@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.12.10.2026.r42.13:00" />
+<meta name="admiranext-version" content="AdmiraNeXT v.13.10.2026.r43.23:47" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -1229,7 +1229,8 @@ function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
 // también, con el comando exacto para instalarlo en vez de dejarte adivinando.
 function mandoHtml(m){
   const k=_norm(m&&(m.name||m.id))||_norm(m&&m.id); if(!k) return '';
-  const g=MANDO_BY_MACHINE[k]||MANDO_BY_MACHINE[_norm(m&&m.id)]||MANDO_BY_MACHINE[_norm(String(m&&m.fqdn||'').split('.')[0])];
+  // `k` es la clave de la FICHA (recuerda el pliegue); `wk`, la del WATCHER que la atiende.
+  const wk=mandoKey(m), g=wk?MANDO_BY_MACHINE[wk]:null;
   if(!g||!g.slots.length){
     // Sin watcher también se pliega igual que los demás (Carlos, 5-sep-2026): el pill de control y
     // «probar» quedan dentro, y al desplegar se lee qué falta y cómo se instala.
@@ -1255,8 +1256,8 @@ function mandoHtml(m){
     const nombre=String(sl.persona||'?')+(sl.runtime?('<i>·'+String(sl.runtime)+'</i>'):'');
     if(viejo) return '<span class="mando-slot mudo" title="'+et.replace(/"/g,'&quot;')+' — el watcher no responde">'+nombre+'</span>';
     return '<span class="mando-slot" title="'+et.replace(/"/g,'&quot;')+'">'+nombre
-      + '<button data-mando="start" data-maq="'+maq+'" data-slot="'+js+'" title="Arrancar '+et.replace(/"/g,'&quot;')+'">▶</button>'
-      + '<button data-mando="stop" data-maq="'+maq+'" data-slot="'+js+'" title="Parar '+et.replace(/"/g,'&quot;')+'">⏹</button></span>';
+      + '<button data-mando="start" data-maq="'+maq+'" data-wk="'+wk+'" data-slot="'+js+'" title="Arrancar '+et.replace(/"/g,'&quot;')+'">▶</button>'
+      + '<button data-mando="stop" data-maq="'+maq+'" data-wk="'+wk+'" data-slot="'+js+'" title="Parar '+et.replace(/"/g,'&quot;')+'">⏹</button></span>';
   };
   const orden=(a,b)=>String(a.persona||'').localeCompare(String(b.persona||''))||String(a.runtime||'').localeCompare(String(b.runtime||''));
   const grupos=[['app','APP'],['cli','CLI']].map(([h,et])=>{
@@ -1273,6 +1274,30 @@ function mandoHtml(m){
     + '<span class="mando-caret">'+(abierto?'▾':'▸')+'</span> 🎛 mando <b>'+g.slots.length+'</b> <span class="mando-age">· watcher hace '+edad+'</span>'
     + '<div class="mando-slots">'+grupos+otras+'</div></div>';
 }
+// QUÉ WATCHER ATIENDE A ESTA FICHA (2026-10-13). La ficha y el watcher no tienen por qué
+// llamarse igual: la ficha la escribe quien da de alta el equipo en el relé, y el watcher
+// publica el nombre que el equipo tiene en macOS. El Mac Studio estaba de alta como
+// «Mac Studio» (id macstudio) y su watcher publicaba «Mac Studio de Carlos»: la tarjeta
+// decía «falta el watcher» con el watcher publicando. Había una tercera búsqueda por
+// `fqdn`, pero el relé no manda `fqdn` —manda `host`; `fqdn` sólo existe en el modo
+// degradado—, así que en modo normal no casaba nunca. Ahora se mira también la primera
+// etiqueta del host, que en Tailscale sale del nombre del equipo.
+// IGUALDAD EXACTA SIEMPRE, nunca prefijo: aquí no se decide un color, se decide a qué
+// equipo va una orden, y «macbookairluna» no es «macbookairluna1». `localhost` no es el
+// nombre de nadie y no cuenta.
+// Devuelve la clave del watcher (la de MANDO_BY_MACHINE) o '' si no lo hay. Es la que
+// viaja al worker: él casa la orden con el watcher por SU nombre, y una orden a nombre
+// de la ficha la rechaza (machine_watcher_stale) aunque la tarjeta ya pinte los botones.
+function mandoKey(m){
+  if(!m) return '';
+  const etq=v=>{ const e=String(v||'').split('.')[0]; return /^localhost$/i.test(e)?'':e; };
+  for(const c of [m.name, m.id, etq(m.fqdn), etq(m.host)]){
+    const k=_norm(c); if(k&&MANDO_BY_MACHINE[k]) return k;
+  }
+  return '';
+}
+// Lo mismo cuando sólo se tiene el id de la ficha, que es lo que llega con la captura.
+function mandoKeyDeId(id){ return mandoKey(MACHINES.find(x=>x.id===id)||{id}); }
 
 // ARRANCAR Y PARAR UN AGENTE (2026-09-02). Los endpoints existían enteros en el
 // worker desde hace semanas, pero el panel no los usaba: encolar exigía la PANEL_KEY
@@ -1284,9 +1309,10 @@ function mandoHtml(m){
 // peor que no tenerlo: promete algo que no ocurre y te deja mirando la pantalla.
 // PARAR PIDE CONFIRMACIÓN y el arranque no: parar interrumpe a un agente que puede
 // estar a media misión, y eso no se hace de un clic despistado.
-async function mandoAgente(machine, slot, action){
+async function mandoAgente(machine, slot, action, wk){
   if(action==='stop' && !confirm('¿Parar '+slot.persona+' ('+slot.runtime+'/'+slot.host+') en '+machine+'?\n\nSi está a media misión, se interrumpe.')) return;
-  const body={ action, machine:_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
+  // `machine` es el nombre de la ficha, para leerlo; la orden va a la clave del watcher (`wk`).
+  const body={ action, machine:wk||_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
   const r=await bridgePost('agent/control', body);
   if(r.status>=200&&r.status<300&&r.data.ok) toast('ok', (action==='stop'?'⏹ parando ':'▶️ arrancando ')+slot.persona, 'orden encolada · la recoge el watcher de '+machine);
   else toast('warn','⚠️ no se pudo '+(action==='stop'?'parar':'arrancar'), bridgeFallo(r));
@@ -1301,7 +1327,7 @@ async function mandoAgente(machine, slot, action){
 // Se encola la captura en el watcher y se recoge cuando la deja. Devuelve la imagen
 // en base64 o null si no llega a tiempo; quien llama decide qué contar.
 async function capturaPorWatcher(machine, slot){
-  const cuerpo={ machine:_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
+  const cuerpo={ machine:mandoKeyDeId(machine)||_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
   try{
     const r=await bridgePost('desktop/capture', cuerpo);
     const d=r.data; if(r.status<200||r.status>=300||!d.ok) return null;
@@ -1320,12 +1346,12 @@ async function capturaPorWatcher(machine, slot){
 // Ranura preferente de un equipo para capturar: la de escritorio, que es la que ve
 // la pantalla. Sin ranuras no hay ruta y se deja el diagnóstico como estaba.
 function ranuraCaptura(machine){
-  const g=MANDO_BY_MACHINE[_norm(machine)]; if(!g||!g.slots.length||g.age>MANDO_FRESH) return null;
+  const g=MANDO_BY_MACHINE[mandoKeyDeId(machine)]; if(!g||!g.slots.length||g.age>MANDO_FRESH) return null;
   return g.slots.find(s=>s.host==='app') || g.slots[0];
 }
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-mando]'); if(!b) return;
-  try{ mandoAgente(b.dataset.maq, JSON.parse(b.dataset.slot), b.dataset.mando); }catch(err){}
+  try{ mandoAgente(b.dataset.maq, JSON.parse(b.dataset.slot), b.dataset.mando, b.dataset.wk); }catch(err){}
 });
 
 /* ── MODO DEGRADADO — ningún relay de control responde ─────────────────────

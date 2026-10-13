@@ -21,6 +21,7 @@
  */
 
 import { marcarTrabajo } from './desde.js';
+import { crearFlota } from './flota.js';
 import { CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
 
 export const EQUIPO = 'GrokBot';
@@ -443,12 +444,28 @@ export function crearYokup(env = {}, identidad, deps = {}) {
    * Si llega una captura, se sube y se enlaza al paso sin cambiar el estado.
    * Solo imagen: no llama a /fleet/progress.
    */
-  async function evidencia({ mision, transcripcion, titulo = '', imagen_base64, imagen_url, paso: code, momento } = {}) {
+  async function evidencia({ mision, encargo, transcripcion, titulo = '', imagen_base64, imagen_url, paso: code, momento } = {}) {
     const id = exigir();
+    if (Boolean(mision) === (encargo != null)) throw new Error('indica exactamente un destino: mision FLT o encargo (número), no ambos');
     const texto = String(transcripcion || '').trim();
     const hayTexto = texto.length > 0;
     const hayImagen = conTexto(imagen_base64) || conTexto(imagen_url);
     if (!hayTexto && !hayImagen) throw new Error('falta evidencia: pasa la transcripción y/o una captura (imagen_base64 o imagen_url)');
+    if (encargo != null) {
+      if (conTexto(code)) throw new Error('un encargo sin misión no tiene pasos: omite paso');
+      const x = await crearFlota(env, id, deps).encargoPropio(encargo);
+      const imagen = hayImagen ? await subirImagen({ base64: imagen_base64, url: imagen_url }) : null;
+      const transcripcionImagen = hayTexto ? await renderYSubir({ titulo: titulo || `${id.agent} · ${x.etiqueta || '#' + encargo} · evidencia`, texto }) : null;
+      const registro = await llamar(`${telegram}/api/bot-inbox/${encargo}/evidence`, {
+        ...json({ persona: id.persona, machine: id.machine, owner: id.agent, momento: momento || 'proceso', titulo,
+          imagen, transcripcion_imagen: transcripcionImagen, transcripcion: texto }),
+        headers: { 'content-type': 'application/json', ...panel() },
+      }, viaTelegram);
+      if (!registro?.ok || !registro.evidencia?.id) throw new Error('el buzón no confirmó el registro de evidencia');
+      await latir(`encargo ${x.etiqueta || '#' + encargo} · evidencia registrada`);
+      return { ...registro, etiqueta: x.etiqueta, mision: null, imagen: imagen || transcripcionImagen,
+        transcripcion_imagen: transcripcionImagen, siguiente: 'encargo_estado muestra las evidencias; encargo_responder cierra el encargo. No se creó una misión FLT.' };
+    }
     let imagenUrl = null;
     let pasoEnlazado = null;
     if (hayImagen) {

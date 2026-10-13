@@ -285,7 +285,19 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const lectura = { pending: 'pendiente: nadie lo ha cogido aún', ack: 'acusado: lo ha cogido y está en ello', in_progress: 'en curso', blocked: 'bloqueado: mira la nota', done: 'hecho: la respuesta está en «respuesta»', cancelled: 'anulado' }[st] || st;
     const etiqueta = etiquetaEncargo(x.id, x.ts, x.etiqueta);
     return { encargo: Number(x.id), etiqueta: etiqueta || null, estado: st, lectura, persona: x.target_persona || null, maquina: x.target_machine || null, de: x.from_name || '', cuando: cuando(x.ts),
-      acuse: x.ack_at ? cuando(x.ack_at) : null, cierre: x.done_at ? cuando(x.done_at) : null, texto: String(x.text || ''), respuesta: x.note || '', proyecto_id: x.project_id || null, task_id: x.task_id || null };
+      acuse: x.ack_at ? cuando(x.ack_at) : null, cierre: x.done_at ? cuando(x.done_at) : null, texto: String(x.text || ''), respuesta: x.note || '', proyecto_id: x.project_id || null, task_id: x.task_id || null, evidencias: x.evidencias || [] };
+  }
+
+  /** Authorize before uploading: an assignment has no mission owner to check. */
+  async function encargoPropio(numero) {
+    if (!identidad || !identidad.persona) throw new Error('sin identidad: adjuntar evidencia exige tu clave (o como para el Consejo)');
+    const x = await estado({ encargo: numero });
+    const para = personaCanonica(x.persona) || sillaCanonica(x.persona);
+    const yo = personaCanonica(identidad.persona) || sillaCanonica(identidad.persona);
+    if ((!para && !x.maquina) || (para && para !== yo) || (x.maquina && norm(x.maquina) !== norm(identidad.machine))) {
+      throw new Error(`el encargo #${numero} no es de ${identidad.agent}: solo el destinatario y su máquina pueden adjuntar evidencia`);
+    }
+    return x;
   }
 
   /** Mandamiento 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): declarar el consumo propio en las
@@ -354,5 +366,5 @@ export function crearFlota(env = {}, identidad, deps = {}) {
       siguiente: 'anulado: no cuenta como pendiente ni dispara alarmas. encargo_estado devuelve cancelled y la nota.' };
   }
 
-  return { vivos, encargar, estado, maquinaDe, reportarConsumo, presenciaCruda, listarEncargos, cargaPorPersona, responder, anular };
+  return { vivos, encargar, estado, encargoPropio, maquinaDe, reportarConsumo, presenciaCruda, listarEncargos, cargaPorPersona, responder, anular };
 }

@@ -152,5 +152,6 @@ bash ~/Claude/admira-vault/mcp-conectar.sh Trinity    # o dilo tú</pre>
     <div class="sello">v.05.09.2026.r21.22:50</div>
   </footer>
 </div>
+<article class="card"><h3>Evidencia de encargos / Assignment evidence</h3><p><code>yokup_evidencia({encargo:5848, imagen_base64:"…"})</code> adjunta una captura al encargo aunque no tenga misión FLT. Usa exactamente uno: <code>encargo</code> o <code>mision</code>. Se comprueba destinatario y máquina; la evidencia queda en <code>encargo_estado</code> sin cambiar el estado. / Attach a capture to an assignment without an FLT mission. Choose exactly one destination; recipient and machine are checked, and <code>encargo_estado</code> retains the evidence without changing status.</p><p>Acusa con <code>encargo_responder</code>, registra imagen y/o transcripción, consulta <code>encargo_estado</code> y cierra con <code>encargo_responder</code>. Si falla la captura, registra el error como transcripción; no la presentes como captura real. / Acknowledge, attach image and/or transcript, read back, then respond. Record capture errors as transcripts, never as real screenshots. <a href="/docs/mcp-evidencia-encargos.md">Guía ES/EN · CLI/MCP tutorial</a></p></article>
 </body>
 </html>

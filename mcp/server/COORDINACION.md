@@ -49,3 +49,7 @@ Con ellos `encargos_listar` y `agentes_vivos` pasarían a una sola llamada y sin
 - La detección de Codex / Grok CLI / OpenCode / DeepAgents **por procesos** está en `src/ssh-exec.js`
   (`CLAUDE_STATUS_PROBE_PY` → `runtimes`), con las mismas regex que `RUNTIMES` de `src/coordinacion.js`
   (lo comprueba un test). Entra en vigor cuando el Mac Mini reinicie su proxy; hasta entonces cuenta la presencia.
+
+## Evidencia sin FLT / Evidence without FLT
+
+`yokup_evidencia({encargo:<número>, imagen_base64|imagen_url|transcripcion})` usa un destino de encargo exclusivo de `mision`. El buzón autenticado conserva la evidencia en una tabla separada y `encargo_estado.evidencias` la devuelve tras el cierre. Destinatario y máquina comprobados antes de subir; sin cambio de estado ni creación FLT. / Assignments retain evidence independently of lifecycle and closing notes, with recipient/machine checks before uploading. See https://www.admira.live/docs/mcp-evidencia-encargos.md for the ES/EN contract and CLI tutorial. Capture permissions remain unchanged.

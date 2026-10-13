@@ -205,3 +205,11 @@ repo fuente, nunca se duplica dentro de `admira-tv`.
 
 ## Comandos del Consejo (CLI)
 Referencia pública y legible de todos los comandos del Consejo: https://www.admira.live/comandos
+
+## Evidencia de encargos / Assignment evidence (13-oct-2026)
+yokup_evidencia accepts exactly one destination: mision="FLT-…" or encargo=5848.
+El encargo no necesita FLT; comprueba destinatario y máquina antes de subir.
+Evidence persists in the authenticated inbox and encargo_estado returns evidencias;
+no status change, note overwrite or FLT creation. Image-only needs no transcript renderer.
+Capture errors may be recorded as transcripts, not claimed as screenshots.
+Guide / CLI tutorial: https://www.admira.live/docs/mcp-evidencia-encargos.md

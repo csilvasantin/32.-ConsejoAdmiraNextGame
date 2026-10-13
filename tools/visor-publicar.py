@@ -19,6 +19,9 @@ enlace OAuth del login. Para actualizar: sustituir ESTE fichero y `launchctl kic
 agente (bot.yokup.com/api/presence, < 3 min) sale de este Mac y la sesión tmux existe aquí. La máquina que se enseña
 («mac», p. ej. «MBP14 Negro») sale del latido, nunca de la conf; en la conf que se manda, el host de esas sesiones pasa
 a ser este Mac. VISOR_SESIONES=morfeo,oraculo limita qué sesiones publica este Mac (las demás no se tocan).
+Sesiones fuera de la cuadrícula (p. ej. hackeo · White Rabbit) van en ~/.config/admiranext/visor-extra.conf (misma forma;
+VISOR_CONF_EXTRA): se publican pero no entran en la conf de 4 que pinta el visor. Cada envío correcto deja en stdout una
+línea «HH:MM:SS envío <sesión> HTTP <código>» (o «latido <sesiones>» si no cambió ninguna); nunca el token.
 """
 import hashlib, importlib.util, json, os, re, subprocess, sys, time, unicodedata, urllib.request, urllib.error
 
@@ -27,6 +30,7 @@ CONF = os.path.join(HOME, ".config", "admiranext", "cuadratura.conf")
 # r33 (/interface 6): los 2 de Grok (Smith en el MBP16, Merovingio en la caja de GrokBot) — misma forma, aparte para no
 # tocar la cuadrícula 2x2 del Mac (cuadratura.sh lee solo las 4 primeras líneas de cuadratura.conf)
 CONF_GROK = os.environ.get("VISOR_CONF_GROK", os.path.join(HOME, ".config", "admiranext", "visor-grok.conf"))
+CONF_EXTRA = os.environ.get("VISOR_CONF_EXTRA", os.path.join(HOME, ".config", "admiranext", "visor-extra.conf"))
 DEFECTO_GROK = ["Smith · Grok|macbook-pro-16|smith|Smith", "Merovingio · Grok|grokbotbox|merovingio|Merovingio"]
 URL = os.environ.get("VISOR_URL", "https://www.admira.live/api/visor/pane")
 CADA = float(os.environ.get("VISOR_CADA", "3"))
@@ -222,7 +226,9 @@ def enviar(cuerpo, tok, dry):
         return {"ok": True}
     req = urllib.request.Request(URL, data=datos, method="POST", headers={"content-type": "application/json", "X-Council-Token": tok, "user-agent": "visor-publicar/r42"})
     with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read() or b"{}")
+        out = json.loads(r.read() or b"{}")
+        out["_http"] = r.status
+        return out
 
 
 def main():
@@ -246,7 +252,8 @@ def main():
         try:
             conf = leer_conf()
             grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)
-            mias = mias_de(conf + grok, maquina)  # #5788: reescribe el host de la conf al del latido real
+            extra = leer_conf(CONF_EXTRA, [], 4)
+            mias = mias_de(conf + grok + extra, maquina)  # #5788: reescribe el host de la conf al del latido real
             agentes, vivas, nuevas = {}, [], {}
             for c, maq_latido in mias:
                 ses = c["sesion"]
@@ -280,6 +287,9 @@ def main():
             if mias and (agentes or cambio_vivas or forzar or t0 - ultimo_envio >= LATIDO):
                 cuerpo = {"maquina": maquina, "completo": forzar, "conf": conf, "grok": grok, "agentes": agentes, "vivas": vivas, "ts": int(t0 * 1000)}
                 r = enviar(cuerpo, tok, dry)
+                hora = time.strftime("%H:%M:%S")
+                for ses in (agentes or ["latido " + ",".join(vivas)]):
+                    print("%s %s HTTP %s" % (hora, ses if ses.startswith("latido ") else "envío " + ses, r.get("_http", "dry-run")), flush=True)
                 ultimo_envio = t0
                 huellas = nuevas
                 forzar = bool(r.get("necesitaCompleto"))

@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { tapar, normalizarPane, fundir, vista, etiquetaModo, CONF_DEFECTO, sha256 } from "./visor-lib.mjs";
+import { tapar, normalizarPane, fundir, vista, etiquetaModo, CONF_DEFECTO, sha256, cortaMaquina, lineaEscritorio } from "./visor-lib.mjs";
 import { onRequestPost, onRequestGet } from "./functions/api/visor/pane.js";
 import { onRequestPost as llavePost } from "./functions/api/visor/llave.js";
 
@@ -180,15 +180,56 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
     assert.equal(f.control, "CONTROL CARLOS"); assert.equal(f.noMolestar, true); assert.equal(f.desktop, true);
   }
   assert.equal(neo.etiquetaModo, "EDGE · MBP14 · Carlos al mando · NO MOLESTAR · admira.tv");
-  assert.equal(neo.estado, "desktop"); assert.equal(neo.latidoMaquina, "MBP14");
-  const neo16 = vista([], A, { grupo: 6, vivos: [{ agente: "Neo", maquinas: ["MacBook Pro 16"], latido: S, modeloTxt: "Fable 5" }] }).fichas.find((x) => x.sesion === "neo");
+  assert.equal(neo.estado, "desktop"); assert.equal(neo.latidoMaquina, "MBP14"); assert.equal(lineaEscritorio(neo), "MBP14 · admira.tv");
+  // Un CLI en el Pro 16 no es la app de escritorio y no revive un equipo fijo.
+  const neo16 = vista([], A, { grupo: 6, vivos: [{ agente: "Neo", maquinas: ["MacBook Pro 16"], maquinaFresca: "MacBook Pro 16", tieneEscritorio: false, latido: S, modeloTxt: "Fable 5" }] }).fichas.find((x) => x.sesion === "neo");
   assert.equal(neo16.latidoMaquina, null); assert.equal(neo16.latidoIgnorado, "MacBook Pro 16"); assert.equal(neo16.latidoModelo, null);
-  assert.equal(tri.etiquetaModo, "EDGE · MBA16 · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
-  assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin datos de MBA16 desde \d\d:\d\d$/);
+  assert.equal(neo16.equipoDeclarado, null); assert.equal(neo16.lineas, undefined);
+  assert.ok(!/MBP14|MBA16/.test(neo16.etiquetaModo));
+  assert.equal(tri.etiquetaModo, "EDGE · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
+  assert.equal(tri.equipoDeclarado, null);
+  assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin máquina en vivo desde \d\d:\d\d$/);
+  assert.ok(!/MBA16|MBP14/.test(tri.etiquetaModo + tri.sinDatos));
   const mer = v.fichas.find((f) => f.sesion === "merovingio");
   assert.equal(mer.estado, "sin_datos"); assert.match(mer.sinDatos, /^sin datos de GrokBotBox/);
   assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → MBP16");
   assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
+});
+
+test("#5824 Trinity pinta la máquina de la app de escritorio, nunca un MBA16 fijo", async () => {
+  const { vivosPorAgente } = await import("./interface-seleccion.mjs");
+  const { maquinaCorta } = await import("./flota-trabajando-lib.mjs");
+  for (const n of ["MacBook Pro 16", "MacBookPro16", "MacBookAir16plata", "MacBookProNegro14", "MacMini", "MBP14"]) {
+    assert.equal(cortaMaquina(n), maquinaCorta(n), n);
+  }
+  const ahora = 1_000_000;
+  const t = vivosPorAgente([
+    { persona: "Trinity", machine: "GrokBotBox", runtime: "DeepAgents", updated: ahora - 10, source: "heartbeat" },
+    { persona: "Trinity", machine: "MacBookProNegro14", runtime: "Codex", host: "app", session_id: "desktop:codex", updated: ahora - 30, source: "process_snapshot" },
+    { persona: "Trinity", machine: "MacBookAir16plata", runtime: "Codex", host: "app", updated: ahora - 5000, source: "heartbeat" },
+  ], ahora).find((x) => x.agente === "Trinity");
+  assert.equal(t.maquinaEscritorio, "MacBookProNegro14");
+  assert.equal(t.maquinaFresca, "GrokBotBox");
+  assert.equal(t.tieneEscritorio, true);
+  const A = 5_000_000;
+  const tri = vista([], A, { grupo: 6, vivos: [t] }).fichas.find((f) => f.sesion === "trinity");
+  assert.equal(tri.equipoDeclarado, "MBP14");
+  assert.equal(tri.terminalMaquina, "MBP14");
+  assert.equal(tri.estado, "desktop");
+  assert.equal(tri.lineas, undefined);
+  assert.equal(lineaEscritorio(tri), "MBP14 · vigilante de incidencias de admira.app");
+  assert.equal(tri.etiquetaModo, "EDGE · MBP14 · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
+  // La misma función, con la app en el Air, dice MBA16: no hay un MBP14 escrito a mano.
+  const air = vista([], A, { grupo: 6, vivos: [{ agente: "Trinity", maquinaEscritorio: "MacBookAir16plata", tieneEscritorio: true, maquinas: ["MacBookAir16plata"] }] }).fichas.find((f) => f.sesion === "trinity");
+  assert.equal(lineaEscritorio(air), "MBA16 · vigilante de incidencias de admira.app");
+  const html = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  assert.match(html, /\[f\.equipoDeclarado, f\.foco\]\.filter\(Boolean\)\.join\(" · "\)/);
+  const { onRequestGet: etiquetaGet } = await import("./functions/api/visor/etiqueta.js");
+  const d = await (await etiquetaGet()).json();
+  const api = d.fichas.find((f) => f.sesion === "trinity");
+  assert.equal(api.equipoDeclarado, null);
+  assert.equal(api.linea, "vigilante de incidencias de admira.app");
+  assert.ok(!/MBA16|MBP14/.test(JSON.stringify(api)));
 });
 
 test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales", async () => {

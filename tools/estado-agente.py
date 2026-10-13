@@ -20,6 +20,9 @@ Misión (r33b · Carlos 13:43 «Idle + última misión in_progress confunde»), 
   · pendiente     = terminal quieta pero con un encargo abierto (in_progress/ack) de < 24 h → ámbar «Pendiente sin trabajar»
   · viejo         = encargo abierto de hace > 24 h y terminal quieta → «#NNNN abierto desde dd/mm hh:mm», tenue, no es misión
 Solo lee: capture-pane / list-sessions. Nunca escribe en la sesión del agente. Solo stdlib (Python 3.9 de macOS).
+
+#5824: la línea de modo escritorio («MBP14 · …») sale de la máquina leída ahora (scutil, si no hostname),
+nunca de un equipo escrito para una persona. Sin lectura no se inventa MBA16 ni MBP14.
 """
 import fcntl, json, os, re, subprocess, sys, time, unicodedata, urllib.request, zlib
 
@@ -85,12 +88,66 @@ def persona_de(nombre):
     return s[:1].upper() + s[1:].lower()
 
 
+# Misma tabla cerrada que flota-trabajando-lib.maquinaCorta / visor-lib.cortaMaquina. Clave exacta.
+_CORTAS = {
+    "macbookpro16": "MBP16", "macbookair16plata": "MBA16", "macbookpronegro14": "MBP14", "macbookpro14": "MBP14",
+    "macmini": "Mini", "grokbotbox": "Box", "grokbot": "GrokBot", "iphone": "iPhone", "galaxyfold": "Fold", "samsunggalaxyfold": "Fold",
+}
+
+
+def clave_maquina(nombre):
+    s = unicodedata.normalize("NFD", nombre or "").encode("ascii", "ignore").decode().lower()
+    if s.endswith(".local"):
+        s = s[:-6]
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+def maquina_corta(nombre):
+    """«MacBookProNegro14» → «MBP14». Desconocida → el nombre tal cual. Vacío → None."""
+    if not (nombre or "").strip():
+        return None
+    return _CORTAS.get(clave_maquina(nombre)) or str(nombre).strip()
+
+
+def leer_maquina_viva(leer=None):
+    """Nombre crudo de ESTA máquina, leído ahora. `leer(argv)` se inyecta en las pruebas.
+    Orden: scutil ComputerName, scutil LocalHostName, hostname, uname -n. Nunca un valor de persona."""
+    if leer is None:
+        def leer(argv):
+            try:
+                r = subprocess.run(argv, capture_output=True, text=True, timeout=5)
+                if r.returncode == 0:
+                    return (r.stdout or "").strip()
+            except Exception:
+                return ""
+            return ""
+    for argv in (["scutil", "--get", "ComputerName"], ["scutil", "--get", "LocalHostName"], ["hostname"], ["uname", "-n"]):
+        v = (leer(argv) or "").strip()
+        if v and not v.lower().startswith("scutil:"):
+            return v.split(".")[0].strip()
+    return ""
+
+
+def maquina_detectada(leer=None):
+    """Código corto de la máquina real (MBP14, MBA16…), o None si no se pudo leer."""
+    cruda = leer_maquina_viva(leer)
+    return maquina_corta(cruda) if cruda else None
+
+
+def etiqueta_escritorio(foco="", leer=None):
+    """Línea del panel de escritorio. La máquina es la detectada ahora; sin lectura, solo el foco."""
+    corta = maquina_detectada(leer)
+    foco = " ".join((foco or "").split())
+    return " · ".join(p for p in (corta, foco) if p)
+
+
 def etiquetas(titulo, host):
-    """modelo y Mac de la línea de info, igual que cuadratura.sh («Neo · Claude» + macbook-pro-16 → Claude Code · MacBook Pro 16)."""
+    """modelo y Mac de la línea de info, igual que cuadratura.sh («Neo · Claude» + macbook-pro-16 → Claude Code · MacBook Pro 16).
+    `host` es el nombre leído en vivo (visor-publicar pasa leer_maquina_viva) o, si no hubo lectura, el de la conf."""
     resto = (titulo or "").split(" · ", 1)[1] if " · " in (titulo or "") else (titulo or "")
     mod = "Claude Code" if resto.startswith("Claude") else "Codex CLI" if resto.startswith("Codex") else "Grok CLI" if resto.startswith("Grok") else resto
     h = (host or "").lower()
-    mac = ("MacBook Pro 16" if h.startswith("macbook-pro-16") else "MacBook Pro 14" if h.startswith(("macbookpronegro14", "macbook-pro-14"))
+    mac = ("MacBook Pro 16" if h.startswith(("macbook-pro-16", "macbookpro16")) else "MacBook Pro 14" if h.startswith(("macbookpronegro14", "macbook-pro-14", "macbookpro14"))
            else "Mac mini" if h.startswith("macmini") else "MacBook Air 16" if h.startswith("macbookair16")
            else "GrokBotBox" if h.startswith("grokbotbox") else host)
     return mod, mac
@@ -211,6 +268,11 @@ def _q(s):
 
 
 def main(argv):
+    if argv and argv[0] == "--maquina":
+        # Solo lee el nombre de esta máquina. No abre tmux ni toca sesiones.
+        cruda = leer_maquina_viva()
+        print(json.dumps({"cruda": cruda, "corta": maquina_corta(cruda) if cruda else None, "etiqueta": etiqueta_escritorio(argv[1] if len(argv) > 1 else "")}, ensure_ascii=False))
+        return 0
     if len(argv) >= 2 and argv[0] in ("--sh", "--json"):
         r = decidir(argv[1], argv[2] if len(argv) > 2 else None)
         if argv[0] == "--json":

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Visor · máquina en vivo</title>
+<style>
+  body { margin: 0; background: #10140f; color: #d7e0c8; font: 16px/1.4 ui-monospace, monospace; }
+  main { max-width: 420px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 14px; letter-spacing: .12em; font-weight: 600; }
+  .ficha { border: 1px solid #3d5a32; border-radius: 8px; padding: 18px 16px 22px; background: #161b14; }
+  .ctrl { font-size: 22px; font-weight: 700; letter-spacing: .08em; color: #9dffa8; }
+  .sub { margin-top: 6px; }
+  .linea { margin-top: 6px; opacity: .8; }
+  .aviso { margin-top: 6px; color: #e0a040; }
+  .meta { margin-top: 14px; font-size: 12px; opacity: .6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>TRINITY · ESCRITORIO</h1>
+  <article class="ficha" id="panel" aria-label="Panel de Trinity">
+    <div class="ctrl">CONTROL CARLOS</div>
+    <div class="sub">DESKTOP APP · NO MOLESTAR</div>
+    <div class="linea" id="linea">cargando…</div>
+    <div class="aviso" id="aviso"></div>
+  </article>
+  <p class="meta" id="meta"></p>
+</main>
+<script type="module">
+const linea = document.getElementById("linea");
+const aviso = document.getElementById("aviso");
+const meta = document.getElementById("meta");
+try {
+  const r = await fetch("/api/visor/etiqueta", { cache: "no-store" });
+  const d = await r.json();
+  const tri = (d.fichas || []).find((f) => f.sesion === "trinity");
+  if (!d.ok || !tri) throw new Error(d.error || "sin ficha");
+  linea.textContent = tri.linea || "";
+  linea.dataset.maquina = tri.equipoDeclarado || "";
+  linea.dataset.estado = tri.estado || "";
+  aviso.textContent = tri.sinDatos || "";
+  meta.textContent = d.generado || "";
+} catch (e) {
+  linea.textContent = "sin lectura";
+  aviso.textContent = String(e && e.message || e);
+}
+</script>
+</body>
+</html>

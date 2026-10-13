@@ -90,16 +90,39 @@ export function etiquetaModo(f) {
   return null;
 }
 
-/** #5803/#5801/#5802 (Carlos 12-oct): el mosaico de 6 va agrupado por modo. Lo que es orden de Carlos (el modo, el foco)
- *  se declara aquí; la máquina y el modelo que se enseñan salen SOLO del latido real: sin latido → «sin datos de <equipo> desde HH:MM». */
+/** #5803/#5801/#5802 (Carlos 12-oct): el mosaico de 6 va agrupado por modo. El modo y el foco son orden de Carlos.
+ *  #5824 (Smith, PR #199): en edge la máquina NO está aquí. Sale del latido de la app de escritorio
+ *  (host «app» o session «desktop:»), abreviada con cortaMaquina. Sin ese latido no se inventa MBA16 ni MBP14.
+ *  #5822 (Carlos 13:27): en híbrido la máquina es la del latido más reciente, no el MBP16 fijo del perfil.
+ *  Smith y Merovingio siguen en nube / GrokBotBox. */
 export const PERFILES = {
   smith: { nombre: "Smith", modo: "nube", equipo: "GrokBotBox", orden: 0 },
   merovingio: { nombre: "Merovingio", modo: "nube", equipo: "GrokBotBox", orden: 1 },
   oraculo: { nombre: "Oráculo", modo: "hibrido", equipo: "MBP16", terminalMaquina: "MBP16", orden: 2 },
   morfeo: { nombre: "Morfeo", modo: "hibrido", equipo: "MBP16", terminalMaquina: "MBP16", orden: 3 },
-  neo: { nombre: "Neo", modo: "edge", equipo: "MBP14", foco: "admira.tv", orden: 4 },
-  trinity: { nombre: "Trinity", modo: "edge", equipo: "MBA16", foco: "vigilante de incidencias de admira.app", orden: 5 },
+  neo: { nombre: "Neo", modo: "edge", foco: "admira.tv", orden: 4 },
+  trinity: { nombre: "Trinity", modo: "edge", foco: "vigilante de incidencias de admira.app", orden: 5 },
 };
+/** Misma tabla que flota-trabajando-lib.maquinaCorta. No se importa aquel módulo: arrastra el consejo al worker.
+ *  Clave exacta (minúsculas, sin signos). Lo que no está se deja tal cual: no se inventa una abreviatura. */
+const CORTAS_MAQ = { macbookpro16: "MBP16", macbookair16plata: "MBA16", macbookpronegro14: "MBP14", macbookpro14: "MBP14", macmini: "Mini", grokbotbox: "Box", grokbot: "GrokBot", iphone: "iPhone", galaxyfold: "Fold", samsunggalaxyfold: "Fold" };
+export function cortaMaquina(m) {
+  if (!m) return null;
+  const k = String(m).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\.local$/, "").replace(/[^a-z0-9]/g, "");
+  return CORTAS_MAQ[k] || String(m);
+}
+/** Máquina de la app de escritorio. `maquinaEscritorio` es el latido host app / desktop:.
+ *  Un resumen antiguo con una sola máquina y sin `tieneEscritorio: false` sigue contando (pruebas #5803).
+ *  Un CLI en otra máquina, con `tieneEscritorio: false`, no se pinta y no se sustituye por un equipo fijo. */
+function maquinaEscritorioDe(vivo) {
+  if (!vivo) return null;
+  if (vivo.maquinaEscritorio) return String(vivo.maquinaEscritorio);
+  if (vivo.tieneEscritorio === false) return null;
+  const ms = Array.isArray(vivo.maquinas) ? vivo.maquinas.filter(Boolean) : [];
+  return ms.length === 1 ? String(ms[0]) : null;
+}
+/** Slug que index.html ya traduce (MAQUINAS). Solo abreviaturas conocidas. */
+const HOST_DE_CORTA = { MBP14: "macbookpronegro14", MBP16: "macbook-pro-16", MBA16: "macbookair16plata", Mini: "macmini" };
 const kPerfil = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 export const perfilDe = (f) => PERFILES[kPerfil(String((f && f.titulo) || (f && f.sesion) || "").split(" · ")[0])] || null;
 const hhmm = (ts) => { if (!ts) return null; const d = new Date(Number(ts) * (Number(ts) > 4102444800 ? 1 : 1000)); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }); };
@@ -150,29 +173,60 @@ export function normalizarEspera(body) {
   return items;
 }
 
+/** Línea del recuadro de escritorio: «MBP14 · vigilante de…». Sin máquina detectada, solo el foco. */
+export function lineaEscritorio(f) {
+  return [f && f.equipoDeclarado, f && f.foco].filter(Boolean).join(" · ");
+}
+
 /** Aplica el perfil de modo a una ficha ya construida. vivo = fila de vivosPorAgente (latido en ventana); ultimoS = último latido (s). */
 export function aplicarPerfil(f, vivo, ultimoS) {
   const pf = perfilDe(f);
   if (!pf) return f;
-  const out = { ...f, modo: pf.modo, equipoDeclarado: pf.equipo, ordenModo: pf.orden };
-  const maqReal = vivo && vivo.maquinas && vivo.maquinas[0] ? String(vivo.maquinas[0]) : null;
   const modeloReal = vivo && vivo.modeloTxt ? vivo.modeloTxt : null;
-  out.latidoMaquina = maqReal; out.latidoModelo = modeloReal;
   if (pf.modo === "edge") {
-    // El equipo de un edge lo manda Carlos; un latido de OTRA máquina (p. ej. una sesión CLI en el MBP16) no es su equipo
-    // y no se enseña como máquina real de su tarjeta (falso positivo #5803).
-    const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/macbookpro/, "mbp").replace(/macbookair/, "mba");
-    if (maqReal && !norm(maqReal).includes(norm(pf.equipo))) { out.latidoIgnorado = maqReal; out.latidoMaquina = null; out.latidoModelo = null; }
-    // DESKTOP APP: sin terminal (la que llegara por pane es el falso positivo del MBP16) y nunca «pendiente sin trabajar».
+    // #5824: la máquina es la de la app de escritorio, ahora. Un CLI en otro Mac no la sustituye (#5803)
+    // y un equipo escrito en el perfil tampoco. Sin app en la ventana → «sin máquina en vivo», nunca MBA16 fijo.
+    const cruda = maquinaEscritorioDe(vivo);
+    const corta = cortaMaquina(cruda);
+    const out = { ...f, modo: pf.modo, equipoDeclarado: corta, ordenModo: pf.orden, latidoMaquina: corta, latidoModelo: corta ? modeloReal : null };
+    const otra = vivo && (vivo.maquinaFresca || (Array.isArray(vivo.maquinas) && vivo.maquinas[0]));
+    if (!corta && otra) out.latidoIgnorado = String(otra);
+    if (corta && HOST_DE_CORTA[corta]) out.host = HOST_DE_CORTA[corta];
+    // DESKTOP APP: sin terminal (la que llegara por pane es el falso positivo del CLI) y nunca «pendiente sin trabajar».
     delete out.agente; delete out.etiqueta; delete out.lineas; delete out.arte; delete out.sub; delete out.mision; delete out.linea;
-    Object.assign(out, { desktop: true, control: "CONTROL CARLOS", noMolestar: true, foco: pf.foco, terminalMaquina: pf.equipo });
-    out.estado = vivo ? "desktop" : "sin_datos";
-    out.etiquetaModo = `EDGE · ${pf.equipo} · Carlos al mando · NO MOLESTAR · ${pf.foco}`;
+    Object.assign(out, { desktop: true, control: "CONTROL CARLOS", noMolestar: true, foco: pf.foco, terminalMaquina: corta });
+    out.estado = corta ? "desktop" : "sin_datos";
+    out.etiquetaModo = corta
+      ? `EDGE · ${corta} · Carlos al mando · NO MOLESTAR · ${pf.foco}`
+      : `EDGE · Carlos al mando · NO MOLESTAR · ${pf.foco}`;
+    if (out.estado === "sin_datos") {
+      const desde = hhmm(ultimoS);
+      out.sinDatos = `sin máquina en vivo${desde ? " desde " + desde : ""}`;
+    }
+    return out;
+  }
+  const maqReal = vivo && vivo.maquinas && vivo.maquinas[0] ? String(vivo.maquinas[0]) : null;
+  const out = { ...f, modo: pf.modo, equipoDeclarado: pf.equipo, ordenModo: pf.orden };
+  out.latidoMaquina = maqReal; out.latidoModelo = modeloReal;
+  if (pf.modo === "hibrido") {
+    // #5822: Oráculo y Morfeo corren donde late el último latido (hoy el MBP14), no en el MBP16 del perfil.
+    // Un CLI más reciente que la app de escritorio manda: la app puede seguir diciendo Mac mini.
+    const lista = vivo && Array.isArray(vivo.maquinas) ? vivo.maquinas.filter(Boolean) : [];
+    const cruda = vivo && (vivo.maquinaFresca || (lista.length === 1 ? lista[0] : null));
+    const corta = cortaMaquina(cruda);
+    if (corta) {
+      out.terminalMaquina = corta;
+      out.equipoDeclarado = corta;
+      out.latidoMaquina = corta;
+      if (HOST_DE_CORTA[corta]) out.host = HOST_DE_CORTA[corta];
+    } else {
+      out.terminalMaquina = pf.terminalMaquina || null;
+    }
   } else {
     out.terminalMaquina = pf.terminalMaquina || null;
-    out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: pf.terminalMaquina });
-    if (!f.lineas && !vivo) out.estado = "sin_datos"; // no publica terminal ni late
   }
+  out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: out.terminalMaquina });
+  if (!f.lineas && !vivo) out.estado = "sin_datos"; // no publica terminal ni late
   if (out.estado === "sin_datos") {
     const desde = hhmm(ultimoS);
     out.sinDatos = `sin datos de ${pf.equipo}${desde ? " desde " + desde : ""}`;

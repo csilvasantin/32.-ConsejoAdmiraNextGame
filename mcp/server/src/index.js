@@ -171,7 +171,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     inputSchema: {
       persona: PERSONA,
       texto: z.string().min(5).max(4000).describe('Qué hay que hacer, para qué y cómo se sabrá que está hecho.'),
-      maquina: z.string().max(40).optional().describe('Equipo concreto (MacMini, MacBookPro16, MacBookProNegro14…). Sin valor: donde late la persona.'),
+      maquina: z.string().max(40).optional().describe('Equipo concreto (MacMini, MacBookPro16, MacBookProNegro14…). Sin valor: la de su último latido vivo. Si la persona ya no late en la indicada, el encargo va a la de su último latido vivo (se avisa en nota y maquina_pedida).'),
       proyecto_id: z.string().max(80).optional().describe('Proyecto del censo de yokup (admira-live, yokup, pixeria…): con él el encargo nace como misión FLT; sin él es conversación (pregunta, aviso, prueba) y no crea misión.'),
       de: z.string().max(80).optional().describe('Quién encarga, si no eres tú (por defecto tu identidad o «MCP admira.live»).'),
       deadline: z.string().max(80).optional().describe('Fecha límite (p. ej. 2026-10-01 18:00 Madrid, «hoy antes de las 14:00»). Se añade al texto y a los metadatos.'),

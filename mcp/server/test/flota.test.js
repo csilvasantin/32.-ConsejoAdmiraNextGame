@@ -17,7 +17,7 @@ const KEYS = {
 };
 const ENV = { MCP_KEYS: JSON.stringify(KEYS), ADMIRA_TELEGRAM_PANEL_KEY: 'panel', ADMIRA_TELEGRAM_URL: 'https://telegram.test', VERSION: 'v.05.09.2026.r1.00:00' };
 
-function fetchFalso(peticiones, estado) {
+function fetchFalso(peticiones, estado, presencia) {
   estado.encargos = {}; estado.siguiente = 2100;
   return async (url, init = {}) => {
     const u = String(url); const method = init.method || 'GET';
@@ -25,6 +25,8 @@ function fetchFalso(peticiones, estado) {
     peticiones.push({ url: u, method, headers: init.headers || {}, body });
     const ok = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json' } });
     if (u.endsWith('/api/presence') && method === 'GET') {
+      if (presencia === 'caida') return ok({ ok: false, error: 'presencia caída' }, 500);
+      if (presencia) return ok(presencia);
       return ok([
         { persona: 'Morfeo', machine: 'MacMini', runtime: 'Claude Code', focus: 'FLT-2038', updated: AHORA / 1000 - 30 },
         { persona: 'Smith', machine: 'MacMini', runtime: 'Claude Code', updated: AHORA / 1000 - 60 },
@@ -49,9 +51,9 @@ function fetchFalso(peticiones, estado) {
   };
 }
 
-async function cliente(clave) {
+async function cliente(clave, presencia) {
   const peticiones = [], estado = {};
-  const server = crearServidor(ENV, { fetch: fetchFalso(peticiones, estado), now: () => AHORA }, identidadPorClave(clave, ENV));
+  const server = crearServidor(ENV, { fetch: fetchFalso(peticiones, estado, presencia), now: () => AHORA }, identidadPorClave(clave, ENV));
   const [a, b] = InMemoryTransport.createLinkedPair();
   await server.connect(b);
   const client = new Client({ name: 'claude-code-de-prueba', version: '2.0' });
@@ -101,14 +103,14 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.ok(!v.agentes.some((a) => a.persona === 'Lucas'));
 });
 
-test('agente_encargar a un agente elige su máquina (Oráculo: su casa, el MacBook Pro 16, desde el 11-10-2026) y firma con la identidad de la clave', async () => {
+test('agente_encargar a un agente elige la máquina de su último latido vivo (Oráculo late en el Mac Mini, no en su casa) y firma con la identidad de la clave', async () => {
   const { client, estado, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Oráculo', texto: 'Revisa el ranking rojo de yokup y di qué prueba falla.', proyecto_id: 'yokup' } }));
-  assert.equal(r.ok, true); assert.equal(r.encargo, 2100); assert.equal(r.etiqueta, '#2100.01.15'); assert.equal(r.persona, 'Oraculo'); assert.equal(r.maquina, 'macbookpro16'); assert.equal(r.de, 'MorfeoMacMini');
+  assert.equal(r.ok, true); assert.equal(r.encargo, 2100); assert.equal(r.etiqueta, '#2100.01.15'); assert.equal(r.persona, 'Oraculo'); assert.equal(r.maquina, 'macmini'); assert.equal(r.de, 'MorfeoMacMini');
   const post = peticiones.find((p) => p.method === 'POST');
   assert.equal(post.headers.authorization, 'Bearer panel');
-  assert.deepEqual(post.body, { text: 'Revisa el ranking rojo de yokup y di qué prueba falla.', target_persona: 'Oraculo', target_machine: 'macbookpro16', from: 'MorfeoMacMini', project_id: 'yokup', materialize_mission: true });
-  assert.equal(estado.encargos[2100].target_machine, 'macbookpro16');
+  assert.deepEqual(post.body, { text: 'Revisa el ranking rojo de yokup y di qué prueba falla.', target_persona: 'Oraculo', target_machine: 'macmini', from: 'MorfeoMacMini', project_id: 'yokup', materialize_mission: true });
+  assert.equal(estado.encargos[2100].target_machine, 'macmini');
 });
 
 test('si la persona late en dos equipos y se indica uno, manda ese; sin señal, queda en cola sin equipo', async () => {
@@ -119,10 +121,10 @@ test('si la persona late en dos equipos y se indica uno, manda ese; sin señal, 
   assert.equal(b.maquina, null); assert.match(b.nota, /no late/);
 });
 
-test('Merovingio se encarga en la GrokBot box; Elon y Elon Musk llegan a la silla Musk', async () => {
+test('Merovingio sin latido queda en cola sin máquina fija aunque se pida la GrokBot box; Elon y Elon Musk llegan a la silla Musk', async () => {
   const { client, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const m = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Merovingio', maquina: 'GrokBotBox', texto: 'Corre esto con Grok CLI en la caja de Musk.' } }));
-  assert.equal(m.persona, 'Merovingio'); assert.equal(m.maquina, 'grokbotbox');
+  assert.equal(m.persona, 'Merovingio'); assert.equal(m.maquina, null, 'no late en ningún equipo: no se fija la máquina pedida'); assert.equal(m.maquina_pedida, 'grokbotbox'); assert.match(m.nota, /tampoco en grokbotbox/);
   const elon = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Elon Musk', texto: 'Revisa el primer principio de este encargo.' } }));
   assert.equal(elon.persona, 'Musk'); assert.equal(elon.maquina, 'grokbot');
   const alias = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'el Merovingio', maquina: 'GrokBotBox', texto: 'El artículo también te nombra.' } }));
@@ -130,13 +132,13 @@ test('Merovingio se encarga en la GrokBot box; Elon y Elon Musk llegan a la sill
   const jobs = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jobs', maquina: 'grokbot', texto: 'el equipo de despertar no es la silla de Musk' } }));
   assert.equal(jobs.persona, 'Jobs'); assert.equal(jobs.maquina, 'grokbot');
   const cypher = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Cypher', maquina: 'GrokBotBox', texto: 'Corre esto con DeepAgents en la caja de Huang.' } }));
-  assert.equal(cypher.persona, 'Cypher'); assert.equal(cypher.maquina, 'grokbotbox');
+  assert.equal(cypher.persona, 'Cypher'); assert.equal(cypher.maquina, null); assert.equal(cypher.maquina_pedida, 'grokbotbox');
   const jensen = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jensen Huang', texto: 'Revisa el cómputo de este encargo.' } }));
   assert.equal(jensen.persona, 'Huang'); assert.equal(jensen.maquina, 'grokbot');
   const jensenCorto = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jensen', texto: 'El alias corto también llega a la silla.' } }));
   assert.equal(jensenCorto.persona, 'Huang'); assert.equal(jensenCorto.maquina, 'grokbot');
   const post = peticiones.filter((p) => p.method === 'POST' && String(p.url).endsWith('/api/bot-inbox'));
-  assert.equal(post[0].body.target_persona, 'Merovingio'); assert.equal(post[0].body.target_machine, 'grokbotbox');
+  assert.equal(post[0].body.target_persona, 'Merovingio'); assert.equal(post[0].body.target_machine, '', 'sin latido vivo no se fija máquina: lo coge donde despierte');
   assert.equal(post[1].body.target_persona, 'Musk'); assert.equal(post[1].body.target_machine, 'grokbot');
 });
 
@@ -251,28 +253,56 @@ test('la silla del Consejo se puede nombrar por su MacBook Air: agente_encargar(
   assert.equal(mal.isError, true); assert.match(mal.content[0].text, /MacBookAirAzul es la silla de Jobs, no de Wozniak/);
 });
 
-test('agente_encargar a Morfeo sin máquina va a su equipo de casa, el MacBook Pro 16 (aunque lata en el Mac Mini)', async () => {
-  const { client, peticiones } = await cliente('clave-que-no-existe');
-  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', texto: 'Prueba de encaminado a su casa.' } }));
-  assert.equal(r.maquina, 'macbookpro16');
-  const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
-  assert.equal(post.body.target_machine, 'macbookpro16');
-  const mm = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', maquina: 'MacMini', texto: 'Con máquina explícita manda la máquina.' } }));
-  assert.equal(mm.maquina, 'macmini');
+// Destino de un encargo (13-10-2026): la máquina del último latido vivo de la persona; nunca una fija ni una apagada.
+const S = AHORA / 1000;
+const encargo = async (c, args) => res(await c.client.callTool({ name: 'agente_encargar', arguments: { texto: 'Prueba de encaminado por latido.', ...args } }));
+const enviado = (c) => c.peticiones.filter((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST').pop().body.target_machine;
+
+test('agente_encargar sin máquina va a la del último latido vivo, no al equipo de casa si allí no late', async () => {
+  const c = await cliente('clave-que-no-existe');
+  const morfeo = await encargo(c, { persona: 'Morfeo' });   // casa: MacBook Pro 16, pero solo late en el Mac Mini
+  assert.equal(morfeo.maquina, 'macmini'); assert.equal(enviado(c), 'macmini'); assert.equal(morfeo.maquina_pedida, undefined);
+  assert.match(morfeo.nota, /último latido vivo \(hace 30 s\)/);
+  assert.equal((await encargo(c, { persona: 'Oráculo' })).maquina, 'macmini');
+  const smith = await encargo(c, { persona: 'Smith' });     // late en los dos: gana el latido más reciente
+  assert.equal(smith.maquina, 'macbookpro16'); assert.equal(enviado(c), 'macbookpro16');
 });
 
-test('agente_encargar a Smith sin máquina va a su equipo de casa, el MacBook Pro 16 (no el Mac Mini)', async () => {
-  const { client, peticiones } = await cliente('clave-que-no-existe');
-  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', texto: 'Prueba de encaminado a su casa.' } }));
-  assert.equal(r.maquina, 'macbookpro16');
-  const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
-  assert.equal(post.body.target_machine, 'macbookpro16');
+test('con máquina explícita donde la persona late, manda esa aunque no sea la más reciente', async () => {
+  const c = await cliente('clave-que-no-existe');
+  const r = await encargo(c, { persona: 'Smith', maquina: 'MacMini' });
+  assert.equal(r.maquina, 'macmini'); assert.equal(r.maquina_pedida, undefined); assert.match(r.nota, /la máquina pedida, donde late/);
 });
 
-test('agente_encargar a Oráculo sin máquina va a su equipo de casa, el MacBook Pro 16 (no el Mac Mini)', async () => {
-  const { client, peticiones } = await cliente('clave-que-no-existe');
-  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Oráculo', texto: 'Prueba de encaminado a su casa.' } }));
-  assert.equal(r.maquina, 'macbookpro16');
-  const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
-  assert.equal(post.body.target_machine, 'macbookpro16');
+test('reenviar con la máquina del encargo original, ya apagada: va a la del último latido vivo y se avisa', async () => {
+  const presencia = [
+    { persona: 'Neo', machine: 'MacBookProNegro14', runtime: 'Claude', updated: S - 4000 },   // el equipo de antes: sin latido vivo
+    { persona: 'Neo', machine: 'MacStudio', runtime: 'Claude', updated: S - 12 },             // el traspaso: late aquí
+  ];
+  const c = await cliente('clave-que-no-existe', presencia);
+  const r = await encargo(c, { persona: 'Neo', maquina: 'MacBookProNegro14' });
+  assert.equal(r.maquina, 'macstudio'); assert.equal(r.maquina_pedida, 'macbookpronegro14'); assert.equal(enviado(c), 'macstudio');
+  assert.match(r.nota, /no late en macbookpronegro14 .*va a macstudio, la de su último latido vivo \(hace 12 s\)/);
+  const m = await encargo(c, { persona: 'Morfeo', maquina: 'MacBookPro16' });                 // ni en su casa ni en ninguna
+  assert.equal(m.maquina, null); assert.equal(enviado(c), ''); assert.equal(m.maquina_pedida, 'macbookpro16');
+});
+
+test('entre varias máquinas vivas gana el latido más reciente; la casa solo desempata el mismo segundo; un latido sin máquina no cuenta', async () => {
+  const c = await cliente('clave-que-no-existe', [
+    { persona: 'Morfeo', machine: 'MacBookPro16', runtime: 'Claude Code', updated: S - 300 },
+    { persona: 'Morfeo', machine: 'MacStudio', runtime: 'Claude Code', updated: (S - 8) * 1000 },   // en milisegundos: también vale
+    { persona: 'Morfeo', machine: '', runtime: 'Claude Code', updated: S - 1 },
+    { persona: 'Smith', machine: 'MacMini', runtime: 'Grok CLI', updated: S - 40 },
+    { persona: 'Smith', machine: 'MacBookPro16', runtime: 'Grok CLI', updated: S - 40 },
+  ]);
+  assert.equal((await encargo(c, { persona: 'Morfeo' })).maquina, 'macstudio');
+  assert.equal((await encargo(c, { persona: 'Smith' })).maquina, 'macbookpro16');
+});
+
+test('si la presencia no responde no se inventa máquina: sin pedir, cola sin máquina; pedida, se conserva y se dice', async () => {
+  const c = await cliente('clave-que-no-existe', 'caida');
+  const sin = await encargo(c, { persona: 'Morfeo' });
+  assert.equal(sin.ok, true); assert.equal(sin.maquina, null); assert.equal(enviado(c), ''); assert.match(sin.nota, /no se pudo leer la presencia/);
+  const con = await encargo(c, { persona: 'Morfeo', maquina: 'MacMini' });
+  assert.equal(con.maquina, 'macmini'); assert.match(con.nota, /no se pudo leer la presencia/);
 });

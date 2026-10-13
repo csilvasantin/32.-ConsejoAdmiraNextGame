@@ -90,14 +90,8 @@ export async function onRequestPost({ request, env }) {
   return json({ ok: true, maquina: doc.maquina, agentes: Object.keys(doc.agentes), necesitaCompleto: !n.pane.completo && !base, kv: kvGuardado }, 200, origin);
 }
 
-export async function onRequestGet({ request, env }) {
-  fijarBase(request);
-  const origin = request.headers.get("Origin") || "";
-  if (!(await llaveValida(request, env))) return json({ ok: false, error: "llave del visor ausente o revocada" }, 401, origin);
-  const store = kv(env);
-  const ahora = Date.now();
-  const idxKey = claveVisor(request, KEY_INDICE);
-  const maqKey = claveVisor(request, KEY_MAQ);
+/** Documentos de paneles de un prefijo (preview o producción). No escribe. */
+async function leerDocs(store, ahora, idxKey, maqKey) {
   let idx = await cacheGet(idxKey);
   const idxKv = await kvGet(store, idxKey);
   idx = [...new Set([...(Array.isArray(idx) ? idx : []), ...(Array.isArray(idxKv) ? idxKv : [])])].slice(0, 10);
@@ -108,6 +102,32 @@ export async function onRequestGet({ request, env }) {
     if (c && k) return c.ts >= k.ts ? c : k;
     return c || k;
   }));
+  return docs.filter(Boolean);
+}
+
+/** Misma máquina en los dos almacenes: manda el documento más reciente. A igual tiempo, el del propio host. */
+function fundirMaquinas(propios, ajenos) {
+  const porMaq = new Map();
+  for (const d of [...ajenos, ...propios]) {
+    if (!d || !d.maquina) continue;
+    const prev = porMaq.get(d.maquina);
+    if (!prev || (d.ts || 0) >= (prev.ts || 0)) porMaq.set(d.maquina, d);
+  }
+  return [...porMaq.values()];
+}
+
+export async function onRequestGet({ request, env }) {
+  fijarBase(request);
+  const origin = request.headers.get("Origin") || "";
+  if (!(await llaveValida(request, env))) return json({ ok: false, error: "llave del visor ausente o revocada" }, 401, origin);
+  const store = kv(env);
+  const ahora = Date.now();
+  const idxKey = claveVisor(request, KEY_INDICE);
+  const maqKey = claveVisor(request, KEY_MAQ);
+  const propios = await leerDocs(store, ahora, idxKey, maqKey);
+  // #5822: Morfeo y Oráculo los publica el MBP14 contra www. La preview no escribe ese KV;
+  // lo lee para no dejarlos en «esperando sesión». Smith/Merovingio del preview ganan si su doc es más nuevo.
+  const docs = maqKey === KEY_MAQ ? propios : fundirMaquinas(propios, await leerDocs(store, ahora, KEY_INDICE, KEY_MAQ));
   const q = new URL(request.url).searchParams;
   const a = String(q.get("a") || "").split(",").filter(Boolean); // #5707: ?a=Neo,Trinity → esos 2 (de los 6)
   const grupo = a.length || Number(q.get("g")) !== 4 ? 6 : 4; // #5803: por defecto el mosaico de 6 // r33: /visor/?g=6 → + Smith y Merovingio

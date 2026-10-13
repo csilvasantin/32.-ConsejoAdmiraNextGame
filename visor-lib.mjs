@@ -26,7 +26,8 @@ export const KEY_LLAVES = "visor:v1:llaves";
 export const KEY_ESPERA = "visor:v1:espera"; // #5804: { items: { Agente: "motivo" } } lo que espera a Carlos
 export const KV_CADA_MS = 20000; // KV como respaldo entre colos: como mucho 1 escritura / 20 s / máquina
 const HOSTS_PROD = new Set(["www.admira.live", "admira.live"]);
-/** #5822: un preview (*.pages.dev) no comparte KV con producción. En www la clave no cambia. */
+/** #5822: un preview no ESCRIBE el KV de producción (www sigue con la clave de siempre).
+ *  El GET del mosaico, en pane.js, sí lee esos paneles para enseñar el mismo tmux. */
 export function claveVisor(request, base) {
   let host = "";
   try { host = new URL(request.url).hostname.toLowerCase(); } catch (e) {}

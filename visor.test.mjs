@@ -317,3 +317,61 @@ test("#5822 el preview no escribe las claves de producción", async () => {
   const g = await (await onRequestGet({ request: new Request(url + "?g=6", { headers: { "X-Visor-Key": body.llave } }), env })).json();
   assert.equal(g.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot");
 });
+
+test("#5822 la preview lee los paneles de producción y no los escribe", async () => {
+  const env = { RECORTE_KV: kvMem(), VISOR_VIEW_TOKEN: "preview-view-token-1234567890" };
+  const ahora = Date.now();
+  const prod = fundir(null, normalizarPane({
+    maquina: "macbookpronegro14", completo: true,
+    conf: [
+      { titulo: "Morfeo · Claude", host: "macbookpronegro14", sesion: "morfeo", skin: "Red Sands" },
+      { titulo: "Oráculo · Codex", host: "macbookpronegro14", sesion: "oraculo", skin: "Grass" },
+      { titulo: "Neo · Claude", host: "macbookpronegro14", sesion: "neo", skin: "Homebrew" },
+      { titulo: "Trinity · Codex", host: "macbookpronegro14", sesion: "trinity", skin: "Ocean" },
+    ],
+    vivas: ["morfeo", "oraculo"],
+    agentes: {
+      morfeo: { lineas: ["morfeo-en-vivo"], estado: "vivo", modo_agente: "hibrido" },
+      oraculo: { lineas: ["no-sale"], estado: "idle", modo_agente: "hibrido" },
+    },
+  }, ahora).pane);
+  const viejo = fundir(null, normalizarPane({
+    maquina: "macbookpronegro14", completo: true, vivas: ["morfeo"],
+    agentes: { morfeo: { lineas: ["preview-viejo"], estado: "vivo" } },
+  }, ahora - 60_000).pane);
+  await env.RECORTE_KV.put("visor:v1:_maquinas", JSON.stringify(["macbookpronegro14"]));
+  await env.RECORTE_KV.put("visor:v1:m:macbookpronegro14", JSON.stringify(prod));
+  const pref = "visor:preview:preview-flt-102038.admira-live.pages.dev:";
+  await env.RECORTE_KV.put(pref + "visor:v1:_maquinas", JSON.stringify(["macbookpronegro14"]));
+  await env.RECORTE_KV.put(pref + "visor:v1:m:macbookpronegro14", JSON.stringify(viejo));
+  const antes = [...env.RECORTE_KV.m.keys()];
+  const g = await (await onRequestGet({
+    request: new Request("https://preview-flt-102038.admira-live.pages.dev/api/visor/pane?g=6", {
+      headers: { "X-Visor-Key": "preview-view-token-1234567890" },
+    }),
+    env,
+  })).json();
+  const mor = g.fichas.find((f) => f.sesion === "morfeo");
+  const ora = g.fichas.find((f) => f.sesion === "oraculo");
+  assert.equal(mor.estado, "vivo");
+  assert.equal(mor.host, "macbookpronegro14");
+  assert.ok(mor.lineas.some((l) => l.includes("morfeo-en-vivo")));
+  assert.ok(!mor.lineas.some((l) => l.includes("preview-viejo")));
+  assert.equal(ora.agente, "idle");
+  assert.notEqual(ora.estado, "esperando");
+  assert.deepEqual(ora.lineas, []);
+  assert.deepEqual([...env.RECORTE_KV.m.keys()].sort(), antes.sort());
+  const fresco = fundir(null, normalizarPane({
+    maquina: "macbookpronegro14", completo: true, vivas: ["morfeo"],
+    agentes: { morfeo: { lineas: ["preview-fresco"], estado: "vivo" } },
+  }, ahora + 1000).pane);
+  await env.RECORTE_KV.put(pref + "visor:v1:m:macbookpronegro14", JSON.stringify(fresco));
+  const g2 = await (await onRequestGet({
+    request: new Request("https://preview-flt-102038.admira-live.pages.dev/api/visor/pane?g=6", {
+      headers: { "X-Visor-Key": "preview-view-token-1234567890" },
+    }),
+    env,
+  })).json();
+  assert.ok(g2.fichas.find((f) => f.sesion === "morfeo").lineas.some((l) => l.includes("preview-fresco")));
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:m:grokbotbox"), false);
+});

@@ -152,7 +152,8 @@ test("#5794 vista sigue a la máquina real del latido: varias máquinas, y termi
 test("#5794 etiquetas de modo: nube, híbrido, edge y sin terminal (nunca «parado»)", () => {
   const A = 1_000_000;
   assert.equal(etiquetaModo({ modo: "nube" }), "GrokBot");
-  assert.equal(etiquetaModo({ modo: "hibrido" }), "GrokBot → MBP16");
+  assert.equal(etiquetaModo({ modo: "hibrido" }), "GrokBot → sin terminal publicada");
+  assert.equal(etiquetaModo({ modo: "hibrido", terminalMaquina: "MBP14 Negro" }), "GrokBot → MBP14 Negro");
   assert.equal(etiquetaModo({ modo: "edge", terminalMaquina: "MBA16" }), "MBA16");
   assert.equal(etiquetaModo({ modo: "sin_terminal", encargo: "5794", encargoEstado: "in_progress" }), "sin terminal, solo encargo · #5794 in_progress");
   assert.equal(etiquetaModo({}), null);
@@ -187,7 +188,7 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
   assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin datos de MBA16 desde \d\d:\d\d$/);
   const mer = v.fichas.find((f) => f.sesion === "merovingio");
   assert.equal(mer.estado, "sin_datos"); assert.match(mer.sinDatos, /^sin datos de GrokBotBox/);
-  assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → MBP16");
+  assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → sin terminal publicada");
   assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
 });
 
@@ -208,4 +209,24 @@ test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales"
   assert.equal(v.fichas.find((f) => f.sesion === "smith").estadoVisor, "OK");
   assert.equal(v.fichas.find((f) => f.sesion === "merovingio").estadoVisor, "ESPERA CARLOS");
   assert.equal(v.fichas.find((f) => f.sesion === "neo").estadoVisor, "KO");
+});
+
+test("#5788 híbrido: la máquina de Morfeo/Oráculo sale del pane o del latido reales (MBP14 Negro), nunca fija", async () => {
+  const { maquinaCorta } = await import("./visor-lib.mjs");
+  assert.equal(maquinaCorta("macbookpronegro14"), "MBP14 Negro");
+  assert.equal(maquinaCorta("MacBookAir16plata"), "MBA16 Plata");
+  assert.equal(maquinaCorta("macbook-pro-16"), "MBP16");
+  const A = 7_000_000, S = A / 1000;
+  const conf = CONF_DEFECTO.map((c) => (c.sesion === "morfeo" || c.sesion === "oraculo" ? { ...c, host: "macbookpronegro14" } : c));
+  const d = fundir(null, normalizarPane({ maquina: "macbookpronegro14", conf, vivas: ["morfeo"], agentes: {
+    morfeo: { estado: "vivo", lineas: ["hola"], modelo: "Claude Code", mac: "MBP14 Negro" } } }, A).pane);
+  const vivos = [{ agente: "Morfeo", maquinas: ["MacBookProNegro14"], latido: S }, { agente: "Oraculo", maquinas: ["MacBookProNegro14"], latido: S }];
+  const v6 = vista([d], A + 1000, { grupo: 6, vivos });
+  const mor = v6.fichas.find((f) => f.sesion === "morfeo"), ora = v6.fichas.find((f) => f.sesion === "oraculo");
+  assert.equal(mor.estado, "vivo"); assert.deepEqual(mor.lineas, ["hola"]);
+  assert.equal(mor.etiquetaModo, "GrokBot → MBP14 Negro");
+  assert.equal(ora.etiquetaModo, "GrokBot → MBP14 Negro"); // sin pane: la del latido
+  const v4 = vista([d], A + 1000, { vivos });
+  const m4 = v4.fichas.find((f) => f.sesion === "morfeo");
+  assert.equal(m4.host, "macbookpronegro14"); assert.equal(m4.mac, "MBP14 Negro"); assert.equal(m4.estado, "vivo");
 });

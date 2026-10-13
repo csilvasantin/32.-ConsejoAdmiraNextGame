@@ -14,8 +14,13 @@ compartido en ~/.cache/admiranext/estado-agentes/, misma histéresis de 80 s). S
 está en vivo; en Idle / Login pendiente / Sin sesión va la ficha (nombre, línea de info, palabra y última misión), nunca el
 enlace OAuth del login. Para actualizar: sustituir ESTE fichero y `launchctl kickstart -k gui/$UID/com.admiranext.visor-publicar`
 (no reescribir el plist: cada reescritura saca el aviso de actividad en segundo plano de macOS).
+
+#5788 (Morfeo, 13-10-2026, MBP16 caído): una sesión es «mía» si su host de la conf es este Mac O si el LATIDO REAL del
+agente (bot.yokup.com/api/presence, < 3 min) sale de este Mac y la sesión tmux existe aquí. La máquina que se enseña
+(«mac», p. ej. «MBP14 Negro») sale del latido, nunca de la conf; en la conf que se manda, el host de esas sesiones pasa
+a ser este Mac. VISOR_SESIONES=morfeo,oraculo limita qué sesiones publica este Mac (las demás no se tocan).
 """
-import hashlib, importlib.util, json, os, re, subprocess, sys, time, urllib.request, urllib.error
+import hashlib, importlib.util, json, os, re, subprocess, sys, time, unicodedata, urllib.request, urllib.error
 
 HOME = os.path.expanduser("~")
 CONF = os.path.join(HOME, ".config", "admiranext", "cuadratura.conf")
@@ -28,6 +33,9 @@ CADA = float(os.environ.get("VISOR_CADA", "3"))
 LATIDO = 60
 LINEAS = 60
 EST = None
+PRESENCIA = os.environ.get("VISOR_PRESENCIA", "https://bot.yokup.com/api/presence")
+VENTANA_LATIDO = 180
+SESIONES = {x.strip() for x in os.environ.get("VISOR_SESIONES", "").split(",") if x.strip()}
 TMUX = next((p for p in ("/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/usr/bin/tmux") if os.path.exists(p)), "tmux")
 DEFECTO = ["Neo · Claude|macbook-pro-16|neo|Homebrew", "Morfeo · Claude|macbook-pro-16|morfeo|Red Sands",
            "Trinity · Codex|macbook-pro-16|trinity|Ocean", "Oráculo · Codex|macmini|oraculo|Grass"]
@@ -115,6 +123,68 @@ def tmux(*args):
     return r.returncode, r.stdout
 
 
+def norm(s):
+    return unicodedata.normalize("NFD", str(s or "")).encode("ascii", "ignore").decode().lower().strip()
+
+
+def idmaq(s):
+    return re.sub(r"[^a-z0-9._-]", "", str(s or "").strip().lower())[:60]
+
+
+def corto(maq):
+    """Nombre corto de la máquina del latido: MacBookProNegro14 → «MBP14 Negro», MacBookAir16plata → «MBA16 Plata»."""
+    m = re.match(r"(?i)^macbook(pro|air)([a-z]*?)(\d+)([a-z]*)$", re.sub(r"\s+", "", str(maq or "")))
+    if m:
+        color = (m.group(2) or m.group(4)).capitalize()
+        return ("MBP" if m.group(1).lower() == "pro" else "MBA") + m.group(3) + (" " + color if color else "")
+    return "Mac mini" if norm(maq).replace(" ", "") == "macmini" else str(maq or "")
+
+
+_LAT = {"ts": 0.0, "datos": {}}
+
+
+def latidos():
+    """{agente: {idmaq: nombre de la máquina}} con latido < VENTANA_LATIDO. Cache 20 s; si falla, lo último (≤ 5 min)."""
+    ahora = time.time()
+    if ahora - _LAT["ts"] < 20:
+        return _LAT["datos"]
+    try:
+        req = urllib.request.Request(PRESENCIA, headers={"user-agent": "visor-publicar/r42"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            d = json.loads(r.read() or b"{}")
+        now = float(d.get("now") or ahora)
+        now = now / 1000 if now > 4102444800 else now
+        out = {}
+        for f in d.get("presence") or []:
+            if f.get("machine") and now - float(f.get("updated") or 0) <= VENTANA_LATIDO:
+                out.setdefault(norm(f.get("persona")), {})[idmaq(f["machine"])] = str(f["machine"])
+        _LAT.update(ts=ahora, datos=out)
+    except Exception:  # noqa: BLE001
+        if ahora - _LAT["ts"] > 300:
+            _LAT.update(ts=ahora - 15, datos={})
+    return _LAT["datos"]
+
+
+def sesiones_locales():
+    rc, txt = tmux("list-sessions", "-F", "#{session_name}")
+    return set(txt.split()) if rc == 0 else set()
+
+
+def mias_de(lista, maquina):
+    """(conf, grok) con el host real → [(línea, máquina del latido o None)] de las sesiones que publica este Mac."""
+    lat, locales, out = latidos(), sesiones_locales(), []
+    for c in lista:
+        if SESIONES and c["sesion"] not in SESIONES:
+            continue
+        maqs = lat.get(norm(c["titulo"].split(" · ")[0]), {})
+        if maquina in maqs and c["sesion"] in locales:
+            c["host"] = maquina
+            out.append((c, maqs[maquina]))
+        elif c["host"] == maquina:
+            out.append((c, None))
+    return out
+
+
 RX_ESTILO = re.compile(r"#\[[^\]]*\]")
 
 
@@ -150,7 +220,7 @@ def enviar(cuerpo, tok, dry):
     if dry:
         print("dry-run:", len(datos), "bytes", list(cuerpo["agentes"]), "vivas", cuerpo["vivas"])
         return {"ok": True}
-    req = urllib.request.Request(URL, data=datos, method="POST", headers={"content-type": "application/json", "X-Council-Token": tok, "user-agent": "visor-publicar/r31"})
+    req = urllib.request.Request(URL, data=datos, method="POST", headers={"content-type": "application/json", "X-Council-Token": tok, "user-agent": "visor-publicar/r42"})
     with urllib.request.urlopen(req, timeout=15) as r:
         return json.loads(r.read() or b"{}")
 
@@ -176,12 +246,14 @@ def main():
         try:
             conf = leer_conf()
             grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)
-            mias = [c for c in conf + grok if c["host"] == maquina]
+            mias = mias_de(conf + grok, maquina)  # #5788: reescribe el host de la conf al del latido real
             agentes, vivas, nuevas = {}, [], {}
-            for c in mias:
+            for c, maq_latido in mias:
                 ses = c["sesion"]
                 nombre = c["titulo"].split(" · ")[0]
                 modelo, mac = EST.etiquetas(c["titulo"], c["host"])
+                if maq_latido:
+                    mac = corto(maq_latido)
                 d = EST.decidir(ses, EST.persona_de(nombre))
                 ficha = {"estado": d["estado"], "etiqueta": d["etiqueta"], "mision": tapar(d["mision"]), "linea": tapar(d["linea"]), "viejo": tapar(d["viejo"]), "modelo": modelo, "mac": mac,
                          "arte": EST.arte(nombre) or [], "cambio": d["cambio"] or int(t0 * 1000), "desde": d["desde"]}

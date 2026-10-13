@@ -69,13 +69,13 @@ export const ESTADOS_AGENTE = ["vivo", "idle", "pendiente", "login", "nosesion"]
 export const ETIQUETAS = { vivo: "en misión", idle: "Idle", pendiente: "Pendiente sin trabajar", login: "Login pendiente", nosesion: "Sin sesión" };
 
 /** #5794 (3) Modo de cada agente: lo manda el publicador (Morfeo #5788), el visor no lo supone.
- *  nube → «GrokBot» · hibrido → «GrokBot → MBP16» · edge → la máquina real de la terminal (MBP14, MBA16…)
+ *  nube → «GrokBot» · hibrido → «GrokBot → <máquina real de la terminal>» (#5788) · edge → la máquina real de la terminal (MBP14, MBA16…)
  *  sin_terminal (app de escritorio) → «sin terminal, solo encargo» (+ encargo y estado), nunca «parado». */
 export const MODOS = ["nube", "hibrido", "edge", "sin_terminal"];
 export function etiquetaModo(f) {
   const m = f && f.modo;
   if (m === "nube") return "GrokBot";
-  if (m === "hibrido") return "GrokBot → " + (f.terminalMaquina || "MBP16");
+  if (m === "hibrido") return "GrokBot → " + (f.terminalMaquina || "sin terminal publicada"); // #5788: nunca una máquina fija
   if (m === "edge") return f.terminalMaquina || f.host || null;
   if (m === "sin_terminal") return "sin terminal, solo encargo" + (f.encargo ? " · #" + f.encargo + (f.encargoEstado ? " " + f.encargoEstado : "") : "");
   return null;
@@ -91,6 +91,15 @@ export const PERFILES = {
   neo: { nombre: "Neo", modo: "edge", equipo: "MBP14", foco: "admira.tv", orden: 4 },
   trinity: { nombre: "Trinity", modo: "edge", equipo: "MBA16", foco: "vigilante de incidencias de admira.app", orden: 5 },
 };
+/** #5788: nombre corto de una máquina real (host del pane o del latido): macbookpronegro14 → «MBP14 Negro». */
+export function maquinaCorta(maq) {
+  const s = String(maq || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const m = s.match(/^macbook(pro|air)([a-z]*?)(\d+)([a-z]*)$/);
+  if (m) { const c = m[2] || m[4]; return (m[1] === "pro" ? "MBP" : "MBA") + m[3] + (c ? " " + c[0].toUpperCase() + c.slice(1) : ""); }
+  if (s === "macmini") return "Mac mini";
+  if (s === "grokbotbox") return "GrokBotBox";
+  return maq ? String(maq) : null;
+}
 const kPerfil = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 export const perfilDe = (f) => PERFILES[kPerfil(String((f && f.titulo) || (f && f.sesion) || "").split(" · ")[0])] || null;
 const hhmm = (ts) => { if (!ts) return null; const d = new Date(Number(ts) * (Number(ts) > 4102444800 ? 1 : 1000)); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }); };
@@ -160,8 +169,9 @@ export function aplicarPerfil(f, vivo, ultimoS) {
     out.estado = vivo ? "desktop" : "sin_datos";
     out.etiquetaModo = `EDGE · ${pf.equipo} · Carlos al mando · NO MOLESTAR · ${pf.foco}`;
   } else {
-    out.terminalMaquina = pf.terminalMaquina || null;
-    out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: pf.terminalMaquina });
+    // #5788: la máquina de la terminal es la REAL: la que publica el pane y, si no hay pane, la del latido; nunca la del perfil
+    out.terminalMaquina = (f.lineas && maquinaCorta(f.host)) || maquinaCorta(maqReal);
+    out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: out.terminalMaquina });
     if (!f.lineas && !vivo) out.estado = "sin_datos"; // no publica terminal ni late
   }
   if (out.estado === "sin_datos") {

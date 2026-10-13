@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.12.10.2026.r42.13:00" />
+<meta name="admiranext-version" content="AdmiraNeXT v.13.10.2026.r43.12:05" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -505,6 +505,15 @@
   .hack-terminal.hk-paused{outline:2px dashed #ffd400;outline-offset:-2px}
   .hack-terminal.hk-paused .hack-terminal-body{opacity:1;cursor:text}
   .hack-terminal.hk-paused::after{content:"\23F8  PAUSA \00B7  pulsa para seguir";position:absolute;bottom:6px;right:8px;background:#ffd400;color:#000;font:700 10px 'Courier New',monospace;letter-spacing:1px;padding:2px 6px;border-radius:4px;pointer-events:none;z-index:2}
+  /* EN VIVO (Woz, 13-10-2026 · Carlos): destella la ventana cuyo proyecto tiene AHORA a un agente
+     interviniendo (latido / terminal real) o un commit de < 15 min; y los contadores parpadean al sumar
+     líneas nuevas. Datos de /api/control/actividad; sin señal fresca no destella nada. */
+  .hack-terminal.hk-vivo{animation:hkVivo 1.2s ease-in-out infinite}
+  @keyframes hkVivo{0%,100%{box-shadow:0 0 0 0 rgba(255,212,0,0)}50%{box-shadow:0 0 16px 4px #ffd400,inset 0 0 12px rgba(255,212,0,.35)}}
+  .hack-terminal.hk-vivo::before{content:"\25CF  EN VIVO \00B7  " attr(data-vivo);position:absolute;bottom:6px;left:8px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#ffd400;color:#000;font:700 10px 'Courier New',monospace;letter-spacing:1px;padding:2px 6px;border-radius:4px;pointer-events:none;z-index:2}
+  .hack-topbar .hk-sube{animation:hkSube .9s ease-out}
+  @keyframes hkSube{0%{box-shadow:0 0 0 0 #ffd400;background:#ffd400;color:#000}100%{box-shadow:0 0 0 8px rgba(255,212,0,0)}}
+  @media (prefers-reduced-motion:reduce){.hack-terminal.hk-vivo{animation:none;box-shadow:0 0 12px 3px #ffd400}.hack-topbar .hk-sube{animation:none}}
   #hkTip{position:fixed;z-index:2147483647;display:none;pointer-events:none;max-width:420px;background:#001a08;color:#bfffd0;border:1px solid #00ff41;border-radius:6px;padding:8px 10px;font:12px/1.45 'Courier New',monospace;box-shadow:0 6px 24px rgba(0,0,0,.6);white-space:pre-line}
   #hkTip b{color:#00ff41}
   #hackBody{flex:1;min-height:0;display:flex}
@@ -3366,6 +3375,8 @@ function collapseAllToggle(){
     // Primero el reparto (semilla del servidor) y los rótulos; luego el guion y el lanzamiento.
     await hkAsignar(ses); if(!hackMode||ses!==hkSes) return;
     applyHkMode();
+    hkVivo=null; hkSesBase=null; hkSesNuevas=0; hkSigmaPintado=null;
+    hkPollVivo(ses); hackIntervals.push(setInterval(()=>hkPollVivo(ses),HK_VIVO_MS));
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"});
       if(res&&res.asignacion&&res.asignacion.origen) window.__HK_ASIG_LANZADA=res.asignacion;
       // Máquinas realmente lanzadas (para cerrarlas al volver al control)
@@ -3502,12 +3513,57 @@ function collapseAllToggle(){
     const idx=await loadHkCorpusIdx(), el=document.getElementById("hkCorpusTotal"); if(!el) return;
     const pc=document.getElementById("hkProjCount"); const n=idx&&idx.projects?idx.projects.length:0;
     if(pc){ pc.textContent=n?(n+" proyecto"+(n===1?"":"s")):""; pc.title=n+" proyectos AdmiraNeXT en el hackeo \u00b7 clic: hist\u00f3rico diario de l\u00edneas de c\u00f3digo"; }
-    el.textContent=idx?("\u03a3 AdmiraNeXT "+hkFmt(idx.lines_total_all)+" l\u00edneas"):"";
-    if(idx) el.title="Todas las l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT, SIN duplicar\n"+
+    const lv=hkVivo&&hkVivo.lineas, sigma=idx?(+idx.lines_total_all||0)+(lv?lv.neto:0):null;
+    el.textContent=idx?("\u03a3 AdmiraNeXT "+hkFmt(sigma)+" l\u00edneas"):"";
+    if(idx&&hkSigmaPintado!=null&&sigma!==hkSigmaPintado) hkFlash(el);
+    hkSigmaPintado=sigma;
+    if(idx) el.title=(lv?"EN VIVO: "+(lv.neto>=0?"+":"\u2212")+hkFmt(Math.abs(lv.neto))+" l\u00edneas netas desde el corpus del despliegue ("+
+      "+"+hkFmt(lv.anadidas)+" / \u2212"+hkFmt(lv.quitadas)+" en commits a la rama principal"+(lv.completos?"":"; alg\u00fan repo sin leer, no se cuenta")+")\n\n":"")+"Todas las l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT, SIN duplicar\n"+
       "(un fichero id\u00e9ntico en dos repos cuenta una vez; un repo compartido no suma dos veces)\n\n"+
       idx.projects.map(p=>(p.num!=null?hkNumTxt(p)+" ":"")+p.project+": "+hkFmt(p.lines_total)+" l\u00edneas \u00b7 aporta "+hkFmt(p.lines_unique!=null?p.lines_unique:p.lines_total)+
         (p.shares_repo_with?" (mismo repo que "+p.shares_repo_with+")":"")).join("\n")+
       "\n\nTotal: "+hkFmt(idx.lines_total_all)+" l\u00edneas \u00b7 "+hkFmt(idx.files_total_all)+" ficheros";
+  }
+  // HACKEO EN VIVO (Woz, 13-10-2026 · orden de Carlos). Cada 20 s, /api/control/actividad dice:
+  //  · qué proyectos tienen AHORA a un agente interviniendo (latidos y terminales reales de Yokup) o un
+  //    commit de < 15 min → su ventana destella; sin señal fresca, nada destella (nunca datos fijos);
+  //  · cuántas líneas de código (no vacías, mismo criterio que el corpus) han entrado en la rama principal
+  //    desde el corpus del despliegue → el Σ las suma, y las NUEVAS desde que se abrió este hackeo se
+  //    suman también al contador de la sesión.
+  const HK_VIVO_API="/api/control/actividad", HK_VIVO_MS=20000;
+  let hkVivo=null, hkSesBase=null, hkSesNuevas=0, hkSigmaPintado=null;
+  function hkFlash(el){ if(!el) return; el.classList.remove("hk-sube"); void el.offsetWidth; el.classList.add("hk-sube"); }
+  async function hkPollVivo(ses){
+    let d=null;
+    try{ const r=await fetch(HK_VIVO_API+"?_t="+Date.now(),{cache:"no-store",signal:AbortSignal.timeout(25000)}); d=r.ok?await r.json():null; }catch(e){}
+    if(!hackMode||ses!==hkSes) return;
+    hkVivo=(d&&d.ok)?d:null;                      // sin respuesta: se apagan los destellos (no se inventa)
+    const pr=(hkVivo&&hkVivo.lineas&&hkVivo.lineas.porRepo)||{};
+    if(!hkSesBase) hkSesBase={};
+    let extra=0;
+    Object.keys(pr).forEach(r=>{ const x=pr[r]; if(!x) return;   // repo sin leer: ni base ni suma
+      if(hkSesBase[r]==null||x.anadidas<hkSesBase[r]){ hkSesBase[r]=x.anadidas; return; }
+      extra+=x.anadidas-hkSesBase[r]; hkSesBase[r]=x.anadidas; });
+    if(extra>0){ hkTotal+=extra; hkSesNuevas+=extra; paintHkTotal(); hkFlash(document.getElementById("hkLineCount")); }
+    { const lc=document.getElementById("hkLineCount"); if(lc) lc.title="L\u00edneas tecleadas entre todos los paneles desde que empez\u00f3 este hackeo"+
+      (hkSesNuevas?"\n+ "+hkFmt(hkSesNuevas)+" l\u00edneas de c\u00f3digo NUEVAS llegadas en commits durante la sesi\u00f3n":""); }
+    paintHkCorpusTotal(); paintHkVivo();
+  }
+  function hkEsc(x){ return String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function hkVivoTexto(v){
+    const ag=[], cm=[];
+    v.motivos.forEach(m=>{ if(m.tipo==="agente"){ if(ag.indexOf(m.agente)<0) ag.push(m.agente); } else cm.push(m); });
+    return ag.length?ag.join(", "):cm.length?("commit "+cm[0].sha):"";
+  }
+  function paintHkVivo(){
+    const act=(hkVivo&&hkVivo.activos)||{};
+    hkTerms.forEach(t=>{
+      const el=document.getElementById("hack-term-"+t.m.id); if(!el) return;
+      const k=t.pkey||(t.pj&&t.pj.key)||null, v=k?act[k]:null;
+      t.vivo=v||null; el.classList.toggle("hk-vivo",!!v);
+      if(v) el.dataset.vivo=hkVivoTexto(v); else delete el.dataset.vivo;
+    });
+    if(hkTipT) paintHkTip();
   }
   // Rótulo: el texto viene del corpus (pj.banner, 3 filas); el tamaño se ajusta al ancho del panel.
   // SIEMPRE ARRIBA (Carlos, 07-10-2026): el rótulo es del ordenador, no del guion. Sale en
@@ -3556,6 +3612,8 @@ function collapseAllToggle(){
         shk.length?"\u21c4 "+shk.map(k=>hkFmt(sh[k])+" l\u00edneas id\u00e9nticas a "+k).join(", ")+" (cuentan una vez)\n":"")+
       (pj.lines_unique!=null?"Aporta al \u03a3: "+hkFmt(pj.lines_unique)+" l\u00edneas\n":"")+
       (f?"Ahora: "+f.path+" ("+hkFmt(f.lines_total)+" l\u00edneas)":"Guion INTRUSI\u00d3N (en C\u00d3DIGO teclea este proyecto)")+
+      (t.vivo?"\n<b>\u26a1 EN VIVO</b>\n"+hkEsc(t.vivo.motivos.map(m=>m.tipo==="agente"?"  \u00b7 "+m.agente+(m.maquina?" en "+m.maquina:"")+(m.runtime?" ("+m.runtime+")":"")+": "+m.motivo:
+        "  \u00b7 commit "+m.sha+" de "+m.autor+" hace "+Math.round(m.haceS/60)+" min: "+m.titulo).join("\n")):"")+
       (hkAsig?"\n\ud83c\udfb2 Reparto aleatorio de esta sesi\u00f3n \u00b7 semilla "+hkAsig.seed+" ("+hkAsig.origen+")":"")+(t.paused?"\n\u23f8 en pausa":"");
     tip.style.display="block";
   }

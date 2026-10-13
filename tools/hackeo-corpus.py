@@ -153,6 +153,9 @@ def proyecto(p: dict, tmp: Path) -> dict:
         sh("git", "clone", "-q", "--depth", "1", f"https://github.com/{p['repo']}.git", str(dst))
     _AL_DIA.add(p["repo"])
     commit = sh("git", "rev-parse", "--short", "HEAD", cwd=dst).strip()
+    # HACKEO en vivo (Woz, 13-10-2026): el commit completo es la base del Δ de líneas en
+    # /api/control/actividad (diff público corpus…HEAD); el corto puede ser ambiguo.
+    commit_full = sh("git", "rev-parse", "HEAD", cwd=dst).strip()
     con_hash = list(elegibles(dst))
     p["_hashes"] = {h: len(l) for _, l, h in con_hash}
     ficheros = [(r, l) for r, l, _ in con_hash]
@@ -178,7 +181,7 @@ def proyecto(p: dict, tmp: Path) -> dict:
             continue
         muestra.append({"path": rel, "lines_total": len(llenas), "lines": limpias})
         usado += coste
-    return {**p, "domain": "www." + p["project"], "commit": commit, "banner": rotulo(p["project"]),
+    return {**p, "domain": "www." + p["project"], "commit": commit, "commit_full": commit_full, "banner": rotulo(p["project"]),
             "files_total": len(ficheros), "lines_total": total,
             "sample_files": len(muestra), "sample_lines": sum(len(m["lines"]) for m in muestra),
             "lines_redacted": caidas, "files": muestra}
@@ -219,7 +222,7 @@ def main():
             nombre = {q["key"]: q["project"] for q in PROYECTOS}
             d["shares_lines_with"] = {nombre[k]: v for k, v in sorted(comparte.items(), key=lambda kv: -kv[1])}
             (out / f"{p['key']}.json").write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-            resumen = {k: d.get(k) for k in ("key", "num", "project", "domain", "repo", "commit", "familia", "par",
+            resumen = {k: d.get(k) for k in ("key", "num", "project", "domain", "repo", "commit", "commit_full", "familia", "par",
                                              "files_total", "lines_total", "files_unique", "lines_unique",
                                              "shares_repo_with", "shares_lines_with", "sample_files", "sample_lines",
                                              "banner")}

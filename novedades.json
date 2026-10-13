@@ -1,4 +1,8 @@
 {
+  "v.13.10.2026.r43.12:05": [
+    "HACKEO en vivo (Woz, MBP14): destella la ventana del proyecto en el que un agente interviene AHORA (latido o terminal real de Yokup) o con commit de < 15 min; nada fijo, sin señal no destella.",
+    "El Σ AdmiraNeXT suma en vivo las líneas de código que entran en la rama principal desde el corpus del despliegue, y las nuevas durante la sesión se suman también al contador de la sesión (/api/control/actividad)."
+  ],
   "v.12.10.2026.r42.13:00": [
     "Visor: estado OK / KO / ESPERA CARLOS en ASCII grande por panel, del latido y del encargo reales (#5804/#5806, Merovingio).",
     "Incluye el mosaico de 6 por modo y /diario de r41; el sello se estampa en todo el HTML al desplegar con deploy.sh."

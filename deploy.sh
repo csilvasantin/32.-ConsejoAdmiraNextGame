@@ -114,8 +114,12 @@ else:
     print("  ⚠ no encontre referencias a la barra compartida — revisa el patron")
 PY2
 
-npx --yes wrangler pages deploy "$TMP" --project-name=admira-live --branch=main --commit-dirty=true
+# PREVIEW (Woz, 13-10-2026): ADMIRA_DEPLOY_BRANCH=<rama> publica en <rama>.admira-live.pages.dev y NO toca
+# producción (www). Sin la variable, main como siempre.
+RAMA="${ADMIRA_DEPLOY_BRANCH:-main}"
+npx --yes wrangler pages deploy "$TMP" --project-name=admira-live --branch="$RAMA" --commit-dirty=true
 rm -rf "$TMP"
+if [ "$RAMA" != "main" ]; then echo "✓ preview de $RAMA publicada (producción intacta)"; exit 0; fi
 # VERIFICACION POST-DESPLIEGUE (NeoMBP14, 01-09-2026). Publicar no es funcionar: se comprueba
 # por el camino del usuario (www, no pages.dev) que la barra recien sellada responde 200, y se
 # avisa si la zona sigue pisando el Cache-Control de _headers.

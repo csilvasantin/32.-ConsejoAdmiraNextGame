@@ -494,6 +494,9 @@
   .hack-terminal-header>span:first-child{flex:0 1 auto;max-width:40%}
   .hack-terminal-header>.hack-role{flex:1 1 auto;text-align:right}
   .hack-terminal-header>.hack-real-status{flex:0 1 auto;max-width:26%}
+  /* Nº de proyecto fijo arriba a la derecha (#01…), del corpus «num» (Carlos, 13-10-2026) */
+  .hack-terminal-header>.hk-num{flex:none;margin-left:6px;padding:0 5px;border:1px solid currentColor;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .hack-terminal-header>.hk-num:empty{display:none}
   /* Σ de todos los proyectos arriba y, DEBAJO, las líneas mostradas ahora (Carlos, 07-10-2026) */
   .hack-topbar .hk-contadores{display:inline-flex;flex-direction:column;align-items:stretch;gap:3px;flex:none;text-align:center}
   .hack-topbar .hk-contadores>span{padding:2px 9px!important;font-size:11px!important}
@@ -3326,7 +3329,7 @@ function collapseAllToggle(){
       if(real){ if(real.action==="ssh_launched"&&real.ok){badge="\u25cf HACKED";color="#0f0";} else if(real.action==="wol_sent"){badge="\u25d0 WoL";color="#fc0";} else if(real.action==="wol_skipped"){badge="\u2717 no MAC";color="#f66";} else if(!real.ok){badge="\u2717 FAIL";color="#f66";} else if(real.online){badge="\u25cf online";color="#0f0";} else {badge="\u25cb offline";color="#888";} }
       else { badge="? not in machines.json"; color="#888"; }
       let st=header.querySelector(".hack-real-status");
-      if(!st){ st=document.createElement("span"); st.className="hack-real-status"; st.style.cssText="margin-left:8px;font-size:10px;letter-spacing:1px;"; header.appendChild(st); }
+      if(!st){ st=document.createElement("span"); st.className="hack-real-status"; st.style.cssText="margin-left:8px;font-size:10px;letter-spacing:1px;"; header.insertBefore(st, header.querySelector(".hk-num")); }
       st.textContent=badge; st.style.color=color; st.title=real?(real.host+" \u00b7 "+(real.detail||"")):"no match";
     });
   }
@@ -3341,7 +3344,7 @@ function collapseAllToggle(){
     { const ti=document.querySelector(".hack-title"); if(ti){ ti.classList.remove("hk-allpaused"); ti.textContent="HACKEO"; ti.title="Pulsa para pausar todo y leer el c\u00f3digo"; } }
     hkAC();   // prepara el audio con el gesto del usuario (clic que abre el HACKEO)
     body.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m,i)=>
-      '<div class="hack-terminal hack-style-'+(i%8)+'" id="hack-term-'+m.id+'"><div class="hack-terminal-header"><span>'+m.persona+' \u2014 '+m.host+'</span><span class="hack-role">'+m.role+'</span></div><pre class="hk-banner" id="hack-banner-'+m.id+'"></pre><div class="hack-terminal-body" id="hack-body-'+m.id+'"></div></div>'
+      '<div class="hack-terminal hack-style-'+(i%8)+'" id="hack-term-'+m.id+'"><div class="hack-terminal-header"><span>'+m.persona+' \u2014 '+m.host+'</span><span class="hack-role">'+m.role+'</span><span class="hk-num" id="hack-num-'+m.id+'"></span></div><pre class="hk-banner" id="hack-banner-'+m.id+'"></pre><div class="hack-terminal-body" id="hack-body-'+m.id+'"></div></div>'
     ).join('') + '</div>';
     const SPEEDS=[15,35,8,50,22,12,45,28,18], OFFSETS=[0,7,14,3,21,10,5,18,12];
     // Un panel = un estado de tecleo. ms = ritmo propio (ms por car\u00e1cter a \u00d71);
@@ -3502,7 +3505,7 @@ function collapseAllToggle(){
     el.textContent=idx?("\u03a3 AdmiraNeXT "+hkFmt(idx.lines_total_all)+" l\u00edneas"):"";
     if(idx) el.title="Todas las l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT, SIN duplicar\n"+
       "(un fichero id\u00e9ntico en dos repos cuenta una vez; un repo compartido no suma dos veces)\n\n"+
-      idx.projects.map(p=>p.project+": "+hkFmt(p.lines_total)+" l\u00edneas \u00b7 aporta "+hkFmt(p.lines_unique!=null?p.lines_unique:p.lines_total)+
+      idx.projects.map(p=>(p.num!=null?hkNumTxt(p)+" ":"")+p.project+": "+hkFmt(p.lines_total)+" l\u00edneas \u00b7 aporta "+hkFmt(p.lines_unique!=null?p.lines_unique:p.lines_total)+
         (p.shares_repo_with?" (mismo repo que "+p.shares_repo_with+")":"")).join("\n")+
       "\n\nTotal: "+hkFmt(idx.lines_total_all)+" l\u00edneas \u00b7 "+hkFmt(idx.files_total_all)+" ficheros";
   }
@@ -3514,6 +3517,7 @@ function collapseAllToggle(){
   function paintHkBanner(t){
     const el=document.getElementById("hack-banner-"+t.m.id); if(!el) return;
     const info=t.pinfo||t.pj, b=(t.pinfo&&t.pinfo.banner)||(t.pj&&t.pj.banner);
+    paintHkNum(t, info);
     el.classList.toggle("on",!!(b&&b.length));
     if(!b||!b.length){ el.textContent=""; return; }
     if(el.dataset.k!==info.key){ el.textContent=b.join("\n"); el.dataset.k=info.key;
@@ -3521,6 +3525,12 @@ function collapseAllToggle(){
     el.__b=b;
     if(hkBannerRO&&!el.__ro){ el.__ro=1; el.parentNode.__hkT=t; hkBannerRO.observe(el.parentNode); }
     hkFitBanner(t);
+  }
+  // Nº de proyecto (#01…): único y estable, viene de tools/hackeo-corpus.py («num»).
+  function hkNumTxt(pj){ return pj&&pj.num!=null?"#"+String(pj.num).padStart(2,"0"):""; }
+  function paintHkNum(t, info){
+    const el=document.getElementById("hack-num-"+t.m.id); if(!el) return;
+    el.textContent=hkNumTxt(info); el.title=info&&info.num!=null?("Proyecto "+hkNumTxt(info)+" \u00b7 "+info.project):"";
   }
   function hkFitBanner(t){
     const el=document.getElementById("hack-banner-"+t.m.id), b=el&&el.__b; if(!b) return;
@@ -3538,7 +3548,7 @@ function collapseAllToggle(){
     const f=t.pj?t.pj.files[t.fi]:null;
     const sh=pj.shares_lines_with||{}, shk=Object.keys(sh);
     const PAR={studio:"admira.studio",store:"admira.store",tv:"admira.tv",app:"admira.app",biz:"admira.biz"};
-    tip.innerHTML="<b>"+pj.project+"</b>"+(pj.familia==="startup"?" \u00b7 startup"+(pj.par?" (\u2194 "+(PAR[pj.par]||pj.par)+")":""):
+    tip.innerHTML=(pj.num!=null?"<b>"+hkNumTxt(pj)+"</b> ":"")+"<b>"+pj.project+"</b>"+(pj.familia==="startup"?" \u00b7 startup"+(pj.par?" (\u2194 "+(PAR[pj.par]||pj.par)+")":""):
       pj.familia==="ecosistema"?" \u00b7 ecosistema AdmiraNeXT":"")+
       " \u00b7 "+pj.repo+" @"+pj.commit+"\n"+
       hkFmt(pj.files_total)+" p\u00e1ginas (ficheros) \u00b7 "+hkFmt(pj.lines_total)+" l\u00edneas de c\u00f3digo\n"+

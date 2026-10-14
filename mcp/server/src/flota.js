@@ -340,8 +340,11 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   /** Anula un encargo (Carlos, 4-oct-2026). No hace falta ser el destinatario: puede
    *  quien lo encargó o un consejero (entra con la clave del Consejo). La escritura
    *  al worker va con la clave del panel, que es la otra vía autorizada. */
+  // El worker antepone al remitente el canal por el que entró el encargo («status-web · MorfeoMacMini»):
+  // se compara sin él, o quien lo encargó desde el panel no podría anularlo (Carlos, 14-oct-2026).
+  const sinCanal = (s) => String(s || '').replace(/^\s*[a-z]+(?:-[a-z]+)+\s*·\s*/, '');
   function esQuienEncargo(fila) {
-    const de = norm(fila && fila.from_name);
+    const de = norm(sinCanal(fila && fila.from_name));
     if (!de) return false;
     const candidatos = [identidad && identidad.agent, identidad && identidad.persona, personaCanonica(identidad && identidad.persona)].filter(Boolean);
     return candidatos.some((c) => {

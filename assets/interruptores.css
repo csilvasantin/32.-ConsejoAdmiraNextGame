@@ -1,0 +1,42 @@
+/* assets/interruptores.css — interruptores «⏻ Desktop app» y «⏻ CLI» de las tarjetas de Mac (#5862, modos #5867). Mismo lenguaje que los
+   toggles de /control: verde = encendido, rojo = apagado; gris mientras no se sabe; ámbar mientras se ejecuta. */
+.int-btn{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-height:34px;font-weight:700;cursor:pointer;text-align:left;max-width:100%}
+.int-btn .int-fila{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px 6px;white-space:nowrap;max-width:100%}
+.int-btn .int-ico{font-size:15px;line-height:1}
+.int-btn .int-st{font-weight:400;font-size:11px;opacity:.9}
+/* #5867: quién está en cada modo, «Morfeo · CLI · MBP16», un agente por línea */
+.int-btn .int-quien{display:flex;flex-direction:column;gap:1px;font-weight:400;font-size:11px;line-height:1.35;color:var(--ink,#e8eef7);opacity:.95}
+.int-btn .int-ag{white-space:normal;overflow-wrap:anywhere}
+.int-btn .int-nadie{color:var(--mut,#8a97ab);font-style:italic}
+.int-btn.int-on{border-color:var(--ok,#5bd6c0)!important;color:var(--ok,#5bd6c0)!important}
+.int-btn.int-off{border-color:var(--bad,#ff6b6b)!important;color:var(--bad,#ff6b6b)!important}
+.int-btn.int-nd{border-color:var(--mut,#8a97ab)!important;color:var(--mut,#8a97ab)!important}
+.int-btn.int-ocupado{border-color:var(--warn,#ffb454)!important;color:var(--warn,#ffb454)!important;cursor:progress}
+.int-btn.int-ocupado .int-ico{animation:int-gira 1s linear infinite;display:inline-block}
+@keyframes int-gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.int-btn.int-ocupado .int-ico{animation:none}}
+/* móvil (iPhone, Fold plegado): los dos interruptores ocupan media fila cada uno, fáciles de pulsar */
+@media (max-width:520px){
+  .acts .int-btn{flex:1 1 calc(50% - 6px);min-height:42px;min-width:0}
+}
+
+/* ---------- /demo/interruptores/ ---------- */
+.int-demo-page{--bg:#0b0e14;--panel:#131822;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;--ok:#5bd6c0;--bad:#ff6b6b;--warn:#ffb454;--acc:#5bd6c0;
+  margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.int-demo-page main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+.int-demo-page a{color:var(--acc)}
+.int-demo-page h1{font-size:clamp(20px,5vw,28px);margin:.3em 0}
+.int-demo-page .int-guia{min-height:3em;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--warn)}
+.int-demo-page .int-ctrl{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.int-demo-page button{font:inherit;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.int-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px}
+.int-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.int-cabeza{display:flex;justify-content:space-between;align-items:center}
+.int-demo{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.int-pantalla{display:flex;gap:6px;aspect-ratio:16/9;background:#05070b;border:1px solid var(--line);border-radius:8px;padding:6px}
+.int-win{flex:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;text-align:center;min-width:0;overflow:hidden}
+.int-app{background:#2a2140;color:#d8c7ff}
+.int-cli{background:#0d2a24;color:var(--ok)}
+.int-vacio{margin:auto;color:var(--mut);font-size:12px}
+.int-acts{display:flex;flex-wrap:wrap;gap:6px}
+.int-fake{opacity:.45}

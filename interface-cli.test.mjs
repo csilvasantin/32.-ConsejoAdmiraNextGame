@@ -88,12 +88,13 @@ test('la barra (páginas sin CLI propia) usa la misma implementación y la home 
   assert.match(home, /\/assets\/interface-cli\.js\?v=/);
 });
 
-test('cli-ayuda: /demo help cuenta, ordena por fecha (interface arriba) y admite antiguas / alfabético', async () => {
+test('cli-ayuda: /demo help cuenta, ordena por fecha (interruptores arriba, luego interface) y admite antiguas / alfabético', async () => {
   await import('./assets/cli-ayuda.js');
   const A = globalThis.AdmiraCliAyuda;
   const h = A.demoHelp('', false).split('\n');
   assert.match(h[0], new RegExp('^Hay ' + A.CATALOGO.length + ' demos'));
-  assert.match(h[1], /^11-10-2026 {2}\/demo interface/);
+  assert.match(h[1], /^14-10-2026 {2}\/demo interruptores/);
+  assert.match(h[2], /^11-10-2026 {2}\/demo interface/);
   const old = A.demoHelp('antiguas', false).split('\n');
   assert.match(old[1], /07-10-2026/);
   const az = A.demoHelp('--orden alfabetico', true).split('\n');

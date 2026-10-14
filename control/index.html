@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r46.07:44" />
+<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r47.07:55" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -24,6 +24,8 @@
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
 <script src="/control/fleet-mesh.js?v=20261009-r10-lectura"></script>
+<link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5867">
+<script src="/assets/interruptores.js?v=20261014-5867"></script>
 <title>Control · AdmiraNext Fleet</title>
 <style>
   :root{
@@ -1114,6 +1116,7 @@ let AGENT_ONLINE=new Set(); // máquinas con un agente (Claude/Codex/Grok) con b
 let PRESENCE_SEEN=new Set();
 let FLEET_SEEN=new Set();
 let PRESENCE_FULL={}; // key(_norm máquina) → registro más reciente {persona,runtime,mode,focus,updated} (para el tablero TAREAS)
+let PRESENCE_ROWS={}; // key(_norm máquina) → filas FRESCAS {persona,runtime,host} (#5867: quién está en Desktop app y en CLI)
 // MANDO REMOTO: qué equipos se pueden gobernar DE VERDAD (2026-09-02).
 // El panel decidía «online» por la antigüedad del latido, y eso no dice nada sobre si
 // una orden llegará a ejecutarse: quien las recoge es el watcher de presencia de cada
@@ -1130,7 +1133,7 @@ const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "onlin
 async function loadPersonas(){
   try{
     const r=await fetch(DIARY_API+'/api/presence',{cache:'no-store'});
-    const d=await r.json(); const map={}; const on=new Set(); const seen=new Set(); const full={}; const now=(d.now||Date.now()/1000);
+    const d=await r.json(); const map={}; const on=new Set(); const seen=new Set(); const full={}; const rows={}; const now=(d.now||Date.now()/1000);
     (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).forEach(p=>{
       const k=_norm(p.machine); if(!k) return;
       if(!map[k]) map[k]=p.persona;                 // la persona más reciente por máquina
@@ -1138,8 +1141,9 @@ async function loadPersonas(){
       const age=now-(p.updated||0);
       if(age<8*60) on.add(k);                        // agente ACTIVO (<8min) en esa máquina
       if(age<PRESENCE_FRESH) seen.add(k);            // latido fresco (<3min) → online por presencia
+      if(age<PRESENCE_FRESH && p.host) (rows[k]=rows[k]||[]).push({persona:p.persona,runtime:p.runtime||'',host:String(p.host).toLowerCase()});
     });
-    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen; PRESENCE_FULL=full;
+    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen; PRESENCE_FULL=full; PRESENCE_ROWS=rows;
     const mando={};
     (d.control_machines||[]).forEach(cm=>{
       const k=_norm(cm&&cm.machine); if(!k) return;
@@ -1845,12 +1849,14 @@ function renderCards(ms){
         <button data-a="channeltoggle" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Cerrar la ventana del canal DS en el Chrome de esta máquina.':'Abrir el canal DS (admira.tv/canal) en el Chrome de esta máquina.'}">${signageIsOn(m.id)?'⏹ cerrar canal':'📺 abrir canal'}</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
+        ${m.online&&interruptorAplica(m)?AdmiraInterruptores.html(m.id, INT_ESTADO[m.id]&&INT_ESTADO[m.id].st, INT_OCUPADO[m.id], interruptorCtx(m)):''}
       </div>
       <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
       ${dsPreflightHtml(m)}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
   el.innerHTML+=pieFuera;
+  interruptoresConsultar(list);
   // etiqueta «opciones (N)» con el número real de botones de cada tarjeta
   document.querySelectorAll('.card').forEach(card=>{ const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(card.classList.contains('collapsed'), card.querySelectorAll('.acts button').length); });
   // restaura miniaturas
@@ -2533,6 +2539,56 @@ $('#csCmd').addEventListener('keydown',e=>{
 });
 $('#csClear').onclick=()=>{ $('#csCmd').value=''; _histIdx=-1; _histDraft=''; $('#out').innerHTML='<div class="empty">Sin resultados todavía.</div>'; $('#csCmd').focus(); };
 
+/* ---------- INTERRUPTORES «⏻ Desktop app» y «⏻ CLI» por Mac (#5862, modos #5867, Jensen por orden de Carlos, 14-10-2026) ----------
+ * Estado REAL: lo devuelve el propio Mac (assets/interruptores.js + /fleet/interruptor-agentes.sh por /api/run).
+ * Se consulta al pintar las tarjetas (como mucho cada 60 s por Mac) y tras cada orden. Apagar pide confirmación. */
+const INT_ESTADO={};   // id → {st, at}
+const INT_OCUPADO={};  // id → {apps|clis: 'apagando…'}
+const INT_CADA=60000;
+/* #5867: dos modos por equipo. Desktop app = uso interactivo de Carlos; CLI = uso remoto (consejeros y agentes).
+ * Cada botón lista quién está en su modo («Morfeo · CLI · MBP16»): presencia fresca de este Mac + sesiones tmux del Mac. */
+function interruptorCtx(m){
+  const ks=_machKeys(m), filas=[];
+  Object.keys(PRESENCE_ROWS).forEach(p=>{ if(ks.some(k=>k===p||k.indexOf(p)===0||p.indexOf(k)===0)) filas.push(...PRESENCE_ROWS[p]); });
+  return {maquina:m.name||m.id, presencia:filas};
+}
+function interruptorAplica(m){ return (m.platform||'macos')==='macos' && !!(m.host||m.local) && typeof AdmiraInterruptores!=='undefined'; }
+function interruptoresPintar(id){
+  const m=MACHINES.find(x=>x.id===id); if(!m) return;
+  document.querySelectorAll('.acts button[data-int][data-m="'+id+'"]').forEach(b=>{
+    const tmp=document.createElement('div'); tmp.innerHTML=AdmiraInterruptores.html(id, INT_ESTADO[id]&&INT_ESTADO[id].st, INT_OCUPADO[id], interruptorCtx(m));
+    const nuevo=tmp.querySelector('button[data-int="'+b.getAttribute('data-int')+'"]'); if(nuevo) b.replaceWith(nuevo);
+  });
+}
+async function interruptorOrden(id, orden, tipo){
+  const script=await AdmiraInterruptores.script();
+  const d=await api('/run',{method:'POST',body:JSON.stringify({machine:id,cmd:AdmiraInterruptores.comando(script,orden),timeoutMs:orden==='estado'?30000:60000})});
+  const st=AdmiraInterruptores.parse(d&&d.stdout);
+  if(st) INT_ESTADO[id]={st,at:Date.now()};
+  return {d,st};
+}
+function interruptoresConsultar(list){
+  if(!SESSION) return;
+  (list||[]).filter(m=>m.online&&interruptorAplica(m)).forEach(m=>{
+    const e=INT_ESTADO[m.id]; if(INT_OCUPADO[m.id]||(e&&(e.pend||Date.now()-e.at<INT_CADA))) return;
+    INT_ESTADO[m.id]={...(e||{}),pend:true,at:(e&&e.at)||0};
+    interruptorOrden(m.id,'estado').catch(()=>{}).finally(()=>{ if(INT_ESTADO[m.id]) delete INT_ESTADO[m.id].pend; if(!INT_ESTADO[m.id].st) INT_ESTADO[m.id].at=Date.now(); interruptoresPintar(m.id); });
+  });
+}
+document.addEventListener('click', async e=>{
+  const b=e.target.closest&&e.target.closest('.acts button[data-int]'); if(!b||b.disabled) return;
+  if(b.closest('.int-card')) return;   // la demo tiene su propio manejador
+  e.preventDefault(); e.stopPropagation();
+  const id=b.getAttribute('data-m'), tipo=b.getAttribute('data-int'), m=MACHINES.find(x=>x.id===id); if(!m) return;
+  const st=INT_ESTADO[id]&&INT_ESTADO[id].st, orden=AdmiraInterruptores.siguiente(st,tipo);
+  if(/-off$/.test(orden) && !confirm(AdmiraInterruptores.confirmacion(m.name||id, tipo, st))) return;
+  INT_OCUPADO[id]={[tipo]: orden==='estado'?'consultando…':/-off$/.test(orden)?'apagando…':'encendiendo…'}; interruptoresPintar(id);
+  try{
+    const {d,st:nuevo}=await interruptorOrden(id, orden, tipo);
+    pushResult(id, '⏻ '+AdmiraInterruptores.TIPOS[tipo].nombre+' · '+orden, {...d, stdout:String(d&&d.stdout||'').replace(/^__INTERRUPTOR__ .*$/m, nuevo?('estado: Desktop app '+(nuevo.apps_on?'encendido':'apagado')+' ('+AdmiraInterruptores.detalle(nuevo,'apps')+') · CLI '+(nuevo.clis_on?'encendido':'apagado')+' ('+AdmiraInterruptores.detalle(nuevo,'clis')+')'):'')});
+  }catch(err){ pushResult(id, '⏻ '+tipo+' · '+orden, {rc:-1, stdout:'', stderr:String(err&&err.msg||err&&err.message||err)}); }
+  finally{ delete INT_OCUPADO[id]; interruptoresPintar(id); }
+}, true);
 function pushResult(machine, label, d){
   const m=MACHINES.find(x=>x.id===machine)||(machine==='__dgx__'?{name:'DGX Spark',emoji:'🧠'}:{name:machine,emoji:''});
   const out=$('#out'); if(out.querySelector('.empty')) out.innerHTML='';

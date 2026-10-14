@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r47.07:55" />
+<title>Interruptores de Macs · Demo · Admira Live</title>
+<link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5867">
+<script defer src="/assets/interruptores.js?v=20261014-5867"></script>
+</head>
+<body class="int-demo-page"><main>
+<p><a href="/">Admira Live</a> / <a href="/control/">Control</a> / Demo</p>
+<h1>⏻ Desktop app y ⏻ CLI de cada Mac</h1>
+<p>Demo pública: funciona sin iniciar sesión y no toca ningún equipo. En <a href="/control/">/control</a>, cada tarjeta de Mac lleva estos dos botones junto a «control remoto» y «terminal», con el estado real que devuelve el propio Mac.</p>
+<p>Cada equipo tiene dos modos predeterminados, y cada botón lleva rotulado su modo y qué agente está en él, por ejemplo «Morfeo · CLI · MBP16».</p>
+<ul>
+<li><b>⏻ Desktop app</b>: el uso interactivo de Carlos. Abre o cierra Claude y ChatGPT/Codex de escritorio en ese Mac.</li>
+<li><b>⏻ CLI</b>: el uso remoto, solo para consejeros y agentes. Arranca o apaga las sesiones tmux de los deepagents de ese Mac; al encenderse ocupan el sitio que tenía el Desktop app.</li>
+<li>Verde = encendido · rojo = apagado · apagar siempre pide confirmación.</li>
+</ul>
+<div class="int-ctrl"><button type="button" id="int-play">▶ recorrido automático</button><span style="color:var(--mut);font-size:13px;align-self:center">o pulsa los botones tú mismo</span></div>
+<div class="int-guia" id="int-guia" aria-live="polite">Pulsa ▶ para ver el recorrido: Mac Mini y MacBook Pro 16.</div>
+<section class="int-grid" id="int-demo" aria-label="Demo de interruptores" style="margin-top:14px"></section>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var demo = window.AdmiraInterruptores.mountDemo(document.getElementById('int-demo'));
+  var guia = document.getElementById('int-guia'), play = document.getElementById('int-play');
+  function correr() { play.disabled = true; demo.recorrido(function (t) { guia.textContent = t; }).then(function () { play.disabled = false; }); }
+  play.addEventListener('click', correr);
+  if (/[?&]auto(=1)?(&|$)/.test(location.search)) correr();
+});
+</script>
+</body></html>

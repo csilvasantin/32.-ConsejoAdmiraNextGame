@@ -19,7 +19,10 @@
   function T(es, e) { return en() ? e : es; }
 
   // [orden, fecha AAAA-MM-DD | null, castellano, inglés, origen]
+  // /demo interruptores (#5862): página pública propia con su recorrido automático.
+  var RE_DEMO_INT = /^\/?demo\s+(interruptores?|apps|clis)\s*$/i;
   var CATALOGO = [
+    ['/demo interruptores', '2026-10-14', '⏻ Desktop app y ⏻ CLI de cada Mac, con quién está en cada modo («Morfeo · CLI · MBP16»): abrir/cerrar Claude y ChatGPT/Codex y arrancar/apagar los deepagents (también /demo apps, /demo clis)', '⏻ Desktop app and ⏻ CLI per Mac, showing who is in each mode («Morfeo · CLI · MBP16»): open/close Claude and ChatGPT/Codex and start/stop the deepagents (also /demo apps, /demo clis)', 'admira.live'],
     ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off → 2 claude · codex · grok · Neo Trinity → error con menos de 2, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off → 2 claude · codex · grok · Neo Trinity → fewer-than-2 error, by itself', 'admira.live'],
     ['/demo velocidad', '2026-10-09', 'velocímetro de tokens/hora de la flota (/demo speed en inglés)', 'fleet tokens/hour speedometer (/demo speed)', 'admira.live'],
     ['/demo lectura', '2026-10-09', 'qué ve una sesión de agente de solo lectura', 'what a read-only agent session sees', 'admira.live'],
@@ -143,7 +146,8 @@
       vigilar(log);
       var input = form.querySelector('input, textarea');
       var t = String((input && input.value) || '').trim();
-      if (/^\/?demo$/i.test(t)) { setTimeout(function () { li(log, T('Hay ', 'There are ') + CATALOGO.length + T(' demos · /demo help las lista de la más reciente a la más antigua (la última: /demo interface)', ' demos · /demo help lists them newest first (latest: /demo interface)')); }, 0); return; }
+      if (/^\/?demo$/i.test(t)) { setTimeout(function () { li(log, T('Hay ', 'There are ') + CATALOGO.length + T(' demos · /demo help las lista de la más reciente a la más antigua (la última: /demo interruptores)', ' demos · /demo help lists them newest first (latest: /demo interruptores)')); }, 0); return; }
+      if (RE_DEMO_INT.test(t)) { e.preventDefault(); e.stopPropagation(); if (input) input.value = ''; li(log, T('Abriendo /demo/interruptores/ …', 'Opening /demo/interruptores/ …')); setTimeout(function () { location.href = '/demo/interruptores/?auto=1'; }, 400); return; }
       var m = RE_DEMO_HELP.exec(t);
       if (!m) return;
       e.preventDefault(); e.stopPropagation();

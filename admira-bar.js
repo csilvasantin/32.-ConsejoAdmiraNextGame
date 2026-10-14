@@ -445,6 +445,8 @@
       var out = form.querySelector("output");
       var orden = inp.value;
       inp.value = "";
+      // /demo interruptores (#5862): ⏻ apps y ⏻ CLIs de cada Mac, en su página pública con recorrido automático.
+      if (/^\/?demo\s+(interruptores?|apps|clis)\s*$/i.test(String(orden).trim())) { out.textContent = T("Abriendo /demo/interruptores/ …", "Opening /demo/interruptores/ …"); location.href = "/demo/interruptores/?auto=1"; return; }
       // /interface y /demo interface: la MISMA implementación que la home (assets/interface-cli.js), cargada al vuelo.
       if (/^\/(interface|interfaz)(\s|$)|^\/?demo\s+(interface|interfaz|terminal|terminales)\s*$/i.test(String(orden).trim())) {
         out.textContent = "…";
@@ -502,7 +504,7 @@
       if (!arg || h) return A.demoHelp(h ? arg.slice(h[0].length) : "");
       var sd = A.sugerir(arg, A.CATALOGO.map(function (d) { return d[0].replace(/^\/demo /, ""); }));
       return T("Demo desconocida en esta página: ", "Unknown demo on this page: ") + arg + (sd ? T(" · ¿Quisiste decir /demo ", " · Did you mean /demo ") + sd + "?" : "") +
-        T(" (aquí solo /demo interface; las demás, en la home ⌘)\n", " (only /demo interface here; the rest on the home page ⌘)\n") + A.demoHelp("");
+        T(" (aquí /demo interface y /demo interruptores; las demás, en la home ⌘)\n", " (here /demo interface and /demo interruptores; the rest on the home page ⌘)\n") + A.demoHelp("");
     }
     var v = (/^\/?(\S+)/.exec(line) || [])[1] || "";
     var s = A.sugerir(v, CONSOLA_LOCAL.map(function (c) { return c.slice(1); }).concat(["demo"]));

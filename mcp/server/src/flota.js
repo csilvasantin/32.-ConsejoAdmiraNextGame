@@ -58,10 +58,9 @@ export function personaCanonica(nombre) {
   // El prefijo corto («Y») no vale: «yokup» empezaría por esa silla.
   return PERSONAS.find((p) => n === norm(p)) || PERSONAS.find((p) => norm(p).length >= 3 && n.startsWith(norm(p))) || null;
 }
-// EQUIPO DE CASA de un agente (Carlos, 11-10-2026: Morfeo trabaja en su terminal «morfeo» del MacBook Pro 16,
-// no en el Mac Mini). Un encargo sin máquina va ahí aunque la persona también lata en otros equipos.
-// Smith (Grok CLI, equipo de Jobs) igual desde el 11-10-2026: Carlos solo quiere deepagents en Macs que ve.
-// Oráculo (Codex) igual desde el 11-10-2026 14:18: sale del Mac Mini a su terminal «oraculo» del MacBook Pro 16.
+// EQUIPO DE CASA de un agente (Carlos, 11-10-2026: Morfeo, Smith y Oráculo trabajan en su terminal del MacBook Pro 16).
+// Desde el 13-10-2026 ya NO fija el destino de un encargo: manda la máquina del último latido vivo de la persona
+// (una casa apagada se tragaba los encargos reenviados). La casa solo desempata dos latidos del mismo segundo.
 export const CASA_AGENTE = { Morfeo: 'macbookpro16', Smith: 'macbookpro16', Oraculo: 'macbookpro16' };
 
 export const esConsejero = (persona) => CONSEJEROS.includes(personaCanonica(persona));
@@ -231,10 +230,15 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     };
   }
 
-  /** Máquina donde late la persona (una sola, o la de latido más reciente). Primero, su equipo de casa. */
+  /** Latidos vivos (≤15 min) de la persona con máquina declarada, el más reciente primero; la casa solo desempata. */
+  async function latidosDe(persona) {
+    const casa = CASA_AGENTE[persona] || '';
+    return (await presenciaViva()).filter((r) => personaCanonica(r.persona) === persona && norm(r.machine))
+      .sort((a, b) => seg(b.updated) - seg(a.updated) || (norm(b.machine) === casa) - (norm(a.machine) === casa));
+  }
+  /** Máquina del último latido vivo de la persona; '' si no late en ninguna. Nunca una fija ni una apagada. */
   async function maquinaDe(persona) {
-    if (CASA_AGENTE[persona]) return CASA_AGENTE[persona];
-    const filas = (await presenciaViva()).filter((r) => personaCanonica(r.persona) === persona).sort((a, b) => seg(b.updated) - seg(a.updated));
+    const filas = await latidosDe(persona);
     return filas[0] ? norm(filas[0].machine) : '';
   }
 
@@ -255,13 +259,26 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const limite = String(deadline || '').trim(); const hecho = String(criterio || '').trim();
     if (limite || hecho) cuerpo += `${limite ? `\n⏰ Fecha límite: ${limite}` : ''}${hecho ? `\n✅ Criterio de hecho: ${hecho}` : ''}`;
     let destino = maquina ? norm(maquina) : '';
-    let nota = '';
+    let nota = '', pedida = '';
     if (libre) { destino = ''; nota = `${libre.nombre} (${libre.rol} · ${libre.gen}) es consejero no principal: no se despierta su Grok Bot. Lo contesta Cypher en la GrokBotBox con Nemotron 3 Ultra (gratis) firmando como ${libre.nombre}; suele tardar 1-3 min y atiende de uno en uno`; }
     else if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = `consejero de GrokBot (silla ${SILLAS[p].rol} · ${SILLAS[p].maquina}): el worker lo despierta por su webhook; suele contestar en 1-3 min`; }
-    else if (!destino) {
-      destino = await maquinaDe(p);
-      nota = destino ? `en cola para ${p} en ${destino} (${CASA_AGENTE[p] ? 'su equipo de casa' : 'la máquina donde late ahora'}); su vigilante lo inyecta en su sesión en ≤15 s` : `${p} no late en ningún equipo desde hace 15 min: el encargo queda en cola y lo cogerá al despertar; a los 30 min sin acuse se reasigna`;
-    } else nota = `en cola para ${p} en ${destino}; si allí no late, a los 30 min se reasigna`;
+    else {
+      // El destino sale del último latido vivo de la persona (también al reenviar con la máquina del encargo
+      // original): una máquina pedida donde ya no late no se respeta si late en otra, y sin latido no se fija ninguna.
+      pedida = destino;
+      let latidos = null, fallo = '';
+      try { latidos = await latidosDe(p); } catch (e) { fallo = String(e && e.message || e); }
+      if (!latidos) {
+        nota = pedida ? `en cola para ${p} en ${pedida}, la máquina pedida: no se pudo leer la presencia para comprobar que late allí (${fallo}); si no late, a los 30 min se reasigna`
+          : `no se pudo leer la presencia (${fallo}): el encargo queda en cola para ${p} sin máquina fija y lo cogerá donde despierte; a los 30 min sin acuse se reasigna`;
+      } else {
+        const viva = latidos.find((r) => norm(r.machine) === pedida) || latidos[0] || null;
+        destino = viva ? norm(viva.machine) : '';
+        if (!viva) nota = `${p} no late en ningún equipo desde hace 15 min${pedida ? ` (tampoco en ${pedida}, la máquina pedida)` : ''}: el encargo queda en cola sin máquina fija y lo cogerá al despertar; a los 30 min sin acuse se reasigna`;
+        else if (pedida && destino !== pedida) nota = `${p} no late en ${pedida} (la máquina pedida): el encargo va a ${destino}, la de su último latido vivo (${hace(viva.updated)}); su vigilante lo inyecta en su sesión en ≤15 s`;
+        else nota = `en cola para ${p} en ${destino}, ${pedida ? 'la máquina pedida, donde late' : 'la máquina de su último latido vivo'} (${hace(viva.updated)}); su vigilante lo inyecta en su sesión en ≤15 s`;
+      }
+    }
     const firma = de || (identidad ? identidad.agent : 'MCP admira.live');
     // Contrato del bot-inbox: con proyecto el encargo nace como misión FLT en yokup; sin proyecto
     // es conversación (materialize_mission:false) y no ensucia el tablero de misiones.
@@ -272,7 +289,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const r = await llamar(`${base}/api/bot-inbox`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!r || !r.ok) throw new Error(`el bot-inbox no aceptó el encargo: ${JSON.stringify(r)}`);
     const etiqueta = etiquetaEncargo(r.id, r.ts, r.etiqueta);
-    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, ...(libre ? { consejero: libre.nombre, via: 'Nemotron 3 Ultra (gratis)', atiende: 'Cypher · grokbotbox', grokbot: false } : {}), publicado_en_telegram: r.posted !== false, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
+    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, ...(libre ? { consejero: libre.nombre, via: 'Nemotron 3 Ultra (gratis)', atiende: 'Cypher · grokbotbox', grokbot: false } : {}), publicado_en_telegram: r.posted !== false, maquina: destino || null, ...(pedida && pedida !== destino ? { maquina_pedida: pedida } : {}), de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
       ...(limite ? { deadline: limite } : {}), ...(hecho ? { criterio: hecho } : {}),
       nota, siguiente: `encargo_estado con encargo=${r.id} para leer el acuse y la respuesta. La etiqueta visible es ${etiqueta || ("#" + r.id)} (se publica también en hilo en Telegram y en admira.live/telegram).` };
   }

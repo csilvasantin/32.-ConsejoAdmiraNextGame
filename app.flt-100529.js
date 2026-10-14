@@ -6195,15 +6195,20 @@
         const previousFocus = document.activeElement;
         document.getElementById("analizar-cancel").onclick = () => { ov.remove(); previousFocus?.focus(); };
         document.getElementById("analizar-cancel").focus();
-        ov.addEventListener("keydown", event => {
-            if (event.key === "Escape") { ov.remove(); previousFocus?.focus(); }
+        const overlayEvents = new AbortController();
+        const overlayRemoval = new MutationObserver(() => { if (!ov.isConnected) { overlayEvents.abort(); overlayRemoval.disconnect(); } });
+        overlayRemoval.observe(document.body, { childList: true });
+        document.addEventListener("keydown", event => {
+            if (!ov.isConnected) return;
+            if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); ov.remove(); previousFocus?.focus(); }
             if (event.key === "Tab") {
                 const items = [...ov.querySelectorAll("button, a[href], input, textarea, summary")].filter(el => !el.disabled && el.getClientRects().length);
                 const first = items[0], last = items[items.length - 1];
-                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                if (!ov.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
+                else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
                 else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
             }
-        });
+        }, { capture: true, signal: overlayEvents.signal });
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 
         // Contador vivo del textarea en modo texto

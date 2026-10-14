@@ -30,12 +30,16 @@ export async function webcamRequest(request, env, {fetchImpl, relays, cors}) {
   let identity;
   try {
     // Do not fail over authentication to another session authority.
-    const response = await fetchImpl(relays[0].base + '/api/auth/session', {headers: {Cookie: cookie, Origin: origin}, redirect: 'error', signal: AbortSignal.timeout(8000)});
+    const response = await fetchImpl(relays[0].base + '/api/auth/session', {headers: {Cookie: cookie, Origin: origin}, redirect: 'manual', signal: AbortSignal.timeout(8000)});
     if (response.status === 401 || response.status === 403) return json({error: 'session_required'}, 401);
     if (!response.ok) return json({error: 'auth_unavailable'}, 503);
     identity = await response.json();
     if (identity.ok !== true || !identity.email || !/^[A-Za-z0-9_-]{32}$/.test(identity.csrf)) return json({error: 'auth_unavailable'}, 503);
-  } catch { return json({error: 'auth_unavailable'}, 503); }
+  } catch (error) {
+    // This request uses only the fixed auth URL (never the webcam secret URL).
+    console.warn('webcam_auth_unavailable', error.name);
+    return json({error: 'auth_unavailable'}, 503);
+  }
   let move;
   if (endpoint === 'mover') {
     if (request.headers.get('X-Fleet-CSRF') !== identity.csrf) return json({error: 'csrf_invalid'}, 403);
@@ -64,7 +68,7 @@ export async function webcamRequest(request, env, {fetchImpl, relays, cors}) {
   } catch { return json({error: 'webcam_not_configured'}, 503); }
   try {
     const url = base.href.replace(/\/$/, '') + '/' + encodeURIComponent(env.WEBCAM_KEY) + '/' + endpoint;
-    const response = await fetchImpl(url, {method: request.method, headers: move ? {'Content-Type': 'application/json'} : {'Accept': endpoint === 'foto.jpg' ? 'image/jpeg' : 'application/json'}, body: move ? JSON.stringify(move) : undefined, redirect: 'error', signal: AbortSignal.timeout(12000), cache: 'no-store'});
+    const response = await fetchImpl(url, {method: request.method, headers: move ? {'Content-Type': 'application/json'} : {'Accept': endpoint === 'foto.jpg' ? 'image/jpeg' : 'application/json'}, body: move ? JSON.stringify(move) : undefined, redirect: 'manual', signal: AbortSignal.timeout(12000), cache: 'no-store'});
     if (!response.ok) return json({error: 'webcam_unavailable'}, 502);
     if (endpoint === 'foto.jpg') {
       if (!/^image\/jpeg(?:;|$)/i.test(response.headers.get('Content-Type') || '')) return json({error: 'invalid_photo'}, 502);

@@ -24,7 +24,7 @@ test('photo requires an authenticated cookie and rejects client keys/tokens', as
   const s = setup({sessionStatus: 401}); assert.equal((await s.request('foto.jpg')).status, 401); assert.equal(s.calls.length, 1);
 });
 test('closed authentication failures and rejected origins never contact camera', async () => {
-  for (const sessionStatus of [403, 503]) { const s = setup({sessionStatus}); assert.equal((await s.request('estado')).status, sessionStatus === 403 ? 401 : 503); assert.equal(s.calls.length, 1); }
+  for (const sessionStatus of [403, 503, 302]) { const s = setup({sessionStatus}); assert.equal((await s.request('estado')).status, sessionStatus === 403 ? 401 : 503); assert.equal(s.calls.length, 1); }
   for (const Origin of ['', 'null', 'https://evil.example']) { const s = setup(); assert.equal((await s.request('estado', {headers: {Origin}})).status, 403); assert.equal(s.calls.length, 0); }
 });
 test('secret stays only in camera request; cookies never reach camera; photo uncached', async () => {
@@ -33,7 +33,7 @@ test('secret stays only in camera request; cookies never reach camera; photo unc
   assert.equal(r.headers.get('Location'), null); assert.equal(r.headers.get('Set-Cookie'), null);
   assert.equal(s.calls[0].options.headers.Cookie, '__Host-fleet_session=valid');
   assert.equal(s.calls[1].url, env.WEBCAM_BASE + key + '/foto.jpg');
-  assert.equal(new Headers(s.calls[1].options.headers).get('Cookie'), null); assert.equal(s.calls[1].options.redirect, 'error');
+  assert.equal(new Headers(s.calls[1].options.headers).get('Cookie'), null); assert.equal(s.calls[1].options.redirect, 'manual');
   assert.ok(![...r.headers].flat().join().includes(key)); assert.ok(!(await r.text()).includes(key));
 });
 test('movement validates exact CSRF and input before calling camera', async () => {
@@ -50,7 +50,7 @@ test('absolute, relative and four preset movements; no automatic replay', async 
   const s = setup({failure: true}); const r = await s.request('mover', {method: 'POST', headers: {'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: '{"preset":"sala"}'}); assert.equal(r.status, 502); assert.equal(s.calls.length, 2); assert.ok(!(await r.text()).includes(key));
 });
 test('upstream error and arbitrary metadata cannot leak secret', async () => {
-  for (const settings of [{failure: true}, {upstreamStatus: 404}, {cameraValue: {pan: key}}]) { const s = setup(settings); const r = await s.request('estado'); assert.equal(r.status, 502); assert.ok(!(await r.text()).includes(key)); }
+  for (const settings of [{failure: true}, {upstreamStatus: 404}, {upstreamStatus: 302}, {cameraValue: {pan: key}}]) { const s = setup(settings); const r = await s.request('estado'); assert.equal(r.status, 502); assert.ok(!(await r.text()).includes(key)); }
   const s = setup({cameraValue: {...state, debug: key}}); assert.deepEqual(await (await s.request('estado')).json(), {...state, presets: ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha']});
   assert.equal((await s.request('mover', {method: 'POST', headers: {'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: '{"preset":"sala"}'})).status, 200);
 });

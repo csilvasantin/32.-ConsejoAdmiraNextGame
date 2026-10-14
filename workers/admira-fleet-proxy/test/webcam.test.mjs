@@ -71,3 +71,46 @@ test('successful empty move acknowledgment does not turn a physical move into an
   const response = await proxy.fetch(new Request('https://fleet.admira.live/api/webcam/mover', {method: 'POST', headers: {Origin: 'https://www.admira.live', Cookie: '__Host-fleet_session=valid', 'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: '{"preset":"sala"}'}), env);
   assert.equal(response.status, 200); assert.deepEqual(await response.json(), {ok: true}); assert.equal(calls.length, 2);
 });
+
+test('editable presets preserve only six validated server names and coordinates',async()=>{
+ const ids=['sala','pantallas-izquierda','pantallas-centro','pantallas-derecha','puerta','recreativa'];
+ const lista=ids.map((id,i)=>({id,nombre:'Vista '+i,pan:0,tilt:0,zoom:100,debug:key}));
+ const s=setup({cameraValue:{...state,lista}});const r=await s.request('estado');
+ assert.equal(r.status,200);const output=await r.json();assert.equal(output.lista.length,6);assert.equal(output.lista[5].nombre,'Vista 5');assert.ok(!JSON.stringify(output).includes(key));
+ for(const bad of [lista.slice(1),lista.map(x=>({...x,nombre:'x'.repeat(25)})),lista.map(x=>({...x,zoom:900})),lista.map(x=>({...x,id:'sala'}))]){
+  const t=setup({cameraValue:{...state,lista:bad}});assert.equal((await t.request('estado')).status,502);
+ }
+});
+test('save and rename require CSRF, fixed id and a bounded name; never replay',async()=>{
+ for(const endpoint of ['presets/guardar','presets/renombrar']){
+  const valid={id:'recreativa',nombre:'Mesa <2>'};const s=setup();const options={method:'POST',headers:{'Content-Type':'application/json','X-Fleet-CSRF':csrf},body:JSON.stringify(valid)};
+  assert.equal((await s.request(endpoint,options)).status,200);assert.deepEqual(JSON.parse(s.calls[1].options.body),valid);assert.ok(s.calls[1].url.endsWith('/'+endpoint));
+  for(const body of [{id:'unknown',nombre:'A'},{id:'sala',nombre:''},{id:'sala',nombre:'x'.repeat(25)},{id:'sala',nombre:'a\nb'},{id:'sala',nombre:'A',url:'evil'}])assert.equal((await s.request(endpoint,{...options,body:JSON.stringify(body)})).status,400);
+  assert.equal((await s.request(endpoint,{...options,headers:{'Content-Type':'application/json'}})).status,403);
+ }
+ const s=setup();assert.equal((await s.request('presets/guardar',{method:'POST',headers:{'Content-Type':'application/json','X-Fleet-CSRF':csrf},body:'{"id":"sala"}'})).status,200);
+ assert.equal((await s.request('presets/renombrar',{method:'POST',headers:{'Content-Type':'application/json','X-Fleet-CSRF':csrf},body:'{"id":"sala"}'})).status,400);
+});
+test('player modules are authenticated and strip upstream credentials and headers',async()=>{
+ const calls=[];
+ const fetchImpl=async(url,options)=>{calls.push({url,options});return url.endsWith('/api/auth/session')?Response.json({ok:true,email:'user@example.com',csrf}):new Response("export const example = 'safe';",{headers:{'Content-Type':'application/javascript','Set-Cookie':key,'Location':key}});};
+ for(const module of ['video-stream.js','video-rtc.js']){
+  const r=await webcamRequest(new Request('https://fleet.admira.live/api/webcam/'+module,{headers:{Origin:'https://www.admira.live',Cookie:'__Host-fleet_session=valid'}}),env,{fetchImpl,relays:[{base:'https://auth.example'}],cors:applyCors});
+  assert.equal(r.status,200);assert.match(r.headers.get('Content-Type'),/javascript/);assert.equal(r.headers.get('Location'),null);assert.ok(!(await r.text()).includes(key));assert.equal(new Headers(calls.at(-1).options.headers).get('Cookie'),null);
+ }
+ const s=setup();assert.equal((await s.request('video-stream.js',{headers:{Cookie:''}})).status,401);
+});
+test('WebSocket upgrade requires origin and session; passes socket without secret headers',async()=>{
+ const NativeResponse=globalThis.Response,socket={fixture:true},calls=[];
+ // Node Fetch cannot construct status 101. Model only the Cloudflare extension.
+ globalThis.Response=class extends NativeResponse{constructor(body,options){if(options?.status===101){super(null,{headers:options.headers});Object.defineProperty(this,'status',{value:101});this.webSocket=options.webSocket;}else super(body,options);}};
+ try {
+  const fetchImpl=async(url,options)=>{calls.push({url,options});return url.endsWith('/api/auth/session')?NativeResponse.json({ok:true,email:'user@example.com',csrf}):{status:101,webSocket:socket};};
+  const request=headers=>new Request('https://fleet.admira.live/api/webcam/ws',{headers:{Origin:'https://www.admira.live',Cookie:'__Host-fleet_session=valid',Upgrade:'websocket',...headers}});
+  const context={fetchImpl,relays:[{base:'https://auth.example'}],cors:applyCors};
+  assert.equal((await webcamRequest(request({Cookie:''}),env,context)).status,401);
+  assert.equal((await webcamRequest(request({Origin:'https://evil.example'}),env,context)).status,403);
+  assert.equal((await webcamRequest(request({Upgrade:''}),env,context)).status,426);
+  const r=await webcamRequest(request(),env,context);assert.equal(r.status,101);assert.equal(r.webSocket,socket);assert.equal(calls.at(-1).url,env.WEBCAM_BASE+key+'/ws');assert.equal(calls.at(-1).options.headers.Upgrade,'websocket');assert.equal(new Headers(calls.at(-1).options.headers).get('Cookie'),null);assert.ok(![...r.headers].flat().join().includes(key));
+ }finally{globalThis.Response=NativeResponse;}
+});

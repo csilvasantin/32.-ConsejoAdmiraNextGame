@@ -24,26 +24,31 @@ npm test
 El despliegue requiere el gate de QA y se ejecuta desde este directorio con
 Wrangler. No se deben copiar tokens o secretos al repositorio.
 
-## Webcam de Analizar (#5856)
+## Webcam de Analizar (#5863)
 
-`GET /api/webcam/foto.jpg`, `GET /api/webcam/estado` y `POST /api/webcam/mover`
-son endpoints cerrados: requieren `Origin` de Admira Live y la cookie SSO
-`__Host-fleet_session` vigente. El Worker consulta la autoridad de sesión del
-Mac Mini en cada petición; mover exige además el CSRF exacto de esa sesión.
-Los tokens de máquinas y la sesión de agente de solo lectura no dan acceso.
+Fleet reenvía sólo /api/webcam/* al origen fijo www.admira.live. La Pages
+Function consulta la sesión SSO de Fleet en cada petición antes de usar los
+secretos WEBCAM_BASE y WEBCAM_KEY de Pages production. El navegador sólo
+conoce URLs públicas de fleet.admira.live; nunca recibe la llave ni la base.
 
-Configurar **ambos como secretos de Wrangler**, nunca en `[vars]` ni en el
-cliente: `WEBCAM_BASE` es la base HTTPS que termina en `/webcam/`;
-`WEBCAM_KEY` es la llave del backend. El despliegue no contiene sus valores.
-El proxy limita endpoints, JSON y rangos UVC, no sigue redirects, no reintenta
-movimientos y elimina los metadatos y errores del upstream. Las fotos y el
-estado salen con `Cache-Control: no-store, private`.
+Rutas: GET estado, foto.jpg (compatibilidad), video-stream.js, video-rtc.js y
+ws (Upgrade: websocket); POST mover, presets/guardar {id,nombre?} y
+presets/renombrar {id,nombre}. Toda mutación exige CSRF exacto. Se aceptan
+sólo los seis ids fijos; nombres de 1–24 caracteres sin controles. Estado
+conserva lista [{id,nombre,pan,tilt,zoom}] validada y descarta otros metadatos.
+No hay redirects ni reintentos de mutaciones. Los sockets se autentican al
+conectar y se transfieren en ambos saltos con Response.webSocket (Workers).
 
-La UI recibe una foto cada 5 s mientras el panel está abierto y la pestaña
-visible. Son fotos JPEG, no streaming ni audio. Tras mover espera 3,5 s por
-el caché de hasta 3 s del puente UVC; ante error mantiene la última hora real
-de recepción. Hay cuatro presets; el puente puede tener otros, no ofrecidos
-en este panel. `/demo` es pública y solo dibuja datos simulados.
+La UI carga los módulos go2rtc v1.9.14 desde el backend con fetch autenticado,
+resuelve el import relativo mediante blobs y usa exclusivamente MSE,
+H.264 + AAC. Esto permite conservar la cookie HttpOnly exclusiva de Fleet.
+Necesita MediaSource/ManagedMediaSource y soporte H.264/AAC (Safari 17+).
+El sonido entra silenciado, M o botón lo cambia. H muestra el overlay;
+1–6 presets, flechas de 5° y zoom ±25. Guardar/Renombrar pide elegir un
+preset y confirmar su nombre; guardar sustituye su posición en el servidor.
+El búfer añade retraso; la cifra mostrada mide búfer, no latencia total.
+Salir o esconder la pestaña detiene vídeo; reabrir vuelve a silenciarlo.
 
-El minitutorial de `/tutoriales/webcam-5856.mp4` se exporta con el generador
-oficial de AdmiraNeXT: animación de instrucciones, no grabación de pantalla.
+/demo no conecta con la cámara: imagen, posiciones y cambios simulados sólo
+durante la visita. /tutoriales/webcam-5863.mp4 es un minitutorial exportado
+con el generador oficial AdmiraNeXT; animación de instrucciones, no pantalla.

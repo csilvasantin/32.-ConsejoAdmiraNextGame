@@ -538,8 +538,13 @@
     "Estas novedades salen en el popover del sello, sin recorte del riel"
   ],
   "default": [
-    "Analizar: overlay de webcam con seis presets (1–6), H o botón móvil para los controles, flechas de 5° y zoom de 25 unidades.",
-    "Proxy de cámara en Pages con secretos de producción y comprobación SSO en cada petición. Fotos cada 5 s; sin audio ni vídeo continuo.",
-    "Minitutorial animado de 15 s en /tutoriales/webcam-5858.mp4 y demo simulada en /demo."
+    "Analizar: vídeo y audio en vivo por MSE; M silencia o activa el sonido (silenciado al entrar), H muestra los controles. Requiere H.264/AAC compatible.",
+    "Seis presets editables en el servidor: Guardar posición aquí… o Renombrar…, elegir 1–6 y confirmar nombre de hasta 24 caracteres.",
+    "Demo pública simulada en /demo. Minitutorial animado en /tutoriales/webcam-5863.mp4."
+  ],
+  "v.14.10.2026.r46.07:44": [
+    "Analizar: vídeo y audio en vivo por MSE; M silencia o activa el sonido (silenciado al entrar), H muestra los controles. Requiere H.264/AAC compatible.",
+    "Seis presets editables en el servidor: Guardar posición aquí… o Renombrar…, elegir 1–6 y confirmar nombre de hasta 24 caracteres.",
+    "Demo pública simulada en /demo. Minitutorial animado en /tutoriales/webcam-5863.mp4."
   ]
 }

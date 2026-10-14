@@ -121,12 +121,13 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
         try {
           const response = await fetchImpl('https://www.admira.live' + url.pathname, {
             method: request.method,
-            headers: new Headers([...request.headers].filter(([name]) => ['origin', 'cookie', 'content-type', 'x-fleet-csrf', 'accept'].includes(name))),
+            headers: new Headers([...request.headers].filter(([name]) => ['origin', 'cookie', 'content-type', 'x-fleet-csrf', 'accept', 'upgrade'].includes(name))),
             body: request.method === 'POST' ? request.body : undefined,
             redirect: 'manual', signal: AbortSignal.timeout(22000)
           });
           if (response.status >= 300 && response.status < 400) throw new Error('redirect');
           const headers = applyCors(new Headers({'Cache-Control':'no-store, private', 'X-Content-Type-Options':'nosniff'}), origin);
+          if (response.status === 101 && response.webSocket) return new Response(null, {status: 101, webSocket: response.webSocket, headers});
           headers.set('Content-Type', response.headers.get('Content-Type') || 'application/json');
           return new Response(response.body, {status: response.status, headers});
         } catch { return jsonResponse(origin, {error:'webcam_unavailable'}, 502); }

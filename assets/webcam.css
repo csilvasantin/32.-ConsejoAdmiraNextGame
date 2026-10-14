@@ -43,3 +43,18 @@
 .webcam-demo-page .webcam-panel{padding:20px;background:#1a1a2e;border:2px solid #3a6aaa}
 @media(max-width:620px){.webcam-demo-page{padding:12px}.webcam-demo-page .webcam-panel,#analizar-overlay>.analizar-dialog{padding:12px}.webcam-heading h4{font-size:17px}.webcam-frame{min-height:410px}.webcam-presets button{font-size:12px;padding:4px}.webcam-controls{width:calc(100% - 12px);padding:8px;bottom:6px}}
 @media(prefers-reduced-motion:reduce){.webcam-panel *{scroll-behavior:auto}}
+.webcam-player,.webcam-player video-stream{display:block;width:100%;height:100%;min-width:0}
+.webcam-player video{object-fit:contain;width:100%;height:100%}
+.webcam-player .info{display:none}
+.webcam-frame{min-height:460px}
+.webcam-panel button.webcam-mute{position:absolute;right:62px;top:10px;width:44px;height:44px;padding:0;border-radius:50%;background:#0009;font-size:20px}
+.webcam-edit{display:flex;gap:6px}.webcam-edit button{flex:1;font-size:12px}
+.webcam-edit button[aria-pressed="true"]{background:#805000}
+.webcam-presets button[aria-pressed="true"]{border-color:#9de6c4}
+.webcam-editor{display:grid;gap:6px;background:#182435;padding:8px;border-radius:8px}
+.webcam-editor[hidden]{display:none}
+.webcam-editor label{display:grid;font-size:12px;gap:4px}
+.webcam-editor input{width:100%;min-width:0;min-height:44px;font:inherit;padding:6px;color:#fff;background:#101c2e;border:1px solid #51759e;border-radius:6px}
+.webcam-editor>div{display:flex;gap:6px}.webcam-editor button{flex:1}
+.webcam-controls:has(.webcam-editor:not([hidden])) .webcam-motion,.webcam-controls:has(.webcam-editor:not([hidden])) .webcam-position{display:none}
+@media(max-width:620px){.webcam-frame{min-height:460px}.webcam-edit button{padding:6px}}

@@ -17,3 +17,12 @@ test('Pages routing neither retries mutations nor follows redirects',async()=>{
   assert.equal(r.status,502);assert.equal(calls,1);assert.ok(!(await r.text()).includes('secret'));
  }
 });
+test('Fleet preserves the Pages WebSocket upgrade and keeps the fixed public target',async()=>{
+ const NativeResponse=globalThis.Response,socket={},calls=[];
+ globalThis.Response=class extends NativeResponse{constructor(body,options){if(options?.status===101){super(null,{headers:options.headers});Object.defineProperty(this,'status',{value:101});this.webSocket=options.webSocket;}else super(body,options);}};
+ try{
+  const proxy=createFleetProxy({fetchImpl:async(url,options)=>{calls.push({url,options});return {status:101,webSocket:socket};}});
+  const r=await proxy.fetch(new Request('https://fleet.admira.live/api/webcam/ws',{headers:{Origin:'https://www.admira.live',Cookie:'__Host-fleet_session=valid',Upgrade:'websocket'}}));
+  assert.equal(r.status,101);assert.equal(r.webSocket,socket);assert.equal(calls[0].url,'https://www.admira.live/api/webcam/ws');assert.equal(calls[0].options.headers.get('Upgrade'),'websocket');assert.equal(calls.length,1);
+ }finally{globalThis.Response=NativeResponse;}
+});

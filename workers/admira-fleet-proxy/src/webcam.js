@@ -71,8 +71,7 @@ export async function webcamRequest(request, env, {fetchImpl, relays, cors}) {
       headers.set('Content-Type', 'image/jpeg');
       return new Response(response.body, {headers});
     }
-    const value = await response.json();
-    if (endpoint === 'estado') return json(safeState(value));
+    if (endpoint === 'estado') return json(safeState(await response.json()));
     // Some UVC bridges acknowledge moves without returning state. Read /estado
     // separately in the UI rather than exposing the bridge response verbatim.
     return json({ok: true});

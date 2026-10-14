@@ -59,3 +59,13 @@ test('allowlisted endpoints, methods and HTTPS server configuration only', async
   assert.equal((await s.request('anything')).status, 404); assert.equal((await s.request('foto.jpg', {method: 'POST'})).status, 405);
   for (const config of [{}, {...env, WEBCAM_BASE: 'http://camera.example/'}, {...env, WEBCAM_KEY: '../bad'}]) assert.equal((await s.request('estado', {config})).status, 503);
 });
+
+test('successful empty move acknowledgment does not turn a physical move into an error', async () => {
+  const calls = [];
+  const proxy = createFleetProxy({relays: [{base: 'https://auth.example/fleet'}], fetchImpl: async url => {
+    calls.push(url);
+    return url.endsWith('/api/auth/session') ? Response.json({ok: true, email: 'user@example.com', csrf}) : new Response(null, {status: 204});
+  }});
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/webcam/mover', {method: 'POST', headers: {Origin: 'https://www.admira.live', Cookie: '__Host-fleet_session=valid', 'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: '{"preset":"sala"}'}), env);
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), {ok: true}); assert.equal(calls.length, 2);
+});

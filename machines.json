@@ -438,6 +438,42 @@
         "connect_tailscale": "ssh bitsatoms@100.119.58.65"
       },
       "mac_address": ""
+    },
+    {
+      "id": "admira-iphone-carlos",
+      "unitType": "iot",
+      "name": "iPhone de Carlos",
+      "emoji": "📱",
+      "member": "Carlos",
+      "role": "Player DS · móvil",
+      "machineRole": "Reproductor de digital signage móvil",
+      "location": "Móvil · Carlos",
+      "platform": "ios",
+      "status": "unknown",
+      "signageBatch": false,
+      "signage": {
+        "url": "https://www.admira.tv/canal",
+        "screen": "iphone17-mupi"
+      },
+      "note": "Screen verificado en /signage/screens: iphone17-mupi, AdmiraIOSPlayer/1.1 (iPhone) AdmiraKiosk. Estado sólo por latido DS; ⏻ abre el canal en el navegador, no controla el móvil."
+    },
+    {
+      "id": "admira-samsung-fold-carlos",
+      "unitType": "iot",
+      "name": "Samsung Galaxy Z Fold",
+      "emoji": "📱",
+      "member": "Carlos",
+      "role": "Player DS · móvil",
+      "machineRole": "Reproductor de digital signage móvil",
+      "location": "Móvil · Carlos",
+      "platform": "android",
+      "status": "unknown",
+      "signageBatch": false,
+      "signage": {
+        "url": "https://www.admira.tv/canal",
+        "screen": "samsung-galaxy-fold-8-mupi"
+      },
+      "note": "Screen samsung-galaxy-fold-8-mupi verificado por ADB en shared_prefs/device.xml (config) y /api/playlist. Beta com.admira.nativeplayer.fold.dev v.12.10.2026.r9: no envía latido remoto; En línea sólo confirma descarga. Tailscale 100.74.143.8; sin SSH ni control remoto."
     }
   ]
 }

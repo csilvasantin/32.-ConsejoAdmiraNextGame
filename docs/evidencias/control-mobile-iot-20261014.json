@@ -1,0 +1,88 @@
+{
+  "mission": "DCL-283a31fc2917bae0aa262e4e",
+  "agent": "TrinityMBP14",
+  "machine": "MacBookProNegro14",
+  "pullRequest": "https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/pull/204",
+  "draft": true,
+  "mergeAuthorized": false,
+  "productionPublished": false,
+  "branch": "trinity/control-mobile-iot-20261014",
+  "preview": "https://5a71d1c8.admira-live.pages.dev/control/",
+  "previewAlias": "https://trinity-control-mobile-iot-2.admira-live.pages.dev/control/",
+  "verifiedCodeCommit": "f7682de2b8c985e92996c19fa6d0a57139744737",
+  "capturedAt": "2026-10-14T09:09:18.856Z",
+  "capture": "https://api.yokup.com/media/fleet/40efadda4d908008.png",
+  "captureProvenance": "Public static preview DOM. Soft login overlay hidden locally only; no auth mocked, no session, no remote mutations. URL evidence header injected only for screenshot.",
+  "cards": [
+    {
+      "id": "iphone-carlos",
+      "text": "📱\niPhone de Carlos\nPlayer DS · móvil · ios\n⠿\n🟢 online · último latido hace 155 s\nscreen: iphone17-mupi\nEstado del player por su latido (vigente hasta 5 minutos).\n⏻ abrir canal\nAbre el canal en este navegador.",
+      "href": "https://www.admira.tv/canal?screen=iphone17-mupi",
+      "remoteButtons": 0
+    },
+    {
+      "id": "samsung-fold-carlos",
+      "text": "📱\nSamsung Galaxy Z Fold\nPlayer DS · móvil · android\n⠿\n⚪ offline · sin latido registrado\nscreen: samsung-galaxy-fold-8-mupi\nBeta nativa Fold: aún no envía latidos. «Offline» indica ausencia de señal, no que el móvil esté apagado.\n⏻ abrir canal\nAbre el canal en este navegador.",
+      "href": "https://www.admira.tv/canal?screen=samsung-galaxy-fold-8-mupi",
+      "remoteButtons": 0
+    }
+  ],
+  "tests": {
+    "passed": 58,
+    "failed": 0,
+    "command": "node --test control/*.test.mjs fleet-control/control-signals.test.js fleet-control/signage-preflight.test.js fleet-control/agent-readonly.test.js",
+    "browser": "Chrome headless: real preview, real heartbeat route, both cards and URLs, no remote buttons; offline desktop fixture retained SSH/power/screenshot controls; fixture removed before capture",
+    "browserErrors": [],
+    "crossReview": "review_mobile_iot: sin bloqueos; corregidos bloqueo de arranque, clasificación degradada y CORS de preview"
+  },
+  "foldInvestigation": {
+    "package": "com.admira.nativeplayer.fold.dev",
+    "installedVersion": "v.12.10.2026.r9.15:37",
+    "screen": "samsung-galaxy-fold-8-mupi",
+    "identitySources": [
+      "USB ADB serial R3GL60807GE: run-as com.admira.nativeplayer.fold.dev shared_prefs/device.xml, config=samsung-galaxy-fold-8-mupi, localPlaylist=false",
+      "https://admira.tv/api/playlist?screen=samsung-galaxy-fold-8-mupi: draft.screen coincide, título Best Songs of 1981 · Samsung Fold · horizontal 16:9"
+    ],
+    "nativeSource": "https://github.com/csilvasantin/admira-signage-app/blob/cf5feb5b13445b41ed3552e2464885964c122f5b/native/player/src/main/java/com/admira/nativeplayer/PlayerActivity.java#L413",
+    "remoteHeartbeat": "No implementado en beta r9. En línea significa playlist/medios descargados; GET playlist cada 30 segundos. Telemetría de sincronización sólo en archivos locales cuando se configura el reloj.",
+    "proposal": "Trabajo futuro en el repo del player: POST https://api.admira.store/signage/now al empezar pieza y cada 60 s en primer plano; screen configurado, producer persistente, versión real, user_agent Android, pieza real y estado de reproducción; cesar al detener actividad. Verificar last_seen y age_seconds en signage/screens. No implementado en este PR."
+  },
+  "tutorial": {
+    "url": "https://api.yokup.com/media/fleet/3c4564f8ce695c9d.mp4",
+    "generator": "https://www.admiranext.com/tiktok/",
+    "kind": "Animación explicativa; no grabación de pantalla; sin locución integrada",
+    "script": "Atajo detectado: animación · móviles en admira.live/control. Desmarca «solo encendidos». Pulsa ⏻: abre el canal en este navegador. iPhone: online si late. Fold: sin latido; no significa apagado. No enciende ni apaga el móvil. Preview en revisión. Menos clics. Más hecho.",
+    "brief": {
+      "task": "Animación · móviles en admira.live/control",
+      "solution": "Desmarca «solo encendidos». Pulsa ⏻: abre el canal en este navegador.",
+      "result": "iPhone: online si late. Fold: sin latido; no significa apagado.",
+      "audience": "Equipo AdmiraNeXT",
+      "cta": "No enciende ni apaga el móvil. Preview en revisión."
+    },
+    "videoVerification": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1920
+        },
+        {
+          "codec_name": "aac"
+        }
+      ],
+      "format": {
+        "duration": "15.090233",
+        "size": "6949735"
+      }
+    },
+    "visualFramesCheckedSeconds": [
+      6,
+      12
+    ],
+    "socialPublishing": false
+  },
+  "authVerification": "No se dispone de sesión FleetControl en el contexto headless. Gate estático oculto sólo en el DOM local de QA; no se han creado ni simulado sesiones, ni ejecutado órdenes. No acredita login ni control remoto.",
+  "commitIdentityCorrection": "353dc42 y f7682de: autor Git TrinityMBP14 correcto; trailer Agente: Smith añadido incorrectamente por hook local autodetector. Autor real de ambos cambios: TrinityMBP14. Este informe y el commit de evidencia lo declaran explícitamente."
+}

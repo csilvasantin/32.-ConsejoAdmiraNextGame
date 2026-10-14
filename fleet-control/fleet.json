@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Fleet",
-  "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows. host = MagicDNS <nombre>.tail48b61c.ts.net. Los equipos relayCapable pueden servir FleetControl y operar al resto por SSH; Mac Mini es una ruta preferida, no un punto único de fallo.",
+  "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows|ios|android. host = MagicDNS <nombre>.tail48b61c.ts.net. Los equipos relayCapable pueden servir FleetControl y operar al resto por SSH; Mac Mini es una ruta preferida, no un punto único de fallo.",
   "machines": [
     { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Relay de control", "platform": "macos", "relayCapable": true, "signageBatch": false, "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookpro16", "name": "MacBook Pro 16", "emoji": "💻", "role": "Relay alternativo", "platform": "macos", "relayCapable": true, "signageBatch": true, "host": "macbook-pro-16.tail48b61c.ts.net", "user": "csilvasantin" },
@@ -19,6 +19,8 @@
     { "id": "admiratwin", "name": "Admira Twin", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "admiratwin.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "metahuman", "name": "MetaHuman PC", "emoji": "🪟", "role": "Render · Windows", "platform": "windows", "host": "metahuman.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "pc-gdg", "name": "PC GdG", "emoji": "🪟", "role": "PC Windows - GdG (Sitges)", "platform": "windows", "host": "pc-gdg.tail48b61c.ts.net", "user": "csilv" },
-    { "id": "asusfold", "name": "asusfold", "emoji": "🪟", "role": "Equipo AdmiraNeXT", "platform": "windows", "signageBatch": true, "host": "asusfold.tail48b61c.ts.net", "user": "csilv" }
+    { "id": "asusfold", "name": "asusfold", "emoji": "🪟", "role": "Equipo AdmiraNeXT", "platform": "windows", "signageBatch": true, "host": "asusfold.tail48b61c.ts.net", "user": "csilv" },
+    {"id": "iphone-carlos", "name": "iPhone de Carlos", "emoji": "📱", "role": "Player DS · móvil", "platform": "ios", "signageBatch": false, "signage": {"url": "https://www.admira.tv/canal", "screen": "iphone17-mupi"}},
+    {"id": "samsung-fold-carlos", "name": "Samsung Galaxy Z Fold", "emoji": "📱", "role": "Player DS · móvil", "platform": "android", "signageBatch": false, "signage": {"url": "https://www.admira.tv/canal", "screen": "samsung-galaxy-fold-8-mupi"}}
   ]
 }

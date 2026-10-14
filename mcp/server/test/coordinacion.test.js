@@ -127,6 +127,8 @@ const INBOX = [
   { id: 4807, ts: S - 300, from_name: 'Carlos', target_persona: 'Neo', target_machine: 'macmini', status: 'pending', text: 'para Neo', note: '' },
   { id: 1043, ts: S - 90000, from_name: 'x', target_persona: '', target_machine: 'macbookair16plata', status: 'pending', text: 'huérfano', note: '' },
   { id: 4808, ts: S - 200, from_name: 'Carlos', target_persona: 'Musk', target_machine: 'grokbot', status: 'ack', text: 'para Elon', note: '' },
+  { id: 4810, ts: S - 90, from_name: 'status-web · MorfeoMacMini', target_persona: 'Cypher', target_machine: 'grokbotbox', status: 'blocked', text: 'encargado por Morfeo desde el panel', note: 'ya no aplica' },
+  { id: 4811, ts: S - 80, from_name: 'status-web · NeoMacMini', target_persona: 'Cypher', target_machine: 'grokbotbox', status: 'pending', text: 'encargado por Neo desde el panel', note: '' },
   { id: 4809, ts: S - 100, from_name: 'Carlos', target_persona: 'Merovingio', target_machine: 'grokbotbox', status: 'cancelled', text: 'aviso de consumo', note: 'Anulado por Carlos 4-oct 23:16: aviso de consumo / obsoleto' },
 ];
 
@@ -233,6 +235,15 @@ test('encargo_responder: no toca encargos ajenos y exige nota en blocked y done'
   const { client: sinId } = await cliente({ identidad: null });
   const anon = await sinId.callTool({ name: 'encargo_responder', arguments: { numero: 4804, estado: 'ack' } });
   assert.equal(anon.isError, true); assert.match(anon.content[0].text, /sin identidad/);
+});
+
+test('encargo_anular: quien lo encargó desde el panel (remitente «status-web · …») puede anularlo; otro agente, no', async () => {
+  const { client, peticiones } = await cliente({ identidad: identidadAgente('Morfeo', 'MacMini') });
+  const r = res(await client.callTool({ name: 'encargo_anular', arguments: { numero: 4810, nota: 'Ya no aplica: los dos PR están mergeados' } }));
+  assert.equal(r.estado, 'cancelled');
+  assert.ok(peticiones.some((p) => p.method === 'POST' && p.url.endsWith('/4810/status') && p.body.status === 'cancelled'));
+  const ajeno = await client.callTool({ name: 'encargo_anular', arguments: { numero: 4811, nota: 'no es mío' } });
+  assert.equal(ajeno.isError, true); assert.match(ajeno.content[0].text, /quien lo encargó \(status-web · NeoMacMini\)/);
 });
 
 test('encargo_anular: un consejero anula un encargo ajeno; un agente que no lo encargó, no', async () => {

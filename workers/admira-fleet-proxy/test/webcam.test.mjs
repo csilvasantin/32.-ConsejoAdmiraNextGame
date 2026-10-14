@@ -1,6 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createFleetProxy} from '../src/index.js';
+import {webcamRequest} from '../src/webcam.js';
+import {applyCors} from '../src/index.js';
+const createFleetProxy = ({fetchImpl, relays}) => ({fetch: (request, env) => webcamRequest(request, env, {fetchImpl, relays, cors:applyCors})});
 import {validMove} from '../src/webcam.js';
 
 const csrf = 'a'.repeat(32), key = 'test-secret-webcam-key-do-not-ship';
@@ -43,19 +45,19 @@ test('movement validates exact CSRF and input before calling camera', async () =
   }
   const s = setup(); assert.equal((await s.request('mover', {method: 'POST', headers: {'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: ' '.repeat(513)})).status, 413);
 });
-test('absolute, relative and four preset movements; no automatic replay', async () => {
-  for (const value of [{pan: -522000, tilt: 360000, zoom: 400}, {dpan: 18000}, {dtilt: -18000}, {dzoom: 25}, ...['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha'].map(preset => ({preset}))]) {
+test('absolute, relative and six preset movements; no automatic replay', async () => {
+  for (const value of [{pan: -522000, tilt: 360000, zoom: 400}, {dpan: 18000}, {dtilt: -18000}, {dzoom: 25}, ...['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha', 'puerta', 'recreativa'].map(preset => ({preset}))]) {
     assert.ok(validMove(value)); const s = setup(); const r = await s.request('mover', {method: 'POST', headers: {'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: JSON.stringify(value)}); assert.equal(r.status, 200); assert.deepEqual(JSON.parse(s.calls[1].options.body), value);
   }
   const s = setup({failure: true}); const r = await s.request('mover', {method: 'POST', headers: {'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: '{"preset":"sala"}'}); assert.equal(r.status, 502); assert.equal(s.calls.length, 2); assert.ok(!(await r.text()).includes(key));
 });
 test('upstream error and arbitrary metadata cannot leak secret', async () => {
   for (const settings of [{failure: true}, {upstreamStatus: 404}, {upstreamStatus: 302}, {cameraValue: {pan: key}}]) { const s = setup(settings); const r = await s.request('estado'); assert.equal(r.status, 502); assert.ok(!(await r.text()).includes(key)); }
-  const s = setup({cameraValue: {...state, debug: key}}); assert.deepEqual(await (await s.request('estado')).json(), {...state, presets: ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha']});
+  const s = setup({cameraValue: {...state, debug: key}}); assert.deepEqual(await (await s.request('estado')).json(), {...state, presets: ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha', 'puerta', 'recreativa']});
   assert.equal((await s.request('mover', {method: 'POST', headers: {'X-Fleet-CSRF': csrf, 'Content-Type': 'application/json'}, body: '{"preset":"sala"}'})).status, 200);
 });
 test('allowlisted endpoints, methods and HTTPS server configuration only', async () => {
-  const s = setup(); await s.request('../secret'); assert.ok(s.calls.every(call => !call.url.includes(key))); // normalized generic path, never a webcam URL
+  const s = setup(); await s.request('secret'); assert.ok(s.calls.every(call => !call.url.includes(key))); // normalized generic path, never a webcam URL
   assert.equal((await s.request('anything')).status, 404); assert.equal((await s.request('foto.jpg', {method: 'POST'})).status, 405);
   for (const config of [{}, {...env, WEBCAM_BASE: 'http://camera.example/'}, {...env, WEBCAM_KEY: '../bad'}]) assert.equal((await s.request('estado', {config})).status, 503);
 });

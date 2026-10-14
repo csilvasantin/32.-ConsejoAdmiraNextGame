@@ -536,5 +536,10 @@
     "La imagen se sube a /api/chat/adjunto y el mensaje lleva la URL pública para que Jobs la vea",
     "/demo o /demo portada en Experto enseña en vivo estas dos mejoras (FLT-101758)",
     "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
+  "default": [
+    "Analizar: overlay de webcam con seis presets (1–6), H o botón móvil para los controles, flechas de 5° y zoom de 25 unidades.",
+    "Proxy de cámara en Pages con secretos de producción y comprobación SSO en cada petición. Fotos cada 5 s; sin audio ni vídeo continuo.",
+    "Minitutorial animado de 15 s en /tutoriales/webcam-5858.mp4 y demo simulada en /demo."
   ]
 }

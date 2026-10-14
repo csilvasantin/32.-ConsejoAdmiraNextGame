@@ -2,8 +2,8 @@
 (function () {
   'use strict';
   const API = 'https://fleet.admira.live/api/webcam/';
-  const presets = ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha'];
-  const labels = ['Sala', 'Pantallas izquierda', 'Pantallas centro', 'Pantallas derecha'];
+  const presets = ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha', 'puerta', 'recreativa'];
+  const labels = ['Sala', 'Pantalla izq.', 'Pantalla centro', 'Pantalla der.', 'Puerta', 'Recreativa'];
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
   window.AdmiraWebcam = {mount};
@@ -16,14 +16,17 @@
       <div class="webcam-heading"><h4>Webcam en vivo</h4><span class="webcam-badge">${demo ? 'DEMO · DATOS SIMULADOS' : 'Gran de Gràcia · Insta360 Link 2'}</span></div>
       <p class="webcam-note">${demo ? 'Ilustración simulada. Los controles no mueven ninguna cámara real.' : 'Fotos cada 5 s · sin audio. Usa un preset para ver las pantallas de la oficina.'}</p>
       <div class="webcam-layout">
-        <figure class="webcam-view"><div class="webcam-frame"><span class="webcam-placeholder">Conectando…</span><img alt="${demo ? 'Vista simulada de las pantallas' : 'Última foto de las pantallas de la oficina'}"></div><figcaption>Última foto ${demo ? 'simulada' : 'recibida'}: <time>—</time></figcaption></figure>
-        <div class="webcam-controls">
+        <figure class="webcam-view"><div class="webcam-frame"><span class="webcam-placeholder">Conectando…</span><img alt="${demo ? 'Vista simulada de las pantallas' : 'Última foto de las pantallas de la oficina'}">
+        <button type="button" class="webcam-toggle" data-toggle aria-label="Ocultar controles de cámara (H)" aria-expanded="true" title="Controles (H)">🎮</button>
+        <div class="webcam-controls" aria-label="Controles de cámara">
+          <div class="webcam-presets" role="group" aria-label="Vistas guardadas">${presets.map((preset, i) => `<button type="button" data-preset="${preset}" aria-keyshortcuts="${i + 1}">${i + 1} ${labels[i]}</button>`).join('')}</div>
+          <div class="webcam-motion">
           <div class="webcam-arrows" role="group" aria-label="Orientación de la cámara">
             <button type="button" data-move="up" aria-label="Inclinar arriba">↑</button><button type="button" data-move="left" aria-label="Girar izquierda">←</button><button type="button" data-move="right" aria-label="Girar derecha">→</button><button type="button" data-move="down" aria-label="Inclinar abajo">↓</button>
           </div>
-          <div><div class="webcam-zoom" role="group" aria-label="Zoom"><button type="button" data-move="in" aria-label="Aumentar zoom">Zoom +</button><button type="button" data-move="out" aria-label="Reducir zoom">Zoom −</button></div><div class="webcam-position"></div></div>
-          <div class="webcam-presets" role="group" aria-label="Vistas guardadas">${presets.map((preset, i) => `<button type="button" data-preset="${preset}">${labels[i]}</button>`).join('')}</div>
-        </div>
+          <div class="webcam-zoom" role="group" aria-label="Zoom"><button type="button" data-move="in" aria-label="Aumentar zoom">＋</button><button type="button" data-move="out" aria-label="Reducir zoom">−</button></div></div>
+          <div class="webcam-position"></div><div class="webcam-shortcuts">H controles · flechas mover · +/− zoom · 1–6 presets</div>
+        </div></div><figcaption>Última foto ${demo ? 'simulada' : 'recibida'}: <time>—</time></figcaption></figure>
       </div>
       <p class="webcam-status" role="status" aria-live="polite">Conectando…</p>
       <div class="webcam-links"><button type="button" data-refresh>Actualizar foto</button>${demo ? '<a href="/">Volver a Admira Live</a>' : '<a href="/demo" target="_blank" rel="noopener">Probar demo sin cámara</a>'}<a class="webcam-retry" href="/" hidden>Volver a entrar con Google</a></div>`;
@@ -83,7 +86,7 @@
       busy = true; enabled(); say('Moviendo cámara…');
       try {
         if (demo) {
-          if (command.preset) { selected = command.preset; state = [{pan: 0, tilt: 0, zoom: 100}, {pan: -120000, tilt: 0, zoom: 150}, {pan: 0, tilt: 0, zoom: 175}, {pan: 120000, tilt: 0, zoom: 150}][presets.indexOf(selected)]; }
+          if (command.preset) { selected = command.preset; state = [{pan: 0, tilt: 0, zoom: 100}, {pan: -120000, tilt: 0, zoom: 150}, {pan: 0, tilt: 0, zoom: 175}, {pan: 120000, tilt: 0, zoom: 150}, {pan: -240000, tilt: 0, zoom: 100}, {pan: 240000, tilt: -36000, zoom: 125}][presets.indexOf(selected)]; }
           else { state.pan = clamp(state.pan + (command.dpan || 0), -522000, 522000); state.tilt = clamp(state.tilt + (command.dtilt || 0), -324000, 360000); state.zoom = clamp(state.zoom + (command.dzoom || 0), 100, 400); }
         } else { await api('mover', command); state = await api('estado'); }
         position(); say(demo ? 'Vista simulada actualizada.' : 'Movimiento confirmado. La siguiente foto mostrará la nueva vista (hasta 5 s).');
@@ -94,11 +97,28 @@
       finally { busy = false; if (alive) enabled(); }
     }
     async function tick() { clearTimeout(timer); if (!alive || document.hidden || failed || refreshing) return; await photo(); clearTimeout(timer); if (alive && !failed && !document.hidden) timer = setTimeout(tick, 5000); }
+    const overlay = root.querySelector('.webcam-controls'), toggleButton = root.querySelector('[data-toggle]');
+    function toggle() {
+      overlay.hidden = !overlay.hidden;
+      toggleButton.setAttribute('aria-expanded', String(!overlay.hidden));
+      toggleButton.setAttribute('aria-label', `${overlay.hidden ? 'Mostrar' : 'Ocultar'} controles de cámara (H)`);
+    }
+    const keydown = event => {
+      if (!alive || !root.isConnected || event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.repeat) return;
+      if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const key = event.key;
+      if (key.toLowerCase() === 'h') { event.preventDefault(); event.stopImmediatePropagation(); toggle(); return; }
+      const direction = {ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right', '+':'in', '=':'in', '-':'out', '−':'out'}[key];
+      if (direction) { event.preventDefault(); event.stopImmediatePropagation(); move(moves[direction]); }
+      else if (/^[1-6]$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); move({preset: presets[Number(key) - 1]}); }
+    };
+    document.addEventListener('keydown', keydown, true);
     root.addEventListener('click', event => {
       const button = event.target.closest('button'); if (!button || !root.contains(button)) return;
       if (button.dataset.move) move(moves[button.dataset.move]);
       else if (button.dataset.preset) move({preset: button.dataset.preset});
       else if (button.hasAttribute('data-refresh')) photo();
+      else if (button.hasAttribute('data-toggle')) toggle();
     });
     const visibility = () => { clearTimeout(timer); if (!document.hidden && alive && !failed) tick(); };
     document.addEventListener('visibilitychange', visibility);
@@ -106,7 +126,7 @@
     // Observing disconnection stops polling and cancels in-flight requests.
     const observer = new MutationObserver(() => { if (!root.isConnected) destroy(); });
     observer.observe(document.body, {childList: true, subtree: true});
-    function destroy() { alive = false; clearTimeout(timer); abort.abort(); observer.disconnect(); document.removeEventListener('visibilitychange', visibility); if (objectURL) URL.revokeObjectURL(objectURL); }
+    function destroy() { alive = false; clearTimeout(timer); abort.abort(); observer.disconnect(); document.removeEventListener('visibilitychange', visibility); document.removeEventListener('keydown', keydown, true); if (objectURL) URL.revokeObjectURL(objectURL); }
     (async () => {
       busy = true; enabled();
       try {

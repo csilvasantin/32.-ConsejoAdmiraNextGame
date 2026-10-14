@@ -1,4 +1,4 @@
-const PRESETS = ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha'];
+const PRESETS = ['sala', 'pantallas-izquierda', 'pantallas-centro', 'pantallas-derecha', 'puerta', 'recreativa'];
 const RANGES = {pan: [-522000, 522000], tilt: [-324000, 360000], zoom: [100, 400], dpan: [-522000, 522000], dtilt: [-684000, 684000], dzoom: [-300, 300]};
 
 export function validMove(value) {

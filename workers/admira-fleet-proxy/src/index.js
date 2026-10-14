@@ -1,5 +1,3 @@
-import { webcamRequest } from './webcam.js';
-
 const RELAYS = [
   { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net/fleet' },
   { id: 'macbookpro16', base: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet' },
@@ -115,7 +113,23 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       }
 
       if (url.pathname.startsWith('/api/webcam/')) {
-        return webcamRequest(request, env, {fetchImpl, relays, cors: applyCors});
+        if (!ALLOWED_ORIGINS.has(origin)) return jsonResponse(origin, {error:'origin_not_allowed'}, 403);
+        if (!['GET', 'POST'].includes(request.method)) return jsonResponse(origin, {error:'method_not_allowed'}, 405);
+        // Keep the browser's host-only Fleet cookie on its existing origin.
+        // Pages checks that cookie with /api/auth/session before using its
+        // webcam secrets. Never retry camera mutations or follow redirects.
+        try {
+          const response = await fetchImpl('https://www.admira.live' + url.pathname, {
+            method: request.method,
+            headers: new Headers([...request.headers].filter(([name]) => ['origin', 'cookie', 'content-type', 'x-fleet-csrf', 'accept'].includes(name))),
+            body: request.method === 'POST' ? request.body : undefined,
+            redirect: 'manual', signal: AbortSignal.timeout(22000)
+          });
+          if (response.status >= 300 && response.status < 400) throw new Error('redirect');
+          const headers = applyCors(new Headers({'Cache-Control':'no-store, private', 'X-Content-Type-Options':'nosniff'}), origin);
+          headers.set('Content-Type', response.headers.get('Content-Type') || 'application/json');
+          return new Response(response.body, {status: response.status, headers});
+        } catch { return jsonResponse(origin, {error:'webcam_unavailable'}, 502); }
       }
 
       // Cookie-auth de navegador: el borde corta mutaciones sin Origin y CSRF

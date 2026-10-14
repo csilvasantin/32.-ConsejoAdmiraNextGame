@@ -123,7 +123,7 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
             method: request.method,
             headers: new Headers([...request.headers].filter(([name]) => ['origin', 'cookie', 'content-type', 'x-fleet-csrf', 'accept', 'upgrade'].includes(name))),
             body: request.method === 'POST' ? request.body : undefined,
-            redirect: 'manual', signal: AbortSignal.timeout(22000)
+            redirect: 'manual', signal: request.headers.get('Upgrade')?.toLowerCase() === 'websocket' ? undefined : AbortSignal.timeout(22000)
           });
           if (response.status >= 300 && response.status < 400) throw new Error('redirect');
           const headers = applyCors(new Headers({'Cache-Control':'no-store, private', 'X-Content-Type-Options':'nosniff'}), origin);

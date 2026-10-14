@@ -96,7 +96,8 @@ test("#5867: muestra qué agente está en cada modo, p. ej. «Morfeo · CLI · M
   assert.match(h, /<span class="int-ag">Neo · Desktop app · MBP16<\/span>/);
   assert.match(h, /<span class="int-ag">Oraculo · Desktop app · MBP16<\/span>/);
   // sin duplicar: Morfeo sale por presencia Y por tmux, una sola vez
-  assert.equal((h.match(/Morfeo · CLI/g) || []).length, 2); // rótulo + title
+  const general = h.slice(h.indexOf('data-int="clis"'), h.indexOf('</button>', h.indexOf('data-int="clis"')));
+  assert.equal((general.match(/Morfeo · CLI/g) || []).length, 2); // rótulo + title del botón general
 });
 
 test("#5867: el estado del Mac manda sobre la presencia; modo apagado → «nadie»", () => {
@@ -118,4 +119,53 @@ test("#5867: /control pasa a los botones la presencia fresca del equipo", () => 
   assert.match(html, /AdmiraInterruptores\.html\(m\.id, [^)]*interruptorCtx\(m\)\)/);
   assert.match(html, /function interruptorCtx\(m\)/);
   assert.match(html, /PRESENCE_ROWS=rows/);
+});
+
+// #5870 (Elon por orden de Carlos, 14-10-2026): cada unidad es su propio botón; los generales siguen.
+const MBP = { apps: { Claude: true, ChatGPT: false }, apps_on: true, clis: ["morfeo", "smith"], clis_on: true,
+  agentes_cli: [{ persona: "Morfeo", on: true, sesiones: ["morfeo"] }, { persona: "Smith", on: true, sesiones: ["smith"] }, { persona: "Neo", on: false, sesiones: [] }] };
+const PRES = [{ persona: "Morfeo", host: "app", runtime: "Claude" }, { persona: "Oraculo", host: "app", runtime: "Codex" }];
+
+test("#5870: una fila por unidad (agente · modo · máquina) con su estado, y los dos generales siguen", () => {
+  const h = I.html("macbookpro16", MBP, null, { maquina: "MacBook Pro 16", presencia: PRES });
+  assert.match(h, /data-int="apps"/); assert.match(h, /data-int="clis"/);
+  assert.match(h, /int-on" data-int="unidad" data-m="macbookpro16" data-u-tipo="cli" data-u="Morfeo"[\s\S]*?Morfeo · CLI · MBP16<\/span><span class="int-st">encendido/);
+  assert.match(h, /int-on" data-int="unidad"[^>]*data-u-tipo="cli" data-u="Smith"/);
+  assert.match(h, /int-off" data-int="unidad"[^>]*data-u-tipo="cli" data-u="Neo"[\s\S]*?Neo · CLI · MBP16<\/span><span class="int-st">apagado/);
+  assert.match(h, /data-u-tipo="app" data-u="Claude"[\s\S]*?Morfeo · Desktop app · MBP16/);
+  assert.match(h, /int-off" data-int="unidad"[^>]*data-u-tipo="app" data-u="ChatGPT"[\s\S]*?ChatGPT · Desktop app · MBP16/);
+  assert.match(h, /^<div class="int-bloque" data-int-bloque="macbookpro16">/);
+});
+
+test("#5870: pulsar una unidad pide la orden SOLO de esa unidad", () => {
+  const us = I.unidades(MBP, { maquina: "MacBook Pro 16", presencia: PRES });
+  const morfeo = us.find((u) => u.tipo === "cli" && u.clave === "Morfeo");
+  const neo = us.find((u) => u.tipo === "cli" && u.clave === "Neo");
+  const claude = us.find((u) => u.tipo === "app" && u.clave === "Claude");
+  assert.equal(I.siguienteUnidad(morfeo), "cli-off");
+  assert.equal(I.siguienteUnidad(neo), "cli-on");
+  assert.equal(I.siguienteUnidad(claude), "app-off");
+  assert.match(I.comando(sh, "cli-off", "Morfeo"), /\| bash -s cli-off Morfeo$/);
+  assert.match(I.comando(sh, "app-on", "ChatGPT"), /\| bash -s app-on ChatGPT$/);
+  assert.throws(() => I.comando(sh, "cli-off", "Morfeo; rm -rf ~"), /orden no válida/);
+  assert.throws(() => I.comando(sh, "app-off", "Finder"), /orden no válida/);
+  assert.throws(() => I.comando(sh, "cli-off"), /orden no válida/);
+  assert.match(I.confirmacionUnidad(morfeo), /solo «Morfeo · CLI · MBP16»[\s\S]*apagar-agentes\.sh Morfeo[\s\S]*siguen igual/);
+});
+
+test("#5870: el Mac apaga/arranca solo ese agente en ESTE Mac y da el estado por agente", () => {
+  assert.match(sh, /"\$FLEET\/apagar-agentes\.sh" "\$UNIDAD" --_remoto/);
+  assert.match(sh, /"\$FLEET\/arrancar-agentes\.sh" "\$UNIDAD" --_remoto --sin-layout/);
+  assert.match(sh, /\^\[A-Za-z\]\[A-Za-z0-9_-\]\{0,31\}\$/);
+  assert.match(sh, /case "\$UNIDAD" in Claude\|ChatGPT\|Codex\)/);
+  assert.match(sh, /"agentes_cli": agentes/);
+});
+
+test("#5870: /control repinta el bloque y manda la unidad; sin agentes_cli se usan las sesiones tmux", () => {
+  assert.match(html, /querySelectorAll\('\.acts \[data-int-bloque="'\+id\+'"\]'\)/);
+  assert.match(html, /if\(tipo==='unidad'\)\{ interruptorUnidad\(/);
+  assert.match(html, /interruptorOrden\(id, orden, null, u\.clave\)/);
+  const us = I.unidades({ apps: {}, clis: ["smith"], clis_on: true }, { maquina: "Mac Mini" });
+  assert.deepEqual(JSON.parse(JSON.stringify(us.map((u) => u.rotulo))), ["Smith · CLI · Mac Mini"]);
+  assert.deepEqual(JSON.parse(JSON.stringify(I.unidades(null, {}))), []);
 });

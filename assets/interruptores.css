@@ -15,9 +15,19 @@
 .int-btn.int-ocupado .int-ico{animation:int-gira 1s linear infinite;display:inline-block}
 @keyframes int-gira{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.int-btn.int-ocupado .int-ico{animation:none}}
+/* #5870: bloque = dos generales + una fila por unidad (agente · modo · máquina) */
+.acts .int-bloque{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.int-unidades{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:6px;min-width:0}
+.int-btn.int-u{min-height:30px;font-size:12px;padding:5px 8px;width:100%}
+.int-btn.int-u .int-nm{white-space:normal;overflow-wrap:anywhere}
+.int-btn.int-u .int-fila{display:block;white-space:normal}
+.int-btn.int-u .int-fila>*{margin-right:6px}
+.int-btn .int-sub{font-weight:400;font-size:10.5px;color:var(--mut,#8a97ab)}
 /* móvil (iPhone, Fold plegado): los dos interruptores ocupan media fila cada uno, fáciles de pulsar */
 @media (max-width:520px){
   .acts .int-btn{flex:1 1 calc(50% - 6px);min-height:42px;min-width:0}
+  .int-unidades{grid-template-columns:1fr}
+  .acts .int-btn.int-u{min-height:44px}
 }
 
 /* ---------- /demo/interruptores/ ---------- */

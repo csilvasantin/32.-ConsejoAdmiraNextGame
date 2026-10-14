@@ -22,7 +22,7 @@
   // /demo interruptores (#5862): página pública propia con su recorrido automático.
   var RE_DEMO_INT = /^\/?demo\s+(interruptores?|apps|clis)\s*$/i;
   var CATALOGO = [
-    ['/demo interruptores', '2026-10-14', '⏻ Desktop app y ⏻ CLI de cada Mac, con quién está en cada modo («Morfeo · CLI · MBP16»): abrir/cerrar Claude y ChatGPT/Codex y arrancar/apagar los deepagents (también /demo apps, /demo clis)', '⏻ Desktop app and ⏻ CLI per Mac, showing who is in each mode («Morfeo · CLI · MBP16»): open/close Claude and ChatGPT/Codex and start/stop the deepagents (also /demo apps, /demo clis)', 'admira.live'],
+    ['/demo interruptores', '2026-10-14', '⏻ Desktop app y ⏻ CLI de cada Mac, con un botón por unidad («Morfeo · CLI · MBP16» apaga solo ese Morfeo): abrir/cerrar Claude y ChatGPT/Codex y arrancar/apagar los deepagents, de uno en uno o todos (también /demo apps, /demo clis)', '⏻ Desktop app and ⏻ CLI per Mac, with one button per unit («Morfeo · CLI · MBP16» stops only that Morfeo): open/close Claude and ChatGPT/Codex and start/stop the deepagents, one by one or all at once (also /demo apps, /demo clis)', 'admira.live'],
     ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off → 2 claude · codex · grok · Neo Trinity → error con menos de 2, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off → 2 claude · codex · grok · Neo Trinity → fewer-than-2 error, by itself', 'admira.live'],
     ['/demo velocidad', '2026-10-09', 'velocímetro de tokens/hora de la flota (/demo speed en inglés)', 'fleet tokens/hour speedometer (/demo speed)', 'admira.live'],
     ['/demo lectura', '2026-10-09', 'qué ve una sesión de agente de solo lectura', 'what a read-only agent session sees', 'admira.live'],

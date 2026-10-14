@@ -1,4 +1,8 @@
 {
+  "v.14.10.2026.r48.08:15": [
+    "Control: cada unidad tiene su propio botón ⏻ (p. ej. «Morfeo · CLI · MBP16», «Morfeo · Desktop app · Mac Mini»). Al pulsarlo se enciende o apaga solo ese agente en ese modo y en esa máquina; el resto sigue igual (#5870).",
+    "Cada fila muestra su estado real (encendido/apagado) y los botones generales ⏻ Desktop app y ⏻ CLI siguen encendiendo o apagando todo. Responsive (iPhone, Fold) y con /demo interruptores."
+  ],
   "v.14.10.2026.r43.07:19": [
     "Analizar: webcam de Gran de Gràcia con fotos cada 5 s, flechas PTZ, zoom y cuatro presets. Solo sesiones Google autorizadas; sin audio ni vídeo continuo.",
     "/demo: controles y vista simulados sin cámara ni login. Minitutorial animado en /tutoriales/webcam-5856.mp4."

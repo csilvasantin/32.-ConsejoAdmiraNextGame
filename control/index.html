@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r47.07:55" />
+<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r48.08:15" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -24,8 +24,8 @@
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
 <script src="/control/fleet-mesh.js?v=20261009-r10-lectura"></script>
-<link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5867">
-<script src="/assets/interruptores.js?v=20261014-5867"></script>
+<link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5870">
+<script src="/assets/interruptores.js?v=20261014-5870"></script>
 <title>Control · AdmiraNext Fleet</title>
 <style>
   :root{
@@ -2555,14 +2555,15 @@ function interruptorCtx(m){
 function interruptorAplica(m){ return (m.platform||'macos')==='macos' && !!(m.host||m.local) && typeof AdmiraInterruptores!=='undefined'; }
 function interruptoresPintar(id){
   const m=MACHINES.find(x=>x.id===id); if(!m) return;
-  document.querySelectorAll('.acts button[data-int][data-m="'+id+'"]').forEach(b=>{
+  // #5870: se repinta el bloque entero (dos generales + una fila por unidad), que cambia de tamaño con el estado.
+  document.querySelectorAll('.acts [data-int-bloque="'+id+'"]').forEach(b=>{
     const tmp=document.createElement('div'); tmp.innerHTML=AdmiraInterruptores.html(id, INT_ESTADO[id]&&INT_ESTADO[id].st, INT_OCUPADO[id], interruptorCtx(m));
-    const nuevo=tmp.querySelector('button[data-int="'+b.getAttribute('data-int')+'"]'); if(nuevo) b.replaceWith(nuevo);
+    if(tmp.firstElementChild) b.replaceWith(tmp.firstElementChild);
   });
 }
-async function interruptorOrden(id, orden, tipo){
+async function interruptorOrden(id, orden, tipo, unidad){
   const script=await AdmiraInterruptores.script();
-  const d=await api('/run',{method:'POST',body:JSON.stringify({machine:id,cmd:AdmiraInterruptores.comando(script,orden),timeoutMs:orden==='estado'?30000:60000})});
+  const d=await api('/run',{method:'POST',body:JSON.stringify({machine:id,cmd:AdmiraInterruptores.comando(script,orden,unidad),timeoutMs:orden==='estado'?30000:90000})});
   const st=AdmiraInterruptores.parse(d&&d.stdout);
   if(st) INT_ESTADO[id]={st,at:Date.now()};
   return {d,st};
@@ -2580,7 +2581,9 @@ document.addEventListener('click', async e=>{
   if(b.closest('.int-card')) return;   // la demo tiene su propio manejador
   e.preventDefault(); e.stopPropagation();
   const id=b.getAttribute('data-m'), tipo=b.getAttribute('data-int'), m=MACHINES.find(x=>x.id===id); if(!m) return;
-  const st=INT_ESTADO[id]&&INT_ESTADO[id].st, orden=AdmiraInterruptores.siguiente(st,tipo);
+  const st=INT_ESTADO[id]&&INT_ESTADO[id].st;
+  if(tipo==='unidad'){ interruptorUnidad(m, st, b.getAttribute('data-u-tipo'), b.getAttribute('data-u')); return; }
+  const orden=AdmiraInterruptores.siguiente(st,tipo);
   if(/-off$/.test(orden) && !confirm(AdmiraInterruptores.confirmacion(m.name||id, tipo, st))) return;
   INT_OCUPADO[id]={[tipo]: orden==='estado'?'consultando…':/-off$/.test(orden)?'apagando…':'encendiendo…'}; interruptoresPintar(id);
   try{
@@ -2589,6 +2592,19 @@ document.addEventListener('click', async e=>{
   }catch(err){ pushResult(id, '⏻ '+tipo+' · '+orden, {rc:-1, stdout:'', stderr:String(err&&err.msg||err&&err.message||err)}); }
   finally{ delete INT_OCUPADO[id]; interruptoresPintar(id); }
 }, true);
+/* #5870: una sola unidad («Morfeo · CLI · MBP16», «Morfeo · Desktop app · Mac Mini»): solo ese agente/app en ese Mac. */
+async function interruptorUnidad(m, st, utipo, uclave){
+  const id=m.id, u=AdmiraInterruptores.unidades(st, interruptorCtx(m)).find(x=>x.tipo===utipo&&x.clave===uclave); if(!u) return;
+  const orden=AdmiraInterruptores.siguienteUnidad(u), k=AdmiraInterruptores.claveUnidad(u);
+  if(u.on && !confirm(AdmiraInterruptores.confirmacionUnidad(u))) return;
+  INT_OCUPADO[id]={[k]: u.on?'apagando…':'encendiendo…'}; interruptoresPintar(id);
+  try{
+    const {d,st:nuevo}=await interruptorOrden(id, orden, null, u.clave);
+    const tras=nuevo&&AdmiraInterruptores.unidades(nuevo, interruptorCtx(m)).map(x=>x.rotulo+' '+(x.on?'●':'○')).join(' · ');
+    pushResult(id, '⏻ '+u.rotulo+' · '+orden, {...d, stdout:String(d&&d.stdout||'').replace(/^__INTERRUPTOR__ .*$/m, tras?('estado: '+tras):'')});
+  }catch(err){ pushResult(id, '⏻ '+u.rotulo+' · '+orden, {rc:-1, stdout:'', stderr:String(err&&err.msg||err&&err.message||err)}); }
+  finally{ delete INT_OCUPADO[id]; interruptoresPintar(id); }
+}
 function pushResult(machine, label, d){
   const m=MACHINES.find(x=>x.id===machine)||(machine==='__dgx__'?{name:'DGX Spark',emoji:'🧠'}:{name:machine,emoji:''});
   const out=$('#out'); if(out.querySelector('.empty')) out.innerHTML='';

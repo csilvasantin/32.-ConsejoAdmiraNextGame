@@ -18,6 +18,11 @@
  *   cierra solo esa app de escritorio; «Smith · CLI · Mac Mini» arranca o apaga solo ese agente en ese Mac
  *   (apagar/arrancar-agentes.sh <Persona> --_remoto) y el resto sigue igual. Cada fila muestra su estado; los dos
  *   botones generales de arriba siguen encendiendo o apagando todas las unidades de su modo a la vez.
+ *
+ * #5872 (Elon por orden de Carlos, 14-10-2026): GrokBot es su propia unidad dentro de Desktop app, una fila por cuenta
+ *   de la app Grok Bot de ese Mac: coetáneos (csilvasantin@gmail.com) o leyendas (csilva@admira.com). El Mac da la
+ *   cuenta sin leer secretos (nombres de su persistencia o ~/.config/admiranext/grokbot-cuenta); encendida = la app
+ *   está abierta con esa cuenta. Su botón abre o cierra solo Grok Bot; Claude, ChatGPT/Codex y los CLIs siguen igual.
  */
 (function (root) {
   'use strict';
@@ -26,6 +31,8 @@
     clis: { nombre: 'CLI', host: 'cli', titulo: 'Modo CLI: uso remoto, solo consejeros y agentes (sesiones tmux de los deepagents)', on: 'clis-on', off: 'clis-off' }
   };
   var SCRIPT_URL = '/fleet/interruptor-agentes.sh';
+  // #5872: las dos cuentas de la app Grok Bot (grupo → cuenta).
+  var GROK = { coetaneos: { nombre: 'Coetáneos', cuenta: 'csilvasantin@gmail.com' }, leyendas: { nombre: 'Leyendas', cuenta: 'csilva@admira.com' } };
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -113,6 +120,7 @@
   /**
    * Unidades de un Mac: [{tipo:'app'|'cli', clave, on, agentes, rotulo}].
    *   app: una por app de escritorio (Claude, ChatGPT/Codex); sus agentes salen de la presencia (host app, mismo runtime).
+   *   grok (#5872): una por cuenta de la app Grok Bot del Mac (st.grokbot.cuentas), dentro de Desktop app.
    *   cli: una por agente CLI del Mac (st.agentes_cli del propio Mac; si el Mac aún no lo da, sus sesiones tmux).
    */
   function unidades(st, ctx) {
@@ -129,6 +137,11 @@
       var on = !!st.apps[app];
       res.push({ tipo: 'app', clave: app, on: on, agentes: on ? ags : [],
         rotulo: [(on && ags.length ? ags.join(' / ') : app), 'Desktop app', maq].filter(Boolean).join(' · '), sub: on && ags.length ? app : '' });
+    });
+    ((st.grokbot && st.grokbot.cuentas) || []).forEach(function (c) {
+      var g = GROK[c.grupo];
+      res.push({ tipo: 'grok', clave: g ? c.grupo : 'desconocida', on: !!c.on, agentes: [], cuenta: c.cuenta || '',
+        rotulo: ['GrokBot', g ? g.nombre : '', 'Desktop app', maq].filter(Boolean).join(' · '), sub: c.cuenta || 'cuenta sin identificar' });
     });
     var cli = st.agentes_cli || (st.clis || []).map(function (s) { return { persona: persona(s), on: true, sesiones: [s] }; });
     cli.slice().sort(function (a, b) { return String(a.persona).localeCompare(String(b.persona)); }).forEach(function (a) {
@@ -188,6 +201,7 @@
     // #5870: órdenes de una unidad; el argumento solo puede ser un nombre limpio (nada de shell).
     if (typeof unidad !== 'string') throw new Error('orden no válida: ' + orden);
     if (/^app-(on|off)$/.test(orden) && /^(Claude|ChatGPT|Codex)$/.test(unidad)) return 'echo ' + b64(script) + ' | base64 -D | bash -s ' + orden + ' ' + unidad;
+    if (/^grok-(on|off)$/.test(orden) && /^(coetaneos|leyendas|desconocida)$/.test(unidad)) return 'echo ' + b64(script) + ' | base64 -D | bash -s ' + orden + ' ' + unidad;
     if (/^cli-(on|off)$/.test(orden) && /^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(unidad)) return 'echo ' + b64(script) + ' | base64 -D | bash -s ' + orden + ' ' + unidad;
     throw new Error('orden no válida: ' + orden + (unidad != null ? ' ' + unidad : ''));
   }
@@ -209,6 +223,7 @@
 
   /** #5870: confirmación de apagar UNA unidad. */
   function confirmacionUnidad(u) {
+    if (u.tipo === 'grok') return '¿Cerrar solo «' + u.rotulo + '»?\n\nSe cierra la app Grok Bot' + (u.cuenta ? ' (' + u.cuenta + ')' : '') + ' en ese Mac. Claude, ChatGPT/Codex y los CLIs siguen igual.';
     if (u.tipo === 'app') return '¿Cerrar solo «' + u.rotulo + '»?\n\nSe cierra ' + u.clave + ' de escritorio en ese Mac. Las otras apps y los CLIs siguen igual.';
     return '¿Apagar solo «' + u.rotulo + '»?\n\nApagado ordenado de ese agente (apagar-agentes.sh ' + u.clave + '): si está a media misión, se interrumpe y sus encargos quedan pendientes. Los demás agentes y las apps siguen igual. Vuelve con este mismo botón.';
   }
@@ -218,10 +233,12 @@
     opts = opts || {};
     var macs = [
       { id: 'macmini', name: 'Mac Mini', st: { apps: { Claude: true, ChatGPT: true }, apps_on: true, clis: ['niobe', 'smith'], clis_on: true,
-          agentes_cli: [{ persona: 'Niobe', on: true, sesiones: ['niobe'] }, { persona: 'Smith', on: true, sesiones: ['smith'] }, { persona: 'Morfeo', on: false, sesiones: [] }] },
+          agentes_cli: [{ persona: 'Niobe', on: true, sesiones: ['niobe'] }, { persona: 'Smith', on: true, sesiones: ['smith'] }, { persona: 'Morfeo', on: false, sesiones: [] }],
+          grokbot: { abierta: true, cuentas: [{ grupo: 'coetaneos', cuenta: GROK.coetaneos.cuenta, on: true }, { grupo: 'leyendas', cuenta: GROK.leyendas.cuenta, on: false }] } },
         presencia: [{ persona: 'Morfeo', host: 'app', runtime: 'Claude' }, { persona: 'Oraculo', host: 'app', runtime: 'Codex' }] },
       { id: 'macbookpro16', name: 'MacBook Pro 16', st: { apps: { Claude: false, ChatGPT: false }, apps_on: false, clis: ['morfeo', 'smith'], clis_on: true,
-          agentes_cli: [{ persona: 'Morfeo', on: true, sesiones: ['morfeo'] }, { persona: 'Smith', on: true, sesiones: ['smith'] }, { persona: 'Neo', on: false, sesiones: [] }] },
+          agentes_cli: [{ persona: 'Morfeo', on: true, sesiones: ['morfeo'] }, { persona: 'Smith', on: true, sesiones: ['smith'] }, { persona: 'Neo', on: false, sesiones: [] }],
+          grokbot: { abierta: false, cuentas: [{ grupo: 'leyendas', cuenta: GROK.leyendas.cuenta, on: false }] } },
         presencia: [{ persona: 'Neo', host: 'app', runtime: 'Claude' }] }
     ];
     // Recalcula los totales del Mac a partir de sus unidades (como hace el estado real del Mac).
@@ -243,6 +260,7 @@
     function pantalla(st) {
       var cajas = [];
       Object.keys(st.apps).forEach(function (k) { if (st.apps[k]) cajas.push('<span class="int-win int-app">Desktop app · ' + k + '</span>'); });
+      ((st.grokbot && st.grokbot.cuentas) || []).forEach(function (c) { if (c.on) cajas.push('<span class="int-win int-app">Desktop app · GrokBot ' + esc(GROK[c.grupo] ? GROK[c.grupo].nombre : '') + '</span>'); });
       st.clis.forEach(function (s) { cajas.push('<span class="int-win int-cli">CLI · ' + esc(persona(s)) + '</span>'); });
       return cajas.length ? cajas.join('') : '<span class="int-vacio">escritorio libre</span>';
     }
@@ -268,6 +286,12 @@
       return new Promise(function (ok) {
         setTimeout(function () {
           if (tipo === 'app') m.st.apps[clv] = !u.on;
+          else if (tipo === 'grok') {
+            // Como en el Mac: una sola app Grok Bot; si está abierta con la otra cuenta, encender esta no cambia nada.
+            var g = m.st.grokbot, otra = g.cuentas.some(function (c) { return c.on && c.grupo !== clv; });
+            if (u.on || !otra) g.cuentas.forEach(function (c) { if (c.grupo === clv) c.on = !u.on; });
+            g.abierta = g.cuentas.some(function (c) { return c.on; });
+          }
           else m.st.agentes_cli.forEach(function (a) { if (a.persona === clv) a.on = !u.on; });
           sync(m.st); delete ocup[m.id]; pintar(); ok();
         }, opts.ms || 1100);
@@ -288,6 +312,7 @@
       var p = Promise.resolve();
       [
         paso('Mac Mini: «Morfeo · Desktop app · Mac Mini» cierra solo Claude; ChatGPT (Oraculo) sigue abierto', function () { return ejecutarUnidad(mini, 'app', 'Claude', true).then(function () { return ejecutarUnidad(mini, 'app', 'Claude', true); }); }),
+        paso('Mac Mini: «GrokBot · Coetáneos · Desktop app · Mac Mini» cierra solo Grok Bot (csilvasantin@gmail.com); Claude, ChatGPT y la fila de Leyendas siguen igual, y vuelve', function () { return ejecutarUnidad(mini, 'grok', 'coetaneos', true).then(function () { return ejecutarUnidad(mini, 'grok', 'coetaneos', true); }); }),
         paso('Mac Mini: Desktop app encendido (Morfeo y Oraculo) → ⏻ Desktop app lo apaga (pide confirmación)', function () { return ejecutar(mini, 'apps', true); }),
         paso('Mac Mini: modo CLI apagado primero, para verlo volver', function () { mini.st.agentes_cli.forEach(function (a) { a.on = false; }); sync(mini.st); pintar(); return new Promise(function (r) { setTimeout(r, 600); }); }),
         paso('Mac Mini: el botón general ⏻ CLI enciende todos sus agentes CLI en el sitio que tenía el Desktop app', function () { return ejecutar(mini, 'clis', true); }),
@@ -303,7 +328,7 @@
   }
 
   root.AdmiraInterruptores = {
-    version: '2', TIPOS: TIPOS, html: html, parse: parse, siguiente: siguiente, comando: comando,
+    version: '3', TIPOS: TIPOS, GROK: GROK, html: html, parse: parse, siguiente: siguiente, comando: comando,
     script: script, confirmacion: confirmacion, encendido: encendido, detalle: detalle, mountDemo: mountDemo,
     quien: quien, rotulos: rotulos, corto: corto,
     unidades: unidades, siguienteUnidad: siguienteUnidad, claveUnidad: claveUnidad, confirmacionUnidad: confirmacionUnidad

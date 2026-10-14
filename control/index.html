@@ -11,9 +11,9 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r48.08:15" />
+<meta name="admiranext-version" content="AdmiraNeXT v.14.10.2026.r49.11:00" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
-    <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
+    <script src="/auth-gate.js?v=20261009-r10-lectura-a6946f922157"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
     <script defer src="/assets/control-lineas.js?v=r17-lineas"></script>
 <meta charset="UTF-8">
@@ -23,7 +23,8 @@
      el .js con cache-control de 4 h, así que una cadena vieja deja al navegador
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
-<script src="/control/fleet-mesh.js?v=20261009-r10-lectura"></script>
+<script src="/control/mobile-players.js?v=20261014-iot-r1"></script>
+<script src="/control/fleet-mesh.js?v=20261009-r10-lectura-a65cc82dab05"></script>
 <link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5870">
 <script src="/assets/interruptores.js?v=20261014-5870"></script>
 <title>Control · AdmiraNext Fleet</title>
@@ -682,6 +683,13 @@
   .tk-col .tk-add{font:inherit;font-size:11px;border:1px solid var(--acc2);color:var(--acc2);background:transparent;border-radius:8px;padding:5px;cursor:pointer;font-weight:700}
   .tk-col .tk-add:hover{background:var(--acc2);color:#04120e}
   .tk-col .tk-empty{font-size:11px;color:var(--mut);font-style:italic;padding:6px 2px}
+
+  .mobile-card .mobile-icon{font-size:36px;line-height:1}
+  .mobile-card .mobile-state{margin:14px 0 8px;font-weight:700}
+  .mobile-card .mobile-detail{font-size:12px;line-height:1.5;color:var(--mut);overflow-wrap:anywhere}
+  .mobile-card .mobile-open{display:inline-block;margin-top:16px;padding:8px 12px;border:1px solid var(--acc);border-radius:8px;color:var(--acc);text-decoration:none;font:600 13px system-ui}
+  .mobile-card .mobile-state.online{color:#5bd6a0}
+  .mobile-card .mobile-state.offline{color:#ffcf7a}
 </style>
 </head>
 <body>
@@ -872,6 +880,25 @@
 const API='https://macmini.tail48b61c.ts.net/fleet/api'; // compatibilidad; las llamadas reales pasan por Fleet Mesh
 const $=s=>document.querySelector(s);
 let MACHINES=[];
+let MOBILE_MACHINES=[];
+const isMobilePlayer=m=>AdmiraMobilePlayers.isMobile(m)||MOBILE_MACHINES.some(x=>x.id===String(m.id||'').replace(/^admira-/,''));
+// Inventario del sitio: la preview no necesita desplegar ni cambiar los relays.
+async function refreshMobilePlayers(){
+  try{
+    const r=await fetch('/fleet-control/fleet.json',{cache:'no-store',signal:AbortSignal.timeout(7000)});
+    if(!r.ok) throw new Error('inventario no disponible');
+    MOBILE_MACHINES=(await r.json()).machines.filter(AdmiraMobilePlayers.isMobile);
+  }catch(e){ /* conservar los perfiles ya leídos; nunca conservar un online anterior */ }
+  let screens=[], available=false;
+  try{
+    const r=await fetch('https://api.admira.store/signage/screens',{cache:'no-store',signal:AbortSignal.timeout(7000)});
+    if(!r.ok) throw new Error('latidos no disponibles');
+    const d=await r.json(); if(!Array.isArray(d.screens)) throw new Error('respuesta no válida');
+    screens=d.screens; available=true;
+  }catch(e){}
+  MOBILE_MACHINES=MOBILE_MACHINES.map(m=>AdmiraMobilePlayers.observe(m,screens,{available}));
+  renderCards(MACHINES);
+}
 let ACTIVE_ROUTE=null;
 // Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
 // re-renders para volver a pintar el aviso + botón de arreglo por SSH.
@@ -1343,7 +1370,7 @@ async function loadFleetMachines(){
     const d=await r.json();
     FLEET_MACHINES=(d.machines||[]).map(m=>({
       id:m.id||_norm(m.name||m.fqdn||''), name:m.name||m.id||m.fqdn||'?',
-      fqdn:m.fqdn||'', online:false, degraded:true
+      fqdn:m.fqdn||'', platform:m.platform||'', online:false, degraded:true
     })).filter(m=>m.id);
   }catch(e){ FLEET_MACHINES=[]; }
   return FLEET_MACHINES;
@@ -1397,7 +1424,7 @@ function showControlRouteBanner(on, route){
 }
 async function degradedRefresh(){
   await Promise.all([loadPersonas(), loadFleet(), loadFleetMachines()]);
-  MACHINES=FLEET_MACHINES.slice();
+  MACHINES=FLEET_MACHINES.filter(m=>!isMobilePlayer(m));
   MACHINES.forEach(m=>{
     if(agentOnline(m)) marcarSenal(m,'viaAgent');
     else if(presenceOnline(m)) marcarSenal(m,'viaPresence');
@@ -1489,7 +1516,7 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     if(!_baselineDone) fase('📋 pidiendo el censo de equipos…', 'warn');
-    const d=await api('/status'); MACHINES=d.machines; MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
+    const d=await api('/status'); MACHINES=d.machines.filter(m=>!isMobilePlayer(m)); MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
     const route=d._mesh&&d._mesh.relay||ACTIVE_ROUTE;
     const failedOver=!!(d._mesh&&d._mesh.failover);
     // PINTAR YA, con lo que hay (FLT-1378). Antes se esperaba a personas + flota +
@@ -1784,6 +1811,7 @@ function infoRedundante(m){
   return t===_norm(m.name)||t===_norm(m.id)||_norm(m.name).startsWith(t)||t.startsWith(_norm(m.name));
 }
 function renderCards(ms){
+  ms=ms.filter(m=>!isMobilePlayer(m)).concat(MOBILE_MACHINES);
   const el=$('#cards');
   if(!ms.length){
     // El mensaje tiene que decir la VERDAD (Carlos, 24-jul-2026): antes, cualquier
@@ -1809,8 +1837,8 @@ function renderCards(ms){
   // Un pie discreto con los apagados que no se pintan: cuántos y quiénes, para no perderlos de vista.
   const fuera=HIDE_OFF?ms.filter(m=>!m.online):[];
   // Franja(s) agregada(s) encima de la parrilla: ≥3 equipos caídos con la misma causa raíz.
-  const pieFuera=fuera.length?('<div class="empty fuera" style="grid-column:1/-1" title="Desmarca «solo encendidos» para verlos">💤 '+fuera.length+' apagados: '+fuera.map(m=>m.name).join(' · ')+'</div>'):'';
-  el.innerHTML=dsBands(list)+list.map(m=>`
+  const pieFuera=fuera.length?('<div class="empty fuera" style="grid-column:1/-1" title="Desmarca «solo encendidos» para verlos">💤 '+fuera.length+' offline: '+fuera.map(m=>m.name).join(' · ')+'</div>'):'';
+  el.innerHTML=dsBands(list.filter(m=>!isMobilePlayer(m)))+list.map(m=>isMobilePlayer(m)?AdmiraMobilePlayers.cardHtml(m):`
     <div class="card${isCollapsed(m.id)?' collapsed':''}" data-card="${m.id}">
       <div class="top">
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
@@ -1862,7 +1890,7 @@ function renderCards(ms){
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
   // por defecto: el wallpaper real de cada máquina hasta que se pida captura real
-  ms.forEach(m=>{ if(!shots[m.id]){ setDefaultShot(m.id); } });
+  ms.filter(m=>!isMobilePlayer(m)).forEach(m=>{ if(!shots[m.id]){ setDefaultShot(m.id); } });
   // re-pinta los avisos de captura fallida que ya conocíamos
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
   applySignageTitles();
@@ -3062,6 +3090,8 @@ function collapseAllToggle(){
   // convierte «pantalla negra» en «esto está arrancando» (FLT-1378).
   bootSkeleton();
   fase('🔑 abriendo sesión…', 'warn');
+  refreshMobilePlayers();
+  setInterval(refreshMobilePlayers, 15000);
   await ensureSession();
   if(SESSION){
     const g=(window.admiraGateUser&&window.admiraGateUser())||{};

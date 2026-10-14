@@ -196,7 +196,8 @@ function consumeChallenge(req,state,flow='popup') {
 }
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
-function machineById(id) { return FLEET.machines.find(m => m.id === id); }
+function isMobilePlayer(m) { return !!m && ['ios', 'android'].includes(String(m.platform).toLowerCase()); }
+function machineById(id) { return FLEET.machines.find(m => m.id === id && !isMobilePlayer(m)); }
 function machineKey(v) { return String(v || '').toLowerCase().split('.')[0].replace(/[^a-z0-9]/g, ''); }
 function isRelayLocal(machine) {
   const here = new Set([machineKey(RELAY_ID), machineKey(RELAY_LABEL), machineKey(os.hostname())]);
@@ -232,6 +233,7 @@ function idempotentCommand(machine, cmd, commandId) {
 }
 
 function run(machine, cmd, timeoutMs) {
+  if (isMobilePlayer(machine)) return Promise.resolve({ rc: 1, stdout: '', stderr: 'IoT móvil: sin ejecución SSH', ms: 0 });
   return new Promise((resolve) => {
     timeoutMs = timeoutMs || 25000;
     let bin, args;
@@ -266,7 +268,7 @@ function psCommand(script) { return 'powershell.exe -NoProfile -NonInteractive -
 // tag(s) del operador: sin acentos (música→musica), minúsculas, anidable con
 // comas/+ ("musica,vertical" = AND en el canal). Solo slug chars (shell-safe).
 function cleanTag(v) { return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_,+-]/g, ''); }
-function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(); return p.startsWith('win') ? 'windows' : (p.startsWith('lin') ? 'linux' : 'macos'); }
+function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(); return ['ios', 'android'].includes(p) ? p : p.startsWith('win') ? 'windows' : (p.startsWith('lin') ? 'linux' : 'macos'); }
 function winPS(script) {
   return 'powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ' +
     Buffer.from("$ProgressPreference='SilentlyContinue'; " + script, 'utf16le').toString('base64');
@@ -995,7 +997,7 @@ const server = http.createServer(async (req, res) => {
   // estado de la flota (lectura) — requiere token (el funnel es público)
   if (url === '/api/status') {
     if (!(await gate(req, res, ip))) return;
-    const results = await Promise.all(FLEET.machines.map(async (m) => {
+    const results = await Promise.all(FLEET.machines.filter(m => !isMobilePlayer(m)).map(async (m) => {
       // Windows OpenSSH tarda ~5,4s en negociar con AsusFold aun estando sano;
       // darle 9s evita el falso offline. Los sondeos corren en paralelo.
       const r = await run(m, statusProbe(m), platOf(m) === 'windows' ? 9000 : 4500);
@@ -1044,7 +1046,7 @@ const server = http.createServer(async (req, res) => {
     if (!(await gate(req, res, ip))) return;
     const q = new URL(req.url, 'http://x').searchParams;
     const only = String(q.get('machine') || '');
-    const targets = only ? FLEET.machines.filter(m => m.id === only) : FLEET.machines.slice();
+    const targets = FLEET.machines.filter(m => !isMobilePlayer(m) && (!only || m.id === only));
     if (only && !targets.length) return json(res, 404, { error: 'máquina desconocida' });
 
     let liveByScreen = new Map();

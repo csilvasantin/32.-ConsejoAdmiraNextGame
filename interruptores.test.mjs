@@ -169,3 +169,60 @@ test("#5870: /control repinta el bloque y manda la unidad; sin agentes_cli se us
   assert.deepEqual(JSON.parse(JSON.stringify(us.map((u) => u.rotulo))), ["Smith · CLI · Mac Mini"]);
   assert.deepEqual(JSON.parse(JSON.stringify(I.unidades(null, {}))), []);
 });
+
+// #5872 (Elon por orden de Carlos, 14-10-2026): GrokBot por cuenta dentro de Desktop app.
+const GROKMAC = { ...MBP, grokbot: { abierta: true, activa: "coetaneos", cuentas: [
+  { grupo: "coetaneos", cuenta: "csilvasantin@gmail.com", on: true }, { grupo: "leyendas", cuenta: "csilva@admira.com", on: false }] } };
+
+test("#5872: una fila de GrokBot por cuenta en Desktop app, con su cuenta y su estado", () => {
+  const h = I.html("macmini", GROKMAC, null, { maquina: "Mac Mini", presencia: PRES });
+  assert.match(h, /int-on" data-int="unidad" data-m="macmini" data-u-tipo="grok" data-u="coetaneos"[\s\S]*?GrokBot · Coetáneos · Desktop app · Mac Mini<\/span><span class="int-st">encendido<\/span><\/span><span class="int-sub">csilvasantin@gmail\.com/);
+  assert.match(h, /int-off" data-int="unidad"[^>]*data-u-tipo="grok" data-u="leyendas"[\s\S]*?GrokBot · Leyendas · Desktop app · Mac Mini<\/span><span class="int-st">apagado<\/span><\/span><span class="int-sub">csilva@admira\.com/);
+  const tipos = I.unidades(GROKMAC, { maquina: "Mac Mini", presencia: PRES }).map((u) => u.tipo).join(",");
+  assert.equal(tipos, "app,app,grok,grok,cli,cli,cli");
+  const sinCuenta = I.unidades({ apps: {}, grokbot: { abierta: true, cuentas: [{ grupo: "desconocida", cuenta: null, on: true }] } }, { maquina: "MacBook Pro 16" });
+  assert.equal(sinCuenta[0].rotulo, "GrokBot · Desktop app · MBP16");
+  assert.equal(sinCuenta[0].sub, "cuenta sin identificar");
+  assert.equal(I.unidades(MBP, { maquina: "Mac Mini" }).filter((u) => u.tipo === "grok").length, 0);
+});
+
+test("#5872: pulsar una cuenta de GrokBot pide solo grok-on/off de esa cuenta", () => {
+  const us = I.unidades(GROKMAC, { maquina: "Mac Mini" });
+  const coe = us.find((u) => u.tipo === "grok" && u.clave === "coetaneos");
+  const ley = us.find((u) => u.tipo === "grok" && u.clave === "leyendas");
+  assert.equal(I.siguienteUnidad(coe), "grok-off");
+  assert.equal(I.siguienteUnidad(ley), "grok-on");
+  assert.match(I.comando(sh, "grok-off", "coetaneos"), /\| bash -s grok-off coetaneos$/);
+  assert.match(I.comando(sh, "grok-on", "leyendas"), /\| bash -s grok-on leyendas$/);
+  assert.throws(() => I.comando(sh, "grok-off", "Grok Bot"), /orden no válida/);
+  assert.throws(() => I.comando(sh, "grok-on", "leyendas; rm -rf ~"), /orden no válida/);
+  assert.match(I.confirmacionUnidad(coe), /solo «GrokBot · Coetáneos · Desktop app · Mac Mini»[\s\S]*Grok Bot \(csilvasantin@gmail\.com\)[\s\S]*siguen igual/);
+});
+
+test("#5872: el Mac da la cuenta sin leer secretos y solo cierra Grok Bot si está abierta con esa cuenta", () => {
+  assert.match(sh, /case "\$UNIDAD" in coetaneos\|leyendas\|desconocida\)/);
+  assert.match(sh, /sand-client-persistence/);
+  assert.doesNotMatch(sh, /open\(os\.path\.join\(D, f\)\)/);
+  assert.match(sh, /"grokbot": json\.loads\(os\.environ\.get\("GROK"\)/);
+  assert.match(sh, /abierta con la cuenta \$act, no con \$UNIDAD: no se cierra/);
+  assert.match(sh, /open -g -a "Grok Bot"/);
+  assert.match(html, /interruptores\.js\?v=20261014-5872/);
+});
+
+test("#5872: la demo cierra y abre solo GrokBot Coetáneos; encender la otra cuenta con la app abierta no cambia nada", async () => {
+  const listeners = [];
+  const el = { innerHTML: "", addEventListener: (_, f) => listeners.push(f) };
+  ctx.setTimeout = setTimeout;
+  const demo = I.mountDemo(el, { ms: 1 });
+  const mini = demo.macs[0];
+  assert.match(el.innerHTML, /GrokBot · Coetáneos · Desktop app · Mac Mini/);
+  const pulsar = (tipo, u) => listeners[0]({ target: { closest: () => ({ disabled: false, getAttribute: (a) => ({ "data-m": "macmini", "data-int": "unidad", "data-u-tipo": tipo, "data-u": u })[a] }) } });
+  ctx.window.confirm = () => true;
+  pulsar("grok", "leyendas"); await new Promise((r) => setTimeout(r, 20));
+  assert.equal(mini.st.grokbot.cuentas.map((c) => c.on).join(), "true,false");
+  pulsar("grok", "coetaneos"); await new Promise((r) => setTimeout(r, 20));
+  assert.equal(mini.st.grokbot.cuentas.map((c) => c.on).join(), "false,false");
+  assert.equal(mini.st.apps.Claude && mini.st.apps.ChatGPT, true);
+  pulsar("grok", "leyendas"); await new Promise((r) => setTimeout(r, 20));
+  assert.equal(mini.st.grokbot.cuentas.map((c) => c.on).join(), "false,true");
+});

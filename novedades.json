@@ -1,4 +1,8 @@
 {
+  "v.14.10.2026.r43.07:19": [
+    "Analizar: webcam de Gran de Gràcia con fotos cada 5 s, flechas PTZ, zoom y cuatro presets. Solo sesiones Google autorizadas; sin audio ni vídeo continuo.",
+    "/demo: controles y vista simulados sin cámara ni login. Minitutorial animado en /tutoriales/webcam-5856.mp4."
+  ],
   "v.12.10.2026.r42.13:00": [
     "Visor: estado OK / KO / ESPERA CARLOS en ASCII grande por panel, del latido y del encargo reales (#5804/#5806, Merovingio).",
     "Incluye el mosaico de 6 por modo y /diario de r41; el sello se estampa en todo el HTML al desplegar con deploy.sh."

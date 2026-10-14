@@ -3863,7 +3863,7 @@ body.rail-open{overflow:hidden}
                 </div>
                 <div class="rail-group" data-en="Create">Crea</div>
                 <button class="rail-btn primary" onclick="railVerb('entrenar')" title="Alimenta a un consejero con URLs y material" data-en-title="Feed a councillor URLs and material" data-en="Train">Entrenar</button>
-                <button class="rail-btn" onclick="railVerb('analizar')" title="Analiza una URL, texto o archivo" data-en-title="Analyse a URL, text or file" data-en="Analyse">Analizar</button>
+                <button class="rail-btn" onclick="railVerb('analizar')" title="Webcam de la oficina y análisis de URL, texto o archivo" data-en-title="Analyse a URL, text or file" data-en="Analyse">Analizar</button>
                 <button class="rail-btn" onclick="railVerb('presentar')" title="Genera una presentación" data-en-title="Generate a presentation" data-en="Present">Presentar</button>
                 <button class="rail-btn" onclick="railVerb('votar')" title="Somete una propuesta a votación" data-en-title="Put a proposal to the vote" data-en="Vote">Votar</button>
                 <button class="rail-btn" onclick="railVerb('crear')" title="Genera una imagen" data-en-title="Generate an image" data-en="Create">Crear</button>
@@ -3995,7 +3995,7 @@ body.rail-open{overflow:hidden}
                     <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos" data-en-title="Team conversations: councillors, deepagents and Carlos" data-en="Conversation">Conversación</a>
                     <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" data-en-title="The Council tells you the book/summary of the day (audio)" data-en="Think" onclick="selectVerb(this)">Pensar</button>
                     <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" data-en-title="Put a proposal to the Council's vote" data-en="Vote" onclick="selectVerb(this)">Votar</button>
-                    <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" data-en-title="Analyse a URL, text or file with the Council" data-en="Analyse" onclick="selectVerb(this)">Analizar</button>
+                    <button class="verb-btn" data-verb="analizar" title="Webcam de la oficina y análisis de URL, texto o archivo con el Consejo" data-en-title="Analyse a URL, text or file with the Council" data-en="Analyse" onclick="selectVerb(this)">Analizar</button>
                     <button class="verb-btn" id="btn-mostrar" type="button" title="Macintosh 1984 sobre la mesa · mismo gesto que /mac" data-en-title="Macintosh 1984 on the table · same as /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mac 1984</button>
                     <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" data-en-title="Generate a presentation from a topic" data-en="Present" onclick="selectVerb(this)">Presentar</button>
                     <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" data-en-title="Meet a councillor one-to-one (1:1 chat)" data-en="Meeting" onclick="selectVerb(this)">Reunión</button>
@@ -4548,7 +4548,9 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/interface-cli.js?v=20261011-5707-selector2"></script>
 <script defer src="/assets/diario-cli.js?v=20261012-5796"></script>
 <script defer src="/assets/cli-ayuda.js?v=20261011-5707-selector"></script>
-<script defer src="app.flt-100529.js?v=20261009-r8-visita"></script>
+<link rel="stylesheet" href="/assets/webcam.css?v=20261014-5856">
+<script defer src="/assets/webcam.js?v=20261014-5856"></script>
+<script defer src="app.flt-100529.js?v=20261014-5856-webcam"></script>
 <script defer src="council-preview.js?v=20260921-ultra1"></script>
 <script defer src="council-composer.js?v=20261009-r9-paste"></script>
 <script defer src="council-working.js?v=20260930-flt101302"></script>

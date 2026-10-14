@@ -1,3 +1,5 @@
+import { webcamRequest } from './webcam.js';
+
 const RELAYS = [
   { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net/fleet' },
   { id: 'macbookpro16', base: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet' },
@@ -103,13 +105,17 @@ function retrySafe(request, path, handoffRequest) {
 
 export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
   return {
-    async fetch(request) {
+    async fetch(request, env = {}) {
       const url = new URL(request.url);
       const origin = request.headers.get('Origin');
       const path = url.pathname.replace(/^\/fleet(?=\/|$)/, '') || '/';
 
       if (request.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: applyCors(new Headers(), origin) });
+      }
+
+      if (url.pathname.startsWith('/api/webcam/')) {
+        return webcamRequest(request, env, {fetchImpl, relays, cors: applyCors});
       }
 
       // Cookie-auth de navegador: el borde corta mutaciones sin Origin y CSRF

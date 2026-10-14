@@ -6173,13 +6173,16 @@
         ov.id = "analizar-overlay";
         ov.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:9999;font-family:inherit;";
         ov.innerHTML = `
-            <div style="background:#1a1a2e;border:2px solid #3a6aaa;border-radius:0;padding:1.6rem;max-width:540px;width:92%;font-family:'Press Start 2P',monospace;image-rendering:pixelated;">
+            <div class="analizar-dialog" role="dialog" aria-modal="true" aria-label="Analizar">
                 <h3 style="color:#88ccff;font-size:0.65rem;margin:0 0 1.2rem;text-align:center;letter-spacing:1px;">ANALIZAR</h3>
+                <section id="analizar-webcam" aria-label="Webcam en vivo"></section>
+                <details class="analizar-extra"><summary>Analizar URL, texto o fichero</summary>
                 ${inputBlock}
                 <div style="margin-bottom:1.2rem;">
                     <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📝 PREGUNTA (opcional)</label>
                     <textarea id="analizar-q" rows="2" placeholder="¿Qué quieres saber?" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;resize:vertical;"></textarea>
                 </div>
+                </details>
                 <div style="display:flex;gap:0.8rem;justify-content:flex-end;">
                     <button id="analizar-cancel" style="background:#222;color:#ccc;border:2px solid #555;border-radius:0;padding:0.4rem 1rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.5rem;">CANCELAR</button>
                     <button id="analizar-submit" style="background:#003399;color:#fff;border:2px solid #4488ff;border-radius:0;padding:0.4rem 1rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.5rem;">🔍 ANALIZAR</button>
@@ -6188,7 +6191,19 @@
             </div>`;
         document.body.appendChild(ov);
 
-        document.getElementById("analizar-cancel").onclick = () => ov.remove();
+        window.AdmiraWebcam?.mount(document.getElementById("analizar-webcam"));
+        const previousFocus = document.activeElement;
+        document.getElementById("analizar-cancel").onclick = () => { ov.remove(); previousFocus?.focus(); };
+        document.getElementById("analizar-cancel").focus();
+        ov.addEventListener("keydown", event => {
+            if (event.key === "Escape") { ov.remove(); previousFocus?.focus(); }
+            if (event.key === "Tab") {
+                const items = [...ov.querySelectorAll("button, a[href], input, textarea, summary")].filter(el => !el.disabled && el.getClientRects().length);
+                const first = items[0], last = items[items.length - 1];
+                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+            }
+        });
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 
         // Contador vivo del textarea en modo texto
@@ -6201,10 +6216,12 @@
                 info.textContent = `${v.length} caracteres · ${words} palabras`;
             };
             ta.addEventListener("input", update);
-            setTimeout(() => ta.focus(), 50);
+            document.querySelector(".analizar-extra")?.addEventListener("toggle", event => { if (event.target.open) ta.focus(); });
         }
 
+        document.querySelector(".analizar-extra").open = mode !== "url";
         document.getElementById("analizar-submit").onclick = async () => {
+            document.querySelector(".analizar-extra").open = true;
             const statusEl = document.getElementById("analizar-status");
             const question = (document.getElementById("analizar-q")?.value || "").trim();
             let content = "";

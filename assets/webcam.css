@@ -1,0 +1,41 @@
+.webcam-panel{font-family:system-ui,sans-serif;font-size:14px;line-height:1.45;color:#e5edf7;min-width:0;margin-bottom:20px}
+.webcam-panel *{box-sizing:border-box}
+.webcam-panel h4{margin:0;font-size:18px;color:#a8d8ff}
+.webcam-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.webcam-badge{font-size:12px;color:#9de6c4;border:1px solid #45836b;padding:3px 7px}
+.webcam-layout{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:16px}
+.webcam-view{margin:0;min-width:0}
+.webcam-frame{position:relative;aspect-ratio:16/9;background:#080d18;border:1px solid #3a6aaa;overflow:hidden;display:grid;place-items:center}
+.webcam-frame img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:auto}
+.webcam-frame img:not([src]){visibility:hidden}
+.webcam-placeholder{position:absolute;color:#a9b6c9;max-width:90%;text-align:center}
+.webcam-view figcaption{margin-top:8px;font-size:12px;color:#b9c8dd}
+.webcam-controls{display:flex;flex-direction:column;gap:10px;min-width:0}
+.webcam-panel button,.webcam-panel a.webcam-retry{font:inherit;min-height:44px;background:#172a48;color:#f0f5fc;border:1px solid #51759e;padding:9px;cursor:pointer;text-align:center;text-decoration:none;border-radius:0;touch-action:manipulation}
+.webcam-panel button:hover{background:#244468}
+.webcam-panel button:focus-visible,.webcam-panel a:focus-visible{outline:3px solid #ffd579;outline-offset:2px}
+.webcam-panel button:disabled{opacity:.5;cursor:wait}
+.webcam-arrows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-width:190px;margin:auto;width:100%}
+.webcam-arrows button:first-child{grid-column:2}
+.webcam-arrows button:nth-child(2){grid-column:1}
+.webcam-arrows button:nth-child(3){grid-column:3}
+.webcam-arrows button:last-child{grid-column:2}
+.webcam-zoom,.webcam-presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.webcam-presets button{font-size:12px}
+.webcam-position{font-variant-numeric:tabular-nums;font-size:12px;color:#b9c8dd;min-height:18px}
+.webcam-status{min-height:22px;margin:10px 0 0;color:#a8d8ff}
+.webcam-status[data-error="true"]{color:#ffd093}
+.webcam-note{margin:4px 0 10px;font-size:12px;color:#b9c8dd}
+.webcam-links{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px}
+.webcam-links a{color:#a8d8ff}
+#analizar-overlay{padding:12px;box-sizing:border-box}
+#analizar-overlay>.analizar-dialog{box-sizing:border-box;width:min(960px,100%);max-height:calc(100dvh - 24px);overflow:auto;background:#1a1a2e;border:2px solid #3a6aaa;padding:20px;overscroll-behavior:contain}
+.analizar-extra{border-top:1px solid #3a6aaa;padding-top:12px;margin:14px 0;font-family:system-ui,sans-serif}
+.analizar-extra>summary{cursor:pointer;color:#b9c8dd;font-size:14px;min-height:44px}
+.webcam-demo-page{margin:0;background:#0b1020;color:#e5edf7;font-family:system-ui,sans-serif;padding:24px}
+.webcam-demo-page main{max-width:960px;margin:0 auto}
+.webcam-demo-page h1{font-size:24px}
+.webcam-demo-page a{color:#a8d8ff}
+.webcam-demo-page .webcam-panel{padding:20px;background:#1a1a2e;border:2px solid #3a6aaa}
+@media(max-width:620px){.webcam-layout{grid-template-columns:1fr}.webcam-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center}.webcam-presets{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr))}.webcam-presets button{padding:7px 4px;font-size:11px;overflow-wrap:anywhere}.webcam-arrows{max-width:180px}.webcam-demo-page{padding:12px}.webcam-demo-page .webcam-panel,#analizar-overlay>.analizar-dialog{padding:12px}.webcam-heading h4{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.webcam-panel *{scroll-behavior:auto}}

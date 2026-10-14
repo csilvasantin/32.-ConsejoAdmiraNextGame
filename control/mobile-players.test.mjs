@@ -100,3 +100,28 @@ test('móviles se renderizan aparte del conjunto de órdenes, capturas y HACKEO'
   const hack = html.slice(html.indexOf('const HACK_MACHINES = ['), html.indexOf('];', html.indexOf('const HACK_MACHINES = [')));
   for (const m of mobiles) assert.ok(!hack.includes(m.id));
 });
+
+test('proxy de preview sólo lee signage/screens y no inventa ni conserva latidos ante un fallo', async t => {
+  const {onRequest} = await import('../functions/api/control/mobile-screens.js');
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, opts) => {
+    calls.push({url, opts});
+    return Response.json({screens:[{screen:'iphone17-mupi', last_seen:now, age_seconds:0, online:true, device:{private:'omitted'}}]});
+  });
+  const request = new Request('https://preview.test/api/control/mobile-screens');
+  const r = await onRequest({request});
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  assert.deepEqual((await r.json()).screens, [{screen:'iphone17-mupi', last_seen:now, age_seconds:0}]);
+  assert.equal(calls[0].url, 'https://api.admira.store/signage/screens');
+  assert.equal(calls[0].opts.cache, 'no-store');
+  const post = await onRequest({request:new Request(request.url, {method:'POST'})});
+  assert.equal(post.status, 405); assert.equal(calls.length, 1);
+  for (const response of [new Response('down', {status:503}), Response.json({bad:true})]) {
+    globalThis.fetch = async () => response;
+    const failed = await onRequest({request});
+    assert.equal(failed.status, 503);
+    assert.deepEqual(await failed.json(), {error:'heartbeat_unavailable'});
+  }
+  globalThis.fetch = async () => {throw new Error('network down');};
+  assert.equal((await onRequest({request})).status, 503);
+});

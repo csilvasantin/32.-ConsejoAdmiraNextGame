@@ -891,7 +891,7 @@ async function refreshMobilePlayers(){
   }catch(e){ /* conservar los perfiles ya leídos; nunca conservar un online anterior */ }
   let screens=[], available=false;
   try{
-    const r=await fetch('https://api.admira.store/signage/screens',{cache:'no-store',signal:AbortSignal.timeout(7000)});
+    const r=await fetch('/api/control/mobile-screens',{cache:'no-store',signal:AbortSignal.timeout(7000)});
     if(!r.ok) throw new Error('latidos no disponibles');
     const d=await r.json(); if(!Array.isArray(d.screens)) throw new Error('respuesta no válida');
     screens=d.screens; available=true;

@@ -1,4 +1,10 @@
 {
+  "v.15.10.2026.r3.08:57": [
+    "En la home, las placas de los 16 consejeros se ven al entrar, sobre la foto (leyendas o coetáneos, según el interruptor).",
+    "Cada 15 segundos la placa alterna el título del cargo y el proyecto en vivo (fuente /api/flota/trabajando).",
+    "Debajo se lee el estado (trabajando, con Carlos, parado o sin latido), los encargos abiertos, el consumo (cuota, gratis o sin medición) y si la máquina está encendida o apagada.",
+    "Si no hay dato, lo dice. No inventa un cero ni un proyecto."
+  ],
   "v.14.10.2026.r48.08:15": [
     "Control: cada unidad tiene su propio botón ⏻ (p. ej. «Morfeo · CLI · MBP16», «Morfeo · Desktop app · Mac Mini»). Al pulsarlo se enciende o apaga solo ese agente en ese modo y en esa máquina; el resto sigue igual (#5870).",
     "Control: GrokBot por cuenta dentro de Desktop app, con su botón ⏻ («GrokBot · Coetáneos» y «GrokBot · Leyendas» en cada Mac). Abre o cierra solo Grok Bot con esa cuenta; Claude, ChatGPT/Codex y los CLIs siguen igual (#5872).",

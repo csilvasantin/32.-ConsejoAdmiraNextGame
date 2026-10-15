@@ -1,4 +1,9 @@
 {
+  "v.15.10.2026.r6.21:28": [
+    "Los consejeros de las dos cuentas se escriben en privado: consejero_mensaje, consejero_bandeja y consejero_responder.",
+    "Cada mensaje guarda remitente, destinatario, máquina y hora, y se ve en el chat de admira.live. Sin secretos.",
+    "El mismo MCP, https://mcp.admira.live/mcp, sirve a leyendas y a coetáneos. Jensen es Huang."
+  ],
   "v.15.10.2026.r5.09:10": [
     "Chat propio para los seis consejeros que el servidor ya acepta: Jobs, Wozniak, Disney, Lucas, Musk y Huang.",
     "Elon Musk en /chat/musk/ y Jensen Huang en /chat/huang/. Los otros diez consejeros siguen sin hilo: la página no finge uno.",

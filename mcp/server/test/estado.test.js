@@ -14,8 +14,8 @@ function fetchFalso(peticiones, { presenciaCae = false } = {}) {
     if (u.endsWith('/api/presence')) {
       if (presenciaCae) return new Response('caído', { status: 503 });
       return ok({ ok: true, presence: [
-        { persona: 'Merovingio', machine: 'GrokBotBox', runtime: 'Grok CLI', mode: 'pasivo', focus: 'mesa del consejo', updated: S - 40 },
-        { persona: 'Merovingio', machine: 'MacMini', runtime: 'Grok CLI', updated: S - 5 },
+        { persona: 'Merovingio', machine: 'MacMini', runtime: 'Grok CLI', mode: 'pasivo', focus: 'mesa del consejo', updated: S - 40 },
+        { persona: 'Merovingio', machine: 'GrokBotBox', runtime: 'Grok CLI', updated: S - 5 },
         { persona: 'Cypher', machine: 'GrokBotBox', runtime: 'DeepAgents', mode: 'trabajando', updated: S - 20 },
         { persona: 'Arquitecto', machine: 'CursorCloud', runtime: 'Cursor', updated: S - 10 },
       ] });
@@ -24,8 +24,8 @@ function fetchFalso(peticiones, { presenciaCae = false } = {}) {
     if (u.includes('/api/public/inbox')) {
       const items = {
         Merovingio: [
-          { id: 5001, ts: S - 7200, target_persona: 'Merovingio', target_machine: 'grokbotbox', status: 'pending', etiqueta: '#5001.10.04', text: 'Soy NeoMacBookPro14.\nRevisar el sello' },
-          { id: 5000, ts: S - 9000, ack_at: S - 3600, target_persona: 'Merovingio', target_machine: 'grokbotbox', status: 'in_progress', etiqueta: '#5000.10.04', from_name: 'Carlos', text: 'Soy Carlos.\n✋ Tablero de estado del Consejo en admira.live' },
+          { id: 5001, ts: S - 7200, target_persona: 'Merovingio', target_machine: 'macmini', status: 'pending', etiqueta: '#5001.10.04', text: 'Soy NeoMacBookPro14.\nRevisar el sello' },
+          { id: 5000, ts: S - 9000, ack_at: S - 3600, target_persona: 'Merovingio', target_machine: 'macmini', status: 'in_progress', etiqueta: '#5000.10.04', from_name: 'Carlos', text: 'Soy Carlos.\n✋ Tablero de estado del Consejo en admira.live' },
           { id: 4999, ts: S - 9999, target_persona: 'Merovingio', status: 'done', text: 'viejo' },
         ],
         Arquitecto: [{ id: 4800, ts: S - 100, target_persona: 'Arquitecto', target_machine: 'cursorcloud', status: 'in_progress', text: 'del orquestador, no de Jony' }],
@@ -43,7 +43,8 @@ test('tituloEncargo: en palabras, sin «Soy X.» ni emojis de cabecera', () => {
   assert.equal(tituloEncargo(''), null);
 });
 
-test('GET /consejo/estado: Elon lee a Merovingio en la GrokBotBox; datos reales, sin inventar', async () => {
+// Merovingio vive en el Mac Mini desde el 15-10-2026 (sillas.js): un latido suyo en la caja ya no es el de Elon.
+test('GET /consejo/estado: Elon lee a Merovingio en el Mac Mini; datos reales, sin inventar', async () => {
   const peticiones = [];
   const r = await manejar(new Request('https://mcp.test/consejo/estado'), { ADMIRA_TELEGRAM_URL: 'https://telegram.test' }, { fetch: fetchFalso(peticiones), now: () => AHORA });
   assert.equal(r.status, 200);
@@ -57,8 +58,8 @@ test('GET /consejo/estado: Elon lee a Merovingio en la GrokBotBox; datos reales,
   assert.equal(elon.estado, 'idle', 'in_progress no fuerza working sin latido trabajando (#5085)');
   assert.equal(elon.encargo.numero, 5001, 'misión = id más alto entre abiertos vivos');
   assert.equal(elon.encargo.titulo, 'Revisar el sello');
-  assert.equal(elon.ultimo_latido, S - 40, 'el latido de MacMini no es el de la GrokBotBox');
-  assert.equal(elon.agentes[0].maquina, 'GrokBotBox');
+  assert.equal(elon.ultimo_latido, S - 40, 'el latido de la GrokBotBox no es el del Mac Mini');
+  assert.equal(elon.agentes[0].maquina, 'MacMini');
   assert.deepEqual(elon.cola, { pending: 1, ack: 0, in_progress: 1, blocked: 0 });
   const jensen = d.mesa.coetaneos.find((s) => s.persona === 'Jensen Huang');
   assert.equal(jensen.estado, 'working', 'trabajando por latido fresco mode=trabajando (≤10 min)');

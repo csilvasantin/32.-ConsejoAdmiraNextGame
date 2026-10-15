@@ -91,7 +91,7 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.equal(v.consejeros.length, 7);
   assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot'], ['Huang', 'CTO', 'GrokBot'], ['Y', 'CTO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk, Huang e Y sin Mac');
   assert.deepEqual(v.consejeros.find((c) => c.persona === 'Musk').deepagent, 'Merovingio');
-  assert.equal(v.consejeros.find((c) => c.persona === 'Musk').deepagent_maquina, 'GrokBotBox');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Musk').deepagent_maquina, 'MacMini');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent, 'Cypher');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_maquina, 'GrokBotBox');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_runtime, 'DeepAgents');

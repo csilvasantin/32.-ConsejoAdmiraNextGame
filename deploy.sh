@@ -23,15 +23,36 @@ fi
 # se firma con quien publica — no se hereda la firma anterior.
 : "${ADMIRA_RELEASE_AGENT:?Define ADMIRA_RELEASE_AGENT (ej. MorfeoMacMini)}"
 : "${ADMIRA_RELEASE_MACHINE:?Define ADMIRA_RELEASE_MACHINE (ej. MacMini)}"
-SELLO="$(sed -n 's/.*admiranext-version" content="AdmiraNeXT \(v\.[^"]*\)".*/\1/p' control/index.html | head -1)"
-[ -n "$SELLO" ] || { echo "✗ falta el <meta admiranext-version> en control/index.html" >&2; exit 1; }
+# 15-10-2026 (MorfeoMacMini): hasta hoy el sello se COPIABA del <meta> de control/index.html y,
+# si nadie lo subía a mano, producción volvía a anunciar la publicación anterior (salió
+# «v.14.10.2026.r48.08:15» el 15-10 con contenido nuevo). Ahora se genera de verdad con la fecha y
+# hora de Madrid y el número siguiente al publicado (tools/sello-siguiente.py). El <meta> del repo
+# solo cuenta si alguien lo ha subido por encima del publicado.
+SELLO_REPO="$(sed -n 's/.*admiranext-version" content="AdmiraNeXT \(v\.[^"]*\)".*/\1/p' control/index.html | head -1)"
+[ -n "$SELLO_REPO" ] || { echo "✗ falta el <meta admiranext-version> en control/index.html" >&2; exit 1; }
+VERSION_PUBLICADA="$(curl -s --max-time 15 -A "Mozilla/5.0" https://www.admira.live/version.json 2>/dev/null || true)"
+PUBLICADO="$(printf '%s' "$VERSION_PUBLICADA" | jq -r '.version // empty' 2>/dev/null || true)"
+GIT_PUBLICADO="$(printf '%s' "$VERSION_PUBLICADA" | jq -r '.gitFull // .git // empty' 2>/dev/null || true)"
+read -r SELLO NOVEDADES_CLAVE < <(python3 tools/sello-siguiente.py "$PUBLICADO" "$SELLO_REPO") || true
+[ -n "${SELLO:-}" ] || { echo "✗ no se pudo generar el sello (publicado: ${PUBLICADO:-?} · repo: $SELLO_REPO)" >&2; exit 1; }
+echo "  ✓ sello generado: $SELLO (publicado: ${PUBLICADO:-sin leer} · repo: $SELLO_REPO)"
 GIT="$(git rev-parse HEAD)"; SUCIO=true; [ -z "$(git status --porcelain)" ] && SUCIO=false
 # Novedades del sello (Carlos 2026-10-05): novedades.json[sello] o .default → version.json
 NOVEDADES_JSON='[]'
 if [ -f novedades.json ]; then
-  NOVEDADES_JSON="$(jq -c --arg v "$SELLO" '
+  # Las novedades del sello del repo solo valen si ese sello es nuevo (NOVEDADES_CLAVE ≠ «-»):
+  # si es el de la publicación anterior, sus novedades ya salieron y no se repiten.
+  # Sin novedades propias de este sello: los títulos de los commits desde lo publicado (lo que de
+  # verdad sale ahora), antes que el «default», que es de una publicación concreta y se repetiría.
+  COMMITS_JSON='[]'
+  if [ -n "$GIT_PUBLICADO" ] && git cat-file -e "$GIT_PUBLICADO^{commit}" 2>/dev/null; then
+    COMMITS_JSON="$(git log --no-merges --format=%s "$GIT_PUBLICADO..HEAD" | jq -R -s -c 'split("\n") | map(select(length>0)) | .[0:6]')"
+    # Mismo commit que lo publicado (se republica): se conservan sus novedades.
+    [ "$COMMITS_JSON" = "[]" ] && COMMITS_JSON="$(printf '%s' "$VERSION_PUBLICADA" | jq -c '.novedades // [] | if type=="array" then . else [] end' 2>/dev/null || echo '[]')"
+  fi
+  NOVEDADES_JSON="$(jq -c --arg v "$SELLO" --arg r "$NOVEDADES_CLAVE" --argjson c "$COMMITS_JSON" '
     if type=="object" then
-      (.[$v] // .default // .novedades // [])
+      (.[$v] // (if $r != "-" then .[$r] else null end) // (if $c != [] then $c else null end) // .default // .novedades // [])
     elif type=="array" then .
     else [] end
     | if type=="array" then . else [] end

@@ -1,4 +1,7 @@
 {
+  "v.15.10.2026.r4.09:08": [
+    "Mismo rótulo de los 16 consejeros que r3. La foto ya no recorta las placas: el título, el proyecto, el estado, los encargos y el consumo se leen enteros."
+  ],
   "v.15.10.2026.r3.08:57": [
     "En la home, las placas de los 16 consejeros se ven al entrar, sobre la foto (leyendas o coetáneos, según el interruptor).",
     "Cada 15 segundos la placa alterna el título del cargo y el proyecto en vivo (fuente /api/flota/trabajando).",

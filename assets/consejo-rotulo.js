@@ -110,8 +110,8 @@
     var s = document.createElement("style");
     s.id = "consejo-rotulo-css";
     s.textContent = [
-      "#nameplates .np{white-space:normal;max-width:128px}",
-      "#nameplates .np .np-rota,#nameplates .np .np-meta{display:block;text-transform:none;letter-spacing:0;font-weight:700;line-height:1.25;white-space:normal}",
+      "#nameplates .np{white-space:normal;max-width:150px;overflow:visible}",
+      "#nameplates .np .np-rota,#nameplates .np .np-meta{display:block;text-transform:none;letter-spacing:0;font-weight:700;line-height:1.2;white-space:normal}",
       "#nameplates .np .np-rota{font-size:.42rem;color:#fff8d0;margin-top:2px}",
       "#nameplates .np.gray .np-rota,#nameplates .np.gray .np-meta{color:#ddd}",
       "#nameplates .np .np-meta{font-size:.34rem;opacity:.95}",

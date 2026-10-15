@@ -42,7 +42,7 @@ const grokBotDesktop = createGrokBotDesktop();
 const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
   ? grokBotDesktop : grokBotLegacy;
 // Elon (CEO) y Jensen (CTO) no viven en el Grok Bot del Mac Mini: su chat se enruta como
-// encargo MCP de admira.live a su deepagent (Merovingio / Cypher, GrokBotBox), y su
+// encargo MCP de admira.live a su deepagent (Merovingio en el Mac Mini / Cypher en GrokBotBox), y su
 // respuesta vuelve al chat. El resto de sillas siguen en el proveedor de siempre.
 const grokBotEncargo = createGrokBotEncargo();
 const grokBotBridge = createGrokBotRouter({ base: grokBotBase, encargo: grokBotEncargo, inbox: grokBotLegacy });

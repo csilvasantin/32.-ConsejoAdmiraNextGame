@@ -33,7 +33,7 @@ const { BridgeError, PERSONAS, canonicalPersona, createPrivateStore } = require(
 
 const MCP_URL = 'https://mcp.admira.live/mcp';
 const TARGETS = Object.freeze({
-  Musk: Object.freeze({ persona: 'Merovingio', maquina: 'GrokBotBox', etiqueta: 'Merovingio · GrokBotBox' }),
+  Musk: Object.freeze({ persona: 'Merovingio', maquina: 'MacMini', etiqueta: 'Merovingio · MacMini' }),
   Huang: Object.freeze({ persona: 'Cypher', maquina: 'GrokBotBox', etiqueta: 'Cypher · GrokBotBox' }),
   Shotwell: Object.freeze({ persona: 'Trinity', maquina: 'GrokBotBox', etiqueta: 'Trinity · GrokBotBox' }),
 });
@@ -353,7 +353,7 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
 }
 
 // Enruta por persona:
-//  · Musk/Huang/Shotwell → encargo MCP (Merovingio/Cypher/Trinity en GrokBotBox)
+//  · Musk/Huang/Shotwell → encargo MCP (Merovingio en el Mac Mini; Cypher/Trinity en GrokBotBox)
 //  · Jobs/Wozniak/Disney/Lucas → bot-inbox con marca [chat-coetaneos] (sin Ágora ni Telegram)
 //  · el resto → proveedor base (escritorio AX). Sin deepagent no se inventa silla.
 const LEYENDAS_INBOX = Object.freeze(new Set(['Jobs', 'Wozniak', 'Disney', 'Lucas']));

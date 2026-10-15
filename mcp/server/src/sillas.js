@@ -10,7 +10,7 @@
  * `maquina: 'GrokBot'` dice dónde vive el bot. Ese mismo nombre es el equipo
  * de despertar de TODAS las sillas, así que flota.js no lo trata como silla
  * exclusiva al resolver «encargar a esta máquina».
- * Su deepagent es Merovingio (Grok CLI en la GrokBot box): no es Smith.
+ * Su deepagent es Merovingio (Grok CLI en el Mac Mini desde el 15-10-2026; antes en la GrokBot box): no es Smith.
  *
  * Huang (Jensen Huang, CTO, lado racional, generación coetáneos) tampoco tiene
  * MacBook. Su deepagent es Cypher (DeepAgents en la GrokBot box; modelo
@@ -28,7 +28,7 @@ export const SILLAS = {
   Jobs:    { rol: 'CEO', lado: 'racional', generacion: 'leyendas',  maquina: 'MacBookAirAzul',  fleet_id: 'admira-macbookairazul',  alias: ['MBAAzul', 'MBA Azul', 'Luna', 'admira-macbookairluna'] },
   Lucas:   { rol: 'CSO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirRosa',  fleet_id: 'admira-macbookairrosa',  alias: ['MBARosa', 'MBA Rosa'] },
   Disney:  { rol: 'CCO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirCrema', fleet_id: 'admira-macbookaircrema', alias: ['MBACrema', 'MBA Crema', 'Carla', 'admira-macbook-carla'] },
-  Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'Grok CLI' },
+  Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'MacMini', deepagent_runtime: 'Grok CLI' },
   Huang:   { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jensen', 'Jensen Huang'], deepagent: 'Cypher', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b' },
   Y:       { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: [] },
 };

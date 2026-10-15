@@ -103,14 +103,14 @@ test("r31: la página pinta Idle / Login pendiente / Sin sesión como el Mac", (
 test("r33: ?g=6 añade Smith y Merovingio con su estado; vista() sin grupo sigue en 4", async () => {
   const A = 3_000_000;
   const mbp = fundir(null, normalizarPane({ maquina: "macbook-pro-16", conf: CONF_DEFECTO, vivas: ["smith"], agentes: { smith: { estado: "idle", mision: "#5600 · done · x", modelo: "Grok CLI", mac: "MacBook Pro 16" } } }, A).pane);
-  const caja = fundir(null, normalizarPane({ maquina: "grokbotbox", vivas: ["merovingio"], agentes: { merovingio: { estado: "vivo", lineas: ["• Working (2s)"] } } }, A).pane);
+  const caja = fundir(null, normalizarPane({ maquina: "macmini", vivas: ["merovingio"], agentes: { merovingio: { estado: "vivo", lineas: ["• Working (2s)"] } } }, A).pane);
   assert.equal(vista([mbp, caja], A + 1000).fichas.length, 4);
   const v6 = vista([mbp, caja], A + 1000, { grupo: 6 }).fichas;
   // #5803: el mosaico de 6 va agrupado por modo (nube · híbrido · edge)
   assert.deepEqual(v6.map((f) => f.sesion), ["smith", "merovingio", "oraculo", "morfeo", "neo", "trinity"]);
-  assert.equal(v6[0].agente, "idle"); assert.equal(v6[1].agente, "vivo"); assert.equal(v6[1].host, "grokbotbox");
+  assert.equal(v6[0].agente, "idle"); assert.equal(v6[1].agente, "vivo"); assert.equal(v6[1].host, "macmini");
   const env = { RECORTE_KV: kvMem(), CONSUMOS_LECTURAS_TOKEN: "maquina-123", VISOR_VIEW_TOKEN: "v".repeat(43) };
-  await onRequestPost({ request: req("POST", { maquina: "grokbotbox", vivas: ["merovingio"], agentes: { merovingio: { estado: "login", lineas: ["https://claude.com/cai/oauth/authorize?client_id=1"] } } }, { "X-Council-Token": "maquina-123" }), env });
+  await onRequestPost({ request: req("POST", { maquina: "macmini", vivas: ["merovingio"], agentes: { merovingio: { estado: "login", lineas: ["https://claude.com/cai/oauth/authorize?client_id=1"] } } }, { "X-Council-Token": "maquina-123" }), env });
   const g = await (await onRequestGet({ request: new Request("https://www.admira.live/api/visor/pane?g=6", { headers: { "X-Visor-Key": "v".repeat(43) } }), env })).json();
   assert.equal(g.grupo, 6); assert.equal(g.fichas.length, 6);
   assert.equal(g.fichas[1].agente, "login"); assert.deepEqual(g.fichas[1].lineas, []);
@@ -191,7 +191,7 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
   assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin máquina en vivo desde \d\d:\d\d$/);
   assert.ok(!/MBA16|MBP14/.test(tri.etiquetaModo + tri.sinDatos));
   const mer = v.fichas.find((f) => f.sesion === "merovingio");
-  assert.equal(mer.estado, "sin_datos"); assert.match(mer.sinDatos, /^sin datos de GrokBotBox/);
+  assert.equal(mer.estado, "sin_datos"); assert.match(mer.sinDatos, /^sin datos de MacMini/);
   assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → MBP16");
   assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
 });

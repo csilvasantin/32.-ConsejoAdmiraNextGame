@@ -27,7 +27,7 @@
 
   /* Consejero de la mesa → agente de la flota. Leyendas: los consejeros de
      GrokBot (council-grokbot.js). Coetáneos: su deepagent (MATRIX_LINKS).
-     Elon = Merovingio (Grok CLI en la GrokBot box), pareja de la silla Musk;
+     Elon = Merovingio (Grok CLI en el Mac Mini), pareja de la silla Musk;
      Smith sigue en la otra cuenta de GrokBot. Jensen = Cypher (DeepAgents en
      la GrokBot box), pareja de la silla Huang. ArquitectoCursorCloud sigue
      siendo el orquestador Cursor y no ocupa silla. Ryan Reynolds se queda sin

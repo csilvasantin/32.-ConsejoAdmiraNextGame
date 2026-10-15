@@ -12,10 +12,10 @@ export const CONF_DEFECTO = [
   { titulo: "Oráculo · Codex", host: "macmini", sesion: "oraculo", skin: "Grass" },
 ];
 /** r33 (Carlos 13:30 «/interface 6»): los 2 de Grok, para la rejilla 3x2 (/visor/?g=6). Smith publica desde el MBP16
- *  (visor-grok.conf) y Merovingio desde la caja de GrokBot (box-visor-keep.sh). Misma forma que la conf de la cuadratura. */
+ *  (visor-grok.conf) y Merovingio desde el Mac Mini (desde el 15-10-2026). Misma forma que la conf de la cuadratura. */
 export const CONF_GROK = [
   { titulo: "Smith · Grok", host: "macbook-pro-16", sesion: "smith", skin: "Smith" },
-  { titulo: "Merovingio · Grok", host: "grokbotbox", sesion: "merovingio", skin: "Merovingio" },
+  { titulo: "Merovingio · Grok", host: "macmini", sesion: "merovingio", skin: "Merovingio" },
 ];
 export const MAX_LINEAS = 80;
 export const MAX_CHARS_LINEA = 1200;
@@ -86,7 +86,7 @@ export function etiquetaModo(f) {
  *  (host «app» o session «desktop:»), abreviada con cortaMaquina. Sin ese latido no se inventa MBA16 ni MBP14. */
 export const PERFILES = {
   smith: { nombre: "Smith", modo: "nube", equipo: "GrokBotBox", orden: 0 },
-  merovingio: { nombre: "Merovingio", modo: "nube", equipo: "GrokBotBox", orden: 1 },
+  merovingio: { nombre: "Merovingio", modo: "nube", equipo: "MacMini", orden: 1 },
   oraculo: { nombre: "Oráculo", modo: "hibrido", equipo: "MBP16", terminalMaquina: "MBP16", orden: 2 },
   morfeo: { nombre: "Morfeo", modo: "hibrido", equipo: "MBP16", terminalMaquina: "MBP16", orden: 3 },
   neo: { nombre: "Neo", modo: "edge", foco: "admira.tv", orden: 4 },

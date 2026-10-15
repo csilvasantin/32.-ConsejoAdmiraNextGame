@@ -187,7 +187,7 @@
         return GREETINGS[agent.persona] || (agent.territory ? agent.persona + ": " + agent.territory + "." : agent.persona + " te escucha.");
     }
 
-    // Elon (coetáneo CEO) = silla GrokBot Musk + deepagent Merovingio (Grok CLI, GrokBot box).
+    // Elon (coetáneo CEO) = silla GrokBot Musk + deepagent Merovingio (Grok CLI, Mac Mini).
     // Smith sigue en la otra cuenta de GrokBot.
     // Jensen (coetáneo CTO) = silla GrokBot Huang + deepagent Cypher (DeepAgents, GrokBot box).
     // ArquitectoCursorCloud sigue siendo el orquestador Cursor, sin silla.
@@ -635,7 +635,7 @@
             // preguntar, y la diferencia es real: unas son gratis y otras no.
             const porGrokBot = !!window.CouncilInterface?.has(p.persona);
             const tituloGrok = p.persona === "Elon Musk"
-                ? "Musk en GrokBot · incluido en la suscripcion. Deepagent: el Merovingio (Grok CLI, GrokBot box)."
+                ? "Musk en GrokBot · incluido en la suscripcion. Deepagent: el Merovingio (Grok CLI, Mac Mini)."
                 : p.persona === "Jensen Huang"
                 ? "Huang en GrokBot · incluido en la suscripcion. Deepagent: Cypher (DeepAgents, GrokBot box, Nemotron 3 Ultra)."
                 : "Por GrokBot · incluido en la suscripcion, no gasta tokens";

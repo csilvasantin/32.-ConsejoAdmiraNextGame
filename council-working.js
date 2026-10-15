@@ -1,7 +1,7 @@
 /* Boca de Elon mientras su deepagent trabaja (FLT-101302).
  * Sondea bot.yokup.com/api/presence/trabajando cada ~20 s, solo con la pestaña
  * visible y la mesa en Coetáneos. Enciende la boca de Elon Musk si late
- * Merovingio@GrokBotBox (alias de CouncilTodo) o Musk, con age ≤ ventana.
+ * Merovingio@MacMini (alias de CouncilTodo; vive en el Mac Mini desde el 15-10-2026) o Musk, con age ≤ ventana.
  * Script clásico; también se importa desde node:test.
  */
 (function (root) {
@@ -11,7 +11,7 @@
   const INTERVAL_MS = 20000;
   const PERSONA = 'Elon Musk';
   const WINDOW_DEFAULT = 90;
-  const MACHINE = 'grokbotbox';
+  const MACHINE = 'macmini';
 
   const key = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -21,7 +21,7 @@
     return (agents && agents[PERSONA]) || 'Merovingio';
   }
 
-  /* Merovingio en la GrokBot box, o la silla Musk, dentro de la ventana del latido. */
+  /* Merovingio en el Mac Mini, o la silla Musk, dentro de la ventana del latido. */
   function elonIsWorking(payload) {
     const declared = Number(payload && payload.window);
     const limit = Number.isFinite(declared) && declared > 0 ? declared : WINDOW_DEFAULT;

@@ -8,22 +8,23 @@ const { create, elonIsWorking, url, intervalMs } = globalThis.CouncilWorking;
 const fixture = {
     ok: true, now: 1_700_000_000, window: 90,
     items: [
-        { persona: 'Merovingio', machine: 'GrokBotBox', runtime: 'Grok CLI', encargo: 101302, working_since: 1000, working_at: 1100, age: 8 },
+        { persona: 'Merovingio', machine: 'MacMini', runtime: 'Grok CLI', encargo: 101302, working_since: 1000, working_at: 1100, age: 8 },
         { persona: 'Smith', machine: 'MacMini', runtime: 'Codex', encargo: null, working_since: 900, working_at: 950, age: 89 },
         { persona: 'Neo', machine: 'GrokBotBox', runtime: 'Claude', encargo: 4390, age: 3 }
     ]
 };
 
-test('Merovingio@GrokBotBox dentro de la ventana enciende a Elon; el resto no', () => {
+// Merovingio vive en el Mac Mini desde el 15-10-2026: su latido allí enciende a Elon; el de la caja ya no.
+test('Merovingio@MacMini dentro de la ventana enciende a Elon; el resto no', () => {
     assert.equal(globalThis.CouncilTodo.AGENTS.coetaneos['Elon Musk'], 'Merovingio');
-    assert.equal(globalThis.CouncilTodo.belongs('Merovingio', 'Merovingio', 'GrokBotBox'), true);
-    assert.equal(globalThis.CouncilTodo.belongs('Merovingio', 'Neo', 'GrokBotBox'), false);
+    assert.equal(globalThis.CouncilTodo.belongs('Merovingio', 'Merovingio', 'MacMini'), true);
+    assert.equal(globalThis.CouncilTodo.belongs('Merovingio', 'Neo', 'MacMini'), false);
     assert.equal(elonIsWorking(fixture), true);
     assert.equal(elonIsWorking({ window: 90, items: [
-        { persona: 'Merovingio', machine: 'MacMini', age: 4 }
-    ] }), false);
+        { persona: 'Merovingio', machine: 'GrokBotBox', age: 4 }
+    ] }), false, 'la caja de GrokBot ya no es Merovingio');
     assert.equal(elonIsWorking({ window: 90, items: [
-        { persona: 'Merovingio', machine: 'GrokBotBox', age: 91 }
+        { persona: 'Merovingio', machine: 'MacMini', age: 91 }
     ] }), false);
     assert.equal(elonIsWorking({ window: 90, items: [
         { persona: 'Musk', machine: 'GrokBot', age: 90 }

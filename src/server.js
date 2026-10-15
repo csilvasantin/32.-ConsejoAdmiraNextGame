@@ -61,7 +61,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Agora-Panel-Key, X-Council-Token",
   "Access-Control-Allow-Private-Network": "true"
 };
-// Elon→Merovingio (Grok CLI, GrokBot box de la silla Musk). Smith sigue como agente extra.
+// Elon→Merovingio (Grok CLI en el Mac Mini, pareja de la silla Musk). Smith sigue como agente extra.
 // Jensen→Cypher (DeepAgents, GrokBot box de la silla Huang).
 // Ryan Reynolds no tiene enlace: Cypher ya no es del CSO. ArquitectoCursorCloud
 // sigue despachable como extra (orquestador Cursor), no como silla de Jensen.

@@ -64,7 +64,7 @@
     function signinBox(){
       if(signin)return signin;
       signin=doc.createElement('div');signin.className='council-chat__signin';
-      const p=doc.createElement('p');p.textContent='Para enviar a Steve Jobs entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
+      const p=doc.createElement('p');p.className='council-chat__signin-texto';p.textContent='Para enviar entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
       const btn=doc.createElement('button');btn.type='button';btn.textContent='Entrar con Google';
       const gbtn=doc.createElement('div');gbtn.className='council-chat__gbtn';
       const err=doc.createElement('p');err.className='council-chat__signin-error';err.hidden=true;
@@ -363,18 +363,18 @@
       return submitted;
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
-    const SCOPE_HILO='Esta visita empieza en blanco. Lo que escribes le llega a Jobs y se guarda en la misma conversación que en GrokBot y en /chat/jobs/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
+    const SCOPE_HILO=()=>'Esta visita empieza en blanco. Lo que escribes le llega a '+shortName(selected)+' y se guarda en la misma conversación que en GrokBot y en /chat/'+(sharedOf(selected)||'')+'/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
     const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Ver histórico».';
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
-    const introHilo=name=>'Chat limpio. Escribe a '+name+' y pulsa Enviar: le llega a Jobs y se guarda en la misma conversación que en GrokBot.';
+    const introHilo=name=>'Chat limpio. Escribe a '+name+' y pulsa Enviar: le llega a '+shortName(name)+' y se guarda en la misma conversación que en GrokBot.';
     function stopShared(){if(sh.timer){clearTimeout(sh.timer);sh.timer=null;}if(sh.tic){clearInterval(sh.tic);sh.tic=null;}sh.again=false;}
     function visibles(){const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;const t=hilo.turnosDeVisita(m.turnos,sh.enviados,sh.desde);return {turnos:t,firma:t.map(x=>[x.id,x.entrega||'',x.encargo||'',x.encargo_estado||''].join(':')).join('|')};}
     function sharedChrome(){
       for(const sel of ['[data-chat-attach]','[data-chat-routines]','[data-chat-stop]','[data-chat-screen]','.council-chat__native'])if($(sel))$(sel).hidden=true;
       historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;
-      const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO;
+      const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO();
       const limits=$('.council-chat__limits');if(limits)limits.textContent=LIMITS_HILO;
       const node=$('.council-chat__connection');node.textContent='· Misma conversación que en GrokBot';node.title='POST /api/chat/enviar · respuestas por GET /api/chat/hilo';
     }
@@ -386,6 +386,8 @@
     }
     function askSignin(message){
       const box=signinBox();box.hidden=false;
+      const texto=box.querySelector('.council-chat__signin-texto');
+      if(texto)texto.textContent='Para enviar a '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
       box.err.hidden=!message;box.err.textContent=message||'';
       say('Entra con Google para enviar a '+selected+'; tu texto se conserva.');
     }

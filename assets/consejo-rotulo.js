@@ -25,6 +25,14 @@
     "Carlos Ratti": "Chief Experience Officer",
     "Ryan Reynolds": "Chief Storytelling Officer"
   };
+  var CHAT = {
+    "Steve Jobs": "jobs",
+    "Steve Wozniak": "wozniak",
+    "Walt Disney": "disney",
+    "George Lucas": "lucas",
+    "Elon Musk": "musk",
+    "Jensen Huang": "huang"
+  };
   var datos = null;
 
   function fase() { return Math.floor(Date.now() / CADA) % 2; }
@@ -102,6 +110,20 @@
       np.setAttribute("data-rotulo", persona + " · " + titulo + " · " + proy + " · " + meta);
       np.classList.toggle("np-estado-verde", !!(t && t.estado === "verde"));
       np.classList.toggle("np-estado-amarillo", !!(t && t.estado === "amarillo"));
+      var slug = CHAT[persona];
+      var link = np.querySelector(":scope > .np-chat");
+      if (slug) {
+        if (!link) {
+          link = document.createElement("a");
+          link.className = "np-chat";
+          link.textContent = "chat";
+          np.appendChild(link);
+        }
+        link.href = "/chat/" + slug + "/";
+        link.setAttribute("title", "Chat con " + persona);
+      } else if (link) {
+        link.remove();
+      }
     }
   }
 
@@ -116,7 +138,8 @@
       "#nameplates .np.gray .np-rota,#nameplates .np.gray .np-meta{color:#ddd}",
       "#nameplates .np .np-meta{font-size:.34rem;opacity:.95}",
       "#nameplates .np.np-estado-verde{box-shadow:0 0 8px rgba(61,220,74,.75)}",
-      "#nameplates .np.np-estado-amarillo{box-shadow:0 0 8px rgba(255,204,51,.8)}"
+      "#nameplates .np.np-estado-amarillo{box-shadow:0 0 8px rgba(255,204,51,.8)}",
+      "#nameplates .np .np-chat{pointer-events:auto;display:inline-block;margin-top:2px;color:#fff;text-decoration:underline;font-size:.4rem;text-transform:none}"
     ].join("");
     document.head.appendChild(s);
   }

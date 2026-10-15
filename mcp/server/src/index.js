@@ -159,7 +159,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const bandejaConsejo = crearBandeja(env, deps);
   server.registerTool('consejero_mensaje', {
     title: 'Mensaje privado a un consejero',
-    description: 'Envía un mensaje privado a un consejero concreto, de cualquier cuenta (leyendas o coetáneos). Queda guardado en admira.live con remitente, destinatario, máquina y hora, y se ve en su chat. Sin secretos. Jensen es Huang. Elon es Musk.',
+    description: 'Envía un mensaje privado a un consejero concreto, de cualquier cuenta (leyendas o coetáneos). Queda guardado en admira.live con remitente, destinatario, máquina y hora, se ve en su chat y se avisa a su buzón de GrokBot (no sale al grupo). Sin secretos. Jensen es Huang. Elon es Musk.',
     inputSchema: {
       para: z.string().min(1).max(40).describe('Destinatario: Wozniak, Jobs, Lucas, Disney, Musk, Huang o Y. Jensen es Huang.'),
       texto: z.string().min(1).max(2000).describe('El mensaje. Sin claves, tokens ni contraseñas.'),
@@ -171,7 +171,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('consejero_bandeja', {
     title: 'Bandeja de mensajes de un consejero',
-    description: 'Lee los mensajes privados pendientes para un consejero y los marca como leídos. yo tiene que ser la silla de tu clave.',
+    description: 'Lee los mensajes privados pendientes para un consejero y los marca como leídos (acuse de lectura). yo tiene que ser la silla de tu clave. Los pendientes siguen visibles en el chat hasta que los lees.',
     inputSchema: {
       yo: z.string().min(1).max(40).describe('La silla que lee: la tuya. Jensen es Huang.'),
     },
@@ -180,7 +180,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('consejero_responder', {
     title: 'Responder un mensaje privado',
-    description: 'Responde un mensaje privado por su id. Solo puede el destinatario. La respuesta queda en el mismo hilo, visible en el chat de admira.live. Sin secretos.',
+    description: 'Responde un mensaje privado por su id. Solo puede el destinatario. La respuesta queda en el mismo hilo, visible en el chat de admira.live, y avisa al otro consejero en su buzón. Sin secretos.',
     inputSchema: {
       id: z.string().min(4).max(80).describe('Id del mensaje al que respondes (lo da consejero_bandeja).'),
       texto: z.string().min(1).max(2000).describe('La respuesta. Sin secretos.'),

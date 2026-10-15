@@ -83,6 +83,50 @@ test('las tres herramientas hablan por el MCP y el GET público no pide clave', 
   const publico = await (await manejar(new Request('https://mcp.test/consejero/mensajes?con=Lucas'), { ADMIRA_LIVE_DESDE: kv }, {})).json();
   assert.equal(publico.ok, true);
   assert.equal(publico.mensajes.length, 2);
+  assert.equal(typeof publico.pendientes, 'number');
   const ajeno = await client.callTool({ name: 'consejero_mensaje', arguments: { de: 'Lucas', para: 'Huang', texto: 'no soy Lucas' } });
   assert.equal(ajeno.isError, true);
+});
+
+test('Elon avisa a Lucas en su buzón y el mensaje sigue guardado si el aviso falla', async () => {
+  const posts = [];
+  const fetchAviso = async (url, init) => {
+    posts.push({ url, body: JSON.parse(init.body), auth: init.headers.authorization });
+    return { ok: true, status: 200, json: async () => ({ ok: true, id: 6315 }) };
+  };
+  const musk = { persona: 'Musk', machine: 'GrokBot', runtime: 'Grok', agent: 'MuskGrokBot', tipo: 'consejero' };
+  const env = {
+    ADMIRA_LIVE_DESDE: kvMemoria(),
+    ADMIRA_TELEGRAM_PANEL_KEY: 'panel-de-prueba',
+    ADMIRA_TELEGRAM_URL: 'https://bot.test',
+    TELEGRAM: { fetch: fetchAviso },
+  };
+  const r = await crearBandeja(env).enviar({
+    de: 'Elon', para: 'Lucas', maquina: 'MacMini',
+    texto: 'Lucas, te mando el orden del día por este canal.',
+  }, musk);
+  assert.equal(r.mensaje.de, 'Musk');
+  assert.equal(r.aviso.ok, true);
+  assert.equal(r.aviso.encargo, 6315);
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].url, 'https://bot.test/api/bot-inbox');
+  assert.equal(posts[0].body.target_persona, 'Lucas');
+  assert.equal(posts[0].body.target_machine, 'grokbot');
+  assert.equal(posts[0].body.materialize_mission, false);
+  assert.match(posts[0].body.text, /^\[chat-coetaneos\] Elon Musk → George Lucas/);
+  assert.match(posts[0].body.text, /orden del día/);
+  assert.equal(posts[0].auth, 'Bearer panel-de-prueba');
+  assert.equal(r.mensaje.texto.includes('panel-de-prueba'), false);
+
+  const roto = {
+    ADMIRA_LIVE_DESDE: kvMemoria(),
+    ADMIRA_TELEGRAM_PANEL_KEY: 'panel-de-prueba',
+    TELEGRAM: { fetch: async () => { throw new Error('red'); } },
+  };
+  const r2 = await crearBandeja(roto).enviar({ de: 'Musk', para: 'Lucas', texto: 'sigue guardado' }, musk);
+  assert.equal(r2.mensaje.para, 'Lucas');
+  assert.equal(r2.aviso.ok, false);
+  const publico = await crearBandeja(roto).listar('Lucas');
+  assert.equal(publico.pendientes, 1);
+  assert.equal(publico.mensajes[0].leido, false);
 });

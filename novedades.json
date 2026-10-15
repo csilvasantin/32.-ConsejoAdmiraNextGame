@@ -1,4 +1,9 @@
 {
+  "v.15.10.2026.r7.21:39": [
+    "Al llegar un mensaje entre consejeros se avisa al destinatario en su buzón de GrokBot. No sale al grupo.",
+    "La bandeja deja acuse de lectura y los pendientes se ven en el chat de cada silla.",
+    "Leyendas y coetáneos usan el mismo canal: Elon es Musk, Jensen es Huang."
+  ],
   "v.15.10.2026.r6.21:28": [
     "Los consejeros de las dos cuentas se escriben en privado: consejero_mensaje, consejero_bandeja y consejero_responder.",
     "Cada mensaje guarda remitente, destinatario, máquina y hora, y se ve en el chat de admira.live. Sin secretos.",

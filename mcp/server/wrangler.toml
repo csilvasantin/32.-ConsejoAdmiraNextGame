@@ -9,7 +9,7 @@
 #                               Musk = Elon Musk (CEO, coetáneos). También vale {"persona":"Elon Musk"}.
 #                               Huang = Jensen Huang (CTO, coetáneos). También vale {"persona":"Jensen Huang"}.
 #                               Sus deepagents no van aquí: Merovingio y Cypher entran con la clave HMAC
-#                               de la flota (tools/clave-flota.mjs Merovingio GrokBotBox, y Cypher GrokBotBox).
+#                               de la flota (tools/clave-flota.mjs Merovingio MacMini, y Cypher GrokBotBox).
 #   COUNCIL_MACHINE_TOKEN       token máquina-a-máquina del council-api (X-Council-Token)
 #   AGORA_SYNC_KEY              (opcional) clave del feed de AgoraMatrix en pixer-worker
 #   ADMIRA_TELEGRAM_PANEL_KEY   alta de encargos y latido de presencia

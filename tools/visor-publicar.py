@@ -19,10 +19,10 @@ import hashlib, importlib.util, json, os, re, subprocess, sys, time, urllib.requ
 
 HOME = os.path.expanduser("~")
 CONF = os.path.join(HOME, ".config", "admiranext", "cuadratura.conf")
-# r33 (/interface 6): los 2 de Grok (Smith en el MBP16, Merovingio en la caja de GrokBot) — misma forma, aparte para no
+# r33 (/interface 6): los 2 de Grok (Smith en el MBP16, Merovingio en el Mac Mini desde el 15-10) — misma forma, aparte para no
 # tocar la cuadrícula 2x2 del Mac (cuadratura.sh lee solo las 4 primeras líneas de cuadratura.conf)
 CONF_GROK = os.environ.get("VISOR_CONF_GROK", os.path.join(HOME, ".config", "admiranext", "visor-grok.conf"))
-DEFECTO_GROK = ["Smith · Grok|macbook-pro-16|smith|Smith", "Merovingio · Grok|grokbotbox|merovingio|Merovingio"]
+DEFECTO_GROK = ["Smith · Grok|macbook-pro-16|smith|Smith", "Merovingio · Grok|macmini|merovingio|Merovingio"]
 URL = os.environ.get("VISOR_URL", "https://www.admira.live/api/visor/pane")
 CADA = float(os.environ.get("VISOR_CADA", "3"))
 LATIDO = 60

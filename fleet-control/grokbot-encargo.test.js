@@ -14,7 +14,7 @@ function setup(t, mcpImpl) {
   const calls = [];
   let clock = 1790000000000;
   const mcp = { call: async (name, args) => { calls.push({ name, args }); return mcpImpl(name, args, calls); } };
-  const provider = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 'state.json') }, keyProvider: () => 'k', mcp, presenceProvider: async () => ({presence:['Merovingio','Cypher','Trinity'].map(persona=>({persona,machine:'GrokBotBox',runtime:'DeepAgents',updated:clock/1000}))}), now: () => (clock += 10000) });
+  const provider = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 'state.json') }, keyProvider: () => 'k', mcp, presenceProvider: async () => ({presence:['Merovingio','Cypher','Trinity'].map(persona=>({persona,machine:persona==='Merovingio'?'MacMini':'GrokBotBox',runtime:'DeepAgents',updated:clock/1000}))}), now: () => (clock += 10000) });
   return { provider, calls };
 }
 const flush = () => new Promise(r => setImmediate(r));
@@ -46,7 +46,7 @@ test('un mensaje de Joshua crea un encargo MCP para el Merovingio y la respuesta
   const sent = await provider.send(joshua, { message_id: 'msg-joshua-0001', persona: 'Elon Musk', prompt: '¿Qué opinas del plan?' });
   assert.equal(sent.status, 'pending'); assert.equal(sent.encargo, 4901); assert.equal(sent.source, 'encargo'); assert.equal(sent.native, true);
   const enc = calls.find(c => c.name === 'agente_encargar').args;
-  assert.equal(enc.persona, 'Merovingio'); assert.equal(enc.maquina, 'GrokBotBox');
+  assert.equal(enc.persona, 'Merovingio'); assert.equal(enc.maquina, 'MacMini');
   assert.match(enc.de, /jsedano@admira\.com/); assert.match(enc.texto, /¿Qué opinas del plan\?/); assert.match(enc.texto, /^\[chat-coetaneos\] Joshua → Elon Musk\nContexto:\n\(sin historial\)\nMensaje de Joshua <jsedano@admira\.com>:\n¿Qué opinas del plan\?$/);
   assert.equal(caps.agente, 'Merovingio');
   // El acuse no se pinta como respuesta.
@@ -222,7 +222,7 @@ function controlled(t, {live = true, handler} = {}) {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'encargo-reliability-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
   let time=Date.parse('2026-10-03T14:00:00Z');const calls=[];
   const provider=createGrokBotEncargo({environment:{GROKBOT_ENCARGO_STATE_FILE:path.join(dir,'s.json')},keyProvider:()=> 'test',now:()=>time,
-    presenceProvider:async()=>({presence:live?['Merovingio','Cypher'].map(persona=>({persona,machine:'GrokBotBox',runtime:'DeepAgents',updated:time/1000})):[]}),
+    presenceProvider:async()=>({presence:live?['Merovingio','Cypher'].map(persona=>({persona,machine:persona==='Merovingio'?'MacMini':'GrokBotBox',runtime:'DeepAgents',updated:time/1000})):[]}),
     mcp:{call:async(name,args)=>{calls.push({name,args});return handler?handler(name,args):name==='agente_encargar'?{encargo:5001}:{texto:'CEO · Elon Musk (racional):\nRespuesta del Consejo.'};}}});
   return {provider,calls,advance:ms=>{time+=ms;}};
 }

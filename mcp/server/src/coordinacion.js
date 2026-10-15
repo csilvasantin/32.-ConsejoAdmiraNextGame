@@ -1,6 +1,6 @@
 /*
  * coordinacion.js — un solo censo para coordinar deepagents desde el MCP
- * (MuskGrokBot · Merovingio · GrokBotBox; HuangGrokBot · Cypher · GrokBotBox, 1-oct-2026).
+ * (MuskGrokBot · Merovingio · MacMini desde el 15-oct; HuangGrokBot · Cypher · GrokBotBox, 1-oct-2026).
  *
  * Problemas que resuelve:
  *  · consejo_bots decía «en línea» con el latido de 90 s del proxy del Mac Mini y
@@ -9,7 +9,7 @@
  *    el latido del Mac Mini queda como dato secundario.
  *  · el proxy del Mac Mini (src/server.js anterior a 6e3afaf) seguía publicando
  *    «Smith · CEO / Elon Musk». El CEO coetáneo Elon Musk es MuskGrokBot y su
- *    deepagent es Merovingio (Grok CLI en la GrokBotBox); Smith es del otro GrokBot.
+ *    deepagent es Merovingio (Grok CLI en el Mac Mini); Smith es del otro GrokBot.
  *    La tabla buena es la de app.js / council-todo.js (MATRIX_LINKS) y vive aquí
  *    también, para que el MCP corrija aunque el Mac Mini sirva código viejo.
  *  · flota_estado solo sabía de Claude Code. Ahora reconoce Codex, Grok CLI,
@@ -74,7 +74,7 @@ export function censoBots({ salud = null, presencia = [], ahoraMs = Date.now(), 
   const correcciones = [];
   for (const b of viejos) {
     if (norm(b.persona) === norm('Elon Musk') && b.id !== 'Merovingio') {
-      correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CEO Elon Musk = MuskGrokBot + deepagent Merovingio (Grok CLI, GrokBotBox). ' + (norm(b.id) === 'smith' ? 'Smith queda como Soporte (otro GrokBot).' : `${b.id} no es la silla CEO.`), motivo: 'el proxy del Mac Mini sirve un src/server.js anterior a 6e3afaf' });
+      correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CEO Elon Musk = MuskGrokBot + deepagent Merovingio (Grok CLI, MacMini). ' + (norm(b.id) === 'smith' ? 'Smith queda como Soporte (otro GrokBot).' : `${b.id} no es la silla CEO.`), motivo: 'el proxy del Mac Mini sirve un src/server.js anterior a 6e3afaf' });
     }
     if (norm(b.persona) === norm('Jensen Huang') && b.id !== 'Cypher') {
       correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CTO Jensen Huang = HuangGrokBot + deepagent Cypher (DeepAgents, GrokBotBox). ' + (norm(b.id) === 'arquitectocursorcloud' ? 'ArquitectoCursorCloud queda como orquestador de Cursor Cloud.' : `${b.id} no es la silla CTO.`), motivo: 'el proxy del Mac Mini sigue mapeando Jensen a ArquitectoCursorCloud' });

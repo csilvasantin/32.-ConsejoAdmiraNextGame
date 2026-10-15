@@ -94,7 +94,7 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
 
 - agentes_vivos: agentes con latido en 15 min (persona, equipo, runtime, foco) + los consejeros de GrokBot
   (Wozniak, Jobs, Lucas, Disney, Musk, Huang; siempre disponibles por webhook). Musk y Huang no tienen Mac.
-  El deepagent de Musk es Merovingio (Grok CLI en GrokBotBox). El de Huang es Cypher (DeepAgents en GrokBotBox,
+  El deepagent de Musk es Merovingio (Grok CLI en el Mac Mini). El de Huang es Cypher (DeepAgents en GrokBotBox,
   modelo nvidia/nemotron-3-ultra-550b-a55b, NVIDIA Nemotron 3 Ultra en integrate.api.nvidia.com).
   agente_encargar(persona, texto, maquina?, proyecto_id?, de?): crea el
   encargo en el bot-inbox (bot.yokup.com) para esa persona; agente → su vigilante lo inyecta en su sesión
@@ -107,7 +107,7 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   Merovingio y Cypher incluidos; un secreto de Cloudflare no pasa de 5 KB, por eso no hay mapa). En la bóveda:
   s:MCP_KEY_<PERSONA>_<EQUIPO>. Derivar una clave (la misma orden que el resto de la flota), con la
   semilla en $MCP_FLOTA_SEED o en ~/.fleet/mcp-flota.seed:
-  node mcp/server/tools/clave-flota.mjs Merovingio GrokBotBox
+  node mcp/server/tools/clave-flota.mjs Merovingio MacMini
   node mcp/server/tools/clave-flota.mjs Cypher GrokBotBox
   mcp-conectar.sh (admira-vault) la lee y registra «admira-live» en el cliente del runtime de la persona:
   Claude Code (claude mcp add en su CLAUDE_CONFIG_DIR), Codex ([mcp_servers.admira_live] con

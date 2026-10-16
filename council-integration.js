@@ -25,7 +25,7 @@
     const text=bubble.querySelector('.speech-text');text.scrollTop=text.scrollHeight;
   }});
   function prepare(persona,role){
-    bubble.classList.add('grokbot-bubble');bubble.hidden=false;
+    bubble.classList.add('grokbot-bubble');bubble.hidden=false;delete bubble.dataset.aviso;
     bubble.dataset.side=positions[persona]||'center';bubble.style.display='flex';
     bubble.style.setProperty('--speech-tail',tails[persona]||'50%');
     bubble.querySelector('.speaker').textContent=(role?role+' · ':'')+persona;

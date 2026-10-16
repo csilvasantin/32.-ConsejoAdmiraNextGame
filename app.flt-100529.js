@@ -1627,6 +1627,8 @@
         try { if (localStorage.getItem("council_onboarded")) return; } catch (e) {}
         const ceo = COUNCIL.find(m => m.gen === currentGen && m.name === "CEO") || COUNCIL[0];
         if (ceo && typeof showSpeechBubble === "function") showSpeechBubble(ceo.persona, ceo.name, "Bienvenido al Consejo. Pulsa un VERBO abajo y luego haz clic en un consejero para actuar. Empieza por PREGUNTAR.");
+        // Aviso, no bocadillo de consejero: el CSS lo ancla en la zona libre del centro de la mesa (council-grokbot.css)
+        { const av = document.getElementById("speech-bubble"); if (av && !av.hidden && av.style.display !== "none") av.dataset.aviso = "bienvenida"; }
         setSentenceHtml(cliT('<span class="sl-verb">Bienvenido</span> — pulsa un verbo y luego un consejero', '<span class="sl-verb">Welcome</span> — press a verb, then a councillor'));
         try { localStorage.setItem("council_onboarded", "1"); } catch (e) {}
     }

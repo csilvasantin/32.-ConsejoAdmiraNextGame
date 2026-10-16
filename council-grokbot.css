@@ -18,6 +18,10 @@
 .speech-bubble.grokbot-bubble[data-side="right"]{left:64%!important;width:23%}
 .speech-bubble.grokbot-bubble[data-side="center"]{left:38%!important;top:10.5%!important;width:24%;max-height:12.5%}
 .speech-bubble.grokbot-bubble[hidden]{display:none!important}
+/* Aviso de bienvenida del CEO (16-10-2026, GrokBot · orden de Carlos): no es un bocadillo de nadie, así que se ancla
+   en la zona libre del centro de la mesa y ya no tapa cabezas, placas ni bocadillos de CONVERSACIÓN. Sin cola: no señala a ningún consejero. */
+.speech-bubble.grokbot-bubble[data-aviso="bienvenida"]:not(.grokbot-docked){left:50%!important;top:58%!important;width:30%;max-height:17%;transform:translateX(-50%);z-index:6}
+.speech-bubble.grokbot-bubble[data-aviso="bienvenida"]::after{display:none}
 .council-speech-dock[hidden]{display:none!important}
 .council-speech-dock{width:100%;margin:6px 0;min-width:0}
 .speech-bubble.grokbot-bubble.grokbot-docked{position:relative;left:0!important;top:0!important;width:100%!important;max-height:230px;margin:0;font-size:12px}

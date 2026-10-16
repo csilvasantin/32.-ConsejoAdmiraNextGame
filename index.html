@@ -179,7 +179,7 @@
             max-width: none; /* hace caja con el menú superior (ancho del contenedor) */
             margin: 0 auto 0;
             border-radius: 12px 12px 0 0;
-            overflow: hidden;
+            overflow: visible;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .council-image img {
@@ -3766,7 +3766,7 @@ body.rail-open{overflow:hidden}
             <div class="meeting-door-hotspot" id="meeting-door-hotspot"
                  style="right:3%;top:15%;width:8%;height:25%"
                  title="Sala de Reuniones Privada — haz clic para entrar"></div>
-            <div class="nameplates hidden" id="nameplates"></div>
+            <div class="nameplates" id="nameplates"></div>
             <div class="speech-overlay" id="speech-overlay">
                 <div class="speech-bubble" id="speech-bubble">
                     <button class="speech-close" type="button" aria-label="Cerrar" onclick="window.CouncilInterface ? window.CouncilInterface.close() : hideSpeechBubble()">×</button>
@@ -4538,8 +4538,8 @@ body.rail-open{overflow:hidden}
 <link rel="stylesheet" href="council-grokbot.css?v=20261009-r9-paste">
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260930-flt101302"></script>
-<script defer src="assets/chat-hilo-client.js?v=20261009-r9-paste"></script>
-<script defer src="council-grokbot.js?v=20261009-r9-paste"></script>
+<script defer src="assets/chat-hilo-client.js?v=20261015-r5-chat"></script>
+<script defer src="council-grokbot.js?v=20261015-r5-chat"></script>
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
 <script defer src="council-estado.js?v=20261004-5113-anterior"></script>
 <script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
@@ -4584,6 +4584,7 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script defer src="/assets/control-lineas.js?v=r17-lineas"></script>
 <script defer src="/assets/barra-agentes.js?v=20261011-r41-agentes"></script>
+<script defer src="/assets/consejo-rotulo.js?v=20261015-r5-chat"></script>
 </body>
 </html>
 

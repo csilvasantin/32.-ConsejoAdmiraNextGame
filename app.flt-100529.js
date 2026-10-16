@@ -2664,8 +2664,8 @@
         document.getElementById(panelId).classList.toggle("collapsed");
     }
 
-    // Toggle nameplates visibility
-    let nameplatesVisible = false;
+    // Placas visibles al entrar: si no, los 16 no se leen en la foto.
+    let nameplatesVisible = true;
     function setNameplatesVisible(visible) {
         const np = document.getElementById("nameplates");
         const btn = document.getElementById("np-toggle");
@@ -2679,6 +2679,7 @@
     function toggleNameplates() {
         setNameplatesVisible(!nameplatesVisible);
     }
+    setNameplatesVisible(true);
 
     // Enter conversation mode — show conv area below SCUMM bar
     let conversationMode = false;

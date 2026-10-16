@@ -100,7 +100,11 @@ let SUPERS = new Set(FALLBACK_ALLOW);
 let _superTs = 0;
 async function refreshSupers() {
   try {
-    const r = await fetch(WL_API + '/list', { signal: AbortSignal.timeout(8000) });
+    // /list exige X-Whitelist-Token desde FLT-100603: sin él respondía 401 y el hub
+    // se quedaba con los owners de reserva (nuevos superusers rechazados en el handoff).
+    let wlToken = String(process.env.WHITELIST_MACHINE_TOKEN || '').trim();
+    if (!wlToken) { try { wlToken = require('fs').readFileSync(require('path').join(__dirname, '.whitelist-machine-token'), 'utf8').trim(); } catch (e) {} }
+    const r = await fetch(WL_API + '/list', { headers: wlToken ? { 'X-Whitelist-Token': wlToken } : {}, redirect: 'manual', signal: AbortSignal.timeout(8000) });
     if (!r.ok) return;
     const d = await r.json();
     if (Array.isArray(d.superusers) && d.superusers.length) {

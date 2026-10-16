@@ -12,7 +12,15 @@
   var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };
   var ESTADO = { enviando: "enviando…", entregado: "entregado", error: "error", sin_confirmar: "sin confirmar" };
   // Consejeros con hilo compartido (nombre visible → persona de la API).
-  var PERSONAS = { "Steve Jobs": "jobs" };
+  // Los seis que el servidor ya acepta. El resto de sillas no tiene hilo.
+  var PERSONAS = {
+    "Steve Jobs": "jobs",
+    "Steve Wozniak": "wozniak",
+    "Walt Disney": "disney",
+    "George Lucas": "lucas",
+    "Elon Musk": "musk",
+    "Jensen Huang": "huang"
+  };
 
   // ── Lógica pura ──────────────────────────────────────────────────────────
   function esperaDesde(turnos) {

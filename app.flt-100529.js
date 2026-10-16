@@ -2664,7 +2664,9 @@
         document.getElementById(panelId).classList.toggle("collapsed");
     }
 
-    // Toggle nameplates visibility
+    // Mesa limpia al entrar (Carlos, 16-oct-2026): ningún texto sobre las cabezas.
+    // Las placas solo salen como bocadillos al pulsar el verbo CONVERSACIÓN
+    // (council-conversacion.js) o con /nombres on.
     let nameplatesVisible = false;
     function setNameplatesVisible(visible) {
         const np = document.getElementById("nameplates");

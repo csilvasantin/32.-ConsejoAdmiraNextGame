@@ -74,7 +74,10 @@ test("cada consejero de las dos salas tiene silueta en el arte", () => {
 
 test("la home solo renombra la entrada a Conversación", () => {
   const html = fs.readFileSync("index.html", "utf8");
-  assert.match(html, /href="\/conversacion"/);
+  // 16-oct-2026: el verbo Conversación abre los bocadillos de la mesa; la página /conversacion
+  // sigue enlazada desde ellos («Todas las conversaciones», council-conversacion.js).
+  assert.match(html, /id="verb-conversacion"/);
+  assert.match(fs.readFileSync("council-conversacion.js", "utf8"), /href = '\/conversacion'/);
   assert.match(html, />Conversación</);
   assert.doesNotMatch(html, />Yarig\.AI</);
   assert.match(html, /council-silhouettes\.js/);

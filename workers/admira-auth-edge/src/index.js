@@ -138,6 +138,29 @@ async function verifyGoogle(credential, nonce, env, fetchImpl, now = Date.now())
     : {error:'account_not_authorized', status:403};
 }
 
+// Login por token MCP personal de AdmiraNeXT (anmcp_…), alternativa a Google
+// para agentes y consejeros sin cuenta Google (Carlos, 16-10-2026). El token lo
+// valida admiranext.com (/api/login-token: hash + directorio activo); aquí se
+// aplica la MISMA autorización que con Google (lista de whitelist.admira.store).
+const ADMIRANEXT_TOKEN_LOGIN = 'https://www.admiranext.com/api/login-token';
+async function verifyAdmiraNextToken(value, env, fetchImpl) {
+  const invalid = {error:'token_not_authorized', status:401};
+  if (!/^anmcp_[A-Za-z0-9_-]{20,100}$/.test(String(value || ''))) return invalid;
+  let data;
+  try {
+    const response = await fetchImpl(ADMIRANEXT_TOKEN_LOGIN, {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'},
+      body:JSON.stringify({token:value}), redirect:'manual', signal:AbortSignal.timeout(8000)});
+    if (response.status === 401) return invalid;
+    if (!response.ok) return {error:'token_validation_unavailable', status:503};
+    data = await response.json();
+  } catch (_) { return {error:'token_validation_unavailable', status:503}; }
+  const email = String(data && data.ok && data.email || '').trim().toLowerCase();
+  if (!email) return invalid;
+  const allow = await readAuthorization(env, fetchImpl);
+  if (allow.error) return allow;
+  return allow.superusers.includes(email) ? {identity:{email, name:''}} : {error:'account_not_authorized', status:403};
+}
+
 function callbackError(request, error, status, extra = {}) {
   const headers = {'Set-Cookie':challengeCookie('', 0), ...extra};
   if (!String(request.headers.get('Accept') || '').includes('text/html')) return json({error}, status, headers);
@@ -281,6 +304,23 @@ export function createWorker({fetchImpl = fetch, now = Date.now} = {}) {
         const headers = new Headers({'Cache-Control':'no-store', 'Content-Type':'application/json'});
         headers.append('Set-Cookie', challengeCookie(value.state));
         return new Response(JSON.stringify({...value, login_uri:LOGIN_URI}), {status:200, headers});
+      }
+      if (url.pathname === '/auth/token') {
+        if (request.method !== 'POST') return json({error:'method_not_allowed'}, 405, {Allow:'POST'});
+        const origin = request.headers.get('Origin');
+        if (origin && origin !== PUBLIC_ORIGIN) return json({error:'origin_not_allowed'}, 403);
+        const type = String(request.headers.get('Content-Type') || '').split(';', 1)[0].trim().toLowerCase();
+        const raw = await readBody(request, type === 'application/json' ? 'application/json' : 'application/x-www-form-urlencoded', 2048);
+        if (raw == null) return json({error:'invalid_form'}, 400);
+        let body; try { body = type === 'application/json' ? JSON.parse(raw) : Object.fromEntries(new URLSearchParams(raw)); } catch (_) { return json({error:'invalid_form'}, 400); }
+        const verification = await verifyAdmiraNextToken(String(body.token || ''), env, fetchImpl);
+        if (verification.error) return type === 'application/json' ? json({error:verification.error}, verification.status) : callbackError(request, verification.error, verification.status);
+        const issued = await (await storeCall(env, '/issue', {returnPath:safeReturnPath(body.return_to), now:now()})).json();
+        const exchange = await storeCall(env, '/exchange', {state:issued.state, nonce:issued.nonce, ...verification.identity, now:now()});
+        if (!exchange.ok) return json({error:'challenge_used'}, 409);
+        const code = (await exchange.json()).code;
+        // CLI: devuelve la URL de canje (60 s, un solo uso); navegador: misma navegación 303 que Google.
+        return type === 'application/json' ? json({ok:true, email:verification.identity.email, handoff:API_HANDOFF + '?code=' + encodeURIComponent(code)}) : handoffRedirect(code);
       }
       if (url.pathname === '/auth/callback') {
         if (request.method !== 'POST') return callbackError(request, 'method_not_allowed', 405, {Allow:'POST'});

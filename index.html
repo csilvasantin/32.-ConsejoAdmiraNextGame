@@ -3644,6 +3644,7 @@ body.rail-open{overflow:hidden}
 .top-bar .version-badge .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}
 </style>
 <link rel="stylesheet" href="council-todo.css?v=20260927-todo1">
+<link rel="stylesheet" href="council-conversacion.css?v=20261016-bocadillos">
 </head>
 <body>
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KD696XW"
@@ -3766,7 +3767,7 @@ body.rail-open{overflow:hidden}
             <div class="meeting-door-hotspot" id="meeting-door-hotspot"
                  style="right:3%;top:15%;width:8%;height:25%"
                  title="Sala de Reuniones Privada — haz clic para entrar"></div>
-            <div class="nameplates" id="nameplates"></div>
+            <div class="nameplates hidden" id="nameplates"></div>
             <div class="speech-overlay" id="speech-overlay">
                 <div class="speech-bubble" id="speech-bubble">
                     <button class="speech-close" type="button" aria-label="Cerrar" onclick="window.CouncilInterface ? window.CouncilInterface.close() : hideSpeechBubble()">×</button>
@@ -3992,7 +3993,7 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" data-en-title="The whole Council debates a topic" data-en="Debate" onclick="selectVerb(this)">Debatir</button>
                     <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" data-en-title="Feed a councillor URLs and reference material" data-en="Train" onclick="selectVerb(this)">Entrenar</button>
                     <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" data-en-title="Generate an image from your description" data-en="Create" onclick="selectVerb(this)">Crear</button>
-                    <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos" data-en-title="Team conversations: councillors, deepagents and Carlos" data-en="Conversation">Conversación</a>
+                    <button type="button" class="verb-btn" id="verb-conversacion" aria-pressed="false" title="Conversación: muestra bocadillos con el estado y el chat de cada consejero sobre la mesa (púlsalo de nuevo para quitarlos)" data-en-title="Conversation: shows speech bubbles with each councillor's status and chat over the table (press again to hide them)" data-en="Conversation">Conversación</button>
                     <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" data-en-title="The Council tells you the book/summary of the day (audio)" data-en="Think" onclick="selectVerb(this)">Pensar</button>
                     <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" data-en-title="Put a proposal to the Council's vote" data-en="Vote" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" title="Webcam de la oficina y análisis de URL, texto o archivo con el Consejo" data-en-title="Analyse a URL, text or file with the Council" data-en="Analyse" onclick="selectVerb(this)">Analizar</button>
@@ -4585,6 +4586,7 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/control-lineas.js?v=r17-lineas"></script>
 <script defer src="/assets/barra-agentes.js?v=20261011-r41-agentes"></script>
 <script defer src="/assets/consejo-rotulo.js?v=20261015-r5-chat"></script>
+<script defer src="council-conversacion.js?v=20261016-bocadillos"></script>
 </body>
 </html>
 

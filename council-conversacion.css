@@ -1,0 +1,85 @@
+/* Bocadillos de CONVERSACIÓN (council-conversacion.js)
+   Solo se ven al pulsar el verbo Conversación; por defecto la mesa va limpia.
+   Estética del sitio: pixel-art, Press Start 2P, madera / ámbar / azul oscuro,
+   marco pixelado (border-image 9-slice sin suavizado) y cola que apunta a la cabeza. */
+.council-bocadillos {
+  position: absolute; inset: 0; z-index: 7; pointer-events: none;
+  container-type: inline-size; overflow: hidden;
+  --cb-px: 2px;                    /* 1 píxel de arte = 2 px de pantalla */
+  --cb-b: 12px;                    /* grosor del marco */
+  --cb-w: clamp(104px, 11.2cqw, 220px);
+  --cb-f1: clamp(6px, .6cqw, 11px);
+  --cb-f2: clamp(5px, .47cqw, 9px);
+  font-family: 'Press Start 2P', monospace; image-rendering: pixelated;
+}
+.council-bocadillos[hidden] { display: none; }
+
+.cb { position: absolute; width: var(--cb-w); box-sizing: border-box; animation: cb-pop .16s steps(3) both; }
+.cb-marco {
+  position: relative; z-index: 2; box-sizing: border-box; width: 100%;
+  padding: calc(var(--cb-f1) * .55) calc(var(--cb-f1) * .6) calc(var(--cb-f1) * .6);
+  border: calc(6 * var(--cb-px)) solid transparent;
+  border-image: url("assets/conversacion/marco.svg") 6 fill / calc(6 * var(--cb-px)) stretch;
+  background: none; color: #f6e9c8; text-align: left; line-height: 1.55;
+  filter: drop-shadow(3px 3px 0 rgba(0,0,0,.55)); image-rendering: pixelated;
+}
+.cb-marco p { margin: 0; overflow-wrap: anywhere; }
+.cb-nombre { font-size: var(--cb-f1); color: #ffd45a; text-transform: uppercase; letter-spacing: 0; }
+.cb-rol { display: inline-block; margin-left: .5em; padding: 0 .35em; font-size: var(--cb-f2); color: #1a0e04; background: #c98a2b; vertical-align: .08em; }
+.cb-cargo { margin-top: calc(var(--cb-f2) * .5); font-size: var(--cb-f2); color: #f6e9c8; }
+.cb-estado { margin-top: calc(var(--cb-f2) * .6); font-size: var(--cb-f2); color: #cfd8ff; }
+.cb-led { display: inline-block; width: calc(var(--cb-f2) * .9); height: calc(var(--cb-f2) * .9); margin-right: .55em; background: #8a90a8; box-shadow: 0 0 0 1px #1a0e04; vertical-align: -.05em; }
+.cb[data-led="verde"] .cb-led { background: #3ddc84; }
+.cb[data-led="amarillo"] .cb-led { background: #ffd60a; }
+.cb-meta { font-size: var(--cb-f2); color: #9fb0e8; }
+.cb-proy { margin-top: calc(var(--cb-f2) * .4); font-size: var(--cb-f2); color: #e0b266; }
+.cb-chat {
+  display: inline-block; margin-top: calc(var(--cb-f2) * .9); padding: .55em 1.1em .5em;
+  font: inherit; font-size: var(--cb-f2); color: #1a0e04; text-decoration: none; text-transform: uppercase;
+  background: #daa520; box-shadow: inset 2px 2px 0 #ffe27a, inset -2px -2px 0 #8a5a1a, 0 0 0 2px #1a0e04;
+  pointer-events: auto; cursor: pointer;
+}
+.cb-chat:hover, .cb-chat:focus-visible { background: #ffe27a; outline: 2px solid #fff; outline-offset: 2px; }
+.cb-chat:active { transform: translateY(1px); }
+
+/* Cola: pixel-art, termina en el punto de anclaje (arriba de la cabeza). */
+.cb-cola {
+  position: absolute; z-index: 3; width: calc(16 * var(--cb-px)); height: calc(11 * var(--cb-px));
+  left: calc(var(--cb-tx, 50%) - 8 * var(--cb-px)); top: calc(100% - var(--cb-b, 12px) + var(--cb-tallo, 0px));
+  background: url("assets/conversacion/cola.svg") 0 0 / 100% 100% no-repeat; image-rendering: pixelated;
+}
+/* Tallo: línea pixelada que une un bocadillo elevado con su cola. */
+.cb-tallo {
+  position: absolute; z-index: 1; width: calc(6 * var(--cb-px));
+  left: calc(var(--cb-tx, 50%) - 3 * var(--cb-px)); top: calc(100% - var(--cb-b, 12px) - 2px); height: calc(var(--cb-tallo, 0px) + var(--cb-b, 12px) + 4px);
+  background: linear-gradient(90deg, #1a0e04 0 2px, #daa520 2px 4px, #1a0e04 4px 6px); background-size: 100% 100%;
+}
+.cb:not([data-alto]) .cb-tallo { display: none; }
+
+/* Pastilla de acceso a la página completa de conversaciones. */
+.cb-todas {
+  position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); z-index: 8; pointer-events: auto;
+  padding: .7em 1.2em .6em; font: inherit; font-size: clamp(5px, .62cqw, 11px); text-transform: uppercase; text-decoration: none; white-space: nowrap;
+  color: #ffd45a; background: #0a1233; box-shadow: 0 0 0 2px #1a0e04, 0 0 0 4px #c98a2b, 3px 5px 0 4px rgba(0,0,0,.5);
+}
+.cb-todas:hover, .cb-todas:focus-visible { color: #1a0e04; background: #daa520; outline: none; }
+
+/* Verbo activo (no es un verbo de selectVerb: lleva su propio estado). */
+.verb-btn.conv-on { color: #000; text-shadow: none; background: #daa520; font-weight: bold; }
+.verb-btn.conv-on:hover { color: #000; background: #ffe27a; }
+
+@keyframes cb-pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cb { animation: none; } }
+
+/* Móvil / estrecho: chips compactos (LED + apellido); si hay chat, todo el chip lo abre. */
+.council-bocadillos.cb-compacto { --cb-px: 1px; --cb-w: auto; --cb-b: 3px; --cb-f1: clamp(5px, 1.5cqw, 8px); --cb-f2: 5px; }
+.cb-compacto .cb { width: auto; max-width: 32%; }
+.cb-compacto .cb-marco { width: auto; padding: 1px 3px 0; border-width: 3px; border-image: url("assets/conversacion/marco-mini.svg") 3 fill / 3px stretch; filter: drop-shadow(2px 2px 0 rgba(0,0,0,.55)); }
+.cb-compacto .cb-nombre { white-space: nowrap; line-height: 1.4; }
+.cb-compacto .cb-led { width: .9em; height: .9em; margin-right: .4em; }
+.cb-compacto .cb[data-href] .cb-marco { pointer-events: auto; cursor: pointer; }
+.cb-compacto .cb[data-href]:active .cb-marco { transform: translateY(1px); }
+.cb-compacto .cb-todas { bottom: 3%; }
+
+/* Placas planas ocultas: ni se ven ni capturan el ratón (el hover/selección lo dan los contornos de la silueta). */
+.nameplates.hidden, .nameplates.hidden .np { visibility: hidden; pointer-events: none !important; }

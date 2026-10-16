@@ -2664,8 +2664,10 @@
         document.getElementById(panelId).classList.toggle("collapsed");
     }
 
-    // Placas visibles al entrar: si no, los 16 no se leen en la foto.
-    let nameplatesVisible = true;
+    // Mesa limpia al entrar (Carlos, 16-oct-2026): ningún texto sobre las cabezas.
+    // Las placas solo salen como bocadillos al pulsar el verbo CONVERSACIÓN
+    // (council-conversacion.js) o con /nombres on.
+    let nameplatesVisible = false;
     function setNameplatesVisible(visible) {
         const np = document.getElementById("nameplates");
         const btn = document.getElementById("np-toggle");
@@ -2679,7 +2681,6 @@
     function toggleNameplates() {
         setNameplatesVisible(!nameplatesVisible);
     }
-    setNameplatesVisible(true);
 
     // Enter conversation mode — show conv area below SCUMM bar
     let conversationMode = false;

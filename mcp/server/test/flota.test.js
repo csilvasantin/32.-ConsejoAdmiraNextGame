@@ -101,14 +101,14 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.ok(!v.agentes.some((a) => a.persona === 'Lucas'));
 });
 
-test('agente_encargar a un agente elige su máquina (Oráculo: su casa, el MacBook Pro 16, desde el 11-10-2026) y firma con la identidad de la clave', async () => {
+test('agente_encargar a un agente elige su máquina (Oráculo: su casa, el Mac Mini, desde el 17-10-2026) y firma con la identidad de la clave', async () => {
   const { client, estado, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Oráculo', texto: 'Revisa el ranking rojo de yokup y di qué prueba falla.', proyecto_id: 'yokup' } }));
-  assert.equal(r.ok, true); assert.equal(r.encargo, 2100); assert.equal(r.etiqueta, '#2100.01.15'); assert.equal(r.persona, 'Oraculo'); assert.equal(r.maquina, 'macbookpro16'); assert.equal(r.de, 'MorfeoMacMini');
+  assert.equal(r.ok, true); assert.equal(r.encargo, 2100); assert.equal(r.etiqueta, '#2100.01.15'); assert.equal(r.persona, 'Oraculo'); assert.equal(r.maquina, 'macmini'); assert.equal(r.de, 'MorfeoMacMini');
   const post = peticiones.find((p) => p.method === 'POST');
   assert.equal(post.headers.authorization, 'Bearer panel');
-  assert.deepEqual(post.body, { text: 'Revisa el ranking rojo de yokup y di qué prueba falla.', target_persona: 'Oraculo', target_machine: 'macbookpro16', from: 'MorfeoMacMini', project_id: 'yokup', materialize_mission: true });
-  assert.equal(estado.encargos[2100].target_machine, 'macbookpro16');
+  assert.deepEqual(post.body, { text: 'Revisa el ranking rojo de yokup y di qué prueba falla.', target_persona: 'Oraculo', target_machine: 'macmini', from: 'MorfeoMacMini', project_id: 'yokup', materialize_mission: true });
+  assert.equal(estado.encargos[2100].target_machine, 'macmini');
 });
 
 test('si la persona late en dos equipos y se indica uno, manda ese; sin señal, queda en cola sin equipo', async () => {
@@ -251,12 +251,12 @@ test('la silla del Consejo se puede nombrar por su MacBook Air: agente_encargar(
   assert.equal(mal.isError, true); assert.match(mal.content[0].text, /MacBookAirAzul es la silla de Jobs, no de Wozniak/);
 });
 
-test('agente_encargar a Morfeo sin máquina va a su equipo de casa, el MacBook Pro 16 (aunque lata en el Mac Mini)', async () => {
+test('agente_encargar a Morfeo sin máquina va a su equipo de casa, el Mac Mini', async () => {
   const { client, peticiones } = await cliente('clave-que-no-existe');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', texto: 'Prueba de encaminado a su casa.' } }));
-  assert.equal(r.maquina, 'macbookpro16');
+  assert.equal(r.maquina, 'macmini');
   const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
-  assert.equal(post.body.target_machine, 'macbookpro16');
+  assert.equal(post.body.target_machine, 'macmini');
   const mm = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', maquina: 'MacMini', texto: 'Con máquina explícita manda la máquina.' } }));
   assert.equal(mm.maquina, 'macmini');
 });
@@ -269,10 +269,10 @@ test('agente_encargar a Smith sin máquina va a su equipo de casa, el MacBook Pr
   assert.equal(post.body.target_machine, 'macbookpro16');
 });
 
-test('agente_encargar a Oráculo sin máquina va a su equipo de casa, el MacBook Pro 16 (no el Mac Mini)', async () => {
+test('agente_encargar a Oráculo sin máquina va a su equipo de casa, el Mac Mini', async () => {
   const { client, peticiones } = await cliente('clave-que-no-existe');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Oráculo', texto: 'Prueba de encaminado a su casa.' } }));
-  assert.equal(r.maquina, 'macbookpro16');
+  assert.equal(r.maquina, 'macmini');
   const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
-  assert.equal(post.body.target_machine, 'macbookpro16');
+  assert.equal(post.body.target_machine, 'macmini');
 });

@@ -264,3 +264,21 @@ test('health comprueba servicio real con credencial interna, sin publicar lista'
   box.env.WHITELIST_MACHINE_TOKEN = '';
   assert.equal((await call({Authorization:'Bearer '+box.env.AUTH_EDGE_SHARED_SECRET})).status, 503);
 });
+
+test('login por token anmcp_ emite handoff solo si admiranext lo valida y es autorizado', async () => {
+  const {env} = environment();
+  const fetchImpl = (url, init) => {
+    if (String(url) === 'https://www.admiranext.com/api/login-token') {
+      const ok = JSON.parse(init.body).token === 'anmcp_' + 'a'.repeat(43);
+      return Promise.resolve(ok ? Response.json({ok:true, email:'carlos@example.com'}) : Response.json({ok:false}, {status:401}));
+    }
+    return trustedFetch(url, init);
+  };
+  const worker = createWorker({fetchImpl, now:() => 1500000});
+  const call = (token, origin) => worker.fetch(new Request('https://www.admira.live/auth/token', {method:'POST', headers:{'Content-Type':'application/json', ...(origin ? {Origin:origin} : {})}, body:JSON.stringify({token})}), env);
+  let r = await call('anmcp_' + 'a'.repeat(43));
+  assert.equal(r.status, 200); const d = await r.json(); assert.equal(d.email, 'carlos@example.com'); assert.match(d.handoff, /^https:\/\/fleet\.admira\.live\/api\/auth\/handoff\?code=/);
+  assert.equal((await call('anmcp_' + 'b'.repeat(43))).status, 401);
+  assert.equal((await call('nope')).status, 401);
+  assert.equal((await call('anmcp_' + 'a'.repeat(43), 'https://evil.example')).status, 403);
+});

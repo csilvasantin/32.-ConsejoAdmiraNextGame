@@ -108,6 +108,12 @@
       var meta = estado(t, np) + " · " + encargos(t) + " · " + consumo(t);
       nodes.meta.textContent = meta;
       np.setAttribute("data-rotulo", persona + " · " + titulo + " · " + proy + " · " + meta);
+      /* Datos sueltos para los bocadillos de Conversación (council-conversacion.js). */
+      np.setAttribute("data-r-titulo", titulo);
+      np.setAttribute("data-r-proyecto", proy);
+      np.setAttribute("data-r-estado", estado(t, np));
+      np.setAttribute("data-r-meta", encargos(t) + " · " + consumo(t));
+      np.setAttribute("data-r-led", t ? (t.estado === "verde" ? "verde" : t.estado === "amarillo" ? "amarillo" : "parado") : "nodata");
       np.classList.toggle("np-estado-verde", !!(t && t.estado === "verde"));
       np.classList.toggle("np-estado-amarillo", !!(t && t.estado === "amarillo"));
       var slug = CHAT[persona];

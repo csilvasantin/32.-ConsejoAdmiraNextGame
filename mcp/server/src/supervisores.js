@@ -12,6 +12,7 @@ import { personaCanonica, norm } from './flota.js';
 
 export const SUPERVISION = {
   Musk: ['Oraculo', 'Morfeo'],
+  Jobs: ['Trinity', 'Neo'],
 };
 
 function tabla() {

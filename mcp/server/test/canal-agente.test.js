@@ -23,7 +23,9 @@ test('mapa de supervisión: Elon supervisa a Oráculo y Morfeo; deepagents salen
   assert.equal(supervisorDe('Oráculo'), 'Musk');
   assert.equal(supervisorDe('Merovingio'), 'Musk');
   assert.equal(supervisorDe('Cypher'), 'Huang');
-  assert.equal(supervisorDe('Neo'), null);
+  assert.equal(supervisorDe('Neo'), 'Jobs');
+  assert.equal(supervisorDe('Trinity'), 'Jobs');
+  assert.equal(supervisorDe('Smith'), null);
 });
 
 test('Morfeo escribe a Elon, Elon lee y responde, Morfeo lo lee y contesta', async () => {
@@ -50,7 +52,7 @@ test('Morfeo escribe a Elon, Elon lee y responde, Morfeo lo lee y contesta', asy
 test('un agente no puede escribir a otro consejero ni sin supervisor, ni llevar secretos', async () => {
   const env = { ADMIRA_LIVE_DESDE: kvMemoria() };
   await assert.rejects(() => crearBandeja(env).enviar({ para: 'Lucas', texto: 'hola' }, oraculo), /supervisor, Musk/);
-  await assert.rejects(() => crearBandeja(env).enviar({ para: 'Musk', texto: 'hola' }, neo), /no tiene consejero supervisor/);
+  await assert.rejects(() => crearBandeja(env).enviar({ para: 'Musk', texto: 'hola' }, { ...neo, persona: 'Smith', agent: 'SmithMacMini' }), /no tiene consejero supervisor/);
   await assert.rejects(() => crearBandeja(env).enviar({ para: 'Musk', texto: 'token: abcdefghijklmnop' }, oraculo), /secreto/);
   const l = await crearBandeja(env).enviar({ de: 'Lucas', para: 'Musk', texto: 'Hola Elon' }, lucas);
   await assert.rejects(() => crearBandeja(env).responder({ id: l.mensaje.id, texto: 'me cuelo' }, oraculo), /no es para Oraculo/);

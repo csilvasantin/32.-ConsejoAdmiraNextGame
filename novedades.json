@@ -1,4 +1,28 @@
 {
+  "v.15.10.2026.r7.21:39": [
+    "Al llegar un mensaje entre consejeros se avisa al destinatario en su buzón de GrokBot. No sale al grupo.",
+    "La bandeja deja acuse de lectura y los pendientes se ven en el chat de cada silla.",
+    "Leyendas y coetáneos usan el mismo canal: Elon es Musk, Jensen es Huang."
+  ],
+  "v.15.10.2026.r6.21:28": [
+    "Los consejeros de las dos cuentas se escriben en privado: consejero_mensaje, consejero_bandeja y consejero_responder.",
+    "Cada mensaje guarda remitente, destinatario, máquina y hora, y se ve en el chat de admira.live. Sin secretos.",
+    "El mismo MCP, https://mcp.admira.live/mcp, sirve a leyendas y a coetáneos. Jensen es Huang."
+  ],
+  "v.15.10.2026.r5.09:10": [
+    "Chat propio para los seis consejeros que el servidor ya acepta: Jobs, Wozniak, Disney, Lucas, Musk y Huang.",
+    "Elon Musk en /chat/musk/ y Jensen Huang en /chat/huang/. Los otros diez consejeros siguen sin hilo: la página no finge uno.",
+    "En la placa de esos seis hay un enlace «chat». En la home, «Ver histórico» abre el chat de quien esté elegido."
+  ],
+  "v.15.10.2026.r4.09:08": [
+    "Mismo rótulo de los 16 consejeros que r3. La foto ya no recorta las placas: el título, el proyecto, el estado, los encargos y el consumo se leen enteros."
+  ],
+  "v.15.10.2026.r3.08:57": [
+    "En la home, las placas de los 16 consejeros se ven al entrar, sobre la foto (leyendas o coetáneos, según el interruptor).",
+    "Cada 15 segundos la placa alterna el título del cargo y el proyecto en vivo (fuente /api/flota/trabajando).",
+    "Debajo se lee el estado (trabajando, con Carlos, parado o sin latido), los encargos abiertos, el consumo (cuota, gratis o sin medición) y si la máquina está encendida o apagada.",
+    "Si no hay dato, lo dice. No inventa un cero ni un proyecto."
+  ],
   "v.14.10.2026.r48.08:15": [
     "Control: cada unidad tiene su propio botón ⏻ (p. ej. «Morfeo · CLI · MBP16», «Morfeo · Desktop app · Mac Mini»). Al pulsarlo se enciende o apaga solo ese agente en ese modo y en esa máquina; el resto sigue igual (#5870).",
     "Control: GrokBot por cuenta dentro de Desktop app, con su botón ⏻ («GrokBot · Coetáneos» y «GrokBot · Leyendas» en cada Mac). Abre o cierra solo Grok Bot con esa cuenta; Claude, ChatGPT/Codex y los CLIs siguen igual (#5872).",

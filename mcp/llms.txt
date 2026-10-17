@@ -50,6 +50,7 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   consejero_preguntar (rol CEO/CTO/COO/CFO/CCO/CDO/CXO/CSO × generación leyendas/coetaneos) ·
   consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir
   consejero_mensaje · consejero_bandeja · consejero_responder
+  Canal agente → consejero: un AGENTE de la flota usa consejero_mensaje para escribir SOLO a su consejero supervisor (Elon/Musk supervisa a Oráculo y Morfeo; Merovingio→Musk, Cypher→Huang). Lee las respuestas con consejero_bandeja y contesta con consejero_responder. El mapa está en mcp/server/src/supervisores.js.
 - Herramientas Yokup (FLT-1580, carnés WozniakGrokBot · JobsGrokBot · DisneyGrokBot · LucasGrokBot · MuskGrokBot · HuangGrokBot,
   equipo GrokBot, runtime Grok): yokup_quien_soy · yokup_presencia · yokup_alta · yokup_paso ·
   yokup_evidencia · yokup_informe · yokup_ventana · yokup_mis_misiones

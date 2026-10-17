@@ -47,7 +47,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       `SI TÚ ERES UN CONSEJERO (un bot de GrokBot: ${CONSEJEROS_GROKBOT.join(', ')} — Steve Wozniak, Steve Jobs, Walt Disney, George Lucas, Elon Musk, Jensen Huang…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.`,
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
-      'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo. Para hablar en privado con otro consejero, de cualquier cuenta, usa consejero_mensaje; él lo lee con consejero_bandeja y contesta con consejero_responder. Sin secretos. Jensen es Huang. Elon es Musk.',
+      'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo. Para hablar en privado con otro consejero, de cualquier cuenta, usa consejero_mensaje; él lo lee con consejero_bandeja y contesta con consejero_responder. SI ERES UN AGENTE de la flota (Morfeo, Oráculo, Merovingio, Cypher…): consejero_mensaje es tu canal directo con TU consejero supervisor (Elon/Musk supervisa a Oráculo y Morfeo); solo puedes escribirle a él, lees sus respuestas con consejero_bandeja y le contestas con consejero_responder. No uses a Carlos de recadero. Sin secretos. Jensen es Huang. Elon es Musk.',
       `COORDINAR DEEPAGENTS (v.01.10.2026.r3): hay UN censo. «En línea» = latido en bot.yokup.com en los últimos 15 min, igual en agentes_vivos y consejo_bots. El CEO coetáneo Elon Musk es MuskGrokBot y su deepagent es Merovingio (Grok CLI, MacMini); Smith es del otro GrokBot, no el CEO. El CTO coetáneo Jensen Huang es HuangGrokBot y su deepagent es Cypher (DeepAgents, GrokBotBox, Nemotron 3 Ultra); ArquitectoCursorCloud es el orquestador de Cursor Cloud, no la silla CTO. agentes_vivos trae la carga (encargos abiertos) de cada agente: encarga al vivo con menos carga. flota_estado distingue runtimes (${Object.values(RUNTIMES).map((v) => v.nombre).join(', ')}) e incluye la GrokBotBox por presencia.`,
       'TU BANDEJA DE ENCARGOS: al empezar cada turno, encargos_listar (sin persona = la tuya) devuelve tus encargos abiertos (pending, ack, in_progress, blocked). Por cada uno: encargo_responder(numero, ack) al cogerlo, in_progress si va para largo, blocked con nota del motivo, done con nota de la respuesta. Solo contestas los tuyos. agente_encargar admite deadline y criterio (criterio de hecho): úsalos para que el otro sepa cuándo y cómo se da por hecho.',
       'MANDAMIENTO 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): cada agente y consejero mide lo que gasta y lo declara en las Notificaciones de Yokup. Si no tienes medidor local (GrokBot, OpenCode, Grok CLI), llama a consumo_reportar al terminar cada jornada o cada misión larga, con entrada, caché, salida, modelo, despertares y qué los quemó. Un despertar sin trabajo nuevo cuesta una línea, no una sesión; un eco duplicado se cierra, no se rehace.',
@@ -159,11 +159,11 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const bandejaConsejo = crearBandeja(env, deps);
   server.registerTool('consejero_mensaje', {
     title: 'Mensaje privado a un consejero',
-    description: 'Envía un mensaje privado a un consejero concreto, de cualquier cuenta (leyendas o coetáneos). Queda guardado en admira.live con remitente, destinatario, máquina y hora, se ve en su chat y se avisa a su buzón de GrokBot (no sale al grupo). Sin secretos. Jensen es Huang. Elon es Musk.',
+    description: 'Envía un mensaje privado a un consejero concreto, de cualquier cuenta (leyendas o coetáneos). Si eres un AGENTE de la flota, es tu canal con tu consejero supervisor y solo puedes escribirle a él (Elon/Musk supervisa a Oráculo y Morfeo; Merovingio→Musk, Cypher→Huang); de lo pone la clave. Queda guardado en admira.live con remitente, destinatario, máquina y hora, se ve en su chat y se avisa a su buzón de GrokBot (no sale al grupo). Sin secretos. Jensen es Huang. Elon es Musk.',
     inputSchema: {
       para: z.string().min(1).max(40).describe('Destinatario: Wozniak, Jobs, Lucas, Disney, Musk, Huang o Y. Jensen es Huang.'),
       texto: z.string().min(1).max(2000).describe('El mensaje. Sin claves, tokens ni contraseñas.'),
-      de: z.string().min(1).max(40).describe('Quién envía. Tiene que ser la silla de tu clave (o la que eliges con la clave compartida del Consejo).'),
+      de: z.string().min(1).max(40).optional().describe('Quién envía. Consejero: la silla de tu clave (o la que eliges con la clave compartida del Consejo). Agente: no hace falta, firma tu clave.'),
       maquina: z.string().min(2).max(40).optional().describe('Máquina del remitente, si no es la de la clave. Por ejemplo MacMini o MacStudio.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
@@ -171,16 +171,16 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('consejero_bandeja', {
     title: 'Bandeja de mensajes de un consejero',
-    description: 'Lee los mensajes privados pendientes para un consejero y los marca como leídos (acuse de lectura). yo tiene que ser la silla de tu clave. Los pendientes siguen visibles en el chat hasta que los lees.',
+    description: 'Lee los mensajes privados pendientes para un consejero (o, con clave de agente, las respuestas de tu consejero supervisor) y los marca como leídos (acuse de lectura). yo tiene que ser la silla de tu clave; un agente puede omitirlo. Los pendientes siguen visibles en el chat hasta que los lees.',
     inputSchema: {
-      yo: z.string().min(1).max(40).describe('La silla que lee: la tuya. Jensen es Huang.'),
+      yo: z.string().min(1).max(40).optional().describe('La silla que lee: la tuya. Jensen es Huang. Un agente no lo necesita.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, seguro(async (a) => texto(await bandejaConsejo.bandeja(a, identidad))));
 
   server.registerTool('consejero_responder', {
     title: 'Responder un mensaje privado',
-    description: 'Responde un mensaje privado por su id. Solo puede el destinatario. La respuesta queda en el mismo hilo, visible en el chat de admira.live, y avisa al otro consejero en su buzón. Sin secretos.',
+    description: 'Responde un mensaje privado por su id. Solo puede el destinatario. Un consejero responde así a los mensajes de sus agentes, y un agente a los de su supervisor. La respuesta queda en el mismo hilo, visible en el chat de admira.live, y avisa al otro consejero en su buzón. Sin secretos.',
     inputSchema: {
       id: z.string().min(4).max(80).describe('Id del mensaje al que respondes (lo da consejero_bandeja).'),
       texto: z.string().min(1).max(2000).describe('La respuesta. Sin secretos.'),

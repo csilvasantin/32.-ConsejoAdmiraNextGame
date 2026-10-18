@@ -388,7 +388,7 @@
       sh.epoch=epoch;sh.turnos=[];sh.locales=[];sh.enviados={};sh.desde=null;sh.primero=null;sh.firma='';sh.seen=new Set();sh.cargado=false;
       if(histMode){
         // Hilo persistente: se carga el histórico al seleccionar (o se pide entrar con Google).
-        sh.desde=0;sharedChrome();render();say('Cargando la conversación con '+selected+'…');
+        sh.desde=0;sh.busy=false;sh.again=false;sharedChrome();render();say('Cargando la conversación con '+selected+'…');
         return sharedRefresh().then(()=>current(epoch));
       }
       sharedChrome();render();say(introHilo(selected));
@@ -397,7 +397,7 @@
     function askSignin(message){
       const box=signinBox();box.hidden=false;
       const texto=box.querySelector('.council-chat__signin-texto');
-      if(texto)texto.textContent=histMode?'Para ver y enviar mensajes con '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.':'Para enviar a '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
+      if(texto)texto.textContent=histMode?'Para ver y enviar mensajes con '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva en la caja; envíalo cuando hayas entrado.':'Para enviar a '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
       box.err.hidden=!message;box.err.textContent=message||'';
       say('Entra con Google para enviar a '+selected+'; tu texto se conserva.');
     }

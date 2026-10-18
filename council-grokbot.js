@@ -55,7 +55,11 @@
        Los demás consejeros siguen por el puente de GrokBot sin cambios. */
     const hilo=options.sharedThread===false?null:(options.hilo||root.ChatHiloClient||null);
     const sharedOf=name=>hilo&&name?hilo.personaDe(name):null;
-    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1};
+    /* historyMode (bandeja ?chat=1, assets/council-inbox.js): hilo PERSISTENTE. Al seleccionar se lee
+       leerHilo(persona,{limite:60}) y se pintan todos los turnos (no solo los de esta visita). Sin sesión de
+       Google se muestra el aviso «Entrar con Google». Sin esta opción el comportamiento es el de siempre. */
+    const histMode=options.historyMode===true&&!!hilo;
+    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1,cargado:false};
     // «Ver histórico» → /chat/jobs/ (solo en el hilo compartido).
     const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Ver histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
     $('.council-chat__toolbar')?.append(historico);
@@ -363,14 +367,15 @@
       return submitted;
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
-    const SCOPE_HILO=()=>'Esta visita empieza en blanco. Lo que escribes le llega a '+shortName(selected)+' y se guarda en la misma conversación que en GrokBot y en /chat/'+(sharedOf(selected)||'')+'/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
+    const SCOPE_HILO=()=>histMode?'Hilo persistente con '+shortName(selected)+': los últimos '+HIST_LIMITE+' mensajes de la misma conversación que en GrokBot y en /chat/'+(sharedOf(selected)||'')+'/ (allí está el histórico completo). No se publica en el Ágora ni en Telegram.':'Esta visita empieza en blanco. Lo que escribes le llega a '+shortName(selected)+' y se guarda en la misma conversación que en GrokBot y en /chat/'+(sharedOf(selected)||'')+'/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
     const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Ver histórico».';
+    const HIST_LIMITE=60;
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
     const introHilo=name=>'Chat limpio. Escribe a '+name+' y pulsa Enviar: le llega a '+shortName(name)+' y se guarda en la misma conversación que en GrokBot.';
     function stopShared(){if(sh.timer){clearTimeout(sh.timer);sh.timer=null;}if(sh.tic){clearInterval(sh.tic);sh.tic=null;}sh.again=false;}
-    function visibles(){const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;const t=hilo.turnosDeVisita(m.turnos,sh.enviados,sh.desde);return {turnos:t,firma:t.map(x=>[x.id,x.entrega||'',x.encargo||'',x.encargo_estado||''].join(':')).join('|')};}
+    function visibles(){const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;const t=histMode?m.turnos:hilo.turnosDeVisita(m.turnos,sh.enviados,sh.desde);return {turnos:t,firma:t.map(x=>[x.id,x.entrega||'',x.encargo||'',x.encargo_estado||''].join(':')).join('|')};}
     function sharedChrome(){
       for(const sel of ['[data-chat-attach]','[data-chat-routines]','[data-chat-stop]','[data-chat-screen]','.council-chat__native'])if($(sel))$(sel).hidden=true;
       historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;
@@ -380,14 +385,19 @@
     }
     function startShared(epoch){
       // Sin red al seleccionar: la home no carga el histórico.
-      sh.epoch=epoch;sh.turnos=[];sh.locales=[];sh.enviados={};sh.desde=null;sh.primero=null;sh.firma='';sh.seen=new Set();
+      sh.epoch=epoch;sh.turnos=[];sh.locales=[];sh.enviados={};sh.desde=null;sh.primero=null;sh.firma='';sh.seen=new Set();sh.cargado=false;
+      if(histMode){
+        // Hilo persistente: se carga el histórico al seleccionar (o se pide entrar con Google).
+        sh.desde=0;sharedChrome();render();say('Cargando la conversación con '+selected+'…');
+        return sharedRefresh().then(()=>current(epoch));
+      }
       sharedChrome();render();say(introHilo(selected));
       return Promise.resolve(true);
     }
     function askSignin(message){
       const box=signinBox();box.hidden=false;
       const texto=box.querySelector('.council-chat__signin-texto');
-      if(texto)texto.textContent='Para enviar a '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
+      if(texto)texto.textContent=histMode?'Para ver y enviar mensajes con '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.':'Para enviar a '+(selected||'este consejero')+' entra con tu cuenta de Google de admira.live. Tu texto se conserva y se envía al entrar.';
       box.err.hidden=!message;box.err.textContent=message||'';
       say('Entra con Google para enviar a '+selected+'; tu texto se conserva.');
     }
@@ -404,16 +414,19 @@
       if(!persona||destroyed||sh.desde===null)return Promise.resolve();
       if(sh.busy){sh.again=true;return Promise.resolve();}
       clearTimeout(sh.timer);sh.timer=null;
-      if(!hilo.credencial()){askSignin('Tu sesión ha caducado. Vuelve a entrar para ver la respuesta.');return Promise.resolve();}
+      if(!hilo.credencial()){askSignin(histMode?'':'Tu sesión ha caducado. Vuelve a entrar para ver la respuesta.');if(histMode)say('Entra con Google para ver tu conversación con '+name+'.');return Promise.resolve();}
       sh.busy=true;
       return hilo.leerHilo(persona,{fetch:request,limite:60}).then(r=>{
         if(!current(epoch))return;
         if(r.status===401){askSignin('Tu sesión ha caducado. Vuelve a entrar para ver la respuesta.');return;}
         if(!r.ok){say('No se pudo comprobar la respuesta de '+name+'. Se reintentará.');return;}
-        sh.turnos=r.turnos;
+        if(histMode&&signin)signin.hidden=true;
+        sh.turnos=r.turnos;if(histMode&&!r.turnos.length)sh.firma='-';
         for(const t of r.turnos)if(t&&t.id===sh.primero)adoptarDesde(t.id,t.ts);
+        if(histMode&&!sh.cargado){sh.cargado=true;say('Conversación con '+name+' · '+r.turnos.length+' mensajes.');}
+        options.onThread?.({persona:name,turnos:r.turnos});
         for(const t of visibles().turnos){
-          if(t.rol!=='carlos'&&!sh.seen.has(t.id))options.onAnswer?.({persona:name,text:String(t.texto||''),messageId:t.id,status:'done',source:'hilo',native:true});
+          if(!histMode&&t.rol!=='carlos'&&!sh.seen.has(t.id))options.onAnswer?.({persona:name,text:String(t.texto||''),messageId:t.id,status:'done',source:'hilo',native:true});
           sh.seen.add(t.id);
         }
         render();
@@ -425,9 +438,12 @@
       const typingText=hilo.textoEscribiendo(v.turnos,Date.now(),shortName(selected));
       if(v.firma!==sh.firma||!log.childElementCount){
         sh.firma=v.firma;log.replaceChildren();sh.typingNode=null;
+        if(histMode&&sh.turnos.length>=HIST_LIMITE){
+          const p=doc.createElement('p');p.className='council-chat__intro';p.textContent='Se muestran los últimos '+HIST_LIMITE+' mensajes · histórico completo en «Ver histórico».';log.append(p);
+        }
         if(!v.turnos.length){
-          const p=doc.createElement('p');p.className='council-chat__intro';p.textContent=introHilo(selected);log.append(p);
-          const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='El histórico de vuestras conversaciones está en «Ver histórico».';log.append(p2);
+          const p=doc.createElement('p');p.className='council-chat__intro';p.textContent=histMode?(hilo.credencial()?'Aún no hay mensajes con '+selected+'. Escribe abajo para empezar: se guarda en la misma conversación que en GrokBot.':'Entra con Google para ver tu conversación con '+selected+'.'):introHilo(selected);log.append(p);
+          if(!histMode){const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='El histórico de vuestras conversaciones está en «Ver histórico».';log.append(p2);}
         }
         for(const t of v.turnos){
           const carlos=t.rol==='carlos';

@@ -4587,6 +4587,14 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/barra-agentes.js?v=20261011-r41-agentes"></script>
 <script defer src="/assets/consejo-rotulo.js?v=20261015-r5-chat"></script>
 <script defer src="council-conversacion.js?v=20261016-bocadillos"></script>
+<!-- Bandeja de conversaciones (woz/ux-chat-inbox): SOLO con ?chat=1. Sin el parámetro este bloque no hace nada
+     (ni CSS ni JS ni peticiones): la home queda como antes. -->
+<script>
+if(/(?:^|[?&])chat=1(?:&|$)/.test(location.search)){
+  var ciCss=document.createElement('link');ciCss.rel='stylesheet';ciCss.href='assets/council-inbox.css?v=20261018-inbox1';document.head.appendChild(ciCss);
+  var ciJs=document.createElement('script');ciJs.src='assets/council-inbox.js?v=20261018-inbox1';document.body.appendChild(ciJs);
+}
+</script>
 </body>
 </html>
 

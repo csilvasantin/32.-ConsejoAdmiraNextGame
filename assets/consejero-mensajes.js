@@ -1,4 +1,5 @@
-/* Mensajes privados entre consejeros, visibles sin login. Los escribe el MCP. */
+/* Mensajes privados entre consejeros. Los escribe el MCP. PRIVADO (19-10-2026): solo con la
+   sesión Google autorizada de admira.live, vía /api/chat/entre-consejeros (nunca en abierto). */
 (function () {
   "use strict";
   var NOMBRE = { Huang: "Jensen Huang", Musk: "Elon Musk", Lucas: "George Lucas", Jobs: "Steve Jobs", Wozniak: "Steve Wozniak", Disney: "Walt Disney", Y: "Y" };
@@ -39,10 +40,19 @@
       lista.appendChild(art);
     });
   }
+  function jwt() {
+    var C = window.ChatHiloClient;
+    try { return C && C.credencial ? C.credencial() : ""; } catch (e) { return ""; }
+  }
   function cargar() {
-    fetch("https://mcp.admira.live/consejero/mensajes?con=" + encodeURIComponent(silla), { cache: "no-store" })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { pintar((d && d.mensajes) || [], Number(d && d.pendientes) || 0); })
+    var t = jwt();
+    if (!t) { lista.textContent = "Privado: entra con tu cuenta de Google de admira.live para ver los mensajes entre consejeros."; return; }
+    fetch("/api/chat/entre-consejeros?con=" + encodeURIComponent(silla), { cache: "no-store", headers: { Authorization: "Bearer " + t } })
+      .then(function (r) {
+        if (r.status === 401) { lista.textContent = "Tu sesión no está autorizada o ha caducado. Vuelve a entrar."; return null; }
+        return r.json();
+      })
+      .then(function (d) { if (d) pintar((d && d.mensajes) || [], Number(d && d.pendientes) || 0); })
       .catch(function () { lista.textContent = "No se ha podido leer la bandeja."; });
   }
   cargar();

@@ -119,3 +119,15 @@ test('sandbox: solo con AVISOS_SANDBOX_KEY y prefijo propio de KV', async () => 
   const r = await manejar(new Request('https://x/mcp', { method: 'POST', headers: { authorization: 'Bearer nada', 'content-type': 'application/json' }, body: '{}' }), { ADMIRA_LIVE_DESDE: kv });
   assert.equal(r.status, 401);
 });
+
+import { lecturaMensajesPermitida } from '../src/index.js';
+test('/consejero/mensajes: abierto sin secreto, cerrado con CONSEJERO_MENSAJES_TOKEN', async () => {
+  const r = (t) => new Request('https://x/consejero/mensajes?con=Jobs', { headers: t ? { 'x-mensajes-token': t } : {} });
+  assert.equal(lecturaMensajesPermitida(r(), {}), true);
+  const env = { CONSEJERO_MENSAJES_TOKEN: 'm'.repeat(32), ADMIRA_LIVE_DESDE: kvMemoria() };
+  assert.equal(lecturaMensajesPermitida(r(), env), false);
+  assert.equal(lecturaMensajesPermitida(r('x'.repeat(32)), env), false);
+  assert.equal(lecturaMensajesPermitida(r('m'.repeat(32)), env), true);
+  assert.equal((await manejar(r(), env)).status, 401);
+  assert.equal((await manejar(r('m'.repeat(32)), env)).status, 200);
+});

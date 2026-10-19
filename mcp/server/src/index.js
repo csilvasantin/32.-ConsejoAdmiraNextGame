@@ -542,6 +542,17 @@ export async function manejar(request, env, deps = {}) {
     const r = await stub.fetch('https://bandeja.interna/vaciar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre: 'sandbox' }) });
     return json(await r.json(), r.status);
   }
+  /* Administración de la bandeja real: solo con BANDEJA_ADMIN_KEY (lo comprueba el propio
+   * Durable Object con SU secreto; este Worker no lo conoce). Sin secreto → 401. */
+  if (ruta === '/consejero/mensajes/admin' && request.method === 'POST') {
+    if (!env.BANDEJA) return json({ ok: false, error: 'no autorizado' }, 401);
+    const b = await request.json().catch(() => ({}));
+    const c = String(request.headers.get('x-bandeja-admin') || '');
+    if (c.length < 32) return json({ ok: false, error: 'no autorizado' }, 401);
+    const stub = env.BANDEJA.get(env.BANDEJA.idFromName('consejo'));
+    const r = await stub.fetch('https://bandeja.interna/admin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre: 'consejo', accion: b && b.accion, clave: c }) });
+    return new Response(r.body, { status: r.status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  }
   if (ruta === '/consejero/mensajes' && request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '86400' } });
   }

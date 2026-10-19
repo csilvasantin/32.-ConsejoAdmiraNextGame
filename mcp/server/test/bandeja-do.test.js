@@ -163,3 +163,22 @@ test('sandbox HTTP: instancia propia, límite subido solo con cabecera, listado 
   const sinClave = await manejar(new Request('https://x/consejero/mensajes/sandbox', { method: 'DELETE' }), env, {});
   assert.equal(sinClave.status, 401);
 });
+
+test('admin: exportar y vaciar la instancia real solo con BANDEJA_ADMIN_KEY; tras vaciar no re-migra del KV', async () => {
+  const env = entorno();
+  env.ADMIRA_LIVE_DESDE.m.set(CLAVE_KV, JSON.stringify([{ id: 'cmZ', de: 'Musk', para: 'Jobs', texto: 'viejo', hora: '2026-10-19T10:00:00.000Z', leido: false, de_tipo: 'consejero', para_tipo: 'consejero', maquina: 'GrokBot' }]));
+  await crearBandeja(env).enviar({ para: 'Musk', texto: 'hola' }, yo('Jobs'));
+  const pedir = (clave, accion) => manejar(new Request('https://x/consejero/mensajes/admin', { method: 'POST', headers: { 'x-bandeja-admin': clave, 'content-type': 'application/json' }, body: JSON.stringify({ accion }) }), env, {});
+  assert.equal((await pedir('z'.repeat(40), 'vaciar')).status, 401); // sin secreto en el DO
+  env.BANDEJA_ADMIN_KEY = 'a'.repeat(40);
+  assert.equal((await pedir('b'.repeat(40), 'vaciar')).status, 401);
+  assert.equal((await pedir('corta', 'vaciar')).status, 401);
+  const ex = await (await pedir('a'.repeat(40), 'exportar')).json();
+  assert.equal(ex.lista.length, 2);
+  const va = await (await pedir('a'.repeat(40), 'vaciar')).json();
+  assert.equal(va.antes, 2); assert.equal(va.despues, 0);
+  assert.equal((await crearBandeja(env).listar('', 500)).mensajes.length, 0);
+  await crearBandeja(env).enviar({ para: 'Huang', texto: 'nuevo' }, yo('Jobs'));
+  assert.equal((await crearBandeja(env).listar('', 500)).mensajes.length, 1);
+  assert.equal(JSON.parse(env.ADMIRA_LIVE_DESDE.m.get(CLAVE_KV)).length, 1); // el KV no lo toca el DO
+});

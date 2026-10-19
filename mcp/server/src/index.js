@@ -520,6 +520,10 @@ export async function manejar(request, env, deps = {}) {
   /* Mensajes entre consejeros, visibles en el chat. Solo lectura. Sin secretos. */
   if (ruta === '/consejero/mensajes' && request.method === 'GET') {
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '86400' };
+    // 19-10-2026 (Carlos): los mensajes pueden llevar datos internos. Con el secreto
+    // CONSEJERO_MENSAJES_TOKEN puesto, solo lo lee quien lo trae (la función Pages
+    // /api/chat/entre-consejeros, tras la sesión Google). Sin el secreto, como antes.
+    if (!lecturaMensajesPermitida(request, env)) return json({ ok: false, error: 'privado: se lee en admira.live con tu cuenta de Google' }, 401, cors);
     const cuerpo = await crearBandeja(env, deps).listar(url.searchParams.get('con') || '');
     return json(cuerpo, 200, cors);
   }
@@ -564,6 +568,15 @@ export async function manejar(request, env, deps = {}) {
   }
 
   return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado', '/consejero/mensajes'] }, 404);
+}
+
+export function lecturaMensajesPermitida(request, env = {}) {
+  const t = String(env.CONSEJERO_MENSAJES_TOKEN || '').trim();
+  if (!t) return true;
+  const c = String(request.headers.get('x-mensajes-token') || '');
+  if (c.length !== t.length) return false;
+  let d = 0; for (let i = 0; i < c.length; i++) d |= c.charCodeAt(i) ^ t.charCodeAt(i);
+  return d === 0;
 }
 
 export const PREFIJO_SANDBOX = 'avisos-sandbox:';

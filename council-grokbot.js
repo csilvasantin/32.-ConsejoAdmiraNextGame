@@ -59,6 +59,9 @@
     // «Ver histórico» → /chat/jobs/ (solo en el hilo compartido).
     const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Ver histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
     $('.council-chat__toolbar')?.append(historico);
+    // «Entre consejeros» (19-10-2026): mensajes privados consejero↔consejero en la página de detalle (privado, con Google).
+    const entre=doc.createElement('a');entre.className='council-chat__historico council-chat__entre';entre.textContent='Entre consejeros';entre.target='_blank';entre.rel='noopener';entre.hidden=true;
+    $('.council-chat__toolbar')?.append(entre);
     // Aviso de acceso: solo aparece al ENVIAR sin sesión de Google (escribir siempre se puede).
     let signin=null;
     function signinBox(){
@@ -306,7 +309,7 @@
       if(destroyed)return false;
       const epoch=++selectedEpoch;selected=PEOPLE[persona]?persona:null;selectionReady=false;selectionError=null;
       clearTimeout(pollTimer);pollTimer=null;stopShared();options.onSelect?.(selected);
-      details.hidden=!selected;details.classList?.toggle('council-chat--hilo',!!sharedOf(selected));if(signin)signin.hidden=true;historico.hidden=true;
+      details.hidden=!selected;details.classList?.toggle('council-chat--hilo',!!sharedOf(selected));if(signin)signin.hidden=true;historico.hidden=true;entre.hidden=true;
       if(operations){operations.hidden=true;operations.replaceChildren();}
       if(!selected)return false;
       if(sharedOf(selected))return startShared(epoch);
@@ -373,7 +376,7 @@
     function visibles(){const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;const t=hilo.turnosDeVisita(m.turnos,sh.enviados,sh.desde);return {turnos:t,firma:t.map(x=>[x.id,x.entrega||'',x.encargo||'',x.encargo_estado||''].join(':')).join('|')};}
     function sharedChrome(){
       for(const sel of ['[data-chat-attach]','[data-chat-routines]','[data-chat-stop]','[data-chat-screen]','.council-chat__native'])if($(sel))$(sel).hidden=true;
-      historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;
+      historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;entre.href='/chat/'+sharedOf(selected)+'/#entre-consejeros';entre.hidden=false;
       const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO();
       const limits=$('.council-chat__limits');if(limits)limits.textContent=LIMITS_HILO;
       const node=$('.council-chat__connection');node.textContent='· Misma conversación que en GrokBot';node.title='POST /api/chat/enviar · respuestas por GET /api/chat/hilo';

@@ -51,6 +51,8 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir
   consejero_mensaje · consejero_bandeja · consejero_responder
   Canal agente → consejero: un AGENTE de la flota usa consejero_mensaje para escribir SOLO a su consejero supervisor (Elon/Musk supervisa a Oráculo y Morfeo; Merovingio→Musk, Cypher→Huang). Lee las respuestas con consejero_bandeja y contesta con consejero_responder. El mapa está en mcp/server/src/supervisores.js.
+  consejero_webhook_registrar · consejero_webhook_ver · consejero_webhook_borrar  (PREVIEW, 19-oct-2026)
+  Avisos al momento: registra con TU clave de silla una URL https (dominio, no IPs ni localhost) y un secreto opcional (cabecera x-admira-secreto o la que elijas; nunca se muestra). Al llegarte un mensaje privado, admira.live hace POST {tipo:"consejero_mensaje", id, de, para, resumen, responde_a, hora, url} (timeout 5 s, 1 reintento; sin el cuerpo completo: léelo con consejero_bandeja). consejero_webhook_ver enseña el último resultado (ok/código/fecha). La ruta encargo + Telegram sigue igual.
 - Herramientas Yokup (FLT-1580, carnés WozniakGrokBot · JobsGrokBot · DisneyGrokBot · LucasGrokBot · MuskGrokBot · HuangGrokBot,
   equipo GrokBot, runtime Grok): yokup_quien_soy · yokup_presencia · yokup_alta · yokup_paso ·
   yokup_evidencia · yokup_informe · yokup_ventana · yokup_mis_misiones

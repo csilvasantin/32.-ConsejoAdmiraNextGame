@@ -1,0 +1,18 @@
+name = "admirito-wa"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+LLM_BASE_URL = "https://api.x.ai/v1"
+LLM_MODEL = "grok-4.7"          # chat y visión (fotos)
+STT_MODEL = "grok-voice-transcribe-2.0"
+STT_PATH = "/stt"               # xAI. Otro proveedor OpenAI-compatible: "/audio/transcriptions"
+STT_LANGUAGE = "es"
+# Opcionales: VISION_MODEL, VISION_BASE_URL, STT_BASE_URL, STT_API_KEY (por defecto usan LLM_* / XAI_API_KEY)
+
+# Crear con: npx wrangler kv namespace create HISTORY  y pegar aquí el id
+# [[kv_namespaces]]
+# binding = "HISTORY"
+# id = "PEGAR_ID"
+
+# Secretos (wrangler secret put …): WA_TOKEN, WA_PHONE_ID, WA_VERIFY, APP_SECRET, ALLOWED_FROM, XAI_API_KEY

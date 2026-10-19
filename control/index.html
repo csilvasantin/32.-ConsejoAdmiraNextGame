@@ -913,13 +913,33 @@ function depurarEquipos(lista){
   EQUIPOS_OCULTOS=r.ocultos; EQUIPOS_FUSIONADOS=r.fusionados;
   return r.visibles;
 }
+/* Borrado REAL en las fuentes (19-10-2026): el relay firma un ticket con tu sesión Google
+   (Fleet Mesh, CSRF) y /api/control/equipos lo canjea EN EL SERVIDOR por la baja en el relay
+   del Mac mini (fleet.json) y en admira-fleet. El navegador nunca ve el token de flota.
+   Si el relay aún no tiene el endpoint, se queda en el borrado lógico de siempre. */
+async function ticketEquipo(id, accion){
+  try{
+    const out=await FLEET_MESH.json('/machines/'+encodeURIComponent(id)+'/ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accion})});
+    return out&&out.response&&out.response.ok&&out.data&&out.data.ok&&out.data.ticket||'';
+  }catch(e){ return ''; }
+}
+let EQUIPOS_ULTIMA_PROPAGACION=null;
 async function guardarEquipoAccion(accion, cuerpo){
+  EQUIPOS_ULTIMA_PROPAGACION=null;
   try{
     const r=await fetch(EQUIPOS_API,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','X-Admira-Control':'1'},body:JSON.stringify(Object.assign({accion},cuerpo))});
     const d=await r.json().catch(()=>({}));
-    if(r.ok&&d.ok){ EQUIPOS_ESTADO=window.AdmiraEquipos.mezclar(d, EQUIPOS_ESTADO); guardarEquiposLocal(); return true; }
+    if(r.ok&&d.ok){ EQUIPOS_ULTIMA_PROPAGACION=d.propagacion||null; EQUIPOS_ESTADO=window.AdmiraEquipos.mezclar(d, EQUIPOS_ESTADO); guardarEquiposLocal(); return true; }
   }catch(e){}
   return false;
+}
+function textoPropagacion(p, accion){
+  if(!p) return accion==='ocultar'?'solo oculto en el tablero (el relay no dio ticket: sin sesión o sin el endpoint nuevo)':'';
+  if(p.error) return 'fuentes: '+p.error;
+  const rl=p.rele||{}, fl=p.fleet||{};
+  const r1=rl.ok?(accion==='ocultar'?(rl.ausente?'relay: no estaba':'relay: borrado de fleet.json'):(rl.nada?'relay: nada que restaurar':'relay: restaurado')):('relay: '+(rl.error||('HTTP '+rl.status)));
+  const f1=fl.ok?('admira-fleet: '+((fl.ids||[]).length?(fl.ids||[]).join(', '):'sin ficha')):'admira-fleet: error';
+  return r1+' · '+f1;
 }
 async function eliminarEquipo(id){
   const m=MACHINES.find(x=>x.id===id); if(!m) return;
@@ -928,16 +948,20 @@ async function eliminarEquipo(id){
   const aviso=entrada.vivo
     ? 'Este equipo HA LATIDO hace menos de 10 min: seguirá oculto aunque siga latiendo, hasta que lo restaures.'
     : 'Si vuelve a latir de verdad (latido posterior a hoy), reaparecerá marcado «↩ ha vuelto a latir».';
-  if(!confirm('¿Eliminar «'+(m.name||m.id)+'» de la lista?\n\nSe oculta en el tablero para todos (borrado lógico): no se apaga ni se borra nada en el equipo ni en admira-fleet. Se puede restaurar desde «🗑 eliminados» al pie.\n\n'+aviso)) return;
+  if(!confirm('¿Eliminar «'+(m.name||m.id)+'» de la lista?\n\nSe oculta en el tablero para todos y, si el relay da el visto bueno con tu sesión, se da de BAJA en el relay del Mac mini (fleet.json, con copia de seguridad) y en admira-fleet. No se apaga nada en el equipo. Se puede restaurar desde «🗑 eliminados» al pie.\n\n'+aviso)) return;
   EQUIPOS_ESTADO=window.AdmiraEquipos.aplicar(EQUIPOS_ESTADO,'ocultar',entrada); guardarEquiposLocal();
   MACHINES=depurarEquipos(MACHINES); renderCards(MACHINES); try{ fillSelect(); updateCapHealth(); }catch(e){}
-  const ok=await guardarEquipoAccion('ocultar',{id:entrada.id,nombre:entrada.nombre,vivo:entrada.vivo,por:entrada.por});
-  toast(ok?'ok':'warn','🗑 '+(m.name||m.id)+' eliminado', ok?'oculto para todos · restaurable al pie del tablero':'guardado SOLO en este navegador (no se pudo guardar en el servidor)');
+  const ticket=await ticketEquipo(entrada.id,'eliminar');
+  const ok=await guardarEquipoAccion('ocultar',{id:entrada.id,nombre:entrada.nombre,vivo:entrada.vivo,por:entrada.por,ticket:ticket||undefined});
+  const p=EQUIPOS_ULTIMA_PROPAGACION;
+  toast(ok&&(!p||p.ok)?'ok':'warn','🗑 '+(m.name||m.id)+' eliminado', ok?('oculto para todos · '+textoPropagacion(p,'ocultar')):'guardado SOLO en este navegador (no se pudo guardar en el servidor)');
 }
 async function restaurarEquipo(id, nombre){
   EQUIPOS_ESTADO=window.AdmiraEquipos.aplicar(EQUIPOS_ESTADO,'restaurar',{id,nombre,at:Date.now()}); guardarEquiposLocal();
-  const ok=await guardarEquipoAccion('restaurar',{id,nombre});
-  toast(ok?'ok':'warn','↩ '+(nombre||id)+' restaurado', ok?'vuelve a la lista':'restaurado SOLO en este navegador');
+  const ticket=await ticketEquipo(id,'restaurar');
+  const ok=await guardarEquipoAccion('restaurar',{id,nombre,ticket:ticket||undefined});
+  const p=EQUIPOS_ULTIMA_PROPAGACION, txt=textoPropagacion(p,'restaurar');
+  toast(ok&&(!p||p.ok)?'ok':'warn','↩ '+(nombre||id)+' restaurado', ok?('vuelve a la lista'+(txt?' · '+txt:'')):'restaurado SOLO en este navegador');
   if(typeof refresh==='function') refresh();
 }
 document.addEventListener('click', ev=>{
@@ -1941,7 +1965,7 @@ function renderCards(ms){
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
         ${m.online&&interruptorAplica(m)?AdmiraInterruptores.html(m.id, INT_ESTADO[m.id]&&INT_ESTADO[m.id].st, INT_OCUPADO[m.id], interruptorCtx(m)):''}
       </div>
-      <div class="acts-admin"><button type="button" data-eliminar="${m.id}" title="Quitar este equipo de la lista (borrado lógico, para todos). Se restaura desde «🗑 eliminados» al pie del tablero.">🗑 Eliminar equipo</button></div>
+      <div class="acts-admin"><button type="button" data-eliminar="${m.id}" title="Quitar este equipo de la lista para todos y darlo de baja en el relay del Mac mini y en admira-fleet. Se restaura desde «🗑 eliminados» al pie del tablero.">🗑 Eliminar equipo</button></div>
       <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
       ${dsPreflightHtml(m)}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>

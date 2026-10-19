@@ -8,6 +8,7 @@
 # Secretos (wrangler secret put):
 #   MCP_KEY                     clave general (Wozniak, la primera que Carlos dio)
 #   MCP_KEYS                    JSON {"<clave>":{"persona":"Jobs|Disney|Lucas|Wozniak|Musk|Huang"},…}
+#   MCP_KEY_<SILLA>             clave de una silla (p. ej. MCP_KEY_HUANG, >=24 caracteres) → {persona:<Silla>}
 #                               Musk = Elon Musk (CEO, coetáneos). También vale {"persona":"Elon Musk"}.
 #                               Huang = Jensen Huang (CTO, coetáneos). También vale {"persona":"Jensen Huang"}.
 #                               Sus deepagents no van aquí: Merovingio y Cypher entran con la clave HMAC

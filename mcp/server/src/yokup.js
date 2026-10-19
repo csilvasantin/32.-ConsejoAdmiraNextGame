@@ -22,7 +22,7 @@
 
 import { marcarTrabajo } from './desde.js';
 import { crearFlota } from './flota.js';
-import { CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
+import { CONSEJEROS_GROKBOT, SILLAS, sillaCanonica } from './sillas.js';
 
 export const EQUIPO = 'GrokBot';
 export const RUNTIME = 'Grok';
@@ -66,10 +66,28 @@ const igualesStr = (a, b) => { if (!a || !b || a.length !== b.length) return fal
  * Los AGENTES DE LA FLOTA entran con su clave derivada (claveFlota): el agente en yokup es
  * persona+equipo (MorfeoMacMini), igual que firma su sesión local, sin declarar nada.
  */
-export function identidadPorClave(clave, env = {}) {
-  if (!clave) return null;
+/**
+ * Mapa clave→{persona}: MCP_KEYS (JSON) más un secreto por silla, MCP_KEY_<SILLA>
+ * (p. ej. MCP_KEY_HUANG), que se mapea a {persona: silla}. MCP_KEYS manda si hay choque.
+ */
+export function mapaClaves(env = {}) {
   let mapa = {};
   try { mapa = env.MCP_KEYS ? JSON.parse(env.MCP_KEYS) : {}; } catch { mapa = {}; }
+  if (!mapa || typeof mapa !== 'object' || Array.isArray(mapa)) mapa = {};
+  for (const silla of Object.keys(SILLAS)) {
+    const k = env[`MCP_KEY_${silla.toUpperCase()}`];
+    if (typeof k === 'string' && k.length >= 24 && !mapa[k]) mapa[k] = { persona: silla };
+  }
+  return mapa;
+}
+/** Nombres de las sillas que tienen su secreto MCP_KEY_<SILLA> (solo nombres). */
+export function sillasConClave(env = {}) {
+  return Object.keys(SILLAS).filter((s) => { const k = env[`MCP_KEY_${s.toUpperCase()}`]; return typeof k === 'string' && k.length >= 24; });
+}
+
+export function identidadPorClave(clave, env = {}) {
+  if (!clave) return null;
+  const mapa = mapaClaves(env);
   let persona = null, entrada = null;
   if (mapa[clave] && mapa[clave].persona) { entrada = mapa[clave]; persona = String(entrada.persona); }
   else if (env.MCP_KEY && clave === env.MCP_KEY) persona = String(env.MCP_KEY_PERSONA || 'Wozniak');

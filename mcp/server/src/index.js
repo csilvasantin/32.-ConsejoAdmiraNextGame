@@ -31,6 +31,7 @@ import { censoBots, flotaCombinada, RUNTIMES, ESTADOS_ABIERTOS } from './coordin
 
 import { crearEstado, CACHE_SEG } from './estado.js';
 import { crearBandeja } from './mensajes.js';
+import { sillaCanonica } from './sillas.js';
 const NOMBRE = 'admira-live-mcp';
 
 const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -47,7 +48,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       `SI TÚ ERES UN CONSEJERO (un bot de GrokBot: ${CONSEJEROS_GROKBOT.join(', ')} — Steve Wozniak, Steve Jobs, Walt Disney, George Lucas, Elon Musk, Jensen Huang…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.`,
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
-      'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo. Para hablar en privado con otro consejero, de cualquier cuenta, usa consejero_mensaje; él lo lee con consejero_bandeja y contesta con consejero_responder. SI ERES UN AGENTE de la flota (Morfeo, Oráculo, Merovingio, Cypher…): consejero_mensaje es tu canal directo con TU consejero supervisor (Elon/Musk supervisa a Oráculo y Morfeo); solo puedes escribirle a él, lees sus respuestas con consejero_bandeja y le contestas con consejero_responder. No uses a Carlos de recadero. Sin secretos. Jensen es Huang. Elon es Musk.',
+      'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo. Para hablar en privado con otro consejero, de cualquier cuenta, usa consejero_mensaje; él lo lee con consejero_bandeja y contesta con consejero_responder. Para enterarte AL MOMENTO de un mensaje nuevo, registra tu webhook https con consejero_webhook_registrar (ver/borrar con consejero_webhook_ver y consejero_webhook_borrar). SI ERES UN AGENTE de la flota (Morfeo, Oráculo, Merovingio, Cypher…): consejero_mensaje es tu canal directo con TU consejero supervisor (Elon/Musk supervisa a Oráculo y Morfeo); solo puedes escribirle a él, lees sus respuestas con consejero_bandeja y le contestas con consejero_responder. No uses a Carlos de recadero. Sin secretos. Jensen es Huang. Elon es Musk.',
       `COORDINAR DEEPAGENTS (v.01.10.2026.r3): hay UN censo. «En línea» = latido en bot.yokup.com en los últimos 15 min, igual en agentes_vivos y consejo_bots. El CEO coetáneo Elon Musk es MuskGrokBot y su deepagent es Merovingio (Grok CLI, MacMini); Smith es del otro GrokBot, no el CEO. El CTO coetáneo Jensen Huang es HuangGrokBot y su deepagent es Cypher (DeepAgents, GrokBotBox, Nemotron 3 Ultra); ArquitectoCursorCloud es el orquestador de Cursor Cloud, no la silla CTO. agentes_vivos trae la carga (encargos abiertos) de cada agente: encarga al vivo con menos carga. flota_estado distingue runtimes (${Object.values(RUNTIMES).map((v) => v.nombre).join(', ')}) e incluye la GrokBotBox por presencia.`,
       'TU BANDEJA DE ENCARGOS: al empezar cada turno, encargos_listar (sin persona = la tuya) devuelve tus encargos abiertos (pending, ack, in_progress, blocked). Por cada uno: encargo_responder(numero, ack) al cogerlo, in_progress si va para largo, blocked con nota del motivo, done con nota de la respuesta. Solo contestas los tuyos. agente_encargar admite deadline y criterio (criterio de hecho): úsalos para que el otro sepa cuándo y cómo se da por hecho.',
       'MANDAMIENTO 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): cada agente y consejero mide lo que gasta y lo declara en las Notificaciones de Yokup. Si no tienes medidor local (GrokBot, OpenCode, Grok CLI), llama a consumo_reportar al terminar cada jornada o cada misión larga, con entrada, caché, salida, modelo, despertares y qué los quemó. Un despertar sin trabajo nuevo cuesta una línea, no una sesión; un eco duplicado se cierra, no se rehace.',
@@ -189,6 +190,32 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, seguro(async (a) => texto(await bandejaConsejo.responder(a, identidad))));
+
+  /* Avisos al momento (avisos.js, 19-oct-2026, propuesta de Elon): webhook propio por consejero. */
+  const avisosConsejo = bandejaConsejo.avisos;
+  server.registerTool('consejero_webhook_registrar', {
+    title: 'Registrar mi webhook de avisos',
+    description: 'Registra (o sustituye) TU webhook https para que admira.live te avise AL MOMENTO cuando te llega un mensaje privado (consejero_mensaje/consejero_responder), sin esperar a tu revisión de 15 min. Solo con la clave propia de tu silla (no la compartida). Te llega un POST JSON {tipo:"consejero_mensaje", id, de, para, resumen, responde_a, hora, url}: sin el cuerpo completo; léelo con consejero_bandeja. Si das secreto, va en la cabecera que elijas (por defecto x-admira-secreto) y nunca se vuelve a mostrar. Solo https con dominio (no IPs, no localhost). La ruta Telegram/encargo sigue igual.',
+    inputSchema: {
+      url: z.string().min(10).max(500).describe('URL https de tu receptor.'),
+      secreto: z.string().max(200).optional().describe('Secreto opcional que se enviará en la cabecera. No se muestra al leer.'),
+      cabecera: z.string().min(3).max(60).optional().describe('Nombre de la cabecera del secreto (por defecto x-admira-secreto).'),
+      silla: z.string().min(1).max(40).optional().describe('Solo admin: silla a la que registrar. Por defecto, la tuya.'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, seguro(async (a) => texto(await avisosConsejo.registrar(a, identidad))));
+  server.registerTool('consejero_webhook_ver', {
+    title: 'Ver mi webhook de avisos',
+    description: 'Muestra tu webhook de avisos (URL, cabecera, si hay secreto — nunca su valor) y el último resultado de entrega (ok, código, fecha, ms, intentos) para diagnóstico.',
+    inputSchema: { silla: z.string().min(1).max(40).optional().describe('Solo admin: otra silla.') },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  }, seguro(async (a) => texto(await avisosConsejo.ver(a, identidad))));
+  server.registerTool('consejero_webhook_borrar', {
+    title: 'Borrar mi webhook de avisos',
+    description: 'Borra tu webhook de avisos y su último estado. Vuelves a quedar solo con la ruta de siempre (encargo + Telegram).',
+    inputSchema: { silla: z.string().min(1).max(40).optional().describe('Solo admin: otra silla.') },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  }, seguro(async (a) => texto(await avisosConsejo.borrar(a, identidad))));
 
   /* ── Flota: ver quién late, encargar y recoger la respuesta (FLT-2038) ────────── */
   const maquinasSilla = Object.entries(SILLAS).filter(([, s]) => s.fleet_id).map(([p, s]) => `${s.maquina}→${p}`).join(', ');
@@ -463,7 +490,7 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejero_webhook_borrar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar'],
       bandeja_consejeros: `${url.origin}/consejero/mensajes`,
       flota: `Con una clave por consejero (MCP_KEYS), ${CONSEJEROS_GROKBOT.join('/')} trabajan en yokup como ${CONSEJEROS_GROKBOT.map((c) => c + 'GrokBot').join('/')} (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…). Una clave de agente no firma como consejero aunque pase «como».`,
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
@@ -501,10 +528,19 @@ export async function manejar(request, env, deps = {}) {
   }
 
   if (ruta === '/mcp') {
-    if (!(await claveValida(request, env))) {
+    if (!sandboxDe(request, env) && !(await claveValida(request, env))) {
       return json({ ok: false, error: 'no autorizado: falta la clave del MCP (Authorization: Bearer … o ?key=…)' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-mcp"' });
     }
     // La identidad sale de la clave (una por consejero): el bot no la declara.
+    // SANDBOX de avisos (solo si el despliegue lleva AVISOS_SANDBOX_KEY, nunca en producción):
+    // KV con prefijo propio, sin Telegram ni secretos; la silla la elige x-sandbox-persona.
+    const sandbox = sandboxDe(request, env);
+    if (sandbox) {
+      const srv = crearServidor(sandbox.env, deps, sandbox.identidad);
+      const tr = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+      await srv.connect(tr);
+      return await tr.handleRequest(request);
+    }
     const identidadPeticion = await identidadPorClaveAsync(claveRecibida(request), env);
     // QUIÉN LLAMA, medido (7-sep-2026): para saber si GrokBot manda alguna señal por Bot
     // (cabecera, user-agent, clientInfo del initialize) que permita representar a cada
@@ -528,6 +564,27 @@ export async function manejar(request, env, deps = {}) {
   }
 
   return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado', '/consejero/mensajes'] }, 404);
+}
+
+export const PREFIJO_SANDBOX = 'avisos-sandbox:';
+function kvConPrefijo(kv, pre) {
+  return {
+    get: (k, t) => kv.get(pre + k, t), put: (k, v, o) => kv.put(pre + k, v, o), delete: (k) => kv.delete(pre + k),
+  };
+}
+export function sandboxDe(request, env = {}) {
+  const sk = env.AVISOS_SANDBOX_KEY;
+  if (!sk || String(sk).length < 24 || !env.ADMIRA_LIVE_DESDE) return null;
+  const c = claveRecibida(request);
+  if (!c || c.length !== sk.length) return null;
+  let d = 0; for (let i = 0; i < c.length; i++) d |= c.charCodeAt(i) ^ sk.charCodeAt(i);
+  if (d !== 0) return null;
+  const persona = sillaCanonica(request.headers.get('x-sandbox-persona') || '');
+  if (!persona) return null;
+  return {
+    env: { ADMIRA_LIVE_DESDE: kvConPrefijo(env.ADMIRA_LIVE_DESDE, PREFIJO_SANDBOX), SITIO: env.SITIO },
+    identidad: { persona, machine: 'Sandbox', runtime: 'prueba', agent: `${persona}Sandbox`, tipo: 'consejero', sandbox: true },
+  };
 }
 
 // ctx.waitUntil: lo que sigue después de contestar (importación y plan de yokup_alta) no

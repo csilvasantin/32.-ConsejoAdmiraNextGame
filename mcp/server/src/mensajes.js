@@ -12,6 +12,7 @@
 import { sillaCanonica } from './sillas.js';
 import { supervisorDe, agenteCanonico } from './supervisores.js';
 import { norm } from './flota.js';
+import { crearAvisos } from './avisos.js';
 
 export const CLAVE_KV = 'consejero-mensajes:v1';
 export const TOPE = 200;
@@ -76,6 +77,9 @@ export function crearBandeja(env = {}, deps = {}) {
   const kv = env.ADMIRA_LIVE_DESDE;
   const ahora = deps.now || (() => new Date());
   const aleatorio = deps.aleatorio || (() => Math.random().toString(36).slice(2, 6));
+  const avisos = crearAvisos(env, deps);
+  // Webhook propio del destinatario (avisos.js): DESPUÉS de guardar, fuera de la respuesta.
+  const alMomento = (m) => { try { avisos.programar(m); } catch { /* nunca rompe el guardado */ } };
 
   async function leer() {
     if (!kv || typeof kv.get !== 'function') return [];
@@ -148,6 +152,7 @@ export function crearBandeja(env = {}, deps = {}) {
       lista.push(mensaje);
       mensaje.aviso = await avisar(mensaje);
       await guardar(lista);
+      alMomento(mensaje);
       return { ok: true, mensaje: vista(mensaje), aviso: mensaje.aviso };
     }
     const remite = exigirConsejero(identidad, de || (identidad && identidad.persona) || '');
@@ -168,6 +173,7 @@ export function crearBandeja(env = {}, deps = {}) {
     lista.push(mensaje);
     mensaje.aviso = await avisar(mensaje);
     await guardar(lista);
+    alMomento(mensaje);
     return { ok: true, mensaje: vista(mensaje), aviso: mensaje.aviso };
   }
 
@@ -208,6 +214,7 @@ export function crearBandeja(env = {}, deps = {}) {
       lista.push(respuesta);
       respuesta.aviso = await avisar(respuesta);
       await guardar(lista);
+      alMomento(respuesta);
       return { ok: true, mensaje: vista(respuesta), responde_a: original.id, aviso: respuesta.aviso };
     }
     const declarado = de || (identidad && identidad.persona) || '';
@@ -233,6 +240,7 @@ export function crearBandeja(env = {}, deps = {}) {
     lista.push(respuesta);
     respuesta.aviso = await avisar(respuesta);
     await guardar(lista);
+    alMomento(respuesta);
     return { ok: true, mensaje: vista(respuesta), responde_a: original.id, aviso: respuesta.aviso };
   }
 
@@ -245,5 +253,5 @@ export function crearBandeja(env = {}, deps = {}) {
     return { ok: true, mensajes, pendientes };
   }
 
-  return { enviar, bandeja, responder, listar };
+  return { enviar, bandeja, responder, listar, avisos };
 }

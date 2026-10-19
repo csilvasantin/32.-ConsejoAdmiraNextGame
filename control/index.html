@@ -24,6 +24,7 @@
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
 <script src="/control/fleet-mesh.js?v=20261009-r10-lectura"></script>
+<script src="/control/equipos.js?v=20261019-r1"></script>
 <link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5872">
 <script src="/assets/interruptores.js?v=20261014-5872"></script>
 <title>Control · AdmiraNext Fleet</title>
@@ -205,6 +206,16 @@
   .card .card-opts{align-self:flex-start;margin-top:2px;font:600 11px/1 var(--mono);color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
   .card .card-opts:hover{color:var(--ink);border-color:var(--acc,#f7c95d)}
   .empty.fuera{font-size:11px;opacity:.7;text-align:left;padding:8px 12px}
+  /* «Eliminar equipo» (19-10-2026): va en el pliegue de opciones, fuera de .acts para que
+     también funcione en equipos apagados (a .acts se le quitan los clics cuando no hay señal). */
+  .card .acts-admin{display:flex;gap:6px;flex-wrap:wrap}
+  .card.collapsed .acts-admin{display:none}
+  .card .acts-admin button{font:600 11px/1 var(--mono);color:#ff8f8f;background:transparent;border:1px solid #7a3434;border-radius:8px;padding:5px 9px;cursor:pointer}
+  .card .acts-admin button:hover{border-color:#ff8f8f}
+  .card .reaparecido{font-size:10.5px;color:#ffcf7a;margin-top:3px}
+  .card .alias-de{font-size:10.5px;color:var(--mut);margin-top:2px}
+  .empty.eliminados{font-size:11px;text-align:left;padding:8px 12px;opacity:.85}
+  .empty.eliminados button{font:600 10.5px/1 var(--mono);margin:2px 4px;padding:3px 7px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
   .card.dragging{opacity:.4}
   .card.drop-target{box-shadow:0 0 0 2px var(--acc2) inset;border-color:var(--acc2)}
   /* deep-link desde /status (?equipo=): tarjeta seleccionada, resaltada unos segundos */
@@ -873,6 +884,68 @@ const API='https://macmini.tail48b61c.ts.net/fleet/api'; // compatibilidad; las 
 const $=s=>document.querySelector(s);
 let MACHINES=[];
 let ACTIVE_ROUTE=null;
+/* ── EQUIPOS DUPLICADOS Y ELIMINADOS (19-10-2026) ──────────────────────────
+   El censo (hub o admira-fleet) pasa SIEMPRE por depurarEquipos() antes de pintarse:
+   funde fichas alias (p. ej. «Mac Studio de Carlos» → «Mac Studio», el mismo Mac
+   renombrado) y quita los equipos eliminados a mano (borrado lógico, reversible,
+   guardado en /api/control/equipos + copia local). Criterio de vuelta en
+   control/equipos.js: si estaba callado al eliminarlo y vuelve a latir, reaparece. */
+const EQUIPOS_API='/api/control/equipos';
+let EQUIPOS_ESTADO=(function(){ try{ return JSON.parse(localStorage.getItem('fleet_equipos_estado')||'null')||window.AdmiraEquipos.estadoVacio(); }catch(e){ return {ocultos:{},alias:{}}; } })();
+let EQUIPOS_OCULTOS=[], EQUIPOS_FUSIONADOS=[];
+let FLEET_LS={};   // clave(_norm) → lastSeen (s) de admira-fleet, para «¿ha vuelto a latir?»
+function guardarEquiposLocal(){ try{ localStorage.setItem('fleet_equipos_estado', JSON.stringify(EQUIPOS_ESTADO)); }catch(e){} }
+async function loadEquiposEstado(){
+  try{
+    const r=await fetch(EQUIPOS_API,{cache:'no-store'}); if(!r.ok) return;
+    const d=await r.json(); if(!d||d.ok!==true) return;
+    EQUIPOS_ESTADO=window.AdmiraEquipos.mezclar(d, EQUIPOS_ESTADO); guardarEquiposLocal();
+  }catch(e){ /* sin función/KV: vale la copia local */ }
+}
+// Último latido REAL conocido de un equipo (s): admira-fleet lastSeen o presencia de Ágora.
+function ultimaSenalEquipo(m){
+  let t=+(m&&m.lastSeen)||0; if(t>1e12) t=t/1000;
+  try{ _machKeys(m).forEach(k=>{ if(FLEET_LS[k]>t) t=FLEET_LS[k]; const p=PRESENCE_FULL[k]; if(p&&p.updated>t) t=p.updated; }); }catch(e){}
+  return t;
+}
+function depurarEquipos(lista){
+  const r=window.AdmiraEquipos.depurar(lista||[], EQUIPOS_ESTADO, ultimaSenalEquipo, Date.now());
+  EQUIPOS_OCULTOS=r.ocultos; EQUIPOS_FUSIONADOS=r.fusionados;
+  return r.visibles;
+}
+async function guardarEquipoAccion(accion, cuerpo){
+  try{
+    const r=await fetch(EQUIPOS_API,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','X-Admira-Control':'1'},body:JSON.stringify(Object.assign({accion},cuerpo))});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok){ EQUIPOS_ESTADO=window.AdmiraEquipos.mezclar(d, EQUIPOS_ESTADO); guardarEquiposLocal(); return true; }
+  }catch(e){}
+  return false;
+}
+async function eliminarEquipo(id){
+  const m=MACHINES.find(x=>x.id===id); if(!m) return;
+  const senal=ultimaSenalEquipo(m);
+  const entrada=window.AdmiraEquipos.entradaOcultar(m, senal, whoami(), Date.now());
+  const aviso=entrada.vivo
+    ? 'Este equipo HA LATIDO hace menos de 10 min: seguirá oculto aunque siga latiendo, hasta que lo restaures.'
+    : 'Si vuelve a latir de verdad (latido posterior a hoy), reaparecerá marcado «↩ ha vuelto a latir».';
+  if(!confirm('¿Eliminar «'+(m.name||m.id)+'» de la lista?\n\nSe oculta en el tablero para todos (borrado lógico): no se apaga ni se borra nada en el equipo ni en admira-fleet. Se puede restaurar desde «🗑 eliminados» al pie.\n\n'+aviso)) return;
+  EQUIPOS_ESTADO=window.AdmiraEquipos.aplicar(EQUIPOS_ESTADO,'ocultar',entrada); guardarEquiposLocal();
+  MACHINES=depurarEquipos(MACHINES); renderCards(MACHINES); try{ fillSelect(); updateCapHealth(); }catch(e){}
+  const ok=await guardarEquipoAccion('ocultar',{id:entrada.id,nombre:entrada.nombre,vivo:entrada.vivo,por:entrada.por});
+  toast(ok?'ok':'warn','🗑 '+(m.name||m.id)+' eliminado', ok?'oculto para todos · restaurable al pie del tablero':'guardado SOLO en este navegador (no se pudo guardar en el servidor)');
+}
+async function restaurarEquipo(id, nombre){
+  EQUIPOS_ESTADO=window.AdmiraEquipos.aplicar(EQUIPOS_ESTADO,'restaurar',{id,nombre,at:Date.now()}); guardarEquiposLocal();
+  const ok=await guardarEquipoAccion('restaurar',{id,nombre});
+  toast(ok?'ok':'warn','↩ '+(nombre||id)+' restaurado', ok?'vuelve a la lista':'restaurado SOLO en este navegador');
+  if(typeof refresh==='function') refresh();
+}
+document.addEventListener('click', ev=>{
+  const b=ev.target.closest&&ev.target.closest('[data-eliminar],[data-restaurar]'); if(!b) return;
+  ev.preventDefault(); ev.stopPropagation();
+  if(b.dataset.eliminar) eliminarEquipo(b.dataset.eliminar);
+  else restaurarEquipo(b.dataset.restaurar, b.dataset.nombre||'');
+}, true);
 // Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
 // re-renders para volver a pintar el aviso + botón de arreglo por SSH.
 let CAP_FAIL={}, CAP_TS={}, PREV_ONLINE={}, PREV_STALE={}, _baselineDone=false;
@@ -1170,7 +1243,7 @@ let FLEET_INFO={};
 async function loadFleet(){
   try{
     const r=await fetch('https://fleet.yokup.com/machines',{cache:'no-store'});
-    const d=await r.json(); const seen=new Set(); const info={}; const now=Date.now()/1000;
+    const d=await r.json(); const seen=new Set(); const info={}; const ls_={}; const now=Date.now()/1000;
     (d.machines||[]).forEach(m=>{
       // estado reportado (para pintar en la tarjeta) — de TODAS las máquinas, online o no
       const st=(m.status||m.currentFocus||'').toString().trim();
@@ -1187,11 +1260,13 @@ async function loadFleet(){
       // frescura para marcar online (señal distribuida)
       let ls=m.lastSeen; if(!ls) return;
       const sec = ls>1e12 ? ls/1000 : ls;           // epoch en ms o s → s
+      [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
+        const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4 && !(ls_[k]>sec)) ls_[k]=sec; });
       if((now-sec)>=FLEET_FRESH) return;            // registro viejo/estático → no cuenta como online
       [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
         const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4) seen.add(k); });
     });
-    FLEET_SEEN=seen; FLEET_INFO=info;
+    FLEET_SEEN=seen; FLEET_INFO=info; FLEET_LS=ls_;
   }catch(e){ /* sin admira-fleet: sólo se usa presencia + probe SSH */ }
 }
 // «En qué está» el agente de una máquina (mismo casado de claves que agentOnline).
@@ -1343,7 +1418,7 @@ async function loadFleetMachines(){
     const d=await r.json();
     FLEET_MACHINES=(d.machines||[]).map(m=>({
       id:m.id||_norm(m.name||m.fqdn||''), name:m.name||m.id||m.fqdn||'?',
-      fqdn:m.fqdn||'', online:false, degraded:true
+      fqdn:m.fqdn||'', lastSeen:+m.lastSeen||0, online:false, degraded:true
     })).filter(m=>m.id);
   }catch(e){ FLEET_MACHINES=[]; }
   return FLEET_MACHINES;
@@ -1396,8 +1471,8 @@ function showControlRouteBanner(on, route){
   } else if(window._rutaReintento){ clearInterval(window._rutaReintento); window._rutaReintento=null; }
 }
 async function degradedRefresh(){
-  await Promise.all([loadPersonas(), loadFleet(), loadFleetMachines()]);
-  MACHINES=FLEET_MACHINES.slice();
+  await Promise.all([loadPersonas(), loadFleet(), loadFleetMachines(), loadEquiposEstado()]);
+  MACHINES=depurarEquipos(FLEET_MACHINES.slice());
   MACHINES.forEach(m=>{
     if(agentOnline(m)) marcarSenal(m,'viaAgent');
     else if(presenceOnline(m)) marcarSenal(m,'viaPresence');
@@ -1489,7 +1564,7 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     if(!_baselineDone) fase('📋 pidiendo el censo de equipos…', 'warn');
-    const d=await api('/status'); MACHINES=d.machines; MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
+    const d=await api('/status'); const CENSO=d.machines||[]; CENSO.forEach(m=>{ m.sshOnline=!!m.online; }); MACHINES=depurarEquipos(CENSO); _reauthTried=false;
     const route=d._mesh&&d._mesh.relay||ACTIVE_ROUTE;
     const failedOver=!!(d._mesh&&d._mesh.failover);
     // PINTAR YA, con lo que hay (FLT-1378). Antes se esperaba a personas + flota +
@@ -1499,7 +1574,8 @@ async function refresh(){
     try{ localStorage.setItem('fleet_last_count', String(MACHINES.length)); }catch(e){}
     if(!_baselineDone){ renderCards(MACHINES); fase('🧩 completando datos de los agentes…','warn'); }
     _capturaDeArranque();   // al INICIAR SESIÓN: foto de todos los conectados (una vez)
-    await Promise.all([loadPersonas(), loadFleet()]);
+    await Promise.all([loadPersonas(), loadFleet(), loadEquiposEstado()]);
+    MACHINES=depurarEquipos(CENSO);   // con las señales ya cargadas: decide quién «ha vuelto a latir»
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
     // ONLINE aunque el hub lo dé offline: el hub solo ve el agente de flota/SSH, no los agentes
     // que trabajan en la máquina (por eso AsusZenbook/MacBookAir16 salían desconectados).
@@ -1704,7 +1780,7 @@ function toggleCollapse(id){
   id=String(id); if(EXPANDIDAS.has(id)) EXPANDIDAS.delete(id); else EXPANDIDAS.add(id);
   const card=document.querySelector('.card[data-card="'+id+'"]'); if(!card) return;
   card.classList.toggle('collapsed', isCollapsed(id));
-  const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(isCollapsed(id), card.querySelectorAll('.acts button').length);
+  const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(isCollapsed(id), card.querySelectorAll('.acts button,.acts-admin button').length);
   if(typeof paintCollapseAll==='function') paintCollapseAll();
 }
 
@@ -1783,6 +1859,13 @@ function infoRedundante(m){
   if(!t) return true;
   return t===_norm(m.name)||t===_norm(m.id)||_norm(m.name).startsWith(t)||t.startsWith(_norm(m.name));
 }
+function pieEliminados(){
+  if(!EQUIPOS_OCULTOS.length) return '';
+  return '<div class="empty eliminados" style="grid-column:1/-1">🗑 '+EQUIPOS_OCULTOS.length+' eliminado'+(EQUIPOS_OCULTOS.length>1?'s':'')+': '
+    + EQUIPOS_OCULTOS.map(o=>dsEsc(o.nombre)+(o.sigueLatiendo?' <span title="Sigue latiendo: se eliminó estando vivo y se respeta">🟢</span>':'')
+      +' <button type="button" data-restaurar="'+dsEsc(o.id)+'" data-nombre="'+dsEsc(o.nombre)+'" title="Volver a mostrarlo en la lista">↩ restaurar</button>').join(' · ')
+    + '</div>';
+}
 function renderCards(ms){
   const el=$('#cards');
   if(!ms.length){
@@ -1800,7 +1883,12 @@ function renderCards(ms){
     return;
   }
   // preserva miniaturas ya cargadas
-  const shots={}; document.querySelectorAll('.shot').forEach(s=>{ if(s.dataset.m && s.style.display!=='none') shots[s.dataset.m]=s.querySelector('img').src; });
+  // SOLO capturas reales (19-10-2026). Antes se guardaba cualquier imagen visible —también el
+  // FONDO de persona— y se repintaba con showShot(), que quita el aviso «SIN CAPTURA · fondo»:
+  // a la segunda vuelta el wallpaper NEO del MacBook Pro 16 y del Mac Studio parecía una
+  // captura en vivo, y un fondo que no cargó (Mac Mini) se quedaba como imagen rota.
+  const shots={}; document.querySelectorAll('.shot').forEach(s=>{ const im=s.querySelector('img');
+    if(s.dataset.m && s.style.display!=='none' && !s.classList.contains('isWall') && !s.classList.contains('nada') && im && im.src && im.complete && im.naturalWidth>0) shots[s.dataset.m]=im.src; });
   // despejar tablero: opcionalmente oculta offline y, en todo caso, los manda al final
   let list=sortByOrder(ms);
   if(HIDE_OFF) list=list.filter(m=>m.online);
@@ -1817,6 +1905,8 @@ function renderCards(ms){
         <div class="cardmeta"><div class="nm">${m.name}</div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div>
         ${agentNowHtml(m)}
+        ${m.reaparecido?'<div class="reaparecido" title="Lo eliminaste cuando estaba callado y ha vuelto a latir después: se enseña otra vez. Puedes volver a eliminarlo.">↩ ha vuelto a latir tras eliminarlo</div>':''}
+        ${m.aliasDe&&m.aliasDe.length?('<div class="alias-de" title="Fichas antiguas de este mismo equipo fusionadas aquí">≡ incluye «'+m.aliasDe.map(dsEsc).join('», «')+'»</div>'):''}
         <span class="msgbadge" data-msgbadge="${m.id}" title="Último mensaje enviado desde Control — pulsa para ver el hilo"><span class="mb-dot"></span><span class="mb-txt"></span></span></div>
         <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
@@ -1851,14 +1941,15 @@ function renderCards(ms){
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
         ${m.online&&interruptorAplica(m)?AdmiraInterruptores.html(m.id, INT_ESTADO[m.id]&&INT_ESTADO[m.id].st, INT_OCUPADO[m.id], interruptorCtx(m)):''}
       </div>
+      <div class="acts-admin"><button type="button" data-eliminar="${m.id}" title="Quitar este equipo de la lista (borrado lógico, para todos). Se restaura desde «🗑 eliminados» al pie del tablero.">🗑 Eliminar equipo</button></div>
       <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
       ${dsPreflightHtml(m)}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
-  el.innerHTML+=pieFuera;
+  el.innerHTML+=pieFuera+pieEliminados();
   interruptoresConsultar(list);
   // etiqueta «opciones (N)» con el número real de botones de cada tarjeta
-  document.querySelectorAll('.card').forEach(card=>{ const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(card.classList.contains('collapsed'), card.querySelectorAll('.acts button').length); });
+  document.querySelectorAll('.card').forEach(card=>{ const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(card.classList.contains('collapsed'), card.querySelectorAll('.acts button,.acts-admin button').length); });
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
   // por defecto: el wallpaper real de cada máquina hasta que se pida captura real
@@ -1892,7 +1983,15 @@ function machineWallpapers(machineId){
   //     macbookairrosa) mientras el hub registra el nombre con espacios ("MacBook Air Rosa"→
   //     macbook-air-rosa). Sin esto, las máquinas "MacBook Air X" no encuentran su fondo.
   const slc=(sl||'').replace(/-/g,''); if(slc && slc!==sl && slc!==machineId) out.push('/wallpapers/machines/'+slc+'.jpg');
-  const p=personaWallpaper(_mname(machineId)); if(p) out.push(p);
+  // 2c) id sin «admira-» y host del fqdn (admira-macmini / macmini.tail… → macmini.jpg): el censo
+  //     de admira-fleet usa ids con prefijo y nombres con «(Carlos)», y sin esto el Mac Mini no
+  //     encontraba su propio fondo.
+  const mm=MACHINES.find(x=>x.id===machineId)||{};
+  [String(machineId||'').replace(/^admira-?/,''), String(mm.fqdn||'').split('.')[0].toLowerCase()].forEach(c=>{
+    c=_slug(c); if(c && !out.includes('/wallpapers/machines/'+c+'.jpg')) out.push('/wallpapers/machines/'+c+'.jpg'); });
+  let p=personaWallpaper(_mname(machineId));
+  if(!p){ try{ for(const k of _machKeys(mm)){ const f=_personaFile[PERSONA_BY_MACHINE[k]]; if(f){ p='/wallpapers/'+f+'.png'; break; } } }catch(e){} }
+  if(p) out.push(p);
   return out;
 }
 // Prueba una lista de URLs en orden: la 1ª que cargue se queda; si todas fallan (404), onfail.

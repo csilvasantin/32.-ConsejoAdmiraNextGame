@@ -49,6 +49,15 @@ service = "admira-telegram"
 binding = "ADMIRA_LIVE_DESDE"
 id = "6bbd9cae35ca492d8a6c6835a323335c"
 
+# Bandeja de consejeros (19-10-2026): Durable Object BandejaConsejo, fuertemente consistente.
+# Vive en el Worker aparte admira-live-bandeja (wrangler.bandeja.toml), así este Worker NO
+# aplica migración de Durable Objects: versions upload y rollback siguen funcionando.
+# El preview (wrangler.preview.toml) apunta a admira-live-bandeja-preview.
+[[durable_objects.bindings]]
+name = "BANDEJA"
+class_name = "BandejaConsejo"
+script_name = "admira-live-bandeja"
+
 [vars]
 # El Consejo (FastAPI, puerto 8420 del Mac Mini) sale por el funnel de Tailscale en
 # /council: el prefijo se quita, así que /council/api/council/models → :8420/api/council/models.
@@ -63,7 +72,7 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.17.10.2026.r9.20:35-casa-macmini"
+VERSION = "v.19.10.2026.r1.20:55-bandeja-do-preview"
 # Cada consejero se representa a sí mismo (Carlos, 7-sep-2026). Estricto = "1" solo cuando cada Bot de GrokBot
 # entre por SU conector: el smoke de las 06:30 demostró que los cuatro Bots seguían saliendo por la clave de Lucas
 # (los conectores son de la cuenta y el Bot no elige solo), así que con "1" Jobs, Disney y Wozniak no podían escribir.

@@ -1,8 +1,13 @@
 /*
  * mensajes.js — bandeja privada entre consejeros (las dos cuentas).
  *
- * Un mensaje lleva remitente, destinatario, máquina y hora. Se guarda en el KV
- * del worker y se lee en el chat de admira.live. No admite secretos.
+ * Un mensaje lleva remitente, destinatario, máquina y hora. Se guarda en el
+ * Durable Object BandejaConsejo (bandeja-do.js, fuertemente consistente: una sola
+ * instancia serializa TODAS las escrituras) y se lee en el chat de admira.live.
+ * Sin binding BANDEJA (tests, local) cae al KV con un cerrojo en memoria.
+ * 19-10-2026: con el KV (eventualmente consistente) se perdían mensajes en ráfaga
+ * (lectura-modificación-escritura sobre una lista vieja) y el anti-bucle no saltaba.
+ * No admite secretos.
  * Jensen es la silla Huang. Elon es la silla Musk.
  *
  * Canal agente → consejero: un agente de la flota solo puede escribir a su
@@ -15,7 +20,7 @@ import { norm, AGENTES_FLOTA, CASA_AGENTE, personaCanonica } from './flota.js';
 import { crearAvisos } from './avisos.js';
 
 export const CLAVE_KV = 'consejero-mensajes:v1';
-export const TOPE = 200;
+export const TOPE = 500;
 
 const SECRETO = /bearer\s+[a-z0-9._-]{12,}|sk-[a-z0-9]{10,}|api[_-]?key\s*[:=]\s*\S+|mcp[_-]?key\s*[:=]|password\s*[:=]\s*\S+|token\s*[:=]\s*[a-z0-9._-]{12,}/i;
 
@@ -48,13 +53,15 @@ export function agenteDestino(nombre) {
 export const VENTANA_MS = 10 * 60 * 1000;
 export const MAX_POR_REMITENTE = 20;
 export const MAX_POR_PAR_CON_AGENTE = 8;
-export function comprobarFrecuencia(lista, m, ahoraMs) {
+export function comprobarFrecuencia(lista, m, ahoraMs, limites = {}) {
+  const maxRem = Number(limites.remitente) > 0 ? Number(limites.remitente) : MAX_POR_REMITENTE;
+  const maxPar = Number(limites.par) > 0 ? Number(limites.par) : MAX_POR_PAR_CON_AGENTE;
   const desde = ahoraMs - VENTANA_MS;
   const recientes = lista.filter((x) => Date.parse(x.hora) >= desde);
-  if (recientes.filter((x) => norm(x.de) === norm(m.de)).length >= MAX_POR_REMITENTE) throw new Error(`límite: ${m.de} ya ha enviado ${MAX_POR_REMITENTE} mensajes en 10 min`);
+  if (recientes.filter((x) => norm(x.de) === norm(m.de)).length >= maxRem) throw new Error(`límite: ${m.de} ya ha enviado ${maxRem} mensajes en 10 min`);
   if (m.de_tipo === 'agente' || m.para_tipo === 'agente') {
     const par = (x) => (norm(x.de) === norm(m.de) && norm(x.para) === norm(m.para)) || (norm(x.de) === norm(m.para) && norm(x.para) === norm(m.de));
-    if (recientes.filter(par).length >= MAX_POR_PAR_CON_AGENTE) throw new Error(`anti-bucle: ${m.de} y ${m.para} ya llevan ${MAX_POR_PAR_CON_AGENTE} mensajes en 10 min; esperad o que intervenga Carlos`);
+    if (recientes.filter(par).length >= maxPar) throw new Error(`anti-bucle: ${m.de} y ${m.para} ya llevan ${maxPar} mensajes en 10 min; esperad o que intervenga Carlos`);
   }
 }
 
@@ -99,26 +106,166 @@ function vista(m) {
   };
 }
 
+/* Recorta a TOPE quitando primero los mensajes ya leídos más antiguos: un mensaje
+ * sin leer no se cae por la cola. */
+export function recortar(lista, tope = TOPE) {
+  if (lista.length <= tope) return lista;
+  let sobra = lista.length - tope;
+  const fuera = new Set();
+  for (const m of lista) { if (!sobra) break; if (m.leido) { fuera.add(m); sobra--; } }
+  let r = lista.filter((m) => !fuera.has(m));
+  if (r.length > tope) r = r.slice(-tope);
+  return r;
+}
+
+/*
+ * Núcleo SÍNCRONO: recibe la lista, la cambia en sitio y dice si hay que guardarla.
+ * Al no tener ningún await, ejecutado dentro del cerrojo (Durable Object o KV local)
+ * es atómico: nadie lee ni escribe en medio. Los avisos van FUERA, después de guardar.
+ */
+export function operar(lista, op, a = {}, identidad, ctx = {}) {
+  const ahora = ctx.now || (() => new Date());
+  const aleatorio = ctx.aleatorio || (() => Math.random().toString(36).slice(2, 8));
+  const limites = ctx.limites || {};
+  const ids = new Set(lista.map((m) => m.id));
+  const idNuevo = () => { let id; do { id = `cm${ahora().getTime().toString(36)}${aleatorio()}`; } while (ids.has(id)); ids.add(id); return id; };
+  const publicar = (m) => { comprobarFrecuencia(lista, m, ahora().getTime(), limites); m.aviso = null; lista.push(m); return m; };
+  const r = (res, cambio, nuevos = []) => ({ res, cambio, nuevos });
+
+  if (op === 'enviar') {
+    const { de, para, texto, maquina, maquina_agente } = a;
+    if (esAgente(identidad)) {
+      const ag = exigirAgente(identidad, para);
+      const destino = (para && sillaCanonica(para)) || ag.supervisor;
+      const mensaje = publicar({
+        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: destino, para_tipo: 'consejero',
+        texto: limpio(texto), maquina: maquinaDe(ag, maquina), hora: ahora().toISOString(), leido: false, responde_a: null,
+      });
+      return r({ ok: true, mensaje: vista(mensaje) }, true, [mensaje]);
+    }
+    const remite = exigirConsejero(identidad, de || (identidad && identidad.persona) || '');
+    const silla = sillaCanonica(para);
+    const agente = silla ? null : agenteDestino(para);
+    if (!silla && !agente) throw new Error(`para tiene que ser un consejero (Wozniak, Jobs, Lucas, Disney, Musk, Huang, Y) o un agente de la flota (${AGENTES_FLOTA.join(', ')})`);
+    if (silla === remite.persona) throw new Error('un consejero no se escribe a sí mismo');
+    const mensaje = {
+      id: idNuevo(), de: remite.persona, de_tipo: 'consejero', para: silla || agente, para_tipo: agente ? 'agente' : 'consejero',
+      texto: limpio(texto), maquina: maquinaDe(remite, maquina), hora: ahora().toISOString(), leido: false, responde_a: null,
+    };
+    if (agente) mensaje.maquina_para = maquinaDe({ machine: CASA_AGENTE[agente] || 'flota' }, maquina_agente);
+    publicar(mensaje);
+    return r({ ok: true, mensaje: vista(mensaje) }, true, [mensaje]);
+  }
+
+  if (op === 'bandeja') {
+    const hora = ahora().toISOString();
+    if (esAgente(identidad)) {
+      const ag = exigirAgente(identidad);
+      const pendientes = lista.filter((m) => m.para_tipo === 'agente' && mismo(m.para, ag.persona) && !m.leido);
+      for (const m of pendientes) { m.leido = true; m.leido_en = hora; }
+      return r({ ok: true, yo: ag.persona, supervisor: ag.supervisor, pendientes: pendientes.map(vista), marcados: pendientes.length }, pendientes.length > 0);
+    }
+    const quien = exigirConsejero(identidad, a.yo || (identidad && identidad.persona) || '');
+    const pendientes = lista.filter((m) => m.para === quien.persona && m.para_tipo !== 'agente' && !m.leido);
+    for (const m of pendientes) { m.leido = true; m.leido_en = hora; }
+    return r({ ok: true, yo: quien.persona, pendientes: pendientes.map(vista), marcados: pendientes.length }, pendientes.length > 0);
+  }
+
+  if (op === 'responder') {
+    const { id, texto, de, maquina } = a;
+    const original = lista.find((m) => m.id === id);
+    if (esAgente(identidad)) {
+      const ag = exigirAgente(identidad);
+      if (!original) throw new Error(`no hay un mensaje con id ${id}`);
+      if (original.para_tipo !== 'agente' || !mismo(original.para, ag.persona)) throw new Error(`el mensaje ${id} no es para ${ag.persona}`);
+      if (original.de_tipo === 'agente' || !sillaCanonica(original.de)) throw new Error('agente → agente todavía no: propuesto');
+      const respuesta = {
+        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: sillaCanonica(original.de), para_tipo: 'consejero',
+        texto: limpio(texto), maquina: maquinaDe(ag, maquina), hora: ahora().toISOString(), leido: false, responde_a: original.id,
+      };
+      publicar(respuesta);
+      if (!original.leido) { original.leido = true; original.leido_en = respuesta.hora; }
+      return r({ ok: true, mensaje: vista(respuesta), responde_a: original.id }, true, [respuesta]);
+    }
+    const quien = exigirConsejero(identidad, de || (identidad && identidad.persona) || '');
+    if (!original) throw new Error(`no hay un mensaje con id ${id}`);
+    if (original.para !== quien.persona || original.para_tipo === 'agente') throw new Error(`el mensaje ${id} es para ${original.para}, no para ${quien.persona}`);
+    const respuesta = {
+      id: idNuevo(), de: quien.persona, para: original.de, para_tipo: original.de_tipo === 'agente' ? 'agente' : 'consejero',
+      de_tipo: 'consejero', texto: limpio(texto), maquina: maquinaDe(quien, maquina), hora: ahora().toISOString(), leido: false, responde_a: original.id,
+    };
+    if (original.de_tipo === 'agente') respuesta.maquina_para = original.maquina;
+    publicar(respuesta);
+    if (!original.leido) { original.leido = true; original.leido_en = respuesta.hora; }
+    return r({ ok: true, mensaje: vista(respuesta), responde_a: original.id }, true, [respuesta]);
+  }
+
+  if (op === 'listar') {
+    const con = a.con;
+    const silla = con ? (sillaCanonica(con) || agenteCanonico(con)) : null;
+    if (con && !silla) return r({ ok: true, mensajes: [] }, false);
+    const max = Math.min(Math.max(Number(a.max) || 50, 1), TOPE);
+    const mensajes = lista.filter((m) => !silla || mismo(m.de, silla) || mismo(m.para, silla)).slice(-max).map(vista);
+    const pendientes = silla ? mensajes.filter((m) => m.para === silla && !m.leido).length : mensajes.filter((m) => !m.leido).length;
+    return r({ ok: true, mensajes, pendientes, total: lista.length }, false);
+  }
+
+  if (op === 'aviso') {
+    const m = lista.find((x) => x.id === a.id);
+    if (!m) return r({ ok: false }, false);
+    m.aviso = a.aviso || null;
+    return r({ ok: true }, true);
+  }
+
+  throw new Error(`operación desconocida: ${op}`);
+}
+
+/* Cerrojo en memoria por objeto KV (solo para el modo sin Durable Object). */
+const cerrojos = new WeakMap();
+export function enCola(llave, fn) {
+  const previo = cerrojos.get(llave) || Promise.resolve();
+  const p = previo.then(fn, fn);
+  cerrojos.set(llave, p.catch(() => {}));
+  return p;
+}
+
 export function crearBandeja(env = {}, deps = {}) {
   const kv = env.ADMIRA_LIVE_DESDE;
-  const ahora = deps.now || (() => new Date());
-  const aleatorio = deps.aleatorio || (() => Math.random().toString(36).slice(2, 6));
   const avisos = crearAvisos(env, deps);
-  // Webhook propio del destinatario (avisos.js): DESPUÉS de guardar, fuera de la respuesta.
   const alMomento = (m) => { try { avisos.programar(m); } catch { /* nunca rompe el guardado */ } };
+  const ctx = { now: deps.now, aleatorio: deps.aleatorio, limites: env.BANDEJA_LIMITES || {} };
+  const nombreDo = env.BANDEJA_NOMBRE || 'consejo';
 
-  async function leer() {
-    if (!kv || typeof kv.get !== 'function') return [];
-    const d = await kv.get(CLAVE_KV, 'json');
-    return Array.isArray(d) ? d : [];
+  /* Con Durable Object: TODA la operación corre dentro de la instancia única. */
+  async function remoto(op, a, identidad) {
+    const ns = env.BANDEJA;
+    const stub = ns.get(ns.idFromName(nombreDo));
+    const resp = await stub.fetch('https://bandeja.interna/op', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ op, args: a || {}, identidad: identidad || null, limites: ctx.limites, nombre: nombreDo }),
+    });
+    const d = await resp.json().catch(() => null);
+    if (!d) throw new Error(`la bandeja no responde (${resp.status})`);
+    if (!d.ok) throw new Error(d.error || 'error en la bandeja');
+    return d.r;
   }
-  async function guardar(lista) {
-    if (!kv || typeof kv.put !== 'function') throw new Error('sin KV: la bandeja de consejeros no está configurada');
-    await kv.put(CLAVE_KV, JSON.stringify(lista.slice(-TOPE)));
+  async function local(op, a, identidad) {
+    if (!kv || typeof kv.get !== 'function') {
+      if (op === 'listar') return { res: { ok: true, mensajes: [], pendientes: 0 }, nuevos: [] };
+      if (op === 'enviar' || op === 'responder' || op === 'aviso') throw new Error('sin KV: la bandeja de consejeros no está configurada');
+    }
+    return enCola(kv || cerrojos, async () => {
+      const d = kv ? await kv.get(CLAVE_KV, 'json') : null;
+      const lista = Array.isArray(d) ? d : [];
+      const out = operar(lista, op, a, identidad, ctx);
+      if (out.cambio) {
+        if (!kv || typeof kv.put !== 'function') throw new Error('sin KV: la bandeja de consejeros no está configurada');
+        await kv.put(CLAVE_KV, JSON.stringify(recortar(lista)));
+      }
+      return { res: out.res, nuevos: out.nuevos };
+    });
   }
-  function idNuevo() {
-    return `cm${ahora().getTime().toString(36)}${aleatorio()}`;
-  }
+  const ejecutar = (op, a, identidad) => (env.BANDEJA && typeof env.BANDEJA.idFromName === 'function' ? remoto(op, a, identidad) : local(op, a, identidad));
 
   /* El mensaje ya está guardado. El aviso despierta al destinatario en su buzón
    * de GrokBot. La marca [chat-coetaneos] no sale al grupo ni abre misión. */
@@ -167,117 +314,25 @@ export function crearBandeja(env = {}, deps = {}) {
     }
   }
 
-  async function publicar(lista, mensaje) {
-    comprobarFrecuencia(lista, mensaje, ahora().getTime());
-    lista.push(mensaje);
-    mensaje.aviso = await avisar(mensaje);
-    await guardar(lista);
-    alMomento(mensaje);
-    return mensaje;
-  }
-
-  async function enviar({ de, para, texto, maquina, maquina_agente }, identidad) {
-    if (esAgente(identidad)) {
-      const ag = exigirAgente(identidad, para);
-      const destino = (para && sillaCanonica(para)) || ag.supervisor;
-      const mensaje = {
-        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: destino, para_tipo: 'consejero',
-        texto: limpio(texto), maquina: maquinaDe(ag, maquina), hora: ahora().toISOString(), leido: false, responde_a: null,
-      };
-      await publicar(await leer(), mensaje);
-      return { ok: true, mensaje: vista(mensaje), aviso: mensaje.aviso };
+  /* Guardar primero (atómico) y avisar después: un Telegram lento ya no abre una
+   * ventana en la que otra escritura pise la lista. */
+  async function conAviso(op, a, identidad) {
+    const { res, nuevos } = await ejecutar(op, a, identidad);
+    for (const m of nuevos || []) {
+      const aviso = await avisar(m);
+      m.aviso = aviso;
+      try { await ejecutar('aviso', { id: m.id, aviso }, null); } catch { /* el mensaje ya está guardado */ }
+      if (res.mensaje && res.mensaje.id === m.id) { res.mensaje.aviso = aviso; res.aviso = aviso; }
+      alMomento(m);
     }
-    const remite = exigirConsejero(identidad, de || (identidad && identidad.persona) || '');
-    const silla = sillaCanonica(para);
-    const agente = silla ? null : agenteDestino(para);
-    if (!silla && !agente) throw new Error(`para tiene que ser un consejero (Wozniak, Jobs, Lucas, Disney, Musk, Huang, Y) o un agente de la flota (${AGENTES_FLOTA.join(', ')})`);
-    if (silla === remite.persona) throw new Error('un consejero no se escribe a sí mismo');
-    const mensaje = {
-      id: idNuevo(),
-      de: remite.persona,
-      de_tipo: 'consejero',
-      para: silla || agente,
-      para_tipo: agente ? 'agente' : 'consejero',
-      maquina_para: agente ? maquinaDe({ machine: CASA_AGENTE[agente] || 'flota' }, maquina_agente) : undefined,
-      texto: limpio(texto),
-      maquina: maquinaDe(remite, maquina),
-      hora: ahora().toISOString(),
-      leido: false,
-      responde_a: null,
-    };
-    await publicar(await leer(), mensaje);
-    return { ok: true, mensaje: vista(mensaje), aviso: mensaje.aviso };
+    return res;
   }
 
-  async function bandeja({ yo }, identidad) {
-    if (esAgente(identidad)) {
-      const ag = exigirAgente(identidad);
-      const lista = await leer();
-      const mios = (m) => m.para_tipo === 'agente' && mismo(m.para, ag.persona) && !m.leido;
-      const pendientes = lista.filter(mios);
-      const hora = ahora().toISOString();
-      for (const m of pendientes) { m.leido = true; m.leido_en = hora; }
-      if (pendientes.length) await guardar(lista);
-      return { ok: true, yo: ag.persona, supervisor: ag.supervisor, pendientes: pendientes.map(vista), marcados: pendientes.length };
-    }
-    const quien = exigirConsejero(identidad, yo || (identidad && identidad.persona) || '');
-    const lista = await leer();
-    const paraMi = (m) => m.para === quien.persona && m.para_tipo !== 'agente' && !m.leido;
-    const pendientes = lista.filter(paraMi);
-    const hora = ahora().toISOString();
-    for (const m of lista) if (paraMi(m)) { m.leido = true; m.leido_en = hora; }
-    if (pendientes.length) await guardar(lista);
-    return { ok: true, yo: quien.persona, pendientes: pendientes.map(vista), marcados: pendientes.length };
-  }
-
-  async function responder({ id, texto, de, maquina }, identidad) {
-    if (esAgente(identidad)) {
-      const ag = exigirAgente(identidad);
-      const lista = await leer();
-      const original = lista.find((m) => m.id === id);
-      if (!original) throw new Error(`no hay un mensaje con id ${id}`);
-      if (original.para_tipo !== 'agente' || !mismo(original.para, ag.persona)) throw new Error(`el mensaje ${id} no es para ${ag.persona}`);
-      if (original.de_tipo === 'agente' || !sillaCanonica(original.de)) throw new Error('agente → agente todavía no: propuesto');
-      const respuesta = {
-        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: sillaCanonica(original.de), para_tipo: 'consejero',
-        texto: limpio(texto), maquina: maquinaDe(ag, maquina), hora: ahora().toISOString(), leido: false, responde_a: original.id,
-      };
-      if (!original.leido) { original.leido = true; original.leido_en = respuesta.hora; }
-      await publicar(lista, respuesta);
-      return { ok: true, mensaje: vista(respuesta), responde_a: original.id, aviso: respuesta.aviso };
-    }
-    const declarado = de || (identidad && identidad.persona) || '';
-    const quien = exigirConsejero(identidad, declarado);
-    const lista = await leer();
-    const original = lista.find((m) => m.id === id);
-    if (!original) throw new Error(`no hay un mensaje con id ${id}`);
-    if (original.para !== quien.persona || original.para_tipo === 'agente') throw new Error(`el mensaje ${id} es para ${original.para}, no para ${quien.persona}`);
-    const respuesta = {
-      id: idNuevo(),
-      de: quien.persona,
-      para: original.de,
-      para_tipo: original.de_tipo === 'agente' ? 'agente' : 'consejero',
-      maquina_para: original.de_tipo === 'agente' ? original.maquina : undefined,
-      de_tipo: 'consejero',
-      texto: limpio(texto),
-      maquina: maquinaDe(quien, maquina),
-      hora: ahora().toISOString(),
-      leido: false,
-      responde_a: original.id,
-    };
-    if (!original.leido) { original.leido = true; original.leido_en = respuesta.hora; }
-    await publicar(lista, respuesta);
-    return { ok: true, mensaje: vista(respuesta), responde_a: original.id, aviso: respuesta.aviso };
-  }
-
-  async function listar(con) {
-    const lista = await leer();
-    const silla = con ? (sillaCanonica(con) || agenteCanonico(con)) : null;
-    if (con && !silla) return { ok: true, mensajes: [] };
-    const mensajes = lista.filter((m) => !silla || mismo(m.de, silla) || mismo(m.para, silla)).slice(-50).map(vista);
-    const pendientes = silla ? mensajes.filter((m) => m.para === silla && !m.leido).length : mensajes.filter((m) => !m.leido).length;
-    return { ok: true, mensajes, pendientes };
-  }
-
-  return { enviar, bandeja, responder, listar, avisos };
+  return {
+    enviar: (a, identidad) => conAviso('enviar', a, identidad),
+    bandeja: async (a, identidad) => (await ejecutar('bandeja', a || {}, identidad)).res,
+    responder: (a, identidad) => conAviso('responder', a, identidad),
+    listar: async (con, max) => (await ejecutar('listar', { con: con || '', max }, null)).res,
+    avisos,
+  };
 }

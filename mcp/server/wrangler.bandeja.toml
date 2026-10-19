@@ -1,0 +1,23 @@
+# admira-live-bandeja — Worker que solo aloja el Durable Object BandejaConsejo (src/bandeja-do.js).
+# Uso: producción (solo con «publica»). Despliegue: npx wrangler deploy -c wrangler.bandeja.toml
+# Es un script NUEVO y aparte: crear la clase (migración v1) no toca admira-live-mcp,
+# que se enlaza por script_name y sigue subiendo versiones sin tráfico y con rollback.
+# El KV ADMIRA_LIVE_DESDE solo se LEE (migración de consejero-mensajes:v1); nunca se escribe.
+name = "admira-live-bandeja"
+main = "src/bandeja-worker.js"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+preview_urls = false
+
+[[kv_namespaces]]
+binding = "ADMIRA_LIVE_DESDE"
+id = "6bbd9cae35ca492d8a6c6835a323335c"
+
+[[durable_objects.bindings]]
+name = "BANDEJA"
+class_name = "BandejaConsejo"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BandejaConsejo"]

@@ -501,7 +501,7 @@ export async function manejar(request, env, deps = {}) {
   if (ruta === '/salud' && request.method === 'GET') {
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
-    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
+    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, bandeja: env.BANDEJA ? 'durable-object' : 'kv', sandbox: !!env.AVISOS_SANDBOX_KEY, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
   /* «¿En qué está cada consejero ahora?» para la mesa de admira.live (hover y DEBATIR, 4-oct-2026).
@@ -525,9 +525,22 @@ export async function manejar(request, env, deps = {}) {
     // 19-10-2026 (Carlos): los mensajes pueden llevar datos internos. Con el secreto
     // CONSEJERO_MENSAJES_TOKEN puesto, solo lo lee quien lo trae (la función Pages
     // /api/chat/entre-consejeros, tras la sesión Google). Sin el secreto, como antes.
+    // Sandbox (solo despliegues con AVISOS_SANDBOX_KEY): lista la instancia «sandbox».
+    if (esClaveSandbox(request, env)) {
+      const cuerpo = await crearBandeja(envSandbox(request, env), deps).listar(url.searchParams.get('con') || '', Number(url.searchParams.get('max')) || 500);
+      return json(cuerpo, 200, cors);
+    }
     if (!lecturaMensajesPermitida(request, env)) return json({ ok: false, error: 'privado: se lee en admira.live con tu cuenta de Google' }, 401, cors);
     const cuerpo = await crearBandeja(env, deps).listar(url.searchParams.get('con') || '');
     return json(cuerpo, 200, cors);
+  }
+  /* Limpieza de pruebas: vacía SOLO la sandbox (instancia «sandbox» del Durable Object). */
+  if (ruta === '/consejero/mensajes/sandbox' && request.method === 'DELETE') {
+    if (!esClaveSandbox(request, env)) return json({ ok: false, error: 'no autorizado' }, 401);
+    if (!env.BANDEJA) return json({ ok: false, error: 'sin Durable Object' }, 400);
+    const stub = env.BANDEJA.get(env.BANDEJA.idFromName('sandbox'));
+    const r = await stub.fetch('https://bandeja.interna/vaciar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre: 'sandbox' }) });
+    return json(await r.json(), r.status);
   }
   if (ruta === '/consejero/mensajes' && request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '86400' } });
@@ -587,6 +600,24 @@ function kvConPrefijo(kv, pre) {
     get: (k, t) => kv.get(pre + k, t), put: (k, v, o) => kv.put(pre + k, v, o), delete: (k) => kv.delete(pre + k),
   };
 }
+/* Entorno de la sandbox: KV con prefijo propio y, si hay Durable Object, la instancia
+ * «sandbox» (nunca la real «consejo»). x-sandbox-limite-remitente / -par cambian el
+ * anti-bucle SOLO aquí, para pruebas de carga (1..1000). */
+function envSandbox(request, env) {
+  const lim = (h) => { const n = Number(request.headers.get(h)); return Number.isInteger(n) && n >= 1 && n <= 1000 ? n : undefined; };
+  const e = { ADMIRA_LIVE_DESDE: kvConPrefijo(env.ADMIRA_LIVE_DESDE, PREFIJO_SANDBOX), SITIO: env.SITIO };
+  if (env.BANDEJA) { e.BANDEJA = env.BANDEJA; e.BANDEJA_NOMBRE = 'sandbox'; }
+  e.BANDEJA_LIMITES = { remitente: lim('x-sandbox-limite-remitente'), par: lim('x-sandbox-limite-par') };
+  return e;
+}
+export function esClaveSandbox(request, env = {}) {
+  const sk = env.AVISOS_SANDBOX_KEY;
+  if (!sk || String(sk).length < 24) return false;
+  const c = claveRecibida(request);
+  if (!c || c.length !== sk.length) return false;
+  let d = 0; for (let i = 0; i < c.length; i++) d |= c.charCodeAt(i) ^ sk.charCodeAt(i);
+  return d === 0;
+}
 export function sandboxDe(request, env = {}) {
   const sk = env.AVISOS_SANDBOX_KEY;
   if (!sk || String(sk).length < 24 || !env.ADMIRA_LIVE_DESDE) return null;
@@ -599,11 +630,11 @@ export function sandboxDe(request, env = {}) {
   const agente = persona ? null : personaFlota(pedido);
   if (!persona && !(agente && AGENTES_FLOTA.includes(agente))) return null;
   if (agente) return {
-    env: { ADMIRA_LIVE_DESDE: kvConPrefijo(env.ADMIRA_LIVE_DESDE, PREFIJO_SANDBOX), SITIO: env.SITIO },
+    env: envSandbox(request, env),
     identidad: { persona: agente, machine: 'Sandbox', runtime: 'prueba', agent: `${agente}Sandbox`, tipo: 'agente', sandbox: true },
   };
   return {
-    env: { ADMIRA_LIVE_DESDE: kvConPrefijo(env.ADMIRA_LIVE_DESDE, PREFIJO_SANDBOX), SITIO: env.SITIO },
+    env: envSandbox(request, env),
     identidad: { persona, machine: 'Sandbox', runtime: 'prueba', agent: `${persona}Sandbox`, tipo: 'consejero', sandbox: true },
   };
 }

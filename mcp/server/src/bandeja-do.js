@@ -73,6 +73,29 @@ export class BandejaConsejo {
       if (request.method !== 'POST') return Response.json({ ok: false, error: 'solo POST' }, { status: 405 });
       const cuerpo = await request.json();
       const nombre = String(cuerpo.nombre || 'consejo');
+      // Administración de la instancia real (Carlos, 19-10-2026 21:10: «vamos a hacer un 0»).
+      // Solo con el secreto BANDEJA_ADMIN_KEY del Worker admira-live-bandeja (≥32 caracteres).
+      // Sin secreto puesto, no existe. exportar = copia completa; vaciar = lista a 0 y sin re-migrar.
+      if (url.pathname === '/admin') {
+        const sk = String(this.env.BANDEJA_ADMIN_KEY || '');
+        const c = String(cuerpo.clave || '');
+        let d = sk.length >= 32 && c.length === sk.length ? 0 : 1;
+        for (let i = 0; !d && i < c.length; i++) d |= c.charCodeAt(i) ^ sk.charCodeAt(i);
+        if (d !== 0) return Response.json({ ok: false, error: 'no autorizado' }, { status: 401 });
+        return await enCola(this.cola, async () => {
+          if (cuerpo.accion === 'exportar') {
+            const lista = (await this.storage.get(LISTA)) || [];
+            return Response.json({ ok: true, nombre, meta: (await this.storage.get(META)) || null, lista });
+          }
+          if (cuerpo.accion === 'vaciar') {
+            const antes = ((await this.storage.get(LISTA)) || []).length;
+            const meta = { nombre, creado: new Date().toISOString(), migra: false, vaciado: new Date().toISOString(), importados: 0 };
+            await this.storage.put({ [LISTA]: [], [META]: meta });
+            return Response.json({ ok: true, nombre, antes, despues: 0 });
+          }
+          return Response.json({ ok: false, error: 'accion: exportar o vaciar' }, { status: 400 });
+        });
+      }
       if (url.pathname === '/vaciar') {
         // Solo la instancia de sandbox se puede vaciar (limpieza de pruebas).
         if (!/^sandbox/.test(nombre)) return Response.json({ ok: false, error: 'solo se vacía la sandbox' }, { status: 403 });

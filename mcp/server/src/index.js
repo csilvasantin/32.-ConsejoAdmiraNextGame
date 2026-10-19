@@ -24,7 +24,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import * as z from 'zod/v4';
 import { ROLES, GENERACIONES, consejeros, crearCliente, resumirRespuesta } from './consejo.js';
-import { identidadPorClave, identidadPorClaveAsync, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
+import { identidadPorClave, identidadPorClaveAsync, crearYokup, CONSEJEROS_GROKBOT, mapaClaves, sillasConClave } from './yokup.js';
 import { crearTelegram } from './telegram.js';
 import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS, SILLAS } from './flota.js';
 import { censoBots, flotaCombinada, RUNTIMES, ESTADOS_ABIERTOS } from './coordinacion.js';
@@ -478,8 +478,7 @@ export async function claveValida(request, env) {
   if (!cand) return false;
   if (env.MCP_KEY && iguales(cand, env.MCP_KEY)) return true;
   if (env.MCP_KEY_CONSEJO && iguales(cand, env.MCP_KEY_CONSEJO)) return true;
-  let mapa = {};
-  try { mapa = env.MCP_KEYS ? JSON.parse(env.MCP_KEYS) : {}; } catch { mapa = {}; }
+  const mapa = mapaClaves(env);
   if (Object.keys(mapa).some((k) => iguales(cand, k))) return true;
   return !!(await identidadPorClaveAsync(cand, env));
 }
@@ -501,7 +500,7 @@ export async function manejar(request, env, deps = {}) {
   if (ruta === '/salud' && request.method === 'GET') {
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
-    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, bandeja: env.BANDEJA ? 'durable-object' : 'kv', sandbox: !!env.AVISOS_SANDBOX_KEY, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
+    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_SILLAS: sillasConClave(env), MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, bandeja: env.BANDEJA ? 'durable-object' : 'kv', sandbox: !!env.AVISOS_SANDBOX_KEY, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
   /* «¿En qué está cada consejero ahora?» para la mesa de admira.live (hover y DEBATIR, 4-oct-2026).

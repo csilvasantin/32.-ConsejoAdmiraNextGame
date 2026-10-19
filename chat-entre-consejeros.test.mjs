@@ -44,6 +44,7 @@ test("con Google autorizado lee la bandeja (con token al Worker si existe) y fil
 test("con inválido: 400; Elon es Musk", async () => {
   assert.equal((await api.onRequestGet({ request: req(jwt(3), "con=Nadie"), env: {}, fetchImpl: falso(carlos, bandeja) })).status, 400);
   assert.equal(api.silla("elon"), "Musk"); assert.equal(api.silla("Jensen"), "Huang");
+  assert.equal(api.silla("Oráculo"), "Oraculo"); assert.equal(api.silla("morfeo"), "Morfeo");
 });
 
 test("la página ya no lee la bandeja en abierto", () => {
@@ -51,6 +52,7 @@ test("la página ya no lee la bandeja en abierto", () => {
   assert.ok(!js.includes("mcp.admira.live/consejero/mensajes"));
   assert.ok(js.includes("/api/chat/entre-consejeros"));
   assert.ok(js.includes("Authorization"));
+  assert.ok(js.includes("Con agentes"));
   const home = readFileSync(new URL("./council-grokbot.js", import.meta.url), "utf8");
   assert.ok(home.includes("#entre-consejeros"));
 });

@@ -24,7 +24,8 @@ test('solo el propio consejero (o admin) gestiona su webhook', () => {
   assert.throws(() => exigirDueno(yo('Jobs'), 'Musk'), /no gestiona/);
   assert.equal(exigirDueno(yo('Jobs'), 'Musk', { AVISOS_ADMIN: 'Jobs' }), 'Musk');
   assert.throws(() => exigirDueno({ tipo: 'consejo-compartido' }, 'Musk'), /compartida/);
-  assert.throws(() => exigirDueno({ persona: 'Morfeo', tipo: 'agente' }), /agente/);
+  assert.equal(exigirDueno({ persona: 'Morfeo', tipo: 'agente' }), 'Morfeo');
+  assert.throws(() => exigirDueno({ persona: 'Morfeo', tipo: 'agente' }, 'Oraculo'), /propio webhook/);
   assert.throws(() => exigirDueno(null), /identidad/);
 });
 
@@ -100,7 +101,7 @@ test('anti-bucle y destinatarios sin webhook', async () => {
   const av = crearAvisos({ ADMIRA_LIVE_DESDE: kv }, { fetchWebhook: async () => { n++; return { status: 200 }; } });
   await av.registrar({ url: 'https://hooks.example.com/m' }, yo('Musk'));
   assert.match((await av.avisar({ id: 'a', de: 'Musk', para: 'Musk', texto: 't' })).omitido, /bucle/);
-  assert.match((await av.avisar({ id: 'b', de: 'Musk', para: 'Morfeo', para_tipo: 'agente', texto: 't' })).omitido, /agente/);
+  assert.match((await av.avisar({ id: 'b', de: 'Musk', para: 'Morfeo', para_tipo: 'agente', texto: 't' })).omitido, /sin webhook/);
   assert.match((await av.avisar({ id: 'c', de: 'Musk', para: 'Jobs', texto: 't' })).omitido, /sin webhook/);
   assert.equal(n, 0);
   assert.equal(resumen('  a   b  '), 'a b');

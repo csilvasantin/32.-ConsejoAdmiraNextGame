@@ -13,8 +13,11 @@ import { emailGoogle, tokenMaquina } from "../../../chat-hilo-lib.mjs";
 import { cabeceras, json } from "../../../chat-hilo-http.mjs";
 
 export const SILLAS = { jobs: "Jobs", wozniak: "Wozniak", lucas: "Lucas", disney: "Disney", musk: "Musk", elon: "Musk", huang: "Huang", jensen: "Huang", y: "Y" };
-export const silla = (s) => SILLAS[String(s || "").trim().toLowerCase()] || null;
-const CAMPOS = ["id", "de", "para", "texto", "maquina", "hora", "leido", "leido_en", "responde_a", "de_tipo", "para_tipo"];
+// 19-10-2026: también agentes de la flota (mensajes consejero ↔ agente).
+export const AGENTES = ["Neo", "Morfeo", "Trinity", "Oraculo", "Smith", "Cypher", "Switch", "Niobe", "Link", "Persefone", "Seraph", "Arquitecto", "Merovingio"];
+const sinTilde = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+export const silla = (s) => SILLAS[sinTilde(s)] || AGENTES.find((a) => a.toLowerCase() === sinTilde(s)) || null;
+const CAMPOS = ["id", "de", "para", "texto", "maquina", "hora", "leido", "leido_en", "responde_a", "de_tipo", "para_tipo", "maquina_para"];
 
 export function onRequestOptions({ request }) {
   return new Response(null, { status: 204, headers: cabeceras(request.headers.get("Origin") || "", "GET, OPTIONS") });
@@ -27,7 +30,7 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   if (!quien) return json({ ok: false, error: "privado: entra con tu cuenta de Google de admira.live" }, 401, origin, "GET, OPTIONS");
   const url = new URL(request.url);
   const con = silla(url.searchParams.get("con"));
-  if (!con) return json({ ok: false, error: "con inválido (Jobs, Wozniak, Lucas, Disney, Musk, Huang, Y)" }, 400, origin, "GET, OPTIONS");
+  if (!con) return json({ ok: false, error: "con inválido (un consejero o un agente de la flota)" }, 400, origin, "GET, OPTIONS");
   const limite = Math.min(50, Math.max(1, Number(url.searchParams.get("limite")) || 50));
   const base = String((env && env.MCP_BASE) || "https://mcp.admira.live").replace(/\/$/, "");
   const headers = { accept: "application/json" };

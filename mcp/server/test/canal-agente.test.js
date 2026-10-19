@@ -49,10 +49,11 @@ test('Morfeo escribe a Elon, Elon lee y responde, Morfeo lo lee y contesta', asy
   assert.equal((await crearBandeja(env).listar('Morfeo')).mensajes.length, 3);
 });
 
-test('un agente no puede escribir a otro consejero ni sin supervisor, ni llevar secretos', async () => {
+test('un agente escribe a cualquier consejero (19-10), no a otro agente, ni lleva secretos', async () => {
   const env = { ADMIRA_LIVE_DESDE: kvMemoria() };
-  await assert.rejects(() => crearBandeja(env).enviar({ para: 'Lucas', texto: 'hola' }, oraculo), /supervisor, Musk/);
-  await assert.rejects(() => crearBandeja(env).enviar({ para: 'Musk', texto: 'hola' }, { ...neo, persona: 'Smith', agent: 'SmithMacMini' }), /no tiene consejero supervisor/);
+  assert.equal((await crearBandeja(env).enviar({ para: 'Lucas', texto: 'hola' }, oraculo)).mensaje.para, 'Lucas');
+  assert.equal((await crearBandeja(env).enviar({ para: 'Musk', texto: 'hola' }, { ...neo, persona: 'Smith', agent: 'SmithMacMini' })).mensaje.para, 'Musk');
+  await assert.rejects(() => crearBandeja(env).enviar({ para: 'Neo', texto: 'hola' }, oraculo), /agente → agente/);
   await assert.rejects(() => crearBandeja(env).enviar({ para: 'Musk', texto: 'token: abcdefghijklmnop' }, oraculo), /secreto/);
   const l = await crearBandeja(env).enviar({ de: 'Lucas', para: 'Musk', texto: 'Hola Elon' }, lucas);
   await assert.rejects(() => crearBandeja(env).responder({ id: l.mensaje.id, texto: 'me cuelo' }, oraculo), /no es para Oraculo/);
@@ -68,6 +69,8 @@ test('por el MCP: el agente usa consejero_mensaje sin de', async () => {
   const ok = await client.callTool({ name: 'consejero_mensaje', arguments: { para: 'Musk', texto: 'Hola Elon' } });
   assert.equal(ok.isError, undefined);
   assert.equal(texto(ok).mensaje.para, 'Musk');
-  const no = await client.callTool({ name: 'consejero_mensaje', arguments: { para: 'Huang', texto: 'Hola Jensen' } });
+  const otro = await client.callTool({ name: 'consejero_mensaje', arguments: { para: 'Huang', texto: 'Hola Jensen' } });
+  assert.equal(texto(otro).mensaje.para, 'Huang');
+  const no = await client.callTool({ name: 'consejero_mensaje', arguments: { para: 'Trinity', texto: 'Hola' } });
   assert.equal(no.isError, true);
 });

@@ -11,7 +11,27 @@
   estilo.textContent = "#entre-consejeros .turno.otro{margin-right:auto;align-items:flex-start}#entre-consejeros .turno.otro .burbuja{background:#3a2a22;border-bottom-left-radius:5px}#entre-consejeros .turno.persona{margin-left:auto;align-items:flex-end}";
   document.head.appendChild(estilo);
   function nombre(s) { return NOMBRE[s] || s; }
+  // 19-10-2026: también mensajes con agentes de la flota; filtro Todos / Consejeros / Agentes.
+  var filtro = "todos", ultimos = [], ultPend = 0;
+  var barra = document.createElement("div");
+  barra.id = "entre-filtro";
+  barra.className = "meta";
+  [["todos", "Todos"], ["consejeros", "Entre consejeros"], ["agentes", "Con agentes"]].forEach(function (f) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "enlace"; b.textContent = f[1]; b.setAttribute("data-filtro", f[0]);
+    b.setAttribute("aria-pressed", f[0] === filtro ? "true" : "false");
+    b.addEventListener("click", function () {
+      filtro = f[0];
+      Array.prototype.forEach.call(barra.children, function (x) { x.setAttribute("aria-pressed", x.getAttribute("data-filtro") === filtro ? "true" : "false"); });
+      pintar(ultimos, ultPend);
+    });
+    barra.appendChild(b); barra.appendChild(document.createTextNode(" "));
+  });
+  lista.parentNode.insertBefore(barra, lista);
+  function conAgente(m) { return m.de_tipo === "agente" || m.para_tipo === "agente"; }
   function pintar(msgs, pendientes) {
+    ultimos = msgs; ultPend = pendientes;
+    msgs = msgs.filter(function (m) { return filtro === "todos" || (filtro === "agentes" ? conAgente(m) : !conAgente(m)); });
     lista.replaceChildren();
     var estado = document.createElement("p");
     estado.id = "entre-estado";
@@ -21,7 +41,7 @@
     if (!msgs.length) {
       var v = document.createElement("p");
       v.id = "entre-vacio";
-      v.textContent = "Aún no hay mensajes entre consejeros.";
+      v.textContent = "Aún no hay mensajes privados aquí.";
       lista.appendChild(v);
       return;
     }
@@ -35,7 +55,7 @@
       meta.className = "meta";
       var hora = m.hora ? m.hora.replace("T", " ").slice(0, 16) : "";
       var acuse = m.leido ? (" · leído" + (m.leido_en ? " " + m.leido_en.replace("T", " ").slice(0, 16) : "")) : " · pendiente";
-      meta.textContent = nombre(m.de) + " → " + nombre(m.para) + " · " + (m.maquina || "") + " · " + hora + acuse;
+      meta.textContent = nombre(m.de) + (m.de_tipo === "agente" ? " (agente)" : "") + " → " + nombre(m.para) + (m.para_tipo === "agente" ? " (agente)" : "") + " · " + (m.maquina || "") + " · " + hora + acuse;
       art.append(b, meta);
       lista.appendChild(art);
     });

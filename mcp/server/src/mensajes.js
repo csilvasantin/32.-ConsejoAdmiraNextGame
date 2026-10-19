@@ -11,7 +11,7 @@
 
 import { sillaCanonica } from './sillas.js';
 import { supervisorDe, agenteCanonico } from './supervisores.js';
-import { norm } from './flota.js';
+import { norm, AGENTES_FLOTA, CASA_AGENTE, personaCanonica } from './flota.js';
 import { crearAvisos } from './avisos.js';
 
 export const CLAVE_KV = 'consejero-mensajes:v1';
@@ -38,11 +38,36 @@ export function exigirConsejero(identidad, declarado) {
 }
 
 /* Un agente solo habla con su supervisor. Devuelve su remitente o lanza el error. */
+/* Un agente de la flota como destinatario («Oráculo» → «Oraculo»), o null. */
+export function agenteDestino(nombre) {
+  const a = personaCanonica(nombre);
+  return a && AGENTES_FLOTA.includes(a) ? a : null;
+}
+
+/* Límites (19-10-2026): agentes automáticos pueden responderse en bucle. */
+export const VENTANA_MS = 10 * 60 * 1000;
+export const MAX_POR_REMITENTE = 20;
+export const MAX_POR_PAR_CON_AGENTE = 8;
+export function comprobarFrecuencia(lista, m, ahoraMs) {
+  const desde = ahoraMs - VENTANA_MS;
+  const recientes = lista.filter((x) => Date.parse(x.hora) >= desde);
+  if (recientes.filter((x) => norm(x.de) === norm(m.de)).length >= MAX_POR_REMITENTE) throw new Error(`límite: ${m.de} ya ha enviado ${MAX_POR_REMITENTE} mensajes en 10 min`);
+  if (m.de_tipo === 'agente' || m.para_tipo === 'agente') {
+    const par = (x) => (norm(x.de) === norm(m.de) && norm(x.para) === norm(m.para)) || (norm(x.de) === norm(m.para) && norm(x.para) === norm(m.de));
+    if (recientes.filter(par).length >= MAX_POR_PAR_CON_AGENTE) throw new Error(`anti-bucle: ${m.de} y ${m.para} ya llevan ${MAX_POR_PAR_CON_AGENTE} mensajes en 10 min; esperad o que intervenga Carlos`);
+  }
+}
+
 export function exigirAgente(identidad, para) {
   const agente = agenteCanonico(identidad && identidad.persona);
   const jefe = supervisorDe(agente);
-  if (!jefe) throw new Error(`${agente || 'este agente'} no tiene consejero supervisor en supervisores.js: pide a Carlos que lo añada`);
-  if (para !== undefined && sillaCanonica(para) !== jefe) throw new Error(`${agente} solo puede escribir a su consejero supervisor, ${jefe}`);
+  if (!agente) throw new Error('este agente no tiene nombre reconocible');
+  // 19-10-2026 (Carlos): un agente puede escribir a CUALQUIER consejero; sin para va a su supervisor.
+  if (para !== undefined && para !== null && para !== '' && !sillaCanonica(para)) {
+    if (agenteDestino(para)) throw new Error('agente → agente todavía no: propuesto (pasa por un consejero o usa agente_encargar)');
+    throw new Error('para tiene que ser un consejero: Wozniak, Jobs, Lucas, Disney, Musk, Huang o Y');
+  }
+  if ((para === undefined || para === null || para === '') && !jefe) throw new Error(`${agente} no tiene consejero supervisor: indica para (un consejero)`);
   return { persona: agente, machine: identidad.machine || 'flota', agent: identidad.agent || agente, tipo: 'agente', supervisor: jefe };
 }
 
@@ -70,6 +95,7 @@ function vista(m) {
     id: m.id, de: m.de, para: m.para, texto: m.texto, maquina: m.maquina, hora: m.hora,
     leido: !!m.leido, leido_en: m.leido_en || null, responde_a: m.responde_a || null,
     aviso: m.aviso || null, de_tipo: m.de_tipo || 'consejero', para_tipo: m.para_tipo || 'consejero',
+    maquina_para: m.maquina_para || null,
   };
 }
 
@@ -141,39 +167,45 @@ export function crearBandeja(env = {}, deps = {}) {
     }
   }
 
-  async function enviar({ de, para, texto, maquina }, identidad) {
+  async function publicar(lista, mensaje) {
+    comprobarFrecuencia(lista, mensaje, ahora().getTime());
+    lista.push(mensaje);
+    mensaje.aviso = await avisar(mensaje);
+    await guardar(lista);
+    alMomento(mensaje);
+    return mensaje;
+  }
+
+  async function enviar({ de, para, texto, maquina, maquina_agente }, identidad) {
     if (esAgente(identidad)) {
       const ag = exigirAgente(identidad, para);
+      const destino = (para && sillaCanonica(para)) || ag.supervisor;
       const mensaje = {
-        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: ag.supervisor, para_tipo: 'consejero',
+        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: destino, para_tipo: 'consejero',
         texto: limpio(texto), maquina: maquinaDe(ag, maquina), hora: ahora().toISOString(), leido: false, responde_a: null,
       };
-      const lista = await leer();
-      lista.push(mensaje);
-      mensaje.aviso = await avisar(mensaje);
-      await guardar(lista);
-      alMomento(mensaje);
+      await publicar(await leer(), mensaje);
       return { ok: true, mensaje: vista(mensaje), aviso: mensaje.aviso };
     }
     const remite = exigirConsejero(identidad, de || (identidad && identidad.persona) || '');
-    const destino = sillaCanonica(para);
-    if (!destino) throw new Error('para tiene que ser un consejero: Wozniak, Jobs, Lucas, Disney, Musk, Huang o Y');
-    if (destino === remite.persona) throw new Error('un consejero no se escribe a sí mismo');
+    const silla = sillaCanonica(para);
+    const agente = silla ? null : agenteDestino(para);
+    if (!silla && !agente) throw new Error(`para tiene que ser un consejero (Wozniak, Jobs, Lucas, Disney, Musk, Huang, Y) o un agente de la flota (${AGENTES_FLOTA.join(', ')})`);
+    if (silla === remite.persona) throw new Error('un consejero no se escribe a sí mismo');
     const mensaje = {
       id: idNuevo(),
       de: remite.persona,
-      para: destino,
+      de_tipo: 'consejero',
+      para: silla || agente,
+      para_tipo: agente ? 'agente' : 'consejero',
+      maquina_para: agente ? maquinaDe({ machine: CASA_AGENTE[agente] || 'flota' }, maquina_agente) : undefined,
       texto: limpio(texto),
       maquina: maquinaDe(remite, maquina),
       hora: ahora().toISOString(),
       leido: false,
       responde_a: null,
     };
-    const lista = await leer();
-    lista.push(mensaje);
-    mensaje.aviso = await avisar(mensaje);
-    await guardar(lista);
-    alMomento(mensaje);
+    await publicar(await leer(), mensaje);
     return { ok: true, mensaje: vista(mensaje), aviso: mensaje.aviso };
   }
 
@@ -205,16 +237,13 @@ export function crearBandeja(env = {}, deps = {}) {
       const original = lista.find((m) => m.id === id);
       if (!original) throw new Error(`no hay un mensaje con id ${id}`);
       if (original.para_tipo !== 'agente' || !mismo(original.para, ag.persona)) throw new Error(`el mensaje ${id} no es para ${ag.persona}`);
-      if (original.de !== ag.supervisor) throw new Error(`${ag.persona} solo puede responder a su consejero supervisor, ${ag.supervisor}`);
+      if (original.de_tipo === 'agente' || !sillaCanonica(original.de)) throw new Error('agente → agente todavía no: propuesto');
       const respuesta = {
-        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: ag.supervisor, para_tipo: 'consejero',
+        id: idNuevo(), de: ag.persona, de_tipo: 'agente', para: sillaCanonica(original.de), para_tipo: 'consejero',
         texto: limpio(texto), maquina: maquinaDe(ag, maquina), hora: ahora().toISOString(), leido: false, responde_a: original.id,
       };
       if (!original.leido) { original.leido = true; original.leido_en = respuesta.hora; }
-      lista.push(respuesta);
-      respuesta.aviso = await avisar(respuesta);
-      await guardar(lista);
-      alMomento(respuesta);
+      await publicar(lista, respuesta);
       return { ok: true, mensaje: vista(respuesta), responde_a: original.id, aviso: respuesta.aviso };
     }
     const declarado = de || (identidad && identidad.persona) || '';
@@ -237,10 +266,7 @@ export function crearBandeja(env = {}, deps = {}) {
       responde_a: original.id,
     };
     if (!original.leido) { original.leido = true; original.leido_en = respuesta.hora; }
-    lista.push(respuesta);
-    respuesta.aviso = await avisar(respuesta);
-    await guardar(lista);
-    alMomento(respuesta);
+    await publicar(lista, respuesta);
     return { ok: true, mensaje: vista(respuesta), responde_a: original.id, aviso: respuesta.aviso };
   }
 

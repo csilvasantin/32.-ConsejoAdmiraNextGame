@@ -21,6 +21,9 @@
  */
 
 import { sillaCanonica } from './sillas.js';
+import { personaCanonica, AGENTES_FLOTA } from './flota.js';
+
+const agenteDe = (n) => { const a = personaCanonica(n); return a && AGENTES_FLOTA.includes(a) ? a : null; };
 
 export const PREFIJO = 'consejero-webhook:v1:';
 export const PREFIJO_ESTADO = 'consejero-webhook-estado:v1:';
@@ -57,7 +60,13 @@ function validarCabecera(c) {
 /* Quién puede tocar el webhook de `silla`: el propio consejero con su clave, o un admin. */
 export function exigirDueno(identidad, declarado, env = {}) {
   if (!identidad) throw new Error('sin identidad: hace falta la clave propia del consejero');
-  if (identidad.tipo === 'agente') throw new Error('un agente de la flota no registra webhooks de consejeros');
+  if (identidad.tipo === 'agente') {
+    // 19-10-2026: un agente registra SU webhook (solo el suyo) con su propia clave.
+    const yoA = agenteDe(identidad.persona);
+    if (!yoA) throw new Error('agente desconocido');
+    if (declarado && agenteDe(declarado) !== yoA) throw new Error(`esta clave es la de ${yoA} y solo gestiona su propio webhook`);
+    return yoA;
+  }
   if (identidad.tipo === 'consejo-compartido') throw new Error('con la clave compartida del Consejo no: usa la clave propia de tu silla');
   const yo = sillaCanonica(identidad.persona);
   if (!yo || identidad.tipo !== 'consejero') throw new Error('esta clave no es de un consejero');
@@ -135,16 +144,16 @@ export function crearAvisos(env = {}, deps = {}) {
   /* Avisa al destinatario del mensaje si tiene webhook. Nunca lanza. */
   async function avisar(m) {
     try {
-      if (!m || !m.para || m.para_tipo === 'agente') return { ok: false, omitido: 'destinatario sin webhook (agente)' };
+      if (!m || !m.para) return { ok: false, omitido: 'sin destinatario' };
       if (m.de === m.para) return { ok: false, omitido: 'anti-bucle: mensaje a sí mismo' };
-      const silla = sillaCanonica(m.para);
+      const silla = m.para_tipo === 'agente' ? agenteDe(m.para) : sillaCanonica(m.para);
       if (!silla) return { ok: false, omitido: 'destinatario desconocido' };
       const reg = await leerRegistro(silla);
       if (!reg) return { ok: false, omitido: 'sin webhook' };
       let url;
       try { url = validarUrl(reg.url); } catch (e) { return { ok: false, omitido: e.message }; }
       const carga = {
-        tipo: 'consejero_mensaje', id: m.id, de: m.de, de_tipo: m.de_tipo || 'consejero', para: silla,
+        tipo: 'consejero_mensaje', id: m.id, de: m.de, de_tipo: m.de_tipo || 'consejero', para: silla, para_tipo: m.para_tipo || 'consejero',
         resumen: resumen(m.texto), responde_a: m.responde_a || null, hora: m.hora,
         url: `${sitio}/consejero.html?con=${encodeURIComponent(silla)}#${encodeURIComponent(m.id)}`,
         leer: 'consejero_bandeja (MCP admira-live) con tu clave',

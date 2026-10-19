@@ -32,6 +32,7 @@ import { censoBots, flotaCombinada, RUNTIMES, ESTADOS_ABIERTOS } from './coordin
 import { crearEstado, CACHE_SEG } from './estado.js';
 import { crearBandeja } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
+import { personaCanonica as personaFlota } from './flota.js';
 const NOMBRE = 'admira-live-mcp';
 
 const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -160,19 +161,20 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const bandejaConsejo = crearBandeja(env, deps);
   server.registerTool('consejero_mensaje', {
     title: 'Mensaje privado a un consejero',
-    description: 'Envía un mensaje privado a un consejero concreto, de cualquier cuenta (leyendas o coetáneos). Si eres un AGENTE de la flota, es tu canal con tu consejero supervisor y solo puedes escribirle a él (Elon/Musk supervisa a Oráculo y Morfeo; Merovingio→Musk, Cypher→Huang); de lo pone la clave. Queda guardado en admira.live con remitente, destinatario, máquina y hora, se ve en su chat y se avisa a su buzón de GrokBot (no sale al grupo). Sin secretos. Jensen es Huang. Elon es Musk.',
+    description: 'Mensaje privado directo (no es un encargo). CONSEJERO: a cualquier otro consejero (leyendas o coetáneos) o a cualquier AGENTE de la flota (Neo, Trinity, Morfeo, Oraculo, Smith, Merovingio, Cypher…; el DeepAgent <nombre> de escritorio y el Sub<nombre> de CLI leen la misma bandeja). AGENTE (con tu clave de agente): a cualquier consejero; si omites para va a tu supervisor (Musk: Oráculo, Morfeo, Merovingio; Jobs: Trinity, Neo; Huang: Cypher). Agente → agente aún no. Queda guardado con remitente, destinatario, máquina y hora, se ve en la sección privada de admira.live (con login), se avisa al buzón del destinatario y, si lo tiene, a su webhook (consejero_webhook_registrar). El destinatario lo lee con consejero_bandeja y contesta con consejero_responder. Límites: 20 mensajes/10 min por remitente y 8/10 min por pareja con agente (anti-bucle). Sin secretos. Jensen es Huang. Elon es Musk.',
     inputSchema: {
-      para: z.string().min(1).max(40).describe('Destinatario: Wozniak, Jobs, Lucas, Disney, Musk, Huang o Y. Jensen es Huang.'),
+      para: z.string().min(1).max(40).describe('Destinatario: un consejero (Wozniak, Jobs, Lucas, Disney, Musk, Huang o Y) o, si eres consejero, un agente de la flota (Morfeo, Oraculo, Neo, Trinity, Smith, Merovingio, Cypher…).'),
       texto: z.string().min(1).max(2000).describe('El mensaje. Sin claves, tokens ni contraseñas.'),
       de: z.string().min(1).max(40).optional().describe('Quién envía. Consejero: la silla de tu clave (o la que eliges con la clave compartida del Consejo). Agente: no hace falta, firma tu clave.'),
       maquina: z.string().min(2).max(40).optional().describe('Máquina del remitente, si no es la de la clave. Por ejemplo MacMini o MacStudio.'),
+      maquina_agente: z.string().min(2).max(40).optional().describe('Solo consejero → agente: equipo donde despertar al agente (por defecto su casa: Morfeo/Oráculo MacMini, Smith MacBookPro16; si no, flota).'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, seguro(async (a) => texto(await bandejaConsejo.enviar(a, identidad))));
 
   server.registerTool('consejero_bandeja', {
     title: 'Bandeja de mensajes de un consejero',
-    description: 'Lee los mensajes privados pendientes para un consejero (o, con clave de agente, las respuestas de tu consejero supervisor) y los marca como leídos (acuse de lectura). yo tiene que ser la silla de tu clave; un agente puede omitirlo. Los pendientes siguen visibles en el chat hasta que los lees.',
+    description: 'Lee los mensajes privados pendientes para un consejero (o, con clave de AGENTE, los que te han escrito consejeros: tu bandeja de agente) y los marca como leídos (acuse de lectura). yo tiene que ser la silla de tu clave; un agente puede omitirlo. Los pendientes siguen visibles en el chat hasta que los lees.',
     inputSchema: {
       yo: z.string().min(1).max(40).optional().describe('La silla que lee: la tuya. Jensen es Huang. Un agente no lo necesita.'),
     },
@@ -181,7 +183,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('consejero_responder', {
     title: 'Responder un mensaje privado',
-    description: 'Responde un mensaje privado por su id. Solo puede el destinatario. Un consejero responde así a los mensajes de sus agentes, y un agente a los de su supervisor. La respuesta queda en el mismo hilo, visible en el chat de admira.live, y avisa al otro consejero en su buzón. Sin secretos.',
+    description: 'Responde un mensaje privado por su id. Solo puede el destinatario. Un consejero responde así a los mensajes de cualquier agente, y un agente a los de cualquier consejero. La respuesta queda en el mismo hilo, visible en el chat de admira.live, y avisa al otro consejero en su buzón. Sin secretos.',
     inputSchema: {
       id: z.string().min(4).max(80).describe('Id del mensaje al que respondes (lo da consejero_bandeja).'),
       texto: z.string().min(1).max(2000).describe('La respuesta. Sin secretos.'),
@@ -195,7 +197,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const avisosConsejo = bandejaConsejo.avisos;
   server.registerTool('consejero_webhook_registrar', {
     title: 'Registrar mi webhook de avisos',
-    description: 'Registra (o sustituye) TU webhook https para que admira.live te avise AL MOMENTO cuando te llega un mensaje privado (consejero_mensaje/consejero_responder), sin esperar a tu revisión de 15 min. Solo con la clave propia de tu silla (no la compartida). Te llega un POST JSON {tipo:"consejero_mensaje", id, de, para, resumen, responde_a, hora, url}: sin el cuerpo completo; léelo con consejero_bandeja. Si das secreto, va en la cabecera que elijas (por defecto x-admira-secreto) y nunca se vuelve a mostrar. Solo https con dominio (no IPs, no localhost). La ruta Telegram/encargo sigue igual.',
+    description: 'Registra (o sustituye) TU webhook https (consejero con la clave de su silla, o agente de la flota con su clave de agente) para que admira.live te avise AL MOMENTO cuando te llega un mensaje privado (consejero_mensaje/consejero_responder), sin esperar a tu revisión de 15 min. Solo con la clave propia de tu silla (no la compartida). Te llega un POST JSON {tipo:"consejero_mensaje", id, de, para, resumen, responde_a, hora, url}: sin el cuerpo completo; léelo con consejero_bandeja. Si das secreto, va en la cabecera que elijas (por defecto x-admira-secreto) y nunca se vuelve a mostrar. Solo https con dominio (no IPs, no localhost). La ruta Telegram/encargo sigue igual.',
     inputSchema: {
       url: z.string().min(10).max(500).describe('URL https de tu receptor.'),
       secreto: z.string().max(200).optional().describe('Secreto opcional que se enviará en la cabecera. No se muestra al leer.'),
@@ -592,8 +594,14 @@ export function sandboxDe(request, env = {}) {
   if (!c || c.length !== sk.length) return null;
   let d = 0; for (let i = 0; i < c.length; i++) d |= c.charCodeAt(i) ^ sk.charCodeAt(i);
   if (d !== 0) return null;
-  const persona = sillaCanonica(request.headers.get('x-sandbox-persona') || '');
-  if (!persona) return null;
+  const pedido = request.headers.get('x-sandbox-persona') || '';
+  const persona = sillaCanonica(pedido);
+  const agente = persona ? null : personaFlota(pedido);
+  if (!persona && !(agente && AGENTES_FLOTA.includes(agente))) return null;
+  if (agente) return {
+    env: { ADMIRA_LIVE_DESDE: kvConPrefijo(env.ADMIRA_LIVE_DESDE, PREFIJO_SANDBOX), SITIO: env.SITIO },
+    identidad: { persona: agente, machine: 'Sandbox', runtime: 'prueba', agent: `${agente}Sandbox`, tipo: 'agente', sandbox: true },
+  };
   return {
     env: { ADMIRA_LIVE_DESDE: kvConPrefijo(env.ADMIRA_LIVE_DESDE, PREFIJO_SANDBOX), SITIO: env.SITIO },
     identidad: { persona, machine: 'Sandbox', runtime: 'prueba', agent: `${persona}Sandbox`, tipo: 'consejero', sandbox: true },

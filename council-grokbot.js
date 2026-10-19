@@ -60,7 +60,7 @@
     const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Ver histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
     $('.council-chat__toolbar')?.append(historico);
     // «Entre consejeros» (19-10-2026): mensajes privados consejero↔consejero en la página de detalle (privado, con Google).
-    const entre=doc.createElement('a');entre.className='council-chat__historico council-chat__entre';entre.textContent='Entre consejeros';entre.target='_blank';entre.rel='noopener';entre.hidden=true;
+    const entre=doc.createElement('a');entre.className='council-chat__historico council-chat__entre';entre.textContent='Mensajes privados';entre.target='_blank';entre.rel='noopener';entre.hidden=true;
     $('.council-chat__toolbar')?.append(entre);
     // Aviso de acceso: solo aparece al ENVIAR sin sesión de Google (escribir siempre se puede).
     let signin=null;

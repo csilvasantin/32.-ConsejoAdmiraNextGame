@@ -1946,7 +1946,8 @@ function renderCards(ms){
       ${dsPreflightHtml(m)}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
-  el.innerHTML+=pieFuera+pieEliminados();
+  el.innerHTML+=pieFuera;
+  el.innerHTML+=pieEliminados();   // 🗑 eliminados (borrado lógico) con ↩ restaurar
   interruptoresConsultar(list);
   // etiqueta «opciones (N)» con el número real de botones de cada tarjeta
   document.querySelectorAll('.card').forEach(card=>{ const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(card.classList.contains('collapsed'), card.querySelectorAll('.acts button,.acts-admin button').length); });

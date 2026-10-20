@@ -35,6 +35,7 @@ const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
 const { createGrokBotEncargo, createGrokBotRouter, LEYENDAS_INBOX } = require('./grokbot-encargo');
 const { createServiceBridge } = require('./service-bridge');
+const { createMachineRemoval, mintTicket } = require('./machine-removal');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
@@ -68,6 +69,9 @@ const AUDIT_FILE = path.join(DIR, 'audit.log');
 
 function loadJSON(f, fallback) { try { return JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')); } catch (e) { return fallback; } }
 const FLEET = loadJSON('fleet.json', { machines: [] });
+if (!Array.isArray(FLEET.machines)) FLEET.machines = [];
+// Baja/restauración de equipos (DELETE /api/machines/:id): copia fechada + fleet.json atómico + memoria.
+const MACHINE_REMOVAL = createMachineRemoval({ dir: DIR, fleet: FLEET });
 
 // Token con rotación en caliente: env manda; si no, se relee .fleet-token
 // (cache 5s) para poder rotar sin reiniciar el servicio.
@@ -804,6 +808,7 @@ const server = http.createServer(async (req, res) => {
         commands: true,
         capture: true,
         terminal: true,
+        machineRemoval: true,
         targetIdempotency: ['macos', 'linux']
       }
     },
@@ -1422,6 +1427,46 @@ const server = http.createServer(async (req, res) => {
     catch (e) { return json(res, 500, { error: 'no se pudo persistir fleet.json: ' + (e.message || e) }); }
     audit({ ip, ev: 'register', machine: id, host, created });
     return json(res, created ? 201 : 200, { ok: true, created, machine, total: FLEET.machines.length });
+  }
+
+  // ── BAJA de equipos (19-10-2026): «🗑 Eliminar equipo» de admira.live/control ──
+  // DELETE /api/machines/:id[?dryRun=1]  · POST /api/machines/:id/restore
+  // Sesión Google + CSRF o X-Fleet-Token (la Pages Function de admira.live, servidor).
+  // POST /api/machines/:id/ticket {accion}: SÓLO sesión → ticket firmado para esa Function.
+  const machineRoute = url.match(/^\/api\/machines\/([^/]+)(?:\/(restore|ticket))?$/);
+  if (machineRoute) {
+    let mid = '';
+    try { mid = decodeURIComponent(machineRoute[1]); } catch (e) { return json(res, 400, { ok: false, error: 'id inválido' }); }
+    const sub = machineRoute[2] || '';
+    const dryRun = requestUrl.searchParams.get('dryRun') === '1';
+    if (sub === 'ticket' && req.method === 'POST') {
+      if (!(await gate(req, res, ip))) return;                      // sólo humanos con sesión
+      const body = await readBody(req);
+      const accion = body.accion === 'restaurar' ? 'restaurar' : 'eliminar';
+      const email = (req.fleetSession && req.fleetSession.email) || '';
+      let ticket;
+      try { ticket = mintTicket(currentToken(), { id: mid, accion, email }); }
+      catch (e) { return json(res, 400, { ok: false, error: String(e.message || e) }); }
+      audit({ ip, ev: 'machine_ticket', machine: mid, accion, by: email });
+      return json(res, 200, { ok: true, ticket, id: mid, accion });
+    }
+    if (!sub && req.method === 'DELETE') {
+      if (!(await gate(req, res, ip, true))) return;                // sesión O X-Fleet-Token
+      const by = String((req.fleetSession && req.fleetSession.email) || req.headers['x-admira-por'] || 'token').slice(0, 120);
+      const out = MACHINE_REMOVAL.remove(mid, { dryRun, by });
+      if (out.status === 200 && !dryRun) { try { if (VIGIA.estado) delete VIGIA.estado[out.body.machine.id]; } catch (e) {} }
+      audit({ ip, ev: dryRun ? 'machine_remove_dry' : 'machine_remove', machine: mid, by, status: out.status, removed: !!out.body.removed, backup: out.body.backup });
+      return json(res, out.status, out.body);
+    }
+    if (sub === 'restore' && req.method === 'POST') {
+      if (!(await gate(req, res, ip, true))) return;
+      const body = await readBody(req);
+      const by = String((req.fleetSession && req.fleetSession.email) || req.headers['x-admira-por'] || 'token').slice(0, 120);
+      const out = MACHINE_REMOVAL.restore(mid, { dryRun, fallback: body && body.machine });
+      audit({ ip, ev: dryRun ? 'machine_restore_dry' : 'machine_restore', machine: mid, by, status: out.status, restored: !!out.body.restored, backup: out.body.backup });
+      return json(res, out.status, out.body);
+    }
+    return json(res, 405, { ok: false, error: 'método no permitido' });
   }
 
   json(res, 404, { error: 'no encontrado' });

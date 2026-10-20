@@ -21,3 +21,5 @@ vista-previa/quien.json
 
 # corpus del HACKEO: se genera en deploy.sh
 control/hackeo-corpus/
+fleet-control/fleet-backups/
+fleet-control/fleet-eliminados.json

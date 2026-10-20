@@ -1,0 +1,81 @@
+/* Bandeja de conversaciones (?chat=1) — assets/council-inbox.js. Solo se carga con ?chat=1. */
+:root{--ci-line:#9c7326;--ci-gold:#ffdf73;--ci-txt:#f5e5a6;--ci-mut:#a8956a;--ci-blue:#4aa3ff;--ci-green:#59d06b;--ci-amber:#e5b64d;--ci-red:#e5604d;--ci-px:'Press Start 2P','Courier New',ui-monospace,monospace}
+/* Un solo compositor en este modo: el de la bandeja. Se ocultan la línea de escribir de la barra SCUMM
+   (#action-input + Enviar) y la caja del panel «Conversación» de Previos. Los verbos y el plegado siguen. */
+body.ci-on .scumm-bar .action-input,body.ci-on .scumm-bar .action-send,body.ci-on .council-preview .council-composer{display:none!important}
+
+.ci{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);height:clamp(420px,64vh,680px);margin:6px 0;border:2px solid var(--ci-line);background:#0d0804;box-shadow:4px 4px 0 #000;color:var(--ci-txt);font:13px/1.5 system-ui,sans-serif;overflow:hidden}
+.ci *{box-sizing:border-box}
+.ci button{font:inherit;color:inherit}
+.ci__list{display:flex;flex-direction:column;min-height:0;min-width:0;background:#100b05;border-right:2px solid var(--ci-line)}
+.ci__head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;font:8px/1.4 var(--ci-px);color:var(--ci-gold);background:linear-gradient(#422a10,#201406);border-bottom:2px solid var(--ci-line)}
+.ci__sello{color:var(--ci-mut);font-size:7px;white-space:nowrap}
+.ci__scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+.ci__grp{display:flex;justify-content:space-between;position:sticky;top:0;z-index:1;padding:8px 12px 5px;font:7px/1.4 var(--ci-px);color:var(--ci-gold);background:#150e06;border-bottom:2px solid #3a2810}
+.ci__grp span{color:var(--ci-mut)}
+.ci__item{display:flex;gap:10px;align-items:center;width:100%;padding:10px 12px;text-align:left;cursor:pointer;background:transparent;border:0;border-bottom:1px solid #2a1c0b;position:relative}
+.ci__item:hover{background:#1b1208}
+.ci__item:focus-visible{outline:2px solid #ffff00;outline-offset:-2px}
+.ci__item.is-sel{background:#3a2608;box-shadow:inset 4px 0 var(--ci-gold)}
+.ci__item--sin{opacity:.55;filter:grayscale(1)}
+.ci__item--sin:hover{opacity:.75}
+.ci__av{position:relative;flex:none;width:42px;height:42px;display:grid;place-items:center;font:10px/1 var(--ci-px);color:#160d03;background:var(--c,#c9c9d6);border:2px solid #000}
+.ci__av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ci__av--lg{width:46px;height:46px}
+.ci__led{position:absolute;right:-4px;bottom:-4px;width:12px;height:12px;border:2px solid #100b05;background:#777;z-index:2}
+.ci__led--verde{background:var(--ci-green)}
+.ci__led--ambar{background:var(--ci-amber)}
+.ci__led--aviso{background:var(--ci-red);animation:ci-pulso 1.4s infinite}
+.ci__led--gris,.ci__led--nd{background:#6b6b6b}
+@keyframes ci-pulso{50%{opacity:.35}}
+.ci__txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ci__top{display:flex;align-items:baseline;gap:6px;min-width:0}
+.ci__top b{font:8px/1.4 var(--ci-px);color:var(--ci-gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci__top i{font-style:normal;font-size:11px;color:var(--ci-mut)}
+.ci__prev{font-size:12px;color:#d9c88f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci__item--sin .ci__prev{white-space:normal;font-size:11px;line-height:1.35;color:var(--ci-mut)}
+.ci__prev--typing{color:var(--ci-blue);font-style:italic}
+.ci__side{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px;align-self:flex-start;min-width:30px}
+.ci__side time{font-size:11px;color:var(--ci-mut);white-space:nowrap}
+.ci__dot{width:12px;height:12px;border-radius:50%;background:var(--ci-blue);border:2px solid #0d2f57}
+
+.ci__thread{display:flex;flex-direction:column;min-width:0;min-height:0;background:#0d0804}
+.ci__thead{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:2px solid var(--ci-line);background:linear-gradient(#2a1a08,#150d05)}
+.ci__thead[hidden]{display:none}
+.ci__back{display:none;background:#120c05;border:2px solid #6b4a17;padding:6px 8px;cursor:pointer;color:var(--ci-gold)}
+.ci__tname{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ci__tname b{font:10px/1.4 var(--ci-px);color:var(--ci-gold)}
+.ci__tname i{font-style:normal;font-size:11px;color:var(--ci-mut)}
+.ci__tname small{font-size:12px}
+.ci__tled--verde{color:var(--ci-green)}.ci__tled--ambar{color:var(--ci-amber)}.ci__tled--aviso{color:var(--ci-red)}.ci__tled--gris,.ci__tled--nd{color:var(--ci-mut)}
+.ci__host{flex:1;min-height:0;display:flex;flex-direction:column}
+.ci__empty,.ci__nohilo{margin:auto;max-width:34em;padding:24px;text-align:center;color:var(--ci-mut);font-size:14px}
+.ci__nohilo b{display:block;margin-bottom:8px;font:9px/1.6 var(--ci-px);color:var(--ci-gold)}
+.ci__nohilo[hidden]{display:none}
+
+/* CouncilGrokBot (historyMode) dentro de la bandeja: cabecera de mensajes con scroll propio + caja fija abajo. */
+.ci__host .council-chat{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;margin:0;border:0;box-shadow:none;background:transparent}
+.ci__host .council-chat[hidden]{display:none!important}
+.ci__host .council-chat__heading,.ci__host .council-chat__scope,.ci__host .council-chat__limits,.ci__host .council-chat__person{display:none}
+.ci__host .council-chat__toolbar{flex:none;padding:4px 14px;gap:8px;font-size:10px;border-bottom:1px solid #2a1c0b}
+.ci__host .council-chat__toolbar button{padding:4px 8px;font:11px system-ui,sans-serif}
+.ci__host .council-chat__connection{width:auto;font-size:11px;color:#cabb96;margin-right:auto}
+.ci__host .council-chat__status{flex:none;margin:3px 14px;font-size:12px;line-height:1.3;max-height:34px;overflow:auto}
+.ci__host .council-chat__signin{flex:none;padding:8px 14px;border-bottom:1px solid #2a1c0b;background:#150e06}
+.ci__host .council-chat__messages{flex:1;min-height:0;max-height:none;overflow-y:auto;padding:10px 18px;font:14px/1.5 system-ui,sans-serif}
+.ci__host .council-composer{flex:none;order:99;padding:10px 14px;border-top:2px solid var(--ci-line);background:#150e06}
+.ci__host .council-composer textarea{width:100%;min-height:46px;resize:none;border:2px solid var(--ci-line);background:#0a0603;color:var(--ci-txt);padding:10px 12px;font:14px system-ui,sans-serif}
+.ci__host .council-composer__footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
+.ci__host .council-composer__footer span{font-size:11px;color:var(--ci-mut)}
+.ci__host .council-composer button[type=submit]{font:9px var(--ci-px);background:var(--ci-gold);color:#1b1004;border:2px solid #000;padding:9px 14px;cursor:pointer}
+.ci__host .council-composer button[type=submit]:disabled{opacity:.5;cursor:default}
+
+/* Móvil: lista o hilo a pantalla completa (◀ vuelve a la lista). */
+@media(max-width:700px){
+  .ci{grid-template-columns:minmax(0,1fr);height:clamp(420px,72vh,720px)}
+  .ci__thread{display:none}
+  .ci--thread .ci__list{display:none}
+  .ci--thread .ci__thread{display:flex}
+  .ci__back{display:inline-block}
+}
+@media (prefers-reduced-motion:reduce){.ci__led--aviso{animation:none}}

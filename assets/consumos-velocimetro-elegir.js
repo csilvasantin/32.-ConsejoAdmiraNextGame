@@ -39,6 +39,24 @@
     if (!a.length) return null;
     return a[Math.floor((ahoraMs == null ? Date.now() : ahoraMs) / ROTA_MS) % a.length].proyecto;
   }
+  /** #6991 (Carlos, 21-10-2026): con UN solo agente operativo, el dial AGENTES lo enseña a él (no «Toda la flota»).
+   *  activos = agentes de /api/flota/trabajando (fuente de verdad de las fichas) si los hay; si no, porAgente con
+   *  consumo en la última hora. Exactamente 1 → su nombre; 0 o 2+ → null (sigue «Toda la flota»). */
+  function agenteUnicoActivo(porAgente, activos) {
+    var n = {};
+    if (activos && activos.length !== undefined) (activos || []).forEach(function (a) { var x = a && (a.agente || a); if (x && typeof x === 'string') n[x] = 1; });
+    else (porAgente || []).forEach(function (a) { if (a && a.agente && tasa(a) > 0) n[a.agente] = 1; });
+    var k = Object.keys(n);
+    return k.length === 1 ? k[0] : null;
+  }
+  /** #6991: mismo criterio en PROYECTOS: con un solo proyecto activo, ese (aunque el pulso no le dé tok/h). */
+  function proyectoUnicoActivo(lista, activos) {
+    var n = {};
+    if (activos && activos.length !== undefined) (activos || []).forEach(function (p) { var x = p && (p.proyecto || p); if (x && typeof x === 'string') n[x] = 1; });
+    else proyectosActivos(lista).forEach(function (p) { n[p.proyecto] = 1; });
+    var k = Object.keys(n);
+    return k.length === 1 ? k[0] : null;
+  }
   /** porAgente de /api/consumos/velocidad + nombre elegido ('' = flota) → { agente|null, fila|null } */
   function elegirAgente(porAgente, nombre) {
     if (!nombre) return { agente: null, fila: null };
@@ -75,6 +93,6 @@
     return null;
   }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos };
+  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

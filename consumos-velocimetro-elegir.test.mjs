@@ -176,3 +176,22 @@ test("r45: en AUTO el reloj de proyecto rota cada 15 s entre activos, de mayor a
   assert.equal(E.elegirProyecto([{ proyecto: "admira.biz", tokHora: 0, tokHoy: 8e6 }], null).proyecto, "admira.biz");
   assert.equal(E.elegirProyecto(l, "admira.tv").proyecto, "admira.tv");
 });
+
+// #6991 (Carlos, 21-10-2026): con UN solo agente/proyecto operativo, el dial lo enseña a él en vez de «Toda la flota».
+test("#6991 agenteUnicoActivo: 1 activo → su nombre; 0 o 2+ → null", () => {
+  const act1 = [{ agente: "Morfeo", maquina: "MacMini", proyecto: "admira.live" }];
+  assert.equal(E.agenteUnicoActivo([], act1), "Morfeo");
+  assert.equal(E.agenteUnicoActivo([], [...act1, { agente: "Neo" }]), null);
+  assert.equal(E.agenteUnicoActivo([{ agente: "Neo", tokHora: 900 }], []), null);
+  // sin /api/flota/trabajando: se mira el consumo de la última hora del pulso
+  assert.equal(E.agenteUnicoActivo([{ agente: "Morfeo", tokUltimaHora: 5000 }, { agente: "Neo", tokUltimaHora: 0, tokHora: 300 }], null), "Morfeo");
+  assert.equal(E.agenteUnicoActivo([{ agente: "Morfeo", tokHora: 5000 }, { agente: "Neo", tokHora: 300 }], null), null);
+  assert.equal(E.agenteUnicoActivo([], null), null);
+});
+
+test("#6991 proyectoUnicoActivo: mismo criterio en PROYECTOS", () => {
+  assert.equal(E.proyectoUnicoActivo([], [{ proyecto: "admira.live", agentes: ["Morfeo"] }]), "admira.live");
+  assert.equal(E.proyectoUnicoActivo([], [{ proyecto: "admira.live" }, { proyecto: "yokup.com" }]), null);
+  assert.equal(E.proyectoUnicoActivo([{ proyecto: "yokup.com", tokHora: 10 }, { proyecto: "admira.biz", tokHora: 0, tokHoy: 9 }], null), "yokup.com");
+  assert.equal(E.proyectoUnicoActivo(VIVO, null), null);
+});

@@ -16,13 +16,15 @@
  * r23: conocidos:[{agente, maquina, modelo, cuentaId, plan, email}] (consumos-perfiles.mjs) para los desplegables.
  * r20: proyectoAhora = el que más quema AHORA (max tokHora; si todos a 0, max tokHoy) — el dial de proyecto lo sigue en auto.
  */
-import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora } from "../../../consumos-velocidad-lib.mjs";
+import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora, madrid, KEY_DIAS, anotarDia, yokupPorDia, periodosTokens, diasPeriodo } from "../../../consumos-velocidad-lib.mjs";
 import { mezclar, appsGrokBot, superficiesDePulso, limitesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
 import { perfilesFlota } from "../../../consumos-perfiles.mjs";
 
 export const FUENTE = "https://api.yokup.com/fleet/consumo?dias=1";
 export const KEY = "consumos:vel:snaps:v1";
+// Periodos del cuentakilómetros (HOY/AYER/SEMANA/MES): partes diarios de Yokup del último mes (cacheados 10 min).
+export const FUENTE_MES = "https://api.yokup.com/fleet/consumo?dias=31";
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 
 function json(obj, status, origin) {
@@ -32,9 +34,9 @@ function json(obj, status, origin) {
 }
 const kv = (env) => (env && (env.CONSUMOS_KV || env.RECORTE_KV)) || null;
 
-async function leerYokup(fetchImpl) {
+async function leerYokup(fetchImpl, url = FUENTE, ttl = 60) {
   try {
-    const r = await fetchImpl(FUENTE, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(6000), cf: { cacheTtl: 60, cacheEverything: true } });
+    const r = await fetchImpl(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(6000), cf: { cacheTtl: ttl, cacheEverything: true } });
     if (!r.ok) return null;
     const d = await r.json();
     return d && d.ok !== false && Array.isArray(d.partes) ? d : null;
@@ -66,7 +68,8 @@ export async function onRequestGet(ctx) {
 export async function calcular({ env, fetchImpl }) {
   const ahora = Date.now();
   const store = kv(env);
-  const [d, docs] = await Promise.all([leerYokup(fetchImpl || fetch), leerPulsos(store).catch(() => [])]);
+  const [d, docs, dMes, libroRaw] = await Promise.all([leerYokup(fetchImpl || fetch), leerPulsos(store).catch(() => []), leerYokup(fetchImpl || fetch, FUENTE_MES, 600),
+    store ? store.get(KEY_DIAS).catch(() => null) : null]);
   let yk = null, propias = [], deYokup = [];
   if (d) {
     const { hoy, nombres } = partesDeHoy(d, ahora);
@@ -81,7 +84,21 @@ export async function calcular({ env, fetchImpl }) {
     yk = calcularVelocidad({ snaps: unir(deYokup, propias, ahora), hoy, ahora });
   }
   const m = mezclar(yk, docs, ahora);
+  // Libro diario: el tokHoy de la flota (máximo del día), como mucho una escritura cada 5 min.
+  let libro = null;
+  try { libro = libroRaw ? JSON.parse(libroRaw) : null; } catch (e) {}
+  const tokHoyFlota = m.sinDatos ? null : Number(m.tokHoy);
+  if (store && Number.isFinite(tokHoyFlota)) {
+    const dia = madrid(ahora).dia, prev = libro && libro[dia];
+    if (!prev || (tokHoyFlota > prev.tok && ahora - (prev.ts || 0) >= 5 * 60 * 1000)) {
+      libro = anotarDia(libro, dia, tokHoyFlota, ahora);
+      try { await store.put(KEY_DIAS, JSON.stringify(libro)); } catch (e) {}
+    }
+  }
+  const periodos = { ...periodosTokens({ tokHoy: Number.isFinite(tokHoyFlota) ? tokHoyFlota : null, libro, yokup: dMes ? yokupPorDia(dMes) : null,
+    yokupDesde: dMes ? (() => { const x = new Date(diasPeriodo(ahora).hoy + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() - 30); return x.toISOString().slice(0, 10); })() : null, ahora }),
+    fuentes: { hoy: "tokHoy en vivo (pulso + Cursor + Yokup)", pasado: "libro diario KV " + KEY_DIAS + " (máximo tokHoy de cada día); si falta, " + FUENTE_MES + " sin caché" }, yokupMes: dMes ? "ok" : "sin respuesta" };
   const base = { grokbotApps: appsGrokBot(docs, ahora), superficies: superficiesDePulso(docs, ahora), limites: limitesDePulso(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
-  if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", ...base };
-  return { ok: true, ...m, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), ...base };
+  if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", periodos, ...base };
+  return { ok: true, ...m, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), periodos, ...base };
 }

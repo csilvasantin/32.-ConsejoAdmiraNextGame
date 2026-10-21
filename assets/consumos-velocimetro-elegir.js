@@ -20,9 +20,24 @@
     return o.length ? o[0].proyecto : null;
   }
   /** manual: proyecto elegido a mano (o null/'' = seguir en auto). → { proyecto, auto } */
-  function elegirProyecto(lista, manual) {
+  function elegirProyecto(lista, manual, ahoraMs) {
     if (manual) return { proyecto: manual, auto: false };
-    return { proyecto: proyectoPorDefecto(lista), auto: true };
+    var r = proyectoRotando(lista, ahoraMs);
+    return { proyecto: r || proyectoPorDefecto(lista), auto: true, rota: !!r };
+  }
+  /** r45 (Carlos, 21-10-2026): en AUTO el reloj de PROYECTO rota cada 15 s entre los proyectos activos (consumo en la
+   *  última hora), de mayor a menor tok/h; se reordena en cada ciclo con los datos frescos. Sin activos → null (modo actual). */
+  var ROTA_MS = 15000;
+  function tasa(p) { return p.tokUltimaHora != null ? num(p.tokUltimaHora) : num(p.tokHora); }
+  function proyectosActivos(lista) {
+    return (lista || []).filter(function (p) { return p && p.proyecto && tasa(p) > 0; }).slice().sort(function (a, b) {
+      return tasa(b) - tasa(a) || num(b.tokHoy) - num(a.tokHoy) || (a.proyecto === OTROS ? 1 : 0) - (b.proyecto === OTROS ? 1 : 0);
+    });
+  }
+  function proyectoRotando(lista, ahoraMs) {
+    var a = proyectosActivos(lista);
+    if (!a.length) return null;
+    return a[Math.floor((ahoraMs == null ? Date.now() : ahoraMs) / ROTA_MS) % a.length].proyecto;
   }
   /** porAgente de /api/consumos/velocidad + nombre elegido ('' = flota) → { agente|null, fila|null } */
   function elegirAgente(porAgente, nombre) {
@@ -60,6 +75,6 @@
     return null;
   }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos };
+  var api = { proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

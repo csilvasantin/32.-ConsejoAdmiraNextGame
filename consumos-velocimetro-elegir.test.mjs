@@ -49,10 +49,11 @@ test("orden del selector: tok/h desc → tokens de hoy desc", () => {
 });
 
 test("auto vs manual: la elección manual manda; sin ella sigue al que más quema (se reevalúa con datos nuevos)", () => {
-  assert.deepEqual({ ...E.elegirProyecto(VIVO, null) }, { proyecto: "otros", auto: true });
+  // r45: en AUTO, en el instante 0 del ciclo sale el activo que más quema (el primero de la rotación).
+  assert.deepEqual({ ...E.elegirProyecto(VIVO, null, 0) }, { proyecto: "otros", auto: true, rota: true });
   assert.deepEqual({ ...E.elegirProyecto(VIVO, "admira.biz") }, { proyecto: "admira.biz", auto: false });
   const despues = VIVO.map((p) => (p.proyecto === "xpaceos.com" ? { ...p, tokHora: 9e6 } : p));
-  assert.equal(E.elegirProyecto(despues, "").proyecto, "xpaceos.com");
+  assert.equal(E.elegirProyecto(despues, "", 0).proyecto, "xpaceos.com");
   assert.equal(E.nombreProyecto("otros"), "otros (sin proyecto)");
 });
 
@@ -162,4 +163,16 @@ test("r38 · cuentakilómetros con pronóstico a fin de hora: nunca 0 con activi
     m += v({ mostrado: m, real, objetivo: obj, segundosRestantes: seg, ritmo });
     assert.ok(m > prev, "sube en el segundo " + t); prev = m;
   }
+});
+
+test("r45: en AUTO el reloj de proyecto rota cada 15 s entre activos, de mayor a menor tok/h; sin activos → modo actual", () => {
+  const l = [{ proyecto: "admira.tv", tokHora: 100, tokHoy: 9e6 }, { proyecto: "admira.live", tokHora: 5000, tokHoy: 10 }, { proyecto: "admira.biz", tokHora: 0, tokHoy: 8e6 }, { proyecto: "otros", tokHora: 300 }];
+  assert.deepEqual(Array.from(E.proyectosActivos(l), (p) => p.proyecto), ["admira.live", "otros", "admira.tv"]);
+  assert.equal(E.proyectoRotando(l, 0), "admira.live");
+  assert.equal(E.proyectoRotando(l, 15000), "otros");
+  assert.equal(E.proyectoRotando(l, 30000), "admira.tv");
+  assert.equal(E.proyectoRotando(l, 45000), "admira.live");
+  assert.equal(E.proyectoRotando([{ proyecto: "admira.biz", tokHora: 0, tokHoy: 8e6 }], 0), null);
+  assert.equal(E.elegirProyecto([{ proyecto: "admira.biz", tokHora: 0, tokHoy: 8e6 }], null).proyecto, "admira.biz");
+  assert.equal(E.elegirProyecto(l, "admira.tv").proyecto, "admira.tv");
 });

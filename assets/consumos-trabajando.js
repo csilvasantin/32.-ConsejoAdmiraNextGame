@@ -72,9 +72,9 @@
   /** r28-sup (Carlos, 17:28/17:29): superficie de una instancia. Terminal (CLI) = canal de trabajo del agente; la app de
    *  escritorio solo la usa Carlos: «App de escritorio · Carlos» si la está usando, si no «App abierta, sin uso» (atenuado). */
   function supTexto(x) {
-    if (x.tipo === 'cli') return T('Terminal (CLI)', 'Terminal (CLI)') + (x.corta ? ' · ' + x.corta : '') + (x.runtime ? ' · ' + rt(x.runtime) : '');
+    if (x.tipo === 'cli') return T('Terminal (CLI)', 'Terminal (CLI)') + (x.corta ? ' · ' + maqNombre(x.corta) : '') + (x.runtime ? ' · ' + rt(x.runtime) : '');
     if (x.tipo === 'asistente') return rt(x.runtime || 'GrokBot (asistente)');
-    return (x.enUso ? T('App de escritorio · Carlos', 'Desktop app · Carlos') : T('App abierta, sin uso', 'App open, not in use')) + (x.corta ? ' · ' + x.corta : '') + (x.app ? ' (' + gb(x.app) + ')' : '');
+    return (x.enUso ? T('App de escritorio · Carlos', 'Desktop app · Carlos') : T('App abierta, sin uso', 'App open, not in use')) + (x.corta ? ' · ' + maqNombre(x.corta) : '') + (x.app ? ' (' + gb(x.app) + ')' : '');
   }
   function superficies(t) {
     var l = t.superficies || [];
@@ -93,7 +93,7 @@
     return p.join(' + ');
   }
   /** r41: «con Carlos · MBP16». */
-  function cc(t) { return T('con Carlos', 'with Carlos') + (t.conCarlosEn ? ' · ' + t.conCarlosEn : ''); }
+  function cc(t) { return T('con Carlos', 'with Carlos') + (t.conCarlosEn ? ' · ' + maqNombre(t.conCarlosEn) : ''); }
   /** r44: «· activo vía Merovingio» (dualidad Elon ↔ Merovingio). */
   function via(t) { return t.via ? ' · <span class="tr-via">' + esc((t.estado === 'gris' ? T('parado vía ', 'idle via ') : T('activo vía ', 'active via ')) + t.via) + '</span>' : ''; }
   function aviso(d) {
@@ -111,7 +111,7 @@
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
-      '<small class="tr-maq tr-rot"><span class="tr-a">' + esc([t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</span><span class="tr-c" title="' + esc(focoTitulo(t)) + '">' + esc(focoTxt(t) || [t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</span></small>' +
+      '<small class="tr-maq tr-rot"><span class="tr-a">' + esc([maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span><span class="tr-c" title="' + esc(focoTitulo(t)) + '">' + esc(focoTxt(t) || [maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span></small>' +
       '<small class="tr-que">' + linea + '</small>' + superficies(t) + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
   }
   /** r43 (Carlos, 12:59): dos grupos, AGENTES y CONSEJEROS, cada uno con sus cuentas. Puro (testeable). */
@@ -140,16 +140,31 @@
       ahora: T('proyecto en el que trabaja ahora', 'project it is working on now'), reparto: T('pilar del reparto del finde', 'weekend split pillar'), defecto: T('valor por defecto (aún no lo ha fijado)', 'default value (not set yet)'), training: T('sin proyecto reportado', 'no project reported') }[f.fuente] || '';
     return (t.consejero ? T('Proyecto principal · deepagent', 'Main project · deepagent') : T('Proyecto', 'Project')) + ': ' + focoTxt(t) + (de ? ' (' + de + ')' : '');
   }
+  /** r45 (encargo #6919): nombres completos de ordenador en /consumos: «Mini» → «MacMini», «MBP16» → «MacBookPro16»… */
+  var LARGAS = { mini: 'MacMini', macmini: 'MacMini', studio: 'MacStudio', macstudio: 'MacStudio', mbp16: 'MacBookPro16', mbp14: 'MacBookPro14', mba16: 'MacBookAir16', mba13: 'MacBookAir13', box: 'GrokBotBox', macbookpro16: 'MacBookPro16', macbookpro14: 'MacBookPro14', macbookpronegro14: 'MacBookPro14', macbookair16: 'MacBookAir16', macbookair16plata: 'MacBookAir16', grokbotbox: 'GrokBotBox' };
+  function maqNombre(s) {
+    if (!s) return s;
+    return String(s).split(' + ').map(function (m) { return LARGAS[m.toLowerCase().replace(/[^a-z0-9]/g, '')] || m; }).join(' + ');
+  }
+  /** r45: misión del chip: «#6919 · título» si hay encargo, si no «FLT · título» (tarea o foco). */
+  function misionTxt(t) {
+    var tit = String(t.tarea || '').replace(/(?:encargo\s*)?#\d{3,6}\b|\bFLT-\d{3,6}\b/gi, '').replace(/^[\s·:—-]+|[\s·:—-]+$/g, '').trim() || focoTxt(t);
+    if (!tit && !t.encargo) return '';
+    return (t.encargo || 'FLT') + (tit ? ' · ' + tit : '');
+  }
+  /** r45: LLM / modelo del chip («Claude · claude-opus-5», «GrokBot CLI»…). */
+  function llmTxt(t) { return rt([t.motor || t.runtime, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ')); }
   function altChip(t) {
-    // r16: con la app Grok Bot en varios Macs se enseñan todos («MBP14 + MBA16»); el de «con Carlos» va el primero.
-    var a = [t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
-    // r26: sin «GrokBot CLI · CLI»: si el runtime ya dice CLI, no se repite.
-    var sc = supCorta(t), r = rt(t.runtime || '');
-    if (/\bCLI\b/.test(r)) sc = sc.replace(/^CLI( \+ )?/, '');
-    var b = [r, sc].filter(Boolean).join(' · ');
-    var c = focoTxt(t);
+    // r45 (encargo #6919): cada 15 s, como el ciclo del panel: misión → ordenador → LLM/modelo.
+    var maq = maqNombre(t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : (t.maquina || t.maqCorta));
+    var a = misionTxt(t);
+    var b = [maq, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
+    // La superficie (CLI / App · Carlos) acompaña al LLM; sin «GrokBot CLI · CLI».
+    var c = llmTxt(t), sc = supCorta(t);
+    if (/\bCLI\b/.test(c)) sc = sc.replace(/^CLI( \+ )?/, '');
+    c = [c, sc].filter(Boolean).join(' · ');
     if (!a && !b && !c) return '';
-    return ' <small class="tr-alt" title="' + esc(T('Cada 15 s: máquina → runtime → proyecto', 'Every 15 s: machine → runtime → project') + (c ? ' · ' + focoTitulo(t) : '')) + '"><span class="tr-a">' + esc(a || b || c) + '</span><span class="tr-b">' + esc(b || a || c) + '</span><span class="tr-c">' + esc(c || a || b) + '</span></small>';
+    return ' <small class="tr-alt" title="' + esc(T('Cada 15 s: misión → ordenador → LLM', 'Every 15 s: mission → computer → LLM') + (a ? ' · ' + a : '')) + '"><span class="tr-a">' + esc(a || b || c) + '</span><span class="tr-b">' + esc(b || a || c) + '</span><span class="tr-c">' + esc(c || a || b) + '</span></small>';
   }
   /** r24 (Carlos, 18:00 — «Trinity ni siquiera sale»): todos con nombre. Primero los que trabajan / con Carlos; después
    *  los parados como chips atenuados «Trinity · Codex · CLI · en espera» (antes, caras anónimas en un montón). */
@@ -191,7 +206,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, focoTxt: focoTxt, altChip: altChip, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

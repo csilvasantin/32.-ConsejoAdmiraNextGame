@@ -115,8 +115,10 @@ test('si la persona late en dos equipos y se indica uno, manda ese; sin señal, 
   const { client } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const a = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', maquina: 'MacBookPro16', texto: 'Comprueba la parrilla del canal.' } }));
   assert.equal(a.maquina, 'macbookpro16'); assert.equal(a.mision_en_yokup, false, 'sin proyecto es conversación');
-  const b = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Trinity', texto: 'Cuando despiertes, revisa el MBP14.' } }));
+  const b = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Link', texto: 'Cuando despiertes, revisa el MBP14.' } }));
   assert.equal(b.maquina, null); assert.match(b.nota, /no late/);
+  const t = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Trinity', texto: 'Casa MacStudio (Carlos 21-10-2026).' } }));
+  assert.equal(t.maquina, 'macstudio');
 });
 
 test('Merovingio se encarga en la GrokBot box; Elon y Elon Musk llegan a la silla Musk', async () => {

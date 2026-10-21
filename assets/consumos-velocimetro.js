@@ -351,9 +351,10 @@
     if (!el) return;
     if (!d || d.fuente !== 'commits' || !v) { el.textContent = ''; return; }
     var lin, tok;
-    if (estado.agente) {
-      var a = (d.hoy.porAgente || []).find(function (x) { return canonAg(x.agente) === canonAg(estado.agente); });
-      var f = (v.porAgente || []).find(function (x) { return x.agente === estado.agente; });
+    var agV = agenteVer(v);
+    if (agV) {
+      var a = (d.hoy.porAgente || []).find(function (x) { return canonAg(x.agente) === canonAg(agV); });
+      var f = (v.porAgente || []).find(function (x) { return x.agente === agV; });
       lin = a ? a.lineas : 0; tok = f ? f.tokHoy : null;
     } else { lin = d.hoy.total; tok = v.tokHoy; }
     var ratio = tok > 0 && lin > 0 ? Math.round(tok / lin) : null;
@@ -395,7 +396,14 @@
   }
 
   /** Proyecto a enseñar: el elegido a mano (guardado) o, en AUTO, el que más quema ahora (se reevalúa cada 10 s). */
-  function eleccion(d) { return E.elegirProyecto((d && d.porProyecto) || [], estado.proyecto); }
+  function eleccion(d) {
+    // #6991: en AUTO con un solo proyecto activo, ese (fuente: /api/flota/trabajando si ya llegó).
+    if (!estado.proyecto) { var u = E.proyectoUnicoActivo((d && d.porProyecto) || [], ACT ? ACT.proyectos : null); if (u) return { proyecto: u, auto: true, unico: true }; }
+    return E.elegirProyecto((d && d.porProyecto) || [], estado.proyecto);
+  }
+  /** #6991 (Carlos, 21-10-2026): agente que enseña el dial: el elegido a mano o, si solo hay UNO operativo, ese. */
+  function agUnico(d) { return estado.agente ? '' : (E.agenteUnicoActivo((d && d.porAgente) || [], ACT ? ACT.agentes : null) || ''); }
+  function agenteVer(d) { return estado.agente || agUnico(d); }
   function proyectoActual(d) { return eleccion(d).proyecto; }
   function nomP(p) { return p === 'otros' ? T('otros (sin proyecto)', 'others (no project)') : p; }
   /* r23 (Carlos): desplegables propios (assets/consumos-desplegable.js) en vez de <select> nativos — el menú nativo de
@@ -472,11 +480,16 @@
     var items = [{ valor: '', estado: estF,
       html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + activos + ' ' + T(activos === 1 ? 'agente activo' : 'agentes activos', activos === 1 ? 'active agent' : 'active agents') + ' ' + T('de ', 'of ') + (ACT ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
+    var unico = agUnico(d);
+    if (unico && !ags.some(function (a) { return a.agente === unico; })) ags.push({ agente: unico, tokHora: null, tokHoy: 0, sinDatos: true });
     ags.forEach(function (a) {
       var f = filaAgenteInfo(a, perfilDe(d, a.agente));
-      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(vis(a.agente)) + '</span>' });
+      // #6991: con un solo agente operativo el botón dice su nombre y máquina («Morfeo · MacMini»), no «Toda la flota».
+      var maqU = a.agente === unico ? maqDe(a, perfilDe(d, a.agente)) : '';
+      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(vis(a.agente)) + (maqU ? ' · ' + esc(maqU) : '') + (a.agente === unico ? ' <em class="dd-autotag">auto</em>' : '') + '</span>' });
     });
-    DD.ag.pon(items, estado.agente || '');
+    DD.ag.pon(items, estado.agente || unico || '');
+    if (unico) DD.ag.valor = ''; // la opción marcada sigue siendo «Toda la flota» (auto); el botón enseña al único activo
   }
   function leerMargen() {
     return fetch('/api/orquestar', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (o) {
@@ -504,7 +517,7 @@
   function pintaIzquierdo(d, sin) {
     var g1 = document.getElementById('vel-g-total');
     if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
-    var r = E.elegirAgente(sin ? [] : d.porAgente, estado.agente);
+    var r = E.elegirAgente(sin ? [] : d.porAgente, sin ? estado.agente : agenteVer(d));
     var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
     var max;
     estado.d1.fresco = usoFresco(sin ? [] : (r.agente ? (r.fila ? [r.fila] : []) : d.porAgente), Date.now());
@@ -584,7 +597,7 @@
       var w = maxR > 0 && !parado ? Math.max(a.tokHora > 0 ? 2 : 0, Math.round(100 * a.tokHora / maxR)) : 0;
       var origen = a.conRetraso ? (a.stale ? T('sin export de Cursor ', 'no Cursor export ') + hace(a.haceS) : esc(txtRetraso(a))) :
         a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
-      var cls = [parado ? 'parado' : '', a === lider ? 'lider' : '', a.agente === estado.agente ? 'sel' : ''].filter(Boolean).join(' ');
+      var cls = [parado ? 'parado' : '', a === lider ? 'lider' : '', a.agente === agenteVer(d) ? 'sel' : ''].filter(Boolean).join(' ');
       return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + vis(a.agente) + T(' en el velocímetro', ' on the gauge')) + '">' +
         '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(gb(vis(a.agente))) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
         (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
@@ -652,7 +665,7 @@
   function nAgAct() { return ACT ? ACT.nAgentes : nAgActivos(estado.datos); }
   function rotProy() { return T('Proyectos', 'Projects') + ' (' + nProyAct() + ')'; }
   function rotAg() { return T('Agentes', 'Agents') + ' (' + nAgAct() + ')'; }
-  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (!a) return; ACT = a; rotulos(); if (estado.datos) pintaSelectorAgente(estado.datos); }); } catch (e) {}
+  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (!a) return; ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
   var H1_ES = null, TIT_ES = null;
   function rotulos() {
     var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');

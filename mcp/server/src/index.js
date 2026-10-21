@@ -30,7 +30,7 @@ import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS, SILLAS } from './flota
 import { censoBots, flotaCombinada, RUNTIMES, ESTADOS_ABIERTOS } from './coordinacion.js';
 
 import { crearEstado, CACHE_SEG } from './estado.js';
-import { crearBandeja } from './mensajes.js';
+import { crearBandeja, agenteDestino } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
 import { personaCanonica as personaFlota } from './flota.js';
 const NOMBRE = 'admira-live-mcp';
@@ -167,10 +167,19 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       texto: z.string().min(1).max(2000).describe('El mensaje. Sin claves, tokens ni contraseñas.'),
       de: z.string().min(1).max(40).optional().describe('Quién envía. Consejero: la silla de tu clave (o la que eliges con la clave compartida del Consejo). Agente: no hace falta, firma tu clave.'),
       maquina: z.string().min(2).max(40).optional().describe('Máquina del remitente, si no es la de la clave. Por ejemplo MacMini o MacStudio.'),
-      maquina_agente: z.string().min(2).max(40).optional().describe('Solo consejero → agente: equipo donde despertar al agente (por defecto su casa: Morfeo/Oráculo MacMini, Smith MacBookPro16; si no, flota).'),
+      maquina_agente: z.string().min(2).max(40).optional().describe('Solo consejero → agente: equipo donde despertar al agente (por defecto su casa: Morfeo/Oráculo MacMini, Smith MacBookPro16; si no, la máquina donde late; si no late, flota).'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  }, seguro(async (a) => texto(await bandejaConsejo.enviar(a, identidad))));
+  }, seguro(async (a) => {
+    // Consejero → agente sin maquina_agente: despertar donde late (misma lógica que agente_encargar:
+    // casa del agente o máquina del latido más reciente); si no late, 'flota' como antes.
+    const agente = !(identidad && identidad.tipo === 'agente') && !a.maquina_agente ? agenteDestino(a.para) : null;
+    if (agente) {
+      const donde = await flota.maquinaDe(agente).catch(() => '');
+      if (donde) a = { ...a, maquina_agente: donde };
+    }
+    return texto(await bandejaConsejo.enviar(a, identidad));
+  }));
 
   server.registerTool('consejero_bandeja', {
     title: 'Bandeja de mensajes de un consejero',

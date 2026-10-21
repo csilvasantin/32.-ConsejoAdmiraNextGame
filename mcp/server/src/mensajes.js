@@ -17,7 +17,7 @@
 import { sillaCanonica } from './sillas.js';
 import { supervisorDe, agenteCanonico } from './supervisores.js';
 import { norm, AGENTES_FLOTA, CASA_AGENTE, personaCanonica } from './flota.js';
-import { crearAvisos } from './avisos.js';
+import { crearAvisos, resumen as resumenCorto } from './avisos.js';
 
 export const CLAVE_KV = 'consejero-mensajes:v1';
 export const TOPE = 500;
@@ -267,14 +267,53 @@ export function crearBandeja(env = {}, deps = {}) {
   }
   const ejecutar = (op, a, identidad) => (env.BANDEJA && typeof env.BANDEJA.idFromName === 'function' ? remoto(op, a, identidad) : local(op, a, identidad));
 
-  /* El mensaje ya está guardado. El aviso despierta al destinatario en su buzón
-   * de GrokBot. La marca [chat-coetaneos] no sale al grupo ni abre misión. */
-  async function avisar(mensaje) {
+  /* El mensaje ya está guardado (con hora e id: se ve en consejero.html?con=<silla>).
+   * #6975 (21-10-2026, Carlos vía Musk): la comunicación entre consejeros es DIRECTA
+   * pero REGISTRADA. Ya no se crea un encargo-aviso numerado en la cola (#6962, #6967…):
+   *   1) si el destinatario registró su webhook aquí (consejero_webhook_registrar), POST directo;
+   *   2) si no, el worker admira-telegram despierta su rutina de Grok Bot con evento «mensaje»
+   *      (POST /api/consejero-mensaje/despertar): sin fila en el bot-inbox ni Telegram;
+   *   3) solo si las dos fallan, el aviso de siempre por bot-inbox, para que nada se pierda.
+   * Los agentes de la flota siguen por bot-inbox: su vigilante lee ahí. */
+  const baseTelegram = () => String(env.ADMIRA_TELEGRAM_URL || 'https://bot.yokup.com').replace(/\/$/, '');
+  const viaTelegram = () => (env.TELEGRAM && typeof env.TELEGRAM.fetch === 'function'
+    ? (u, i) => env.TELEGRAM.fetch(u, i)
+    : (deps.fetch || globalThis.fetch));
+  const cabecerasPanel = () => ({
+    accept: 'application/json',
+    'content-type': 'application/json',
+    authorization: `Bearer ${env.ADMIRA_TELEGRAM_PANEL_KEY}`,
+    'user-agent': 'admira-live-mcp/1.0',
+  });
+  const sitio = String(env.SITIO || 'https://www.admira.live').replace(/\/$/, '');
+
+  async function despertarDirecto(mensaje) {
     if (!env.ADMIRA_TELEGRAM_PANEL_KEY) return { ok: false, error: 'sin clave de aviso' };
-    const base = String(env.ADMIRA_TELEGRAM_URL || 'https://bot.yokup.com').replace(/\/$/, '');
-    const via = env.TELEGRAM && typeof env.TELEGRAM.fetch === 'function'
-      ? (u, i) => env.TELEGRAM.fetch(u, i)
-      : (deps.fetch || globalThis.fetch);
+    const para = sillaCanonica(mensaje.para);
+    if (!para) return { ok: false, error: 'destinatario desconocido' };
+    const carga = {
+      persona: para,
+      mensaje: {
+        id: mensaje.id, de: mensaje.de, de_tipo: mensaje.de_tipo || 'consejero', para, para_tipo: 'consejero',
+        maquina: mensaje.maquina || null, hora: mensaje.hora, responde_a: mensaje.responde_a || null,
+        resumen: resumenCorto(mensaje.texto),
+        url: `${sitio}/consejero.html?con=${encodeURIComponent(para)}#${encodeURIComponent(mensaje.id)}`,
+      },
+    };
+    try {
+      const r = await viaTelegram()(`${baseTelegram()}/api/consejero-mensaje/despertar`, {
+        method: 'POST', headers: cabecerasPanel(), body: JSON.stringify(carga),
+      });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d && d.ok && d.despertado === true) return { ok: true, directo: true, via: 'grokbot-webhook', para };
+      return { ok: false, error: (d && (d.resultado || d.error)) || `despertar no aceptado (${r.status || 'sin estado'})` };
+    } catch {
+      return { ok: false, error: 'no se pudo despertar al destinatario' };
+    }
+  }
+
+  async function avisarPorEncargo(mensaje) {
+    if (!env.ADMIRA_TELEGRAM_PANEL_KEY) return { ok: false, error: 'sin clave de aviso' };
     const cuerpo = [
       `[chat-coetaneos] ${NOMBRE[mensaje.de] || mensaje.de} → ${NOMBRE[mensaje.para] || mensaje.para}`,
       mensaje.de_tipo === 'agente' || mensaje.para_tipo === 'agente'
@@ -290,14 +329,9 @@ export function crearBandeja(env = {}, deps = {}) {
       mensaje.texto,
     ].join('\n').slice(0, 3900);
     try {
-      const r = await via(`${base}/api/bot-inbox`, {
+      const r = await viaTelegram()(`${baseTelegram()}/api/bot-inbox`, {
         method: 'POST',
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json',
-          authorization: `Bearer ${env.ADMIRA_TELEGRAM_PANEL_KEY}`,
-          'user-agent': 'admira-live-mcp/1.0',
-        },
+        headers: cabecerasPanel(),
         body: JSON.stringify({
           text: cuerpo,
           target_persona: mensaje.para,
@@ -308,10 +342,25 @@ export function crearBandeja(env = {}, deps = {}) {
       });
       const d = await r.json().catch(() => null);
       if (!r.ok || !d || !d.ok || !(Number(d.id) > 0)) return { ok: false, error: `aviso no aceptado (${r.status || 'sin estado'})` };
-      return { ok: true, encargo: Number(d.id), para: mensaje.para };
+      return { ok: true, encargo: Number(d.id), para: mensaje.para, via: 'bot-inbox' };
     } catch {
       return { ok: false, error: 'no se pudo avisar al destinatario' };
     }
+  }
+
+  async function avisar(mensaje) {
+    if (mensaje.para_tipo === 'agente') {
+      const a = await avisarPorEncargo(mensaje);
+      alMomento(mensaje);
+      return a;
+    }
+    let propio = null;
+    try { propio = await avisos.avisar(mensaje); } catch { propio = null; }
+    if (propio && propio.ok) return { ok: true, directo: true, via: 'webhook-propio', para: mensaje.para };
+    const directo = await despertarDirecto(mensaje);
+    if (directo.ok) return directo;
+    const encargo = await avisarPorEncargo(mensaje);
+    return { ...encargo, respaldo: true, motivo: directo.error || 'sin despertar directo' };
   }
 
   /* Guardar primero (atómico) y avisar después: un Telegram lento ya no abre una
@@ -323,7 +372,6 @@ export function crearBandeja(env = {}, deps = {}) {
       m.aviso = aviso;
       try { await ejecutar('aviso', { id: m.id, aviso }, null); } catch { /* el mensaje ya está guardado */ }
       if (res.mensaje && res.mensaje.id === m.id) { res.mensaje.aviso = aviso; res.aviso = aviso; }
-      alMomento(m);
     }
     return res;
   }

@@ -88,10 +88,34 @@ test('las tres herramientas hablan por el MCP y el GET público no pide clave', 
   assert.equal(ajeno.isError, true);
 });
 
+test('#6975: Lucas→Musk llega DIRECTO (sin encargo-aviso) y queda registrado', async () => {
+  const posts = [];
+  const fetchAviso = async (url, init) => {
+    posts.push({ url, body: JSON.parse(init.body), auth: init.headers.authorization });
+    return { ok: true, status: 200, json: async () => ({ ok: true, despertado: true, resultado: 'ok' }) };
+  };
+  const lucas = { persona: 'Lucas', machine: 'GrokBot', agent: 'LucasGrokBot', tipo: 'consejero' };
+  const env = { ADMIRA_LIVE_DESDE: kvMemoria(), ADMIRA_TELEGRAM_PANEL_KEY: 'panel-de-prueba', ADMIRA_TELEGRAM_URL: 'https://bot.test', TELEGRAM: { fetch: fetchAviso } };
+  const r = await crearBandeja(env).enviar({ de: 'Lucas', para: 'Elon', texto: 'Elon, prueba directa.' }, lucas);
+  assert.equal(r.aviso.ok, true);
+  assert.equal(r.aviso.directo, true);
+  assert.equal(r.aviso.encargo, undefined);
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].url, 'https://bot.test/api/consejero-mensaje/despertar');
+  assert.equal(posts[0].body.persona, 'Musk');
+  assert.equal(posts[0].body.mensaje.id, r.mensaje.id);
+  assert.match(posts[0].body.mensaje.url, /consejero\.html\?con=Musk#/);
+  assert.equal(posts.some((p) => p.url.endsWith('/api/bot-inbox')), false);
+  const publico = await crearBandeja(env).listar('Musk');
+  assert.equal(publico.mensajes[0].id, r.mensaje.id);
+  assert.ok(publico.mensajes[0].hora);
+});
+
 test('Elon avisa a Lucas en su buzón y el mensaje sigue guardado si el aviso falla', async () => {
   const posts = [];
   const fetchAviso = async (url, init) => {
     posts.push({ url, body: JSON.parse(init.body), auth: init.headers.authorization });
+    if (url.endsWith('/despertar')) return { ok: false, status: 404, json: async () => ({ ok: false }) };
     return { ok: true, status: 200, json: async () => ({ ok: true, id: 6315 }) };
   };
   const musk = { persona: 'Musk', machine: 'GrokBot', runtime: 'Grok', agent: 'MuskGrokBot', tipo: 'consejero' };
@@ -108,7 +132,10 @@ test('Elon avisa a Lucas en su buzón y el mensaje sigue guardado si el aviso fa
   assert.equal(r.mensaje.de, 'Musk');
   assert.equal(r.aviso.ok, true);
   assert.equal(r.aviso.encargo, 6315);
-  assert.equal(posts.length, 1);
+  assert.equal(r.aviso.respaldo, true);
+  assert.equal(posts.length, 2);
+  assert.equal(posts[0].url, 'https://bot.test/api/consejero-mensaje/despertar');
+  posts.shift();
   assert.equal(posts[0].url, 'https://bot.test/api/bot-inbox');
   assert.equal(posts[0].body.target_persona, 'Lucas');
   assert.equal(posts[0].body.target_machine, 'grokbot');

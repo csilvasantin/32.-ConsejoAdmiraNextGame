@@ -43,7 +43,7 @@ test("API: POST con token guarda; sin token 401; GET público", async () => {
   assert.equal(g.focos.Jobs.deepagent, "Smith");
 });
 
-test("cliente: rota en 3 fases cada 15 s y no repite «CLI»", () => {
+test("cliente: rota en 3 fases cada 15 s (misión → ordenador → LLM), MacMini y no repite «CLI»", () => {
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
   const win = { addEventListener() {}, dispatchEvent() {} };
   const doc = { readyState: "complete", documentElement: { getAttribute: () => "es" }, getElementById: () => null };
@@ -51,7 +51,12 @@ test("cliente: rota en 3 fases cada 15 s y no repite «CLI»", () => {
   const { altChip, focoTxt } = win.ConsumosTrabajando;
   assert.match(js, /ALTERNA_MS = 15000/);
   const mero = altChip({ agente: "Merovingio", estado: "verde", maqCorta: "Box", runtime: "GrokBot CLI", superficies: [{ tipo: "cli" }, { tipo: "app", enUso: true }], foco: { proyecto: "admira.live" } });
-  assert.doesNotMatch(mero, /CLI · CLI/); assert.match(mero, /GrokBot CLI · App · Carlos/); assert.match(mero, /tr-c">admira\.live</);
+  assert.doesNotMatch(mero, /CLI · CLI/); assert.match(mero, /GrokBot CLI · App · Carlos/); assert.match(mero, /tr-a">FLT · admira\.live</); assert.match(mero, /tr-b">GrokBotBox</);
+  const { misionTxt, maqNombre } = win.ConsumosTrabajando;
+  assert.equal(misionTxt({ encargo: "#6919", tarea: "encargo #6919 · fix flecha consumos" }), "#6919 · fix flecha consumos");
+  assert.equal(misionTxt({ tarea: "Revisar consumos" }), "FLT · Revisar consumos");
+  assert.equal(maqNombre("Mini"), "MacMini"); assert.equal(maqNombre("MBP14 + MBA16"), "MacBookPro14 + MacBookAir16"); assert.equal(maqNombre("MacBook Pro 16"), "MacBookPro16");
+  assert.match(altChip({ agente: "Smith", estado: "verde", maquina: "MacMini", maqCorta: "Mini", motor: "Claude", modelo: "claude-opus-5" }), /tr-b">MacMini<.*tr-c">Claude · claude-opus-5</);
   assert.equal(focoTxt({ foco: { proyecto: "admira.live", deepagent: "Morfeo", defecto: true } }), "admira.live · Morfeo · por defecto");
   assert.equal(focoTxt({ foco: { proyecto: "Training", fuente: "training" } }), "Training");
 });

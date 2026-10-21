@@ -64,7 +64,7 @@ export function personaCanonica(nombre) {
 // Oráculo (Codex) igual desde el 11-10-2026 14:18: sale del Mac Mini a su terminal «oraculo» del MacBook Pro 16.
 // Carlos, 17-10-2026: Morfeo (app Claude) y Oráculo (app Codex) vuelven a trabajar en apps de escritorio del Mac Mini;
 // el MacBook Pro 16 no es alcanzable, así que su casa es el Mac Mini.
-export const CASA_AGENTE = { Morfeo: 'macmini', Smith: 'macbookpro16', Oraculo: 'macmini' };
+export const CASA_AGENTE = { Morfeo: 'macmini', Smith: 'macbookpro16', Oraculo: 'macmini', Neo: 'macstudio', Trinity: 'macstudio' };
 
 export const esConsejero = (persona) => CONSEJEROS.includes(personaCanonica(persona));
 // CONSEJEROS NO PRINCIPALES (orden de Carlos, encargo 5674): solo Musk, Huang, Jobs y Wozniak despiertan su Grok Bot

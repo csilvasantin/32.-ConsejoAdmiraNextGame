@@ -217,7 +217,10 @@ test("r27 cursor: serie en hora del evento validada; re-mandar el mismo CSV no c
   const m = medirAgente(doc.agentes["Grok Bot (Consejo)"], AHORA);
   // r39: datos con retraso no son «ahora» → tokHora null; la última hora con datos va aparte (informativa).
   assert.equal(m.tokHora, null, "con retraso: sin cifra en vivo");
-  assert.equal(m.tokHoraRetraso, 600000, "última hora CON DATOS (04:40 → 05:40)");
+  // r48: esa hora con datos acabó hace 5 h 20 min → no es uso reciente: ni aguja ni «activo»; queda informativa.
+  assert.equal(m.tokHoraRetraso, null, "ventana vieja (> 1 h) → no entra en la aguja");
+  assert.equal(m.tokUltimaHora, 0);
+  assert.equal(m.tokUltimaHoraConDatos, 600000, "última hora CON DATOS (04:40 → 05:40)");
   assert.equal(m.stale, false);
   assert.equal(m.conRetraso, true);
   assert.equal(m.retrasoS, 5 * 3600 + 20 * 60);
@@ -239,7 +242,8 @@ test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma en
   const sumaAg = m.porAgente.reduce((t, a) => t + (a.tokHora || 0), 0);
   const sumaPr = m.porProyecto.reduce((t, x) => t + (x.tokHora || 0), 0);
   // FLT-102599: la última hora con datos de Cursor entra en la aguja como estimado aparte.
-  assert.equal(m.tokHoraEstimado, 600000);
+  // r48: pero solo si esa hora acaba hace ≤ 1 h; aquí hay 5 h 20 min de retraso → 0.
+  assert.equal(m.tokHoraEstimado, 0);
   assert.equal(sumaAg + m.tokHoraEstimado, m.tokHora);
   assert.ok(Math.abs(sumaPr - (m.tokHora - m.tokHoraEstimado - 1000)) <= m.porProyecto.length + 1, `Σ proyectos del pulso (${sumaPr}) = Σ agentes con pulso`);
   assert.equal(m.porProyecto.find((x) => x.proyecto === "admiranext.com").tokHoy, 1000000);
@@ -260,4 +264,13 @@ test("FLT-102599: fuera las filas sin señal de hoy (MacBookAir16plata del 12-oc
   const m = mezclar(null, docs, AHORA);
   assert.ok(!m.porAgente.some((a) => a.maquina === "MacBookAir16plata"));
   assert.equal(m.tokHoy, 50000);
+});
+
+test("r48: la última hora de Cursor entra en la aguja solo si acaba hace ≤ 1 h", () => {
+  const p = normalizarPulso(cursorCuerpo(SERIE_C)).pulso;
+  const fin = (INI + 5 * 3600 + 40 * 60) * 1000;
+  const { doc } = aplicarPulso(null, p, fin + 30 * 60000);
+  const a = doc.agentes["Grok Bot (Consejo)"];
+  assert.equal(medirAgente(a, fin + 30 * 60000).tokHoraRetraso, 600000, "30 min de retraso → cuenta");
+  assert.equal(medirAgente(a, fin + 61 * 60000).tokHoraRetraso, null, "61 min → ventana vieja, no cuenta");
 });

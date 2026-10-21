@@ -37,6 +37,8 @@ const M = 60000;
 const MOTORES = new Set(["claude", "codex", "cursor", "grok"]);
 export const STALE_CURSOR_MS = 150 * 60 * 1000;
 export const VENTANA_CURSOR_MS = 60 * 60 * 1000;
+/** r48: una ventana de Cursor solo es «uso reciente» si acaba hace ≤ 1 h. */
+export const RETRASO_RECIENTE_MS = 60 * 60 * 1000;
 /** ¿Este agente manda su serie en hora del evento (datos con retraso)? */
 export const conRetraso = (a) => !!a && (a.motor === "cursor" || a.serieEventos === true);
 
@@ -332,7 +334,7 @@ export function proyectosDePulso(docs, ahora) {
     const v = ventanaAgente(a, ahora);
     // r47 (Carlos: «sale 0 proyectos»): «activo» = consumo en la ÚLTIMA HORA (como AGENTES); antes solo había tok/h de 15 min.
     for (const proy of Object.keys(hoy)) { const p = de(proy); if (p.tokUltimaHora === null) p.tokUltimaHora = 0; }
-    const r60 = repartoVentana(serie, v.hasta - 60 * 60 * 1000, v.hasta);
+    const r60 = ahora - v.hasta <= RETRASO_RECIENTE_MS ? repartoVentana(serie, v.hasta - 60 * 60 * 1000, v.hasta) : { porProyecto: {} };
     for (const [proy, t] of Object.entries(r60.porProyecto)) { const p = de(proy); p.tokUltimaHora = (p.tokUltimaHora || 0) + t; }
     const r = repartoVentana(serie, v.desde, v.hasta);
     const factor = r.total > 0 ? m.tokHora / r.total : 0;
@@ -369,7 +371,11 @@ export function medirAgente(a, ahora) {
       // r39 (Carlos): datos con horas de retraso NO son «ahora»: tokHora = null (no cuentan en la velocidad de la flota,
       // la aguja, el pronóstico del cuentakilómetros ni el verde de «Trabajando ahora»). La última hora con datos queda
       // como tokHoraRetraso, solo informativa. Sus tokens de hoy SÍ cuentan en los totales.
-      tokHora: null, tokHoraRetraso: !stale && serie.length >= 2 ? tok60 : null, tokUltimos5min: null, tokUltimos15min: null, tokUltimaHora: tok60,
+      // r48 (Carlos: aguja a ~870 k tok/h sin uso desde las 22:21): la «última hora con datos» de Cursor puede ser de
+      // hace horas (ventana anclada a su último evento). Solo cuenta como reciente si esa hora acaba hace ≤ 1 h; si no,
+      // 0 en tokHoraRetraso/tokUltimaHora (no es uso reciente) y la cifra vieja queda en tokUltimaHoraConDatos.
+      tokHora: null, tokHoraRetraso: !stale && serie.length >= 2 && ahora - v.hasta <= RETRASO_RECIENTE_MS ? tok60 : null, tokUltimos5min: null, tokUltimos15min: null,
+      tokUltimaHora: ahora - v.hasta <= RETRASO_RECIENTE_MS ? tok60 : 0, tokUltimaHoraConDatos: tok60,
       ventanaMin: 60, stale, haceS: a.ultimoPulso ? Math.max(0, Math.round((ahora - a.ultimoPulso) / 1000)) : null,
       conRetraso: true, retrasoS: Math.max(0, Math.round((ahora - v.hasta) / 1000)), datosHasta: new Date(v.hasta).toISOString(),
     };

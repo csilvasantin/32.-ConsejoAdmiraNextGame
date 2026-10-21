@@ -17,8 +17,8 @@ class Fuentes(unittest.TestCase):
     def test_maquinas(self):
         m = cargar(tempfile.mkdtemp())
         self.assertEqual(m.MAPA["MacStudio"]["claude"][0], "Neo")
-        self.assertEqual(m.MAPA["MacBookPro16"]["codex"][0], "Trinity")
-        self.assertNotIn("claude", m.MAPA["MacBookPro16"])
+        self.assertEqual(m.MAPA["MacStudio"]["codex"][0], "Trinity")
+        self.assertEqual(m.MAPA["MacBookPro16"], {})
 
     def test_codex_sin_doble(self):
         h = tempfile.mkdtemp(); m = cargar(h)

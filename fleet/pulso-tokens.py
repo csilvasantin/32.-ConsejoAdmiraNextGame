@@ -206,7 +206,9 @@ MAPA = {
     "MacMini": {"claude": ("Morfeo", "csilvasantin@gmail.com"), "codex": ("Oráculo", "csilvasantin@gmail.com"), "grok": ("Smith", "Grok CLI (grok-4.7)")},
     # r49 (encargo #6989, 21-10-2026): Neo vive en el MacStudio (app Claude); el MBP16 queda solo para Trinity (app Codex).
     # El MacStudio también reporta su Codex (app «codex_work_desktop» + agent-inbox-trinity) como Trinity.
-    "MacBookPro16": {"codex": ("Trinity", "ChatGPT Pro")},
+    # r49b (Carlos, 23:04): Trinity vive en la app Codex del MacStudio (monitor izquierdo) → el MBP16 no declara agentes
+    # de tokens (como el MBP14 negro); su pulso con agentesCompletos borra del servidor las fichas viejas Neo/Trinity MBP16.
+    "MacBookPro16": {},
     "MacStudio": {"claude": ("Neo", "csilva@admira.com"), "codex": ("Trinity", "ChatGPT Pro")},
     # r40 (Carlos, 10-10-2026): el Mac donde trabaja Carlos no mandaba pulso (máquina no reconocida → salía con código 2).
     # r41 (Carlos, 12:48 — «Neo está conmigo en el MBP16, no en el Air»): el pulso atribuye por MOTOR, y en el Air los
@@ -1154,7 +1156,7 @@ def main():
     guardar_cache(cache)
     guardar_proyectos()
     guardar_otros()
-    cuerpo = {"maquina": maq, "agentes": agentes, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+    cuerpo = {"maquina": maq, "agentes": agentes, "agentesCompletos": True, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
     lim = limites(maq)
     if lim:
         cuerpo["limites"] = lim

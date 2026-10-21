@@ -442,6 +442,13 @@
     var n = E.notaOrquestador(m);
     return n ? ' <span class="dd-nota dd-n-' + esc(n.semaforo || 'rojo') + '" title="' + esc(T('Semáforo del orquestador (no es el margen)', 'Orchestrator status (not the margin)')) + '">⚠ ' + esc(n.texto) + '</span>' : '';
   }
+  /** r47: máquina = la de la ficha (latido/proceso más fresco); si el pulso de tokens llega de otra, se dice. */
+  function maqDe(a, pf) {
+    var mp = a.maquina || (pf && pf.maquina) || '', mf = ACT && ACT.maquinas ? ACT.maquinas[a.agente] : '';
+    var k = function (x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+    if (!mf || k(mf) === k(mp)) return mp || mf;
+    return mf + (mp ? ' (' + T('tokens de ', 'tokens from ') + mp + ')' : '');
+  }
   function filaAgenteInfo(a, pf) {
     var est = a.sinDatos ? 'rojo' : E.estadoFila(a.tokHora, a.tokHoy);
     var motor = nombreMotor(a.motor);
@@ -450,7 +457,7 @@
     var m = ORQ.margen[a.agente];
     var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
       '<b>' + (a.conRetraso ? T('sin cifra en vivo', 'no live figure') : a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
-      (a.maquina || (pf && pf.maquina) ? ' · ' + esc(a.maquina || pf.maquina) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '') +
+      (maqDe(a, pf) ? ' · ' + esc(maqDe(a, pf)) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '') +
       (a.conRetraso ? ' · <span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : '');
     if (a.sinDatos && pf && pf.nota) lin1 += ' · ' + esc(pf.nota);
     var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + E.colorMargen(m.pct) + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' + notaHtml(m) : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
@@ -460,10 +467,10 @@
     if (!DD.ag) return;
     var ags = E.agentesConConocidos((d && d.porAgente) || [], (d && d.conocidos) || []);
     if (estado.agente && !ags.some(function (a) { return a.agente === estado.agente; })) ags.push({ agente: estado.agente, tokHora: null, tokHoy: 0, sinDatos: true });
-    var activos = ags.filter(function (a) { return a.tokHora > 0; }).length, conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
+    var activos = ACT ? ACT.nAgentes : nAgActivos(d), conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
     var estF = d && d.tokHora != null ? E.estadoFila(d.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
-      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + activos + ' ' + T(activos === 1 ? 'agente activo' : 'agentes activos', activos === 1 ? 'active agent' : 'active agents') + ' ' + T('de ', 'of ') + ags.length + (conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + activos + ' ' + T(activos === 1 ? 'agente activo' : 'agentes activos', activos === 1 ? 'active agent' : 'active agents') + ' ' + T('de ', 'of ') + (ACT ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     ags.forEach(function (a) {
       var f = filaAgenteInfo(a, perfilDe(d, a.agente));
@@ -639,8 +646,13 @@
   root.ConsumosVelocimetro = { leer: leer, fmt: fmt, escala: escala };
   /** r45 (Carlos, 20:59): «PROYECTOS (x)» y «AGENTES (x)»: x = activos ahora (consumo en la última hora), en vivo. */
   function nAgActivos(d) { return ((d && d.porAgente) || []).filter(function (a) { return a && (Number(a.tokUltimaHora != null ? a.tokUltimaHora : a.tokHora) || 0) > 0; }).length; }
-  function rotProy() { return T('Proyectos', 'Projects') + ' (' + E.proyectosActivos((estado.datos && estado.datos.porProyecto) || []).length + ')'; }
-  function rotAg() { return T('Agentes', 'Agents') + ' (' + nAgActivos(estado.datos) + ')'; }
+  // r47: misma fuente de verdad que las fichas (/api/flota/trabajando → activos: latido trabajando o tokens última hora).
+  var ACT = null;
+  function nProyAct() { return ACT ? ACT.nProyectos : E.proyectosActivos((estado.datos && estado.datos.porProyecto) || []).length; }
+  function nAgAct() { return ACT ? ACT.nAgentes : nAgActivos(estado.datos); }
+  function rotProy() { return T('Proyectos', 'Projects') + ' (' + nProyAct() + ')'; }
+  function rotAg() { return T('Agentes', 'Agents') + ' (' + nAgAct() + ')'; }
+  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (!a) return; ACT = a; rotulos(); if (estado.datos) pintaSelectorAgente(estado.datos); }); } catch (e) {}
   var H1_ES = null, TIT_ES = null;
   function rotulos() {
     var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');

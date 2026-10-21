@@ -6,7 +6,7 @@
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
@@ -124,7 +124,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
       ventanas: l.ventanas.map((w) => ({ ventana: w.ventana, pct: w.pct, reinicio: new Date(w.reinicio * 1000).toISOString() })) } : null;
   }
   return {
-    ok: true, tarjetas: ts,
+    ok: true, tarjetas: ts, activos: activosDeFlota(ts, v),
     matriz: conSuperficies(conRetratos(matriz({ presencia: pres, carga, ahoraS })), ts), carga: carga.size ? "ok" : "sin datos",
     // r17: qué cuenta(s) tiene en uso la app Grok Bot de cada Mac (cuenta null = app abierta, cuenta desconocida).
     appsGrokBot: (v && Array.isArray(v.grokbotApps) ? v.grokbotApps : []).map((a) => ({ maquina: a.maquina, cuenta: a.cuenta || null,

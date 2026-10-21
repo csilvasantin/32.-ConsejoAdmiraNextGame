@@ -317,7 +317,7 @@ export function repartoVentana(serie, desdeMs, hastaMs) {
  */
 export function proyectosDePulso(docs, ahora) {
   const acc = {};
-  const de = (proy) => acc[proy] || (acc[proy] = { proyecto: proy, tokHoy: 0, tokHora: null, tokUltimos15min: 0, agentes: [] });
+  const de = (proy) => acc[proy] || (acc[proy] = { proyecto: proy, tokHoy: 0, tokHora: null, tokUltimos15min: 0, tokUltimaHora: null, agentes: [] });
   for (const doc of docs || []) for (const a of Object.values((doc && doc.agentes) || {})) {
     const serie = (a.serie || []).slice().sort((x, y) => x[0] - y[0]);
     const m = medirAgente(a, ahora);
@@ -330,6 +330,10 @@ export function proyectosDePulso(docs, ahora) {
     if (m.tokHora === null) continue;
     for (const proy of Object.keys(hoy)) { const p = de(proy); if (p.tokHora === null) p.tokHora = 0; }
     const v = ventanaAgente(a, ahora);
+    // r47 (Carlos: «sale 0 proyectos»): «activo» = consumo en la ÚLTIMA HORA (como AGENTES); antes solo había tok/h de 15 min.
+    for (const proy of Object.keys(hoy)) { const p = de(proy); if (p.tokUltimaHora === null) p.tokUltimaHora = 0; }
+    const r60 = repartoVentana(serie, v.hasta - 60 * 60 * 1000, v.hasta);
+    for (const [proy, t] of Object.entries(r60.porProyecto)) { const p = de(proy); p.tokUltimaHora = (p.tokUltimaHora || 0) + t; }
     const r = repartoVentana(serie, v.desde, v.hasta);
     const factor = r.total > 0 ? m.tokHora / r.total : 0;
     for (const [proy, t] of Object.entries(r.porProyecto)) {
@@ -339,7 +343,7 @@ export function proyectosDePulso(docs, ahora) {
       p.tokHora = (p.tokHora || 0) + t * factor;
     }
   }
-  return Object.values(acc).map(({ agentes, ...p }) => ({ ...p, tokUltimos15min: Math.round(p.tokUltimos15min), tokHora: p.tokHora === null ? null : Math.round(p.tokHora), maquinas: agentes.filter(Boolean) }))
+  return Object.values(acc).map(({ agentes, ...p }) => ({ ...p, tokUltimos15min: Math.round(p.tokUltimos15min), tokHora: p.tokHora === null ? null : Math.round(p.tokHora), tokUltimaHora: p.tokUltimaHora === null ? null : Math.round(p.tokUltimaHora), maquinas: agentes.filter(Boolean) }))
     .sort((a, b) => b.tokHoy - a.tokHoy || (b.tokHora || 0) - (a.tokHora || 0));
 }
 

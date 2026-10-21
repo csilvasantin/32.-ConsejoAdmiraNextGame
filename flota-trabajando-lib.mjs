@@ -470,3 +470,38 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   const ord = { verde: 0, amarillo: 1, gris: 2 };
   return out.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }
+
+/** r47: nombre de proyecto comparable («www.admiranext.com», «admiranext» y «admiranext.com» son el mismo). */
+export function normProyecto(n, conocidos = []) {
+  let x = String(n || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  if (!x || x === "otros" || x === "training" || /^galaxia/.test(x)) return null;
+  if (!x.includes(".")) { const c = conocidos.find((k) => k.split(".")[0] === x); if (c) x = c; }
+  return x;
+}
+
+/**
+ * r47 (Carlos: «0 proyectos / 0 agentes activos de 6» con Neo trabajando): UNA fuente de verdad para «activos».
+ * Agente activo = ficha verde/amarilla (latido trabajando, encargo en curso, con Carlos o tokens 15 min) O consumo
+ * medido en la última hora. Proyectos activos = proyecto de cada agente activo (pulso o latido: su dato, nada inventado)
+ * ∪ proyectos del pulso con tokens en la última hora. Sin proyecto declarado ni medido → no aporta proyecto.
+ */
+export function activosDeFlota(ts, velocidad) {
+  const pp = (velocidad && velocidad.porProyecto) || [];
+  const conocidos = pp.map((p) => normProyecto(p.proyecto)).filter((x) => x && x.includes("."));
+  const agentes = [];
+  for (const t of ts || []) {
+    if (!t || !t.agente) continue;
+    const porLatido = t.estado === "verde" || t.estado === "amarillo";
+    const porTokens = Number(t.tokUltimaHora) > 0;
+    if (!porLatido && !porTokens) continue;
+    if (/vía Merovingio/.test(t.motivo || "")) continue; // espejo (Musk/Huang) de Merovingio
+    agentes.push({ agente: t.agente, maquina: t.maquina || null, proyecto: normProyecto(t.proyecto, conocidos), por: porLatido ? (t.motivo || t.estado) : "tokens última hora" });
+  }
+  const set = new Map();
+  for (const a of agentes) if (a.proyecto && !set.has(a.proyecto)) set.set(a.proyecto, { proyecto: a.proyecto, agentes: [], tokUltimaHora: null });
+  for (const p of pp) { const n = normProyecto(p.proyecto, conocidos); if (n && Number(p.tokUltimaHora) > 0) { const x = set.get(n) || { proyecto: n, agentes: [], tokUltimaHora: 0 }; x.tokUltimaHora = (x.tokUltimaHora || 0) + Number(p.tokUltimaHora); set.set(n, x); } }
+  for (const a of agentes) if (a.proyecto) set.get(a.proyecto).agentes.push(a.agente);
+  const maquinas = {};
+  for (const t of ts || []) if (t && t.agente && t.maquina) maquinas[t.agente] = t.maquina;
+  return { agentes, proyectos: [...set.values()], nAgentes: agentes.length, nProyectos: set.size, total: (ts || []).filter((t) => t && t.agente && !/vía Merovingio/.test(t.motivo || "")).length, maquinas };
+}

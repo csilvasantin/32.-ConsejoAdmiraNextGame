@@ -58,7 +58,9 @@ test("sin datos de hoy: 0 tok/h, nunca inventado", () => {
 test("pico 24 h y escala del dial: max(50 M, 1,5 × pico)", () => {
   const snaps = [snap(180, { A: 0 }), snap(120, { A: 30e6 }), snap(60, { A: 40e6 }), snap(0, { A: 45e6 })];
   assert.equal(pico24h(podar(snaps, AHORA), AHORA), 30e6);
-  assert.equal(escala(10e6), 50e6);
+  assert.equal(escala(10e6), 20e6);
+  assert.equal(escala(312e3), 2e6); // FLT-102599: flota a ~312 k → escala 2 M, no 50 M
+  assert.equal(escala(1.2e6), 2e6);
   assert.equal(escala(40e6), 100e6);
   assert.equal(escala(222e6), 500e6);
   assert.equal(formatoTok(12.4e6), "12,4 M");

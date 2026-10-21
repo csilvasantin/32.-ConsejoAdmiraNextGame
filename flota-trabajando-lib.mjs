@@ -404,7 +404,14 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const enPulso = !!(p && (Number(tokVivo) > 0 || ultPulso > (l ? Number(l.declared_updated || l.updated) || 0 : 0)));
     // Gris: «hace X» y máquina salen de la MISMA fuente, la más fresca de latido / proceso / pulso de tokens.
     let fresca = null;
-    for (const e of x.latidos) { const ts = Number(e.declared_updated || e.updated) || 0; if (ts && (!fresca || ts > fresca.ts)) fresca = { ts, maquina: e.machine || null, fuente: e.source || "heartbeat" }; }
+    // r49 (#6989): con tokens hoy en el pulso, un process_snapshot de OTRA máquina (la app abierta sin uso en el MBP16)
+    // no decide la máquina: Trinity trabaja en la app Codex del MacStudio, que es donde el colector mide sus tokens.
+    const maqTok = p && Number(p.tokHoy) > 0 ? new Set((p.maquinasPulso || [p.maquina]).filter(Boolean).map(claveMaquina)) : null;
+    const cuentaLatido = (e) => !(maqTok && e.source === "process_snapshot" && /^(app|cli)$/.test(e.host || "") && !(cpuProceso(e) > CPU_MIN) && e.machine && !maqTok.has(claveMaquina(e.machine)));
+    for (const e of x.latidos) {
+      if (!cuentaLatido(e)) continue;
+      const ts = Number(e.declared_updated || e.updated) || 0; if (ts && (!fresca || ts > fresca.ts)) fresca = { ts, maquina: e.machine || null, fuente: e.source || "heartbeat" };
+    }
     if (ultPulso && (!fresca || ultPulso > fresca.ts)) fresca = { ts: ultPulso, maquina: (p && p.maquina) || null, fuente: "pulso" };
     const gris = st.estado === "gris" && fresca;
     let motor = p && p.motor ? (p.motor === "claude" ? "Claude Code" : p.motor === "codex" ? "Codex" : p.motor) : (l && l.runtime) || null;
@@ -423,7 +430,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
       conCarlosEn,
-      maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
+      maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && cuentaLatido(l) && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: modeloCard,
       enCurso, abiertos: cg ? Number(cg.abiertos) || 0 : null, bloqueados: cg ? Number(cg.blocked) || 0 : null, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),

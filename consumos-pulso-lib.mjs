@@ -87,7 +87,7 @@ export function normalizarPulso(body) {
     agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto,
       conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null, ...extra });
   }
-  return { ok: true, pulso: { maquina, agentes, ...(grokbotApp ? { grokbotApp } : {}), ...(superficies ? { superficies } : {}), ...(limites ? { limites } : {}) } };
+  return { ok: true, pulso: { maquina, agentes, ...(body.agentesCompletos === true ? { agentesCompletos: true } : {}), ...(grokbotApp ? { grokbotApp } : {}), ...(superficies ? { superficies } : {}), ...(limites ? { limites } : {}) } };
 }
 
 /**
@@ -261,6 +261,9 @@ export function aplicarPulso(doc, pulso, ahora) {
   if (pulso.superficies) d.superficies = { lista: pulso.superficies, ts: ahora };
   if (pulso.limites) d.limites = { lista: pulso.limites, ts: ahora };
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
+  // r49 (#6989): el colector declara la lista COMPLETA de agentes de su máquina → los que ya no están (Neo y Trinity en
+  // el MBP16 tras pasar al MacStudio) se borran en vez de quedarse 26 h como fichas fantasma a 0.
+  if (pulso.agentesCompletos) { const vivos = new Set(pulso.agentes.map((a) => a.agente)); for (const n of Object.keys(d.agentes)) if (!vivos.has(n)) delete d.agentes[n]; }
   d.maquina = pulso.maquina;
   d.ultimoPulso = ahora;
   return { doc: d, guardar: true };

@@ -204,7 +204,12 @@ ENDPOINT = os.environ.get("PULSO_ENDPOINT", "https://www.admira.live/api/consumo
 # Atribución por máquina (encargo de Carlos, 09-10-2026). Clave: nombre corto de la máquina.
 MAPA = {
     "MacMini": {"claude": ("Morfeo", "csilvasantin@gmail.com"), "codex": ("Oráculo", "csilvasantin@gmail.com"), "grok": ("Smith", "Grok CLI (grok-4.7)")},
-    "MacBookPro16": {"claude": ("Neo", "csilva@admira.com"), "codex": ("Trinity", "ChatGPT Pro")},
+    # r49 (encargo #6989, 21-10-2026): Neo vive en el MacStudio (app Claude); el MBP16 queda solo para Trinity (app Codex).
+    # El MacStudio también reporta su Codex (app «codex_work_desktop» + agent-inbox-trinity) como Trinity.
+    # r49b (Carlos, 23:04): Trinity vive en la app Codex del MacStudio (monitor izquierdo) → el MBP16 no declara agentes
+    # de tokens (como el MBP14 negro); su pulso con agentesCompletos borra del servidor las fichas viejas Neo/Trinity MBP16.
+    "MacBookPro16": {},
+    "MacStudio": {"claude": ("Neo", "csilva@admira.com"), "codex": ("Trinity", "ChatGPT Pro")},
     # r40 (Carlos, 10-10-2026): el Mac donde trabaja Carlos no mandaba pulso (máquina no reconocida → salía con código 2).
     # r41 (Carlos, 12:48 — «Neo está conmigo en el MBP16, no en el Air»): el pulso atribuye por MOTOR, y en el Air los
     # agentes que viven ahí son los de tmux con bot-inbox: Morfeo (Claude, tmux «morfeo») y Oráculo (Codex, tmux
@@ -300,6 +305,8 @@ def maquina_local():
         return "MacBookAir16plata"
     if "mini" in n:
         return "MacMini"
+    if "studio" in n:
+        return "MacStudio"
     if "pro-16" in n or "pro16" in n:
         return "MacBookPro16"
     return None
@@ -351,11 +358,71 @@ def es_hoy(dt, dia):
     return dt is not None and dt.astimezone(MADRID).strftime("%Y-%m-%d") == dia
 
 
+# r49 (#6989): fuentes de las apps de escritorio. La app Claude (Claude Code dentro de Claude.app, entrypoint
+# «claude-desktop») escribe en ~/.claude/projects igual que la CLI; además se miran CLAUDE_CONFIG_DIR y las carpetas de
+# la app (claude-code-sessions, local-agent-mode-sessions) por si guardan transcripciones .jsonl. La app Codex
+# (originator «codex_work_desktop») escribe en ~/.codex/sessions; se añaden CODEX_HOME y ~/.codex/archived_sessions.
+# Sin doble cuenta: cada fichero se toma una vez por realpath, Claude deduplica por message.id|requestId y Codex por id
+# de sesión (el uuid del nombre rollout-…-<uuid>.jsonl) aunque el fichero aparezca en dos carpetas.
+APP_CLAUDE = os.path.join(HOME, "Library", "Application Support", "Claude")
+
+
+def _unicos(rutas):
+    vistos, out = set(), []
+    for r in rutas:
+        try:
+            k = os.path.realpath(r)
+        except OSError:
+            k = r
+        if k not in vistos:
+            vistos.add(k)
+            out.append(r)
+    return out
+
+
+def rutas_claude():
+    bases = [os.path.join(HOME, ".claude", "projects")]
+    if os.environ.get("CLAUDE_CONFIG_DIR"):
+        bases.append(os.path.join(os.environ["CLAUDE_CONFIG_DIR"], "projects"))
+    bases += [os.path.join(APP_CLAUDE, "claude-code-sessions"), os.path.join(APP_CLAUDE, "local-agent-mode-sessions")]
+    rutas = []
+    for b in _unicos([b for b in bases if os.path.isdir(b)]):
+        rutas += glob.glob(os.path.join(b, "**", "*.jsonl"), recursive=True)
+    return _unicos(rutas)
+
+
+def id_sesion_codex(path):
+    m = re.search(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$", path)
+    return m.group(1) if m else os.path.realpath(path)
+
+
+def rutas_codex(hoy, dias=15):
+    homes = [os.path.join(HOME, ".codex")]
+    if os.environ.get("CODEX_HOME"):
+        homes.append(os.environ["CODEX_HOME"])
+    rutas = []
+    for h in _unicos([h for h in homes if os.path.isdir(h)]):
+        for delta in range(0, dias):
+            d = hoy - timedelta(days=delta)
+            rutas += glob.glob(os.path.join(h, "sessions", d.strftime("%Y/%m/%d"), "*.jsonl"))
+        rutas += glob.glob(os.path.join(h, "archived_sessions", "*.jsonl"))
+    # Una sesión = un id: si está en sessions y archived_sessions se queda la copia más reciente.
+    por_id = {}
+    for r in _unicos(rutas):
+        try:
+            t = os.path.getmtime(r)
+        except OSError:
+            continue
+        k = id_sesion_codex(r)
+        if k not in por_id or t > por_id[k][0]:
+            por_id[k] = (t, r)
+    return [r for _, r in por_id.values()]
+
+
 def claude(cache, dia, inicio_dia):
     st = cache["claude"]
     ultimo = None
-    base = os.path.join(HOME, ".claude", "projects")
-    for path in glob.glob(os.path.join(base, "**", "*.jsonl"), recursive=True):
+    for path in rutas_claude():
         try:
             if os.path.getmtime(path) < inicio_dia:
                 continue
@@ -413,17 +480,17 @@ def claude(cache, dia, inicio_dia):
 def codex(cache, dia, inicio_dia):
     st = cache["codex"]
     hoy = datetime.now(MADRID)
-    rutas = set()
     # r20: una sesión de Codex vive en la carpeta del día en que EMPEZÓ (Trinity lleva desde el 07-10): se miran
-    # las de los últimos 14 días y se filtran por mtime de hoy.
-    for delta in range(0, 15):
-        d = hoy - timedelta(days=delta)
-        rutas.update(glob.glob(os.path.join(HOME, ".codex", "sessions", d.strftime("%Y/%m/%d"), "*.jsonl")))
-    for path in rutas:
+    # las de los últimos 14 días y se filtran por mtime de hoy. r49: + CODEX_HOME y archived_sessions, una vez por sesión.
+    for path in rutas_codex(hoy):
         try:
             if os.path.getmtime(path) < inicio_dia:
                 continue
-            f = st["files"].setdefault(path, {"off": 0, "prev": None, "tok": 0, "cache": 0, "ult": None, "cwd": None, "pp": {}})
+            # r49: clave = id de sesión (no la ruta) → una sesión movida a archived_sessions no cuenta dos veces.
+            f = st["files"].setdefault(id_sesion_codex(path), {"off": 0, "prev": None, "tok": 0, "cache": 0, "ult": None, "cwd": None, "pp": {}})
+            if f.get("path") not in (None, path):  # misma sesión en otra ruta: se relee entera desde cero
+                f.update({"off": 0, "prev": None, "tok": 0, "cache": 0, "pp": {}, "otros": {}})
+            f["path"] = path
             lineas, nuevo = lineas_nuevas(path, f["off"])
         except OSError:
             continue
@@ -1089,7 +1156,7 @@ def main():
     guardar_cache(cache)
     guardar_proyectos()
     guardar_otros()
-    cuerpo = {"maquina": maq, "agentes": agentes, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+    cuerpo = {"maquina": maq, "agentes": agentes, "agentesCompletos": True, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
     lim = limites(maq)
     if lim:
         cuerpo["limites"] = lim

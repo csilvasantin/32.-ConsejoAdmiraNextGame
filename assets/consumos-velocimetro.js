@@ -466,7 +466,7 @@
     if (!r.agente) {
       max = sin ? (estado.d1.max || 2e6) : (d.escalaMax || 2e6);
       estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin, sin ? null : tokHoyVivo(d));
-      if (tit) tit.textContent = T('Agente', 'Agent'); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
+      if (tit) tit.textContent = rotAg(); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       if (rot) rot.textContent = T('tokens hoy', 'tokens today');
       if (met) met.textContent = '';
       return max;
@@ -476,7 +476,7 @@
     max = escala(maxAg, 5e6);
     var sinA = sin || !f;
     estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA, f ? (f.conRetraso ? 0 : f.tokHoy) : null);
-    if (tit) tit.textContent = T('Agente', 'Agent');
+    if (tit) tit.textContent = rotAg();
     if (rot) rot.textContent = r.agente + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
       (f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: la aguja no la cuenta', 'no live figure: not on the needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
@@ -558,6 +558,8 @@
     var max = sin ? 2e6 : (d.escalaMax || 2e6);
     pintaSelector(d);
     pintaProyecto(d, sin);
+    var tpr = document.getElementById('vel-proy-titulo'); if (tpr) tpr.textContent = rotProy();
+    var tag = document.getElementById('vel-ag-titulo'); if (tag) tag.textContent = rotAg();
     var met = document.getElementById('vel-metodo');
     if (sin) met.textContent = T('Sin pulso en tiempo real y sin partes de Yokup. No se enseña ninguna cifra.', 'No real-time pulse and no Yokup reports. No number is shown.');
     else if (d.metodo === 'tiempo real') met.innerHTML = textoMetodo();
@@ -585,12 +587,16 @@
     return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (d) { pinta(d); return d; });
   }
   root.ConsumosVelocimetro = { leer: leer, fmt: fmt, escala: escala };
+  /** r45 (Carlos, 20:59): «PROYECTOS (x)» y «AGENTES (x)»: x = activos ahora (consumo en la última hora), en vivo. */
+  function nAgActivos(d) { return ((d && d.porAgente) || []).filter(function (a) { return a && (Number(a.tokUltimaHora != null ? a.tokUltimaHora : a.tokHora) || 0) > 0; }).length; }
+  function rotProy() { return T('Proyectos', 'Projects') + ' (' + E.proyectosActivos((estado.datos && estado.datos.porProyecto) || []).length + ')'; }
+  function rotAg() { return T('Agentes', 'Agents') + ' (' + nAgActivos(estado.datos) + ')'; }
   var H1_ES = null, TIT_ES = null;
   function rotulos() {
     var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');
     if (tv) tv.textContent = T('Tokens por hora', 'Tokens per hour');
-    if (tp) tp.textContent = T('Proyecto', 'Project');
-    if (ta) ta.textContent = T('Agente', 'Agent');
+    if (tp) tp.textContent = rotProy();
+    if (ta) ta.textContent = rotAg();
     var h1 = document.querySelector('h1');
     if (h1 && H1_ES == null && /Consumo Agentes/.test(h1.textContent)) H1_ES = h1.textContent;
     if (TIT_ES == null && /Consumo Agentes/.test(document.title)) TIT_ES = document.title;

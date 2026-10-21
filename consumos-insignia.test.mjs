@@ -41,5 +41,5 @@ test("la página pinta la insignia delante del detalle, en ámbar y verde, tambi
   assert.match(html, /\.mz-ins-pago\{background:#ffb020/);
   assert.match(html, /\.mz-ins-gratis\{background:#3ddc84/);
   assert.match(html, /\.mz-off td\.mz-td-co\{opacity:1\}/);
-  assert.match(html, /consumos-matriz\.js\?v=20261011-r29-insignia/);
+  assert.match(html, /consumos-matriz\.js\?v=20261021-r46-jensen/);
 });

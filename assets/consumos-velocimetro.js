@@ -635,6 +635,8 @@
     setInterval(function () { if (!document.hidden) leerLineas(); }, 60000);
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(function () { if (!document.hidden) leerMargen(); }, 60000);
+    // r45: en AUTO, el reloj de proyecto pasa al siguiente activo cada 15 s (repinta con los datos frescos de cada lectura).
+    setInterval(function () { if (!document.hidden && estado.datos && !estado.proyecto && Math.floor(Date.now() / 1000) % 15 === 0) pintaProyecto(estado.datos, !!estado.datos.sinDatos); }, 1000);
     setInterval(function () { var t = textoMetodo(), m = document.getElementById('vel-metodo'); if (t && m) m.innerHTML = t; }, 1000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();

@@ -175,10 +175,12 @@
       ruedas[i].firstChild.style.transform = 'translateY(' + (-pos[i] * 100 / 11).toFixed(3) + '%)';
     }
   };
-  function odometro(el, n, tokHora, activo, nVivo, periodo) {
+  function odometro(el, n, tokHora, activo, nVivo, periodo, quieto) {
     if (!el) return;
     if (!el._odo) el._odo = new Odometro(el);
     var o = el._odo, p = periodo || 'hoy';
+    // Sin uso reciente: si el pronóstico se había adelantado, vuelve al real (no se enseñan tokens que no existen).
+    if (quieto && o.mostrado != null && n != null && o.mostrado > n) o.mostrado = n;
     // Al cambiar de periodo el valor salta al nuevo (sin rodar hacia atrás ni alcanzar a 30 s); fuera de HOY queda quieto.
     if (o.periodo !== p) { o.periodo = p; o.mostrado = null; o.dia = ''; }
     if (p === 'hoy') o.pon(n, tokHora, activo, nVivo); else o.pon(n, 0, false, 0);
@@ -266,7 +268,9 @@
     b.querySelector('.vel-unidad').textContent = sin ? '' : T('tokens/hora', 'tokens/hour');
     this.arranca();
     var rm = ritmoMedio(sin ? null : tokHoy);
-    odometro(b.querySelector('.odo'), tokHoy, v, v > 0 || hayVerdes(), tokHoyVivo, this.periodo);
+    // r57 (Carlos): sin uso real reciente (último evento > 3 min) no hay pronóstico: el cuentakilómetros se queda en tokHoy.
+    var fresco = this.fresco !== false;
+    odometro(b.querySelector('.odo'), tokHoy, fresco ? v : 0, fresco && (v > 0 || hayVerdes()), tokHoyVivo, this.periodo, !fresco);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
     if (que) que.innerHTML = sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour');
@@ -480,12 +484,23 @@
   /** r39: tokens de hoy solo de fuentes en vivo (sin los agentes con retraso, p. ej. Cursor). */
   function tokHoyVivo(d) { var r = ((d && d.porAgente) || []).filter(function (a) { return a.conRetraso; }).reduce(function (s, a) { return s + (Number(a.tokHoy) || 0); }, 0); return Math.max(0, (Number(d && d.tokHoy) || 0) - r); }
   function retrasoEnProyecto(d, proy) { return ((d && d.porAgente) || []).filter(function (a) { return a.conRetraso && a.porProyecto; }).reduce(function (s, a) { return s + (Number(a.porProyecto[proy]) || 0); }, 0); }
+  /** r57: ¿hay uso REAL reciente? Algún agente en vivo (no Cursor con retraso) con último evento hace ≤ 3 min. */
+  var USO_FRESCO_MS = 3 * 60 * 1000;
+  function usoFresco(agentes, ahora) {
+    return (agentes || []).some(function (a) {
+      if (!a || a.conRetraso || a.stale) return false;
+      var t = Date.parse(a.ultimoEvento);
+      return isFinite(t) && ahora - t <= USO_FRESCO_MS;
+    });
+  }
+  root.ConsumosUsoFresco = usoFresco;
   function pintaIzquierdo(d, sin) {
     var g1 = document.getElementById('vel-g-total');
     if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
     var r = E.elegirAgente(sin ? [] : d.porAgente, estado.agente);
     var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
     var max;
+    estado.d1.fresco = usoFresco(sin ? [] : (r.agente ? (r.fila ? [r.fila] : []) : d.porAgente), Date.now());
     var per = estado.periodo, pd = per !== 'hoy' && !sin && d.periodos ? d.periodos[per] : null;
     estado.d1.periodo = per;
     if (!r.agente) {

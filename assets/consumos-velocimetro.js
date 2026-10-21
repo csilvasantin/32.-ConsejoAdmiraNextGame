@@ -464,7 +464,7 @@
     var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
     var max;
     if (!r.agente) {
-      max = sin ? (estado.d1.max || 50e6) : (d.escalaMax || 50e6);
+      max = sin ? (estado.d1.max || 2e6) : (d.escalaMax || 2e6);
       estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin, sin ? null : tokHoyVivo(d));
       if (tit) tit.textContent = T('Agente', 'Agent'); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       if (rot) rot.textContent = T('tokens hoy', 'tokens today');
@@ -555,7 +555,7 @@
     box.classList.toggle('rt', !sin && d.metodo === 'tiempo real');
     pintaSelectorAgente(d);
     pintaIzquierdo(d, sin);
-    var max = sin ? 50e6 : (d.escalaMax || 50e6);
+    var max = sin ? 2e6 : (d.escalaMax || 2e6);
     pintaSelector(d);
     pintaProyecto(d, sin);
     var met = document.getElementById('vel-metodo');

@@ -13,7 +13,7 @@ export const VENTANA_MIN = 60;
 export const MIN_VENTANA_MIN = 15;
 export const RETENCION_MS = 26 * 3600 * 1000;
 export const INTERVALO_SNAP_MS = 5 * 60 * 1000;
-export const ESCALA_MIN = 50e6;
+export const ESCALA_MIN = 2e6; // FLT-102599 (Carlos, 21-10-2026): antes 50 M fijo → con la flota a ~300 k la aguja marcaba ~0
 const H = 3600 * 1000;
 
 /** Fecha (AAAA-MM-DD) y hora decimal en Europe/Madrid de un instante. */
@@ -150,7 +150,7 @@ export function calcularVelocidad({ snaps, hoy, ahora }) {
   };
 }
 
-/** Escala del dial: 0 → max(50 M, 1,5 × pico), redondeada hacia arriba a un número «bonito». */
+/** Escala del dial: 0 → max(2 M, 1,5 × pico 24 h) (como los diales por agente), redondeada hacia arriba a un número «bonito». */
 export function escala(pico) {
   const bruto = Math.max(ESCALA_MIN, 1.5 * (Number(pico) || 0));
   const mag = Math.pow(10, Math.floor(Math.log10(bruto)));

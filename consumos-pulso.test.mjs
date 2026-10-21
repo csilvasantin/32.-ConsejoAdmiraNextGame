@@ -238,15 +238,26 @@ test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma en
   assert.equal(m.tokHoy, 1000000 + 50000 + 2000);
   const sumaAg = m.porAgente.reduce((t, a) => t + (a.tokHora || 0), 0);
   const sumaPr = m.porProyecto.reduce((t, x) => t + (x.tokHora || 0), 0);
-  assert.equal(sumaAg, m.tokHora);
-  assert.ok(Math.abs(sumaPr - (m.tokHora - 1000)) <= m.porProyecto.length + 1, `Σ proyectos del pulso (${sumaPr}) = Σ agentes con pulso`);
+  // FLT-102599: la última hora con datos de Cursor entra en la aguja como estimado aparte.
+  assert.equal(m.tokHoraEstimado, 600000);
+  assert.equal(sumaAg + m.tokHoraEstimado, m.tokHora);
+  assert.ok(Math.abs(sumaPr - (m.tokHora - m.tokHoraEstimado - 1000)) <= m.porProyecto.length + 1, `Σ proyectos del pulso (${sumaPr}) = Σ agentes con pulso`);
   assert.equal(m.porProyecto.find((x) => x.proyecto === "admiranext.com").tokHoy, 1000000);
   assert.match(m.etiqueta, /Cursor \(datos con ~5 h de retraso\)/);
   const g = m.porAgente.find((a) => a.agente === "Merovingio");
   assert.equal(g.modelo, "Grok Bot / Cursor Pro");
   // r39: Cursor (retraso) fuera de todo lo «en vivo»: ni en la velocidad de la flota ni en los agentes en tiempo real; sí en tokHoy.
   assert.equal(g.tokHora, null);
-  assert.equal(m.tokHora, m.porAgente.filter((a) => !a.conRetraso).reduce((t, a) => t + (a.tokHora || 0), 0));
+  assert.equal(m.tokHora, m.porAgente.filter((a) => !a.conRetraso).reduce((t, a) => t + (a.tokHora || 0), 0) + m.tokHoraEstimado);
   assert.equal(m.agentesTiempoReal, 1, "solo Smith es en vivo");
   assert.equal(g.proyectoAhora, "admiranext.com");
+});
+
+test("FLT-102599: fuera las filas sin señal de hoy (MacBookAir16plata del 12-oct no infla tokHoy)", () => {
+  const viejo = Date.parse("2026-10-12T12:57:00Z");
+  const docs = [{ maquina: "MacBookAir16plata", agentes: { Oraculo: { motor: "codex", tokHoy: 2889083, ultimoEvento: new Date(viejo).toISOString(), ultimoPulso: viejo, serie: [] } } },
+    { maquina: "MacMini", agentes: { Smith: { motor: "grok", ultimoPulso: AHORA - 20000, porProyecto: { "admira.live": 50000 }, tokHoy: 50000, serie: [[s(16), 10000, 0, { "admira.live": 10000 }], [s(0), 50000, 0, { "admira.live": 50000 }]] } } }];
+  const m = mezclar(null, docs, AHORA);
+  assert.ok(!m.porAgente.some((a) => a.maquina === "MacBookAir16plata"));
+  assert.equal(m.tokHoy, 50000);
 });

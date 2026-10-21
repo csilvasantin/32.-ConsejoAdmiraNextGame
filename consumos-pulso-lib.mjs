@@ -24,7 +24,7 @@
  *    Bot): sus partes de Yokup (p. ej. la ESTIMACIÓN de Woz por consumo_reportar) se quitan de la suma → sin doble conteo.
  *  - «grok»: Grok CLI local (Smith en el Mac mini, ~/.grok/sessions/<cwd>/<id>/usage.json), mismo pulso de 60 s que Claude/Codex.
  */
-import { incremento } from "./consumos-velocidad-lib.mjs";
+import { incremento, madrid } from "./consumos-velocidad-lib.mjs";
 import { agenteVisible } from "./consumos-perfiles.mjs";
 
 export const KEY_PREFIX = "consumos:pulso:v1:";
@@ -417,12 +417,22 @@ export function proyectoDeAgente(a, ahora) {
   return r ? r[0] : null;
 }
 
+/** ¿El agente ha dado señal hoy (Madrid)? Último evento o último pulso con fecha de hoy. */
+export function deHoy(a, ahora) {
+  const hoy = madrid(ahora).dia;
+  const ts = [a && a.ultimoEvento, a && a.ultimoPulso].map((x) => (typeof x === "number" ? x : Date.parse(x))).filter(Number.isFinite);
+  return ts.some((t) => madrid(t).dia === hoy);
+}
+
 /** Documentos de máquina → lista plana de agentes con sus medidas. */
 export function agentesDePulso(docs, ahora) {
   const out = [];
   for (const doc of docs || []) {
     if (!doc || !doc.agentes) continue;
     for (const [agente, a] of Object.entries(doc.agentes)) {
+      // FLT-102599 (4): fuera las filas cuyo último evento y último pulso no son de hoy (Madrid): un Mac apagado desde
+      // hace días (p. ej. MacBookAir16plata del 12-oct) inflaba tokHoy con totales viejos.
+      if (!deHoy(a, ahora)) continue;
       const ret = conRetraso(a);
       // r42: la bolsa de Grok Bot («Grok Bot (Consejo)») se enseña como Merovingio.
       out.push({ agente: agenteVisible(agente), maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
@@ -478,7 +488,10 @@ export function mezclar(yk, docs, ahora) {
     .sort((a, b) => (b.tokHora || 0) - (a.tokHora || 0) || (b.tokHoy || 0) - (a.tokHoy || 0));
   const medidos = porAgente.filter((a) => Number.isFinite(a.tokHora));
   if (!frescos.length && !yk) return { sinDatos: true, tokHora: null, porAgente, metodo: null, porProyecto: proyectosDePulso(docs, ahora).map((p) => ({ ...p, tokHora: null })), proyectoTop: null };
-  const tokHora = medidos.reduce((s, a) => s + a.tokHora, 0);
+  // FLT-102599 (3): los consejeros y Merovingio (CSV de Cursor, ~13 min de retraso, tokHora null) entran en la aguja
+  // como ESTIMADO con su última hora con datos (tokHoraRetraso). Va aparte en tokHoraEstimado para que se vea.
+  const tokHoraEstimado = porAgente.filter((a) => a.conRetraso && !a.stale && Number.isFinite(a.tokHoraRetraso)).reduce((s, a) => s + a.tokHoraRetraso, 0);
+  const tokHora = medidos.reduce((s, a) => s + a.tokHora, 0) + tokHoraEstimado;
   const vivos = frescos.filter((a) => !a.conRetraso); // r39: solo fuentes en vivo para lo que es «ahora»
   const tokHoy = porAgente.reduce((s, a) => s + (Number(a.tokHoy) || 0), 0);
   const suma = (k) => vivos.reduce((s, a) => s + (a[k] || 0), 0);
@@ -490,7 +503,7 @@ export function mezclar(yk, docs, ahora) {
   const proys = proyectosDePulso(docs, ahora);
   return {
     sinDatos: false,
-    tokHora: Math.round(tokHora),
+    tokHora: Math.round(tokHora), tokHoraEstimado: Math.round(tokHoraEstimado),
     metodo: frescos.length ? "tiempo real" : yk.metodo,
     etiqueta: frescos.length ? (deYokup.length ? "tiempo real + partes Yokup" : "tiempo real") + etqRet : yk.etiqueta,
     ventanaMin: frescos.length ? 15 : yk.ventanaMin,

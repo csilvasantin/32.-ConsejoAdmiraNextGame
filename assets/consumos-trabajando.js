@@ -44,14 +44,14 @@
     return en() ? v + ' ago' : 'hace ' + v;
   }
   function retrato(t) {
-    var r = t.retrato, ini = esc(String(t.agente || '?').slice(0, 2));
+    var r = t.retrato, ini = esc(String(vis(t.agente) || '?').slice(0, 2));
     if (r && (r.cara || r.crop)) {
       // Recorte de la cara en la ilustración del Consejo («cara» del servidor; «crop» antiguo = cuerpo → 42 % de arriba).
       var c = r.cara || r.crop, h = r.cara ? c.h : c.h * 0.42, w = c.w;
       var sx = (10000 / w).toFixed(1), sy = (10000 / h).toFixed(1), px = (c.l / (100 - w) * 100).toFixed(2), py = (c.t / (100 - h) * 100).toFixed(2);
-      return '<span class="tr-foto" role="img" aria-label="' + esc(t.agente) + '" style="background-image:url(\'' + esc(r.img) + '\');background-size:' + sx + '% ' + sy + '%;background-position:' + px + '% ' + py + '%"></span>';
+      return '<span class="tr-foto" role="img" aria-label="' + esc(vis(t.agente)) + '" style="background-image:url(\'' + esc(r.img) + '\');background-size:' + sx + '% ' + sy + '%;background-position:' + px + '% ' + py + '%"></span>';
     }
-    if (r && r.img) return '<span class="tr-foto" role="img" aria-label="' + esc(t.agente) + '" style="background-image:url(\'' + esc(r.img) + '\');background-size:cover;background-position:center 25%"></span>';
+    if (r && r.img) return '<span class="tr-foto" role="img" aria-label="' + esc(vis(t.agente)) + '" style="background-image:url(\'' + esc(r.img) + '\');background-size:cover;background-position:center 25%"></span>';
     return '<span class="tr-foto tr-ini" aria-hidden="true">' + ini + '</span>';
   }
   /** r40: «≈ 2,5 M tok/h (15 min × 4) · 868 k última hora»; «sin medición» si no hay medición de tokens. */
@@ -66,6 +66,8 @@
   }
   // r18 (Carlos, 15:55): la familia visible es «GrokBot», nunca «Grok» a secas; «Grok CLI» → «GrokBot CLI». Se respetan
   // los nombres de modelo con versión («Grok 4.7», «Grok Heavy», «grok-4.7») y los nombres de consejeros/URLs (no llevan «Grok»).
+  /** #6961 (Carlos, 21-10-2026): etiqueta visible «Jensen» para la silla Huang (la silla interna sigue siendo Huang). */
+  function vis(n) { return n === 'Huang' ? 'Jensen' : n; }
   function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot').replace(/(^|· )grok(?= ·|$)/g, '$1GrokBot CLI'); }
   /** r28-sup: «GrokBot (asistente)» → 'GrokBot (assistant)' en inglés. */
   function rt(s) { s = gb(s); return s && en() ? String(s).replace(/\(asistente\)/g, '(assistant)') : s; }
@@ -110,7 +112,7 @@
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
-      '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
+      '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(vis(t.agente)) + '</b>' +
       '<small class="tr-maq tr-rot"><span class="tr-a">' + esc([maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span><span class="tr-c" title="' + esc(focoTitulo(t)) + '">' + esc(focoTxt(t) || [maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span></small>' +
       '<small class="tr-que">' + linea + '</small>' + superficies(t) + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
   }
@@ -173,7 +175,7 @@
     function chip(t) {
       var gris = t.estado === 'gris';
       var est = gris ? T('en espera', 'idle') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
-      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + (gris && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : '') + '</span>';
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + (gris && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + altChip(t) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : '') + '</span>';
     }
     return vivos.map(chip).join('') + grises.map(chip).join('');
   }

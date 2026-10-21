@@ -315,7 +315,7 @@
     if (!box) return;
     if (!d || d.rango !== LIN.rango) { box.innerHTML = '<p class="vel-spark-pie"><span>' + T('Leyendo líneas de código…', 'Reading lines of code…') + '</span></p>'; return; }
     if (d.fuente === 'ninguna') { box.innerHTML = '<p class="vel-spark-pie"><span>' + T('Sin datos de líneas de código todavía.', 'No lines-of-code data yet.') + '</span></p>'; return; }
-    var ags = (d.lineas.porAgente || []).slice(0, 6).map(function (a) { return esc(gb(a.agente)) + ' <b>' + fmt(a.lineas) + '</b>'; }).join(' · ');
+    var ags = (d.lineas.porAgente || []).slice(0, 6).map(function (a) { return esc(gb(vis(a.agente))) + ' <b>' + fmt(a.lineas) + '</b>'; }).join(' · ');
     box.innerHTML = grafica(d.lineas.serie.map(function (x) { return x.lineas; }), { barras: true, clase: 'vel-lin', rango: d.rango, unidad: T('líneas', 'lines') + '/' + unidadPaso(d.rango), titulo: T('líneas de código', 'lines of code'), aria: T('Líneas de código escritas por los agentes', 'Lines of code written by the agents') }) +
       '<p class="vel-lin-pie">' + T('Líneas añadidas en el rango', 'Lines added in range') + ': <b>' + fmt(d.lineas.total) + '</b>' + (ags ? ' · ' + ags : '') +
       ' · <span title="' + esc(d.metodo || '') + '">' + (d.fuente === 'commits' ? T('commits de la rama principal', 'main-branch commits') + (d.actualizado ? ' · ' + T('leídos ', 'read ') + new Date(d.actualizado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }) : '') : T('fotos 00:00/12:00 (escalonado)', '00:00/12:00 snapshots (stepped)')) + '</span></p>';
@@ -341,7 +341,7 @@
     if (!d || d.sinDatos) { el.textContent = T('Sin pulso ahora', 'No pulse right now'); return; }
     var ags = (d.porAgente || []).filter(function (a) { return a.tokHora > 0; }).sort(function (x, y) { return y.tokHora - x.tokHora; });
     var p = [];
-    if (ags.length) p.push('★ <b>' + esc(ags[0].agente) + '</b> ' + fmt(ags[0].tokHora) + ' ' + T('tokens/hora', 'tokens/hour'));
+    if (ags.length) p.push('★ <b>' + esc(vis(ags[0].agente)) + '</b> ' + fmt(ags[0].tokHora) + ' ' + T('tokens/hora', 'tokens/hour'));
     else p.push(T('nadie quemando ahora', 'nobody burning now'));
     p.push(T('hoy ', 'today ') + '<b>' + fmt(d.tokHoy) + '</b> tok');
     if (LIN.d && LIN.d.fuente === 'commits') {
@@ -386,6 +386,8 @@
     return T('Cursor · datos con ' + cuanto + ' de retraso', 'Cursor · data ' + cuanto + ' behind');
   }
   // r18: familia visible «GrokBot» (igual que consumos-trabajando.js / consumos-matriz.js).
+  /** #6961 (Carlos, 21-10-2026): etiqueta visible «Jensen» para la silla Huang (la silla interna sigue siendo Huang). */
+  function vis(n) { return n === 'Huang' ? 'Jensen' : n; }
   function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot').replace(/(^|· )grok(?= ·|$)/g, '$1GrokBot CLI'); }
   function nombreMotor(m) { return m === 'claude' ? 'Claude' : m === 'codex' ? 'Codex' : m === 'cursor' ? 'Cursor' : m === 'grok' ? 'GrokBot CLI' : (m || ''); }
   function txtEstado(est) { return est === 'verde' ? T('activo ahora', 'active now') : est === 'amarillo' ? T('hoy sí, ahora parado', 'today yes, idle now') : T('sin datos hoy', 'no data today'); }
@@ -427,7 +429,7 @@
       (a.conRetraso ? ' · <span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : '');
     if (a.sinDatos && pf && pf.nota) lin1 += ' · ' + esc(pf.nota);
     var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + E.colorMargen(m.pct) + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' + notaHtml(m) : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
-    return { est: est, html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(a.agente) + (a.conCarlos ? ' <em class="con-carlos">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><small>' + lin1 + '</small>' + (lin2 ? '<small class="dd-sub">' + lin2 + '</small>' : '') + '</span>' };
+    return { est: est, html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(vis(a.agente)) + (a.conCarlos ? ' <em class="con-carlos">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><small>' + lin1 + '</small>' + (lin2 ? '<small class="dd-sub">' + lin2 + '</small>' : '') + '</span>' };
   }
   function pintaSelectorAgente(d) {
     if (!DD.ag) return;
@@ -440,7 +442,7 @@
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     ags.forEach(function (a) {
       var f = filaAgenteInfo(a, perfilDe(d, a.agente));
-      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(a.agente) + '</span>' });
+      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(vis(a.agente)) + '</span>' });
     });
     DD.ag.pon(items, estado.agente || '');
   }
@@ -477,7 +479,7 @@
     var sinA = sin || !f;
     estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA, f ? (f.conRetraso ? 0 : f.tokHoy) : null);
     if (tit) tit.textContent = rotAg();
-    if (rot) rot.textContent = r.agente + ' · ' + T('tokens hoy', 'tokens today');
+    if (rot) rot.textContent = vis(r.agente) + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
       (f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: la aguja no la cuenta', 'no live figure: not on the needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
        f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') +
@@ -528,8 +530,8 @@
       var origen = a.conRetraso ? (a.stale ? T('sin export de Cursor ', 'no Cursor export ') + hace(a.haceS) : esc(txtRetraso(a))) :
         a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
       var cls = [parado ? 'parado' : '', a === lider ? 'lider' : '', a.agente === estado.agente ? 'sel' : ''].filter(Boolean).join(' ');
-      return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + a.agente + T(' en el velocímetro', ' on the gauge')) + '">' +
-        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(gb(a.agente)) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
+      return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + vis(a.agente) + T(' en el velocímetro', ' on the gauge')) + '">' +
+        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(gb(vis(a.agente))) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
         (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
         '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (a.conRetraso ? '<span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b>' +
         '<small>' + T('hoy ', 'today ') + '<b>' + fmt(a.tokHoy) + '</b>' + (a.maquina ? ' · ' + esc(a.maquina) : '') + (a.proyectoAhora ? ' · ' + T('proyecto ', 'project ') + '<b>' + esc(nomP(a.proyectoAhora)) + '</b>' : '') +

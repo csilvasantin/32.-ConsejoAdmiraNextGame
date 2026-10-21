@@ -198,3 +198,69 @@ export function proyectoAhora(porProyecto) {
     .sort((a, b) => n(b.tokHora) - n(a.tokHora) || n(b.tokHoy) - n(a.tokHoy) || (a.proyecto === "otros") - (b.proyecto === "otros"));
   return o.length ? o[0].proyecto : null;
 }
+
+/* ---------- Periodos del cuentakilómetros (Carlos, 21-10-2026): HOY → AYER → SEMANA → MES ----------
+ * Todo en días de Europe/Madrid. Semana = lunes de esta semana … hoy; mes = día 1 del mes … hoy.
+ * Hoy = el tokHoy en vivo del velocímetro (mismo número que ya enseñaba el cuentakilómetros).
+ * Días pasados: 1) el LIBRO DIARIO (KV consumos:vel:dias:v1), que guarda el máximo tokHoy de la flota visto cada día
+ * (misma base que «hoy»); 2) si ese día no está en el libro, los partes diarios de Yokup (fleet/consumo?dias=31) SIN
+ * caché (total − cache, la misma base que el pulso, que manda la caché aparte). Si Yokup no respondió y el día no está en
+ * el libro, el día es desconocido: no suma y se dice en «cobertura». Nada se inventa. */
+export const KEY_DIAS = "consumos:vel:dias:v1";
+export const RETENCION_DIAS = 40;
+const sumaDias = (dia, n) => { const d = new Date(dia + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
+/** { hoy, ayer, lunes, dia1 } (AAAA-MM-DD, Madrid) de un instante. */
+export function diasPeriodo(ahora) {
+  const hoy = madrid(ahora).dia;
+  const dow = (new Date(hoy + "T12:00:00Z").getUTCDay() + 6) % 7; // lunes = 0
+  return { hoy, ayer: sumaDias(hoy, -1), lunes: sumaDias(hoy, -dow), dia1: hoy.slice(0, 8) + "01" };
+}
+
+/** Anota en el libro diario el tokHoy de la flota (se queda el máximo del día) y poda lo anterior a 40 días. */
+export function anotarDia(libro, dia, tok, ahora) {
+  const out = {};
+  const corte = sumaDias(dia, -RETENCION_DIAS);
+  for (const [k, v] of Object.entries(libro && typeof libro === "object" ? libro : {})) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && k >= corte && v && Number.isFinite(v.tok)) out[k] = v;
+  if (Number.isFinite(tok) && tok >= 0 && (!out[dia] || tok > out[dia].tok)) out[dia] = { tok: Math.round(tok), ts: ahora };
+  return out;
+}
+
+/** Partes de Yokup → { dia: tokens sin caché } (por owner y día el máximo, y luego la suma de owners). */
+export function yokupPorDia(d) {
+  const por = {};
+  for (const p of (d && d.partes) || []) {
+    const x = (p && p.datos) || {};
+    if (!p || !/^\d{4}-\d{2}-\d{2}$/.test(p.dia) || !Number.isFinite(x.total)) continue;
+    const sin = Math.max(0, x.total - (Number(x.cache) || 0));
+    const k = p.owner + "|" + p.machine;
+    por[p.dia] = por[p.dia] || {};
+    por[p.dia][k] = Math.max(por[p.dia][k] || 0, sin);
+  }
+  const out = {};
+  for (const [dia, m] of Object.entries(por)) out[dia] = Object.values(m).reduce((s, v) => s + v, 0);
+  return out;
+}
+
+/**
+ * Agregados por periodo. yokup = salida de yokupPorDia o null (sin respuesta); yokupDesde = primer día que cubre la
+ * consulta (los días sin parte dentro de ese rango cuentan 0: nadie declaró consumo).
+ * → { zona, hoy, ayer, semana, mes } con { tok|null, desde, hasta, dias:[{dia,tok|null,fuente}], cobertura:{conDatos,total} }.
+ */
+export function periodosTokens({ tokHoy, libro, yokup, yokupDesde, ahora }) {
+  const p = diasPeriodo(ahora);
+  const dia = (d) => {
+    if (d === p.hoy) return Number.isFinite(tokHoy) ? { dia: d, tok: tokHoy, fuente: "en vivo" } : { dia: d, tok: null, fuente: "sin datos" };
+    if (libro && libro[d] && Number.isFinite(libro[d].tok)) return { dia: d, tok: libro[d].tok, fuente: "libro diario" };
+    if (yokup && Number.isFinite(yokup[d])) return { dia: d, tok: yokup[d], fuente: "partes Yokup (sin caché)" };
+    if (yokup && yokupDesde && d >= yokupDesde) return { dia: d, tok: 0, fuente: "partes Yokup (ninguno ese día)" };
+    return { dia: d, tok: null, fuente: "sin datos" };
+  };
+  const rango = (desde, hasta) => {
+    const dias = [];
+    for (let d = desde; d <= hasta; d = sumaDias(d, 1)) dias.push(dia(d));
+    const con = dias.filter((x) => x.tok != null);
+    return { tok: con.length ? con.reduce((s, x) => s + x.tok, 0) : null, desde, hasta, dias, cobertura: { conDatos: con.length, total: dias.length } };
+  };
+  return { zona: "Europe/Madrid", hoy: rango(p.hoy, p.hoy), ayer: rango(p.ayer, p.ayer), semana: rango(p.lunes, p.hoy), mes: rango(p.dia1, p.hoy) };
+}

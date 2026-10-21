@@ -135,7 +135,7 @@
     var seg = segundosFinHora(ahora);
     this.finHora = ahora + seg * 1000;
     this.objetivo = n + this.ritmo * seg;
-    el.setAttribute('aria-label', Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES') + ' ' + T('tokens hoy', 'tokens today'));
+    el.setAttribute('aria-label', Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES') + ' ' + rotuloPeriodo(this.periodo || 'hoy') + (el.getAttribute('role') === 'button' ? ' · ' + T('pulsa para cambiar de periodo', 'press to change period') : ''));
     this.arranca();
   };
   Odometro.prototype.avanza = function (ahora) {
@@ -175,10 +175,31 @@
       ruedas[i].firstChild.style.transform = 'translateY(' + (-pos[i] * 100 / 11).toFixed(3) + '%)';
     }
   };
-  function odometro(el, n, tokHora, activo, nVivo) {
+  function odometro(el, n, tokHora, activo, nVivo, periodo) {
     if (!el) return;
     if (!el._odo) el._odo = new Odometro(el);
-    el._odo.pon(n, tokHora, activo, nVivo);
+    var o = el._odo, p = periodo || 'hoy';
+    // Al cambiar de periodo el valor salta al nuevo (sin rodar hacia atrás ni alcanzar a 30 s); fuera de HOY queda quieto.
+    if (o.periodo !== p) { o.periodo = p; o.mostrado = null; o.dia = ''; }
+    if (p === 'hoy') o.pon(n, tokHora, activo, nVivo); else o.pon(n, 0, false, 0);
+  }
+  /* Periodos del cuentakilómetros de la flota (Carlos, 21-10-2026): cada pulsación HOY → AYER → SEMANA → MES → HOY.
+   * Días de Europe/Madrid: semana = lunes … hoy, mes = día 1 … hoy. Cifras de /api/consumos/velocidad → periodos
+   * (hoy = tokHoy en vivo; días pasados = libro diario KV o, si falta, partes diarios de Yokup sin caché). Sin datos: «—». */
+  var PERIODOS = ['hoy', 'ayer', 'semana', 'mes'];
+  function rotuloPeriodo(p) {
+    return p === 'ayer' ? T('tokens ayer', 'tokens yesterday') : p === 'semana' ? T('tokens semana', 'tokens this week') : p === 'mes' ? T('tokens mes', 'tokens this month') : T('tokens hoy', 'tokens today');
+  }
+  function fechaCorta(dia) {
+    var d = new Date(dia + 'T12:00:00Z');
+    return d.toLocaleDateString(en() ? 'en-GB' : 'es-ES', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  function textoPeriodo(per) {
+    if (!per) return T('Sin datos de este periodo', 'No data for this period');
+    var dias = per.desde === per.hasta ? fechaCorta(per.desde) : fechaCorta(per.desde) + ' – ' + fechaCorta(per.hasta);
+    var fu = {};
+    (per.dias || []).forEach(function (x) { if (x.tok != null) fu[x.fuente] = 1; });
+    return dias + ' (Madrid) · ' + per.cobertura.conDatos + '/' + per.cobertura.total + T(' días con datos', ' days with data') + (Object.keys(fu).length ? ' · ' + esc(Object.keys(fu).join(' + ')) : '');
   }
   /** Ritmo medio del día en tokens/s (tokens de hoy / segundos desde la medianoche de Madrid; mínimo 10 min). */
   function ritmoMedio(tokHoy) { if (tokHoy == null || !isFinite(tokHoy)) return 0; return Math.max(0, tokHoy) / Math.max(600, relojMadrid(Date.now()).s); }
@@ -245,7 +266,7 @@
     b.querySelector('.vel-unidad').textContent = sin ? '' : T('tokens/hora', 'tokens/hour');
     this.arranca();
     var rm = ritmoMedio(sin ? null : tokHoy);
-    odometro(b.querySelector('.odo'), tokHoy, v, v > 0 || hayVerdes(), tokHoyVivo);
+    odometro(b.querySelector('.odo'), tokHoy, v, v > 0 || hayVerdes(), tokHoyVivo, this.periodo);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
     if (que) que.innerHTML = sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour');
@@ -256,7 +277,7 @@
   function lsGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) || '' : ''; } catch (e) { return ''; } }
   function lsSet(k, v) { try { if (!root.localStorage) return; if (v) root.localStorage.setItem(k, v); else root.localStorage.removeItem(k); } catch (e) {} }
   var E = root.ConsumosElegir;
-  var estado = { datos: null, recibido: 0, proyecto: lsGet(LS_PROY) || null, agente: lsGet(LS_AG) || '', d1: null, d2: null };
+  var estado = { periodo: 'hoy', datos: null, recibido: 0, proyecto: lsGet(LS_PROY) || null, agente: lsGet(LS_AG) || '', d1: null, d2: null };
   function hace(s) {
     if (s == null || !isFinite(s)) return '';
     if (s < 90) return T('hace ', '') + Math.round(s) + ' s' + T('', ' ago');
@@ -465,13 +486,25 @@
     var r = E.elegirAgente(sin ? [] : d.porAgente, estado.agente);
     var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
     var max;
+    var per = estado.periodo, pd = per !== 'hoy' && !sin && d.periodos ? d.periodos[per] : null;
+    estado.d1.periodo = per;
     if (!r.agente) {
       max = sin ? (estado.d1.max || 2e6) : (d.escalaMax || 2e6);
-      estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin, sin ? null : tokHoyVivo(d));
+      var nOdo = per === 'hoy' ? (sin ? null : d.tokHoy) : (pd && pd.tok != null ? pd.tok : null);
+      estado.d1.pinta(sin ? 0 : d.tokHora, max, nOdo, sin, sin ? null : tokHoyVivo(d));
       if (tit) tit.textContent = rotAg(); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
-      if (rot) rot.textContent = T('tokens hoy', 'tokens today');
-      if (met) met.textContent = '';
+      if (rot) rot.textContent = rotuloPeriodo(per) + (per !== 'hoy' && nOdo == null ? ' · —' : '');
+      if (met) met.innerHTML = per === 'hoy' ? '' : textoPeriodo(pd);
       return max;
+    }
+    if (per !== 'hoy') {
+      // Histórico solo de la flota: con un agente elegido, fuera de HOY no hay cifra honesta → «—».
+      var maxA = escala(((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0), 5e6);
+      estado.d1.pinta(r.fila ? (r.fila.tokHora || 0) : 0, maxA, null, sin || !r.fila, null);
+      if (tit) tit.textContent = rotAg();
+      if (rot) rot.textContent = vis(r.agente) + ' · ' + rotuloPeriodo(per) + ' · —';
+      if (met) met.textContent = T('Sin histórico por agente: AYER/SEMANA/MES solo para «Toda la flota».', 'No per-agent history: YESTERDAY/WEEK/MONTH only for «Whole fleet».');
+      return d && d.escalaMax || maxA;
     }
     var f = r.fila;
     var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0);
@@ -605,8 +638,25 @@
     if (h1 && H1_ES != null) h1.textContent = en() ? 'AdmiraNeXT Agents Usage' : H1_ES;
     if (TIT_ES != null) document.title = en() ? 'AdmiraNeXT Agents Usage · admira.live' : TIT_ES;
   }
+  function cambiaPeriodo() {
+    estado.periodo = PERIODOS[(PERIODOS.indexOf(estado.periodo) + 1) % PERIODOS.length];
+    pintaIzquierdo(estado.datos, !estado.datos);
+  }
+  function preparaPeriodo() {
+    var el = document.querySelector('#vel-g-total .odo');
+    if (!el || el._periodo) return;
+    el._periodo = true;
+    el.classList.add('odo-periodo');
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.title = T('Pulsa: hoy → ayer → semana (lunes–hoy) → mes (día 1–hoy), Madrid', 'Press: today → yesterday → week (Mon–today) → month (1st–today), Madrid');
+    el.addEventListener('click', cambiaPeriodo);
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cambiaPeriodo(); } });
+  }
+  root.ConsumosPeriodo = { PERIODOS: PERIODOS, rotulo: function (p) { return rotuloPeriodo(p); }, actual: function () { return estado.periodo; } };
   function arranca() {
     if (!document.getElementById('velocimetro')) return;
+    preparaPeriodo();
     // r26 (Carlos): rótulos «Tokens por hora» · «Agente ·» · «Proyecto ·» (en inglés: Tokens per hour · Agent · Project).
     rotulos();
     // r11: se repintan al cambiar de idioma (antes solo al arrancar: «AGENTE» seguía en castellano con ?lang=en si el

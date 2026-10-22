@@ -144,6 +144,10 @@
     return [{ id: 'agentes', titulo: T('Agentes', 'Agents'), tarjetas: g.agentes, n: cuenta(g.agentes) },
             { id: 'consejeros', titulo: T('Consejeros', 'Councillors'), tarjetas: g.consejeros, n: cuenta(g.consejeros) }];
   }
+  /** Carlos 22-10-2026: cabecera «AGENTES (x/y)» / «CONSEJEROS (x/y)»: x = trabajando ahora (verde, la misma lógica
+   *  que el reloj «Agentes (x/y)»: «con Carlos» no cuenta como trabajando), y = total del grupo en el panel. Puro. */
+  function xyGrupo(n) { var t = (n && n.total) || 0, x = Math.min((n && n.trabajando) || 0, t); return x + '/' + t; }
+  function rotGrupo(g) { return g.titulo + ' (' + xyGrupo(g.n) + ')'; }
   function cifras(n) {
     return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle');
   }
@@ -204,12 +208,12 @@
     var gs = grupos(ts);
     // r43: una cabecera por grupo (ocupa toda la fila de la rejilla) con sus cuentas, y debajo sus tarjetas.
     ul.innerHTML = gs.map(function (g) {
-      return '<li class="tr-grupo" id="trabajando-' + g.id + '"><b>' + esc(g.titulo) + '</b> <small>' + cifras(g.n) + '</small></li>' +
+      return '<li class="tr-grupo" id="trabajando-' + g.id + '"><b>' + esc(rotGrupo(g)) + '</b> <small>' + cifras(g.n) + '</small></li>' +
         (g.tarjetas.length ? g.tarjetas.map(tarjeta).join('') : '<li class="tr-vacio">' + T('Nadie en este grupo ahora.', 'Nobody in this group right now.') + '</li>');
     }).join('');
     // r31/r43: fila compacta (zona plegada), también por grupo.
     var ch = document.getElementById('trabajando-chips');
-    ponFase(ch); ponFase(ul); if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
+    ponFase(ch); ponFase(ul); if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(rotGrupo(g)) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
     if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n) + '</span>'; }).join(' — ') + aviso(d);
     if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
       T('verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) o, en un consejero, su consejero_latido «trabajando» vigente · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · rojo = sin actividad desde hace más de 1 h, pero activo hoy (Madrid) · gris = sin actividad hoy · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
@@ -225,7 +229,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

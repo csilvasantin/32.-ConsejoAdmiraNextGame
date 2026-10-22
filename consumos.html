@@ -132,6 +132,10 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .vel-par{display:grid;grid-template-columns:1fr;gap:18px}
 @media (min-width:860px){.vel-par{grid-template-columns:1fr 1fr}}
 .vel-g{min-width:0}.vel-g h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);text-align:center;margin:4px 0 2px;font-weight:700}
+/* Carlos 22-10-2026: el rótulo «Agentes (x/y)» / «Proyectos (x/y)» nunca se corta: el contador va pegado al título (sin partir ni elipsis)
+   y, en móvil, el desplegable baja a su propia línea si no cabe. */
+#vel-ag-titulo,#vel-proy-titulo{white-space:nowrap}.tr-chiptit,.tr-grupo>b{white-space:nowrap}
+@media (max-width:560px){.vel-g h3{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:6px;row-gap:4px;font-size:12px;letter-spacing:.03em}.vel-g h3>#vel-ag-titulo,.vel-g h3>#vel-proy-titulo{flex:none;max-width:100%}.vel-g h3 .dd-boton{max-width:calc(100vw - 48px)}}
 .vel-g.sin-datos .vel-dial-svg{filter:grayscale(1) opacity(.45)}.vel-g.sin-datos .vel-cifra{color:#75aab9;text-shadow:none;font-size:clamp(34px,9vw,52px)}
 .vel.sin-datos .vel-dial{filter:none}
 .vel-sel select{background:#0a1620;color:var(--brand);border:1px solid rgba(120,243,255,.35);border-radius:8px;padding:3px 6px;font:inherit;font-size:13px;text-transform:none;letter-spacing:0;max-width:min(300px,62vw)}
@@ -493,7 +497,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-plegable.js?v=r31"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r6991-unico"></script>
 <script src="/assets/consumos-matriz.js?v=20261021-r46-jensen"></script>
-<script src="/assets/consumos-trabajando.js?v=20261022-lineas"></script>
+<script src="/assets/consumos-trabajando.js?v=20261022-titulos-xy"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/consumos-velocimetro.js?v=20261022-lineas-xy"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>

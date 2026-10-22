@@ -447,6 +447,14 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const cg = carga && typeof carga.get === "function" ? carga.get(personaCenso(x.agente)) || null : null;
     const enCurso = cg ? Number(cg.in_progress) || 0 : 0;
     const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS, enCurso, siempreVivo: VIVO_SIEMPRE.includes(x.agente), verdeGana: esConsejero(x.agente) });
+    // r53 (Carlos, 22-10-2026 22:43): SIN MARGEN para AGENTES. Verde solo si gasta tokens de verdad (tokHora del
+    // pulso > 0 o tokUltimaHora > 0) o su app de escritorio está en uso. Proceso vivo / latido / encargos abiertos ya no
+    // bastan: pasa a gris (y aplicarRojo lo pone en rojo si hubo actividad hoy). Consejeros: sin cambios.
+    if (st.estado === "verde" && !esConsejero(x.agente)) {
+      const gasta = Number(tokVivo) > 0 || !!(p && Number(p.tokUltimaHora) > 0);
+      const appUso = (supPulso || []).some((s) => s && s.tipo === "app" && s.enUso && s.agente && canonico(s.agente) === x.agente);
+      if (!gasta && !appUso) { st.estado = "gris"; st.motivo = "sin tokens en la última hora (" + st.motivo + ")"; }
+    }
     // r4: instancias vivas (< 15 min) por máquina+runtime; las de OpenCode/DeepAgents/Nemotron son el plan C gratis.
     const inst = new Map();
     for (const e of x.latidos) if (ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S) inst.set(claveMaquina(e.machine) + "|" + sinTilde(e.runtime), esGratis(e.runtime, e.model));

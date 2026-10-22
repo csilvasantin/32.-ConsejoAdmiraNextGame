@@ -33,6 +33,30 @@ const MAQUINAS = {
   macbookpronegro14: { maquina: 'MacBookProNegro14', alias: ['mbp14', 'macbook pro 14', 'macbookpro14', 'negro14', 'macbookpronegro14.local'], agentes: ['Neo', 'Trinity', 'Smith'] },
 };
 
+/** XPACIOS: grupos de equipos (Carlos, 22-10-2026). «handOFF AdmiraNeXT» = handOFF de cada equipo
+ *  del xpacio. Para añadir uno: clave → { nombre, alias, equipos:[claves de MAQUINAS] }. El poller
+ *  recibe la lista en la marca ([equipo_* … equipos=MacMini,MacStudio]), así que un xpacio nuevo
+ *  funciona desde la tool sin tocar los pollers (solo para escribirlo a mano en Agora/Telegram). */
+export const XPACIOS = {
+  admiranext: { nombre: 'AdmiraNeXT', alias: ['admira next', 'admira-next', 'xpacio admiranext'], equipos: ['macmini', 'macstudio'] },
+};
+
+/** «AdmiraNeXT», «admira next» → 'admiranext'; null si no es un xpacio. */
+export function xpacioCanonico(nombre) {
+  const n = norm(nombre);
+  if (!n) return null;
+  for (const [clave, x] of Object.entries(XPACIOS)) if (n === clave || norm(x.nombre) === n || x.alias.some((a) => norm(a) === n)) return clave;
+  return null;
+}
+
+/** Nombre → { tipo:'xpacio'|'equipo', nombre, equipos:[clave…] } o null. */
+export function expandir(nombre) {
+  const x = xpacioCanonico(nombre);
+  if (x) return { tipo: 'xpacio', clave: x, nombre: XPACIOS[x].nombre, equipos: [...XPACIOS[x].equipos] };
+  const e = equipoCanonico(nombre);
+  return e ? { tipo: 'equipo', clave: e, nombre: MAQUINAS[e].maquina, equipos: [e] } : null;
+}
+
 /** Tabla por defecto: { macmini: { maquina, agentes:[{persona, runtime, consejero}], consejeros:[…] } }. */
 export function tablaEquipos() {
   const t = {};
@@ -106,15 +130,16 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
   }
 
   /** setup modo ahorro <equipo>: SOLO monitores en negro; los agentes siguen trabajando. */
-  async function ahorro({ equipo, prueba = false }) {
+  async function ahorro1({ equipo, prueba = false }, silencio = false) {
     const eq = resolver(equipo);
     const plan = `AgoraMatrix «setup modo ahorro ${eq.maquina} · [equipo_ahorro]» → agora-cmd-poller de ${eq.maquina}: pmset displaysleepnow (no toca agentes, apps ni el Mac)`;
     if (prueba) return { ok: true, prueba: true, accion: 'ahorro', equipo: eq.maquina, plan };
+    if (silencio) return { ok: true, accion: 'ahorro', equipo: eq.maquina };
     const monitores = await intentar(async () => { await api.agoraDecir({ texto: `setup modo ahorro ${eq.maquina} · [equipo_ahorro] monitores en negro; los agentes siguen trabajando`, de: `ahorro · ${quien}`, tipo: 'ahorro' }); return { via: plan }; });
     return { ok: monitores.ok, accion: 'ahorro', equipo: eq.maquina, monitores };
   }
 
-  async function handon({ equipo, prueba = false, nota = '' }) {
+  async function handon1({ equipo, prueba = false, nota = '' }, silencio = false) {
     const eq = resolver(equipo);
     const hora = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }).format(ahora());
     const extra = nota ? ` Nota de Carlos: ${nota}` : '';
@@ -141,7 +166,7 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
     }
     const consejeros = [];
     for (const s of eq.consejeros) consejeros.push(await avisarConsejero(s, textoConsejero(s), eq));
-    const monitores = await intentar(async () => {
+    const monitores = silencio ? { ok: true, via: 'aviso único del xpacio' } : await intentar(async () => {
       await api.agoraDecir({ texto: `handON ${eq.maquina} · [equipo_handon] enciende monitores y empieza la jornada: ${eq.agentes.map((a) => a.nombre).join(', ')} + ${eq.consejeros.map((s) => NOMBRE[s] || s).join(', ')}`, de: `handON · ${quien}`, tipo: 'handon' });
       return { via: `AgoraMatrix → agora-cmd-poller ${eq.maquina} (≤15 s)` };
     });
@@ -150,7 +175,7 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
     return { ok, accion: 'handON', equipo: eq.maquina, agentes, consejeros, monitores, latido };
   }
 
-  async function handoff({ equipo, prueba = false, apagar = true, gracia = 10 }) {
+  async function handoff1({ equipo, prueba = false, apagar = true, gracia = 10 }, silencio = false) {
     gracia = Math.max(0, Math.min(60, Number(gracia) || 0));
     const eq = resolver(equipo);
     const { mmdd, iso } = hoyMadrid(ahora());
@@ -201,7 +226,7 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
     const consejeros = [];
     for (const s of eq.consejeros) consejeros.push(await avisarConsejero(s, textoConsejero(s), eq));
     // 2) Publicar el resumen y, al final, apagar monitores (el poller lo hace al ver «handOFF <Equipo>»).
-    const monitores = await intentar(async () => {
+    const monitores = silencio ? { ok: true, via: 'aviso único del xpacio' } : await intentar(async () => {
       const cierre = ` · [equipo_handoff pausa=${gracia}${apagar ? '' : ' monitores=no'}]${apagar ? ' apaga monitores' : ''}`;
       await api.agoraDecir({ texto: `handOFF ${eq.maquina}${cierre} · resumen ${iso}: ${lineas}. Hechos hoy ${resumen.totales.hechos_hoy}, pendientes ${resumen.totales.pendientes}.`.slice(0, 1900), de: `handOFF · ${quien}`, tipo: 'handoff' });
       return { via: apagar ? `AgoraMatrix → agora-cmd-poller ${eq.maquina}: pmset displaysleepnow (≤15 s)` : 'resumen publicado; monitores sin tocar' };
@@ -211,5 +236,34 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
     return { ok, accion: 'handOFF', equipo: eq.maquina, resumen, agentes, consejeros, monitores, latido, pausa_en_min: gracia };
   }
 
-  return { handon, handoff, ahorro, resolver };
+  // Xpacio: la acción de cada equipo sin su aviso en Agora y UN aviso común con la lista de
+  // equipos en la marca, para que cada poller actúe si su Mac está en ella.
+  function destino(a) {
+    const nombre = a.xpacio || a.equipo;
+    const d = expandir(nombre);
+    if (!d) throw new Error(`equipo o xpacio desconocido «${nombre}»: equipos ${Object.values(MAQUINAS).map((m) => m.maquina).join(', ')}; xpacios ${Object.values(XPACIOS).map((x) => x.nombre).join(', ')}`);
+    return d;
+  }
+  function porXpacio(fn, accion, marca, textoAgora) {
+    return async (a = {}) => {
+      const d = destino(a);
+      if (d.tipo === 'equipo') return fn({ ...a, equipo: d.clave });
+      const maquinas = d.equipos.map((k) => MAQUINAS[k].maquina);
+      const equipos = [];
+      for (const k of d.equipos) equipos.push(await intentar(() => fn({ ...a, equipo: k }, true)));
+      const tag = `[${marca(a)} equipos=${maquinas.join(',')}]`;
+      const out = { accion, xpacio: d.nombre, equipos_xpacio: maquinas, equipos };
+      if (a.prueba) return { ok: equipos.every((x) => x.ok), prueba: true, ...out, aviso: `AgoraMatrix «${accion} ${d.nombre} · ${tag}» → actúan los pollers de ${maquinas.join(' y ')}`, nota: 'modo prueba: no se ha escrito nada' };
+      const monitores = await intentar(async () => { await api.agoraDecir({ texto: `${accion} ${d.nombre} · ${tag} ${textoAgora(a, equipos)}`.slice(0, 1900), de: `${accion} · ${quien}`, tipo: { handON: 'handon', handOFF: 'handoff' }[accion] || 'ahorro' }); return { via: `AgoraMatrix → agora-cmd-poller de ${maquinas.join(', ')} (≤15 s)` }; });
+      return { ok: monitores.ok && equipos.every((x) => x.ok), ...out, monitores };
+    };
+  }
+  const handon = porXpacio(handon1, 'handON', () => 'equipo_handon', () => 'enciende monitores y empieza la jornada');
+  const handoff = porXpacio(handoff1, 'handOFF', (a) => {
+    const g = Math.max(0, Math.min(60, Number(a.gracia ?? 10) || 0));
+    return `equipo_handoff pausa=${g}${a.apagar === false ? ' monitores=no' : ''}`;
+  }, (a, eqs) => `${a.apagar === false ? '' : 'apaga monitores'} · ${eqs.map((e) => `${e.equipo}: hechos ${e.resumen ? e.resumen.totales.hechos_hoy : '?'}, pendientes ${e.resumen ? e.resumen.totales.pendientes : '?'}`).join('; ')}. Nunca se apagan ni duermen los Mac.`);
+  const ahorro = porXpacio(ahorro1, 'setup modo ahorro', () => 'equipo_ahorro', () => 'monitores en negro; los agentes siguen trabajando');
+
+  return { handon, handoff, ahorro, resolver, expandir };
 }

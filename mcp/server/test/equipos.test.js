@@ -88,7 +88,7 @@ test('handOFF: resumen de hoy, cierre a todos y apagado al final; en prueba no a
 });
 
 test('equipo desconocido falla legible', async () => {
-  await assert.rejects(() => crearEquipos(falsos()).handon({ equipo: 'Tostadora' }), /equipo desconocido/);
+  await assert.rejects(() => crearEquipos(falsos()).handon({ equipo: 'Tostadora' }), /equipo o xpacio desconocido/);
 });
 
 test('setup modo ahorro: solo monitores, sin encargos ni mensajes', async () => {
@@ -103,4 +103,42 @@ test('handON deja a los consejeros trabajando con su latido', async () => {
   const f = falsos();
   const r = await crearEquipos({ ...f, ahora: AHORA }).handon({ equipo: 'MacStudio' });
   assert.deepEqual(r.latido.map((x) => [x.consejero, x.modo]), [['Jobs', 'trabajando'], ['Wozniak', 'trabajando']]);
+});
+
+test('XPACIOS: AdmiraNeXT = MacMini + MacStudio; alias y desconocidos', async () => {
+  const { XPACIOS, xpacioCanonico, expandir } = await import('../src/equipos.js');
+  assert.deepEqual(XPACIOS.admiranext.equipos, ['macmini', 'macstudio']);
+  assert.equal(xpacioCanonico('AdmiraNeXT'), 'admiranext');
+  assert.equal(xpacioCanonico('admira next'), 'admiranext');
+  assert.equal(xpacioCanonico('MacMini'), null);
+  assert.deepEqual(expandir('AdmiraNeXT').equipos, ['macmini', 'macstudio']);
+  assert.deepEqual(expandir('mbp16').equipos, ['macbookpro16']);
+  assert.equal(expandir('Tostadora'), null);
+});
+
+test('handOFF AdmiraNeXT: cierre de los dos equipos y UN aviso con la lista de equipos', async () => {
+  const f = falsos();
+  const r = await crearEquipos({ ...f, ahora: AHORA }).handoff({ equipo: 'AdmiraNeXT' });
+  assert.equal(r.ok, true);
+  assert.equal(r.xpacio, 'AdmiraNeXT');
+  assert.deepEqual(f.log.encargos.map((e) => [e.persona, e.maquina]), [['Oraculo', 'MacMini'], ['Morfeo', 'MacMini'], ['Neo', 'MacStudio'], ['Trinity', 'MacStudio']]);
+  assert.deepEqual(f.log.mensajes.map((m) => m.para), ['Disney', 'Lucas', 'Jobs', 'Wozniak']);
+  assert.equal(f.log.agora.length, 1);
+  assert.match(f.log.agora[0].texto, /^handOFF AdmiraNeXT · \[equipo_handoff pausa=10 equipos=MacMini,MacStudio\]/);
+  assert.deepEqual(f.lat.map((x) => x[1].modo), ['reposo', 'reposo', 'reposo', 'reposo']);
+});
+
+test('handON y ahorro por xpacio (param xpacio); prueba no escribe nada', async () => {
+  const f = falsos();
+  const eq = crearEquipos({ ...f, ahora: AHORA });
+  for (const fn of ['handon', 'handoff', 'ahorro']) {
+    const p = await eq[fn]({ xpacio: 'AdmiraNeXT', prueba: true });
+    assert.equal(p.prueba, true); assert.equal(p.equipos.length, 2); assert.ok(p.equipos.every((x) => x.ok));
+  }
+  assert.equal(f.log.encargos.length + f.log.mensajes.length + f.log.agora.length + f.lat.length, 0);
+  await eq.handon({ xpacio: 'admira next' });
+  assert.match(f.log.agora[0].texto, /^handON AdmiraNeXT · \[equipo_handon equipos=MacMini,MacStudio\]/);
+  await eq.ahorro({ equipo: 'AdmiraNeXT' });
+  assert.match(f.log.agora[1].texto, /^setup modo ahorro AdmiraNeXT · \[equipo_ahorro equipos=MacMini,MacStudio\]/);
+  assert.equal(f.log.agora.length, 2);
 });

@@ -107,7 +107,31 @@
   "Último %": "Last %",
   "última hora:": "last hour:"
 };
+  // Ventana 00:21 (23-10-2026): fechas de reset de la tarjeta Accounts («hoy 03:00», «mañana 03:00», «lun 03:00», «22 oct 03:00», «22 oct»).
+  var MES = { ene: "Jan", feb: "Feb", mar: "Mar", abr: "Apr", may: "May", jun: "Jun", jul: "Jul", ago: "Aug", sep: "Sep", sept: "Sep", oct: "Oct", nov: "Nov", dic: "Dec" };
+  var DIA = { dom: "Sun", lun: "Mon", mar: "Tue", "mié": "Wed", jue: "Thu", vie: "Fri", "sáb": "Sat" };
+  function cuandoEn(s) {
+    var m = String(s).match(/^(hoy|mañana|dom|lun|mar|mié|jue|vie|sáb) (\d\d:\d\d)$/);
+    if (m) return (m[1] === "hoy" ? "today" : m[1] === "mañana" ? "tomorrow" : DIA[m[1]]) + " " + m[2];
+    m = String(s).match(/^(\d{1,2}) ([a-zé]+)( \d\d:\d\d)?$/);
+    if (m && MES[m[2]]) return MES[m[2]] + " " + m[1] + (m[3] || "");
+    return null;
+  }
+  function usoEn(p) {
+    var m = p.match(/^(sesión|semana) (.+?)( \(renovado\))?$/);
+    if (m) return (m[1] === "sesión" ? "session " : "week ") + m[2].replace(/(\d),(\d)/g, "$1.$2") + (m[3] ? " (renewed)" : "");
+    return cuandoEn(p) || p;
+  }
   var reglas = [
+    [/^dato de hace (\d+) h$/, "data from $1 h ago"],
+    [/^dato de hace (\d+) días$/, "data from $1 days ago"],
+    [/^(?:sesión|semana) [\s\S]+$/, function (m) { return m[0].split(" · ").map(usoEn).join(" · "); }],
+    [/^Reinicio gratis disponible(?: · vence (.+))?$/, function (m) { return "Free reset available" + (m[1] ? " · expires " + (cuandoEn(m[1]) || m[1]) : ""); }],
+    [/^(\d+) reinicios gratis(?: · el primero vence (.+))?$/, function (m) { return m[1] + " free resets" + (m[2] ? " · the first expires " + (cuandoEn(m[2]) || m[2]) : ""); }],
+    [/^(Grok ?Bot) \(Consejo\) · Cursor Pro([.,]?)$/, "$1 (Council) · Cursor Pro$2"],
+    [/^Todas las cuentas con lectura van justas\.([\s\S]*)$/, function (m) {
+      return "All accounts with a reading are tight." + m[1].replace(/ Frenar /, " Slow down ").replace(/ Sin lectura: /, " No reading: ").replace(/\(Consejo\)/g, "(Council)");
+    }],
     [/^· ([\d,]+) (k|M) hoy · (.+)$/, function (m, t) { return "· " + m[1] + " " + m[2] + " today · " + m[3].split(" · ").map(function (p) { return t(p) || p; }).join(" · "); }],
     [/^· ([\d,]+) (k|M) hoy · (\d+) agentes? activos? de (\d+) \((\d+) parados con tokens hoy\)$/, "· $1 $2 today · $3 active agent(s) of $4 ($5 stopped with tokens today)"],
     [/^· ([\d,]+) (k|M) hoy$/, "· $1 $2 today"],
@@ -143,7 +167,7 @@
     [/^(.+) \((leyendas|coetaneos|coetáneos)\)$/, function (m) { return m[1].replace(/ semanal\b/g, " weekly") + " (" + (m[2] === "leyendas" ? "legends" : "contemporaries") + ")"; }],
     [/^Mover encargos pesados a ([\s\S]+?): les sobra ([^.(]+?)( \(([^)]+) al día hasta el reset\))?\.([\s\S]*)$/, function (m, t) {
       var q = m[1].replace(/\(([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no GrokBot\)/, "($2's $1$3, not GrokBot)");
-      var resto = m[5].replace(/ Frenar /, " Slow down ").replace(/ Sin lectura: /, " No reading: ").replace(/ al día hasta el reset/g, " a day until the reset");
+      var resto = m[5].replace(/ Frenar /, " Slow down ").replace(/ Sin lectura: /, " No reading: ").replace(/\(Consejo\)/g, "(Council)").replace(/ al día hasta el reset/g, " a day until the reset");
       var dec = function (x) { return String(x).replace(/(\d),(\d)/g, "$1.$2"); };
       return "Move heavy tasks to " + q + ": " + dec(m[2]) + " to spare" + (m[3] ? " (" + dec(m[4]) + " a day until the reset)" : "") + "." + dec(resto);
     }],

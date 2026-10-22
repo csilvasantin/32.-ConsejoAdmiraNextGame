@@ -103,11 +103,27 @@
     if (d.presencia === 'cache') return ' · <span class="tr-aviso" title="' + esc(T('Yokup no ha respondido: se usa la última presencia buena', 'Yokup did not answer: using the last good presence')) + '">⚠ ' + esc(T('presencia de ', 'presence from ') + hace(d.presenciaEdadS || 0)) + '</span>';
     return ' · <span class="tr-aviso" title="' + esc(T('Yokup no ha respondido y no hay presencia reciente: solo salen agentes con pulso de tokens', 'Yokup did not answer and there is no recent presence: only agents with a token pulse are shown')) + '">⚠ ' + T('presencia sin respuesta: pueden faltar agentes', 'no presence answer: agents may be missing') + '</span>';
   }
+  /** #7037: «Encargo abierto · sin actividad desde 21-oct 06:56» (Madrid) en ámbar, en vez de «trabajando». */
+  var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function fechaMadrid(iso) {
+    var p = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(iso)).forEach(function (x) { p[x.type] = x.value; });
+    return p.day + '-' + (en() ? MONTHS : MESES)[Number(p.month) - 1] + ' ' + p.hour + ':' + p.minute;
+  }
+  function sinAct(t) {
+    var s = t.sinActividad;
+    var txt = s.desde ? T('Encargo abierto · sin actividad desde ', 'Open task · no activity since ') + fechaMadrid(s.desde)
+      : T('Encargo abierto · sin actividad hoy', 'Open task · no activity today');
+    return '<span class="tr-est tr-sinact" title="' + esc(T('Tiene encargo en curso pero ningún token del modelo desde hace ≥ 2 h (hora de Madrid)', 'Has a task in progress but no model tokens for ≥ 2 h (Madrid time)')) + '">⚠ ' + esc(txt) + '</span>';
+  }
   function tarjeta(t) {
     var motor = rt([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
     var que = t.tarea || t.foco || '';
     var linea;
     if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
+    else if (t.sinActividad) linea = sinAct(t) + via(t) + (que ? ' · ' + esc(que) : '');
     else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : T('trabajando', 'working')) + '</span>' + via(t) + (t.enCurso > 0 ? ' · ' + t.enCurso + ' ' + T('en curso', 'in progress') : '') + tokens(t) + (que ? ' · ' + esc(que) : '');
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');

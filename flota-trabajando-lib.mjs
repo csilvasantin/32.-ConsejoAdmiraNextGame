@@ -331,6 +331,23 @@ const limpio = (s, n = 140) => String(s || "").replace(/<[^>]*>/g, " ").replace(
  * Varios pulsos del mismo agente (uno por máquina) → uno: manda el que está con Carlos, si no el que más tok/h quema,
  * si no el más reciente; las cifras de tokens se suman (son de máquinas distintas). null si no hay ninguno.
  */
+/**
+ * #7037 (Carlos, 22-10-2026): ficha activa con ≥ 1 encargo en curso pero sin tokens desde hace ≥ 2 h → { desde, horas }
+ * (desde = ultimaActividad ISO, o null si no hay tokens registrados hoy ni fecha guardada). Solo con pulso de tokens del
+ * agente (sin pulso no sabemos nada: sigue «sin medición»). No toca las cuentas de tokens.
+ */
+export const SIN_ACTIVIDAD_S = 2 * 3600;
+export function sinActividad({ estado, enCurso, p, ahoraS }) {
+  if (estado === "gris" || !(Number(enCurso) > 0) || !p || p.conRetraso) return null;
+  if (Number(p.tokHora) > 0 || Number(p.tokUltimaHora) > 0) return null;
+  const ua = p.ultimaActividad ? Date.parse(p.ultimaActividad) : NaN;
+  if (Number.isFinite(ua)) {
+    const s = ahoraS - Math.floor(ua / 1000);
+    return s >= SIN_ACTIVIDAD_S ? { desde: new Date(ua).toISOString(), horas: Math.floor(s / 3600) } : null;
+  }
+  return Number(p.tokHoy) > 0 ? null : { desde: null, horas: null };
+}
+
 export function unirPulsos(ps) {
   const v = (ps || []).filter(Boolean);
   if (!v.length) return null;
@@ -341,7 +358,8 @@ export function unirPulsos(ps) {
   const vivos = v.filter((a) => !a.conRetraso);
   return { ...base, tokHoy: suma("tokHoy"), tokUltimaHora: suma("tokUltimaHora"),
     tokHora: vivos.some((a) => a.tokHora != null) ? vivos.reduce((n, a) => n + (Number(a.tokHora) || 0), 0) : base.tokHora,
-    maquinasPulso: v.map((a) => a.maquina).filter(Boolean) };
+    maquinasPulso: v.map((a) => a.maquina).filter(Boolean),
+    ultimaActividad: v.map((a) => a.ultimaActividad).filter(Boolean).sort().pop() || null };
 }
 
 /**
@@ -440,6 +458,8 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       tokUltimaHora: p && p.tokUltimaHora != null ? p.tokUltimaHora : null,
       tokHoraMetodo: p && p.tokHora != null && !p.conRetraso ? "15 min × 4" : null,
       sinMedicion: !p || (!Number(p.tokHoy) && !Number(p.tokHora) && !Number(p.tokUltimaHora)),
+      ultimaActividad: (p && p.ultimaActividad) || null,
+      sinActividad: sinActividad({ estado: st.estado, enCurso, p, ahoraS }),
       haceS: gris ? Math.max(0, ahoraS - fresca.ts) : ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: gris ? fresca.fuente : l ? l.source : (p ? "pulso" : null),
       maquinas: [...new Set(x.latidos.map((e) => e.machine).filter(Boolean))],
       retrato: r ? r : retratoDe(x.agente),

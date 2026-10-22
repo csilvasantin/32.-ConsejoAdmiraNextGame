@@ -240,6 +240,16 @@ export function normalizarSerie(serie) {
 }
 
 /** Aplica un pulso al documento de la máquina. Devuelve { doc, guardar } (guardar=false si llegó antes de 50 s). */
+/** #7037: ISO de la última actividad con tokens > 0 (máximo entre la guardada, el último evento con tokens y, si tokHoy creció, este pulso). */
+export function ultimaActividadDe(prev, a, ahora) {
+  const ts = [prev && prev.ultimaActividad ? Date.parse(prev.ultimaActividad) : NaN];
+  if (Number(a.tokHoy) > 0 && a.ultimoEvento) ts.push(Date.parse(a.ultimoEvento));
+  if (Number(a.tokHoy) > (Number(prev && prev.tokHoy) || 0)) ts.push(ahora);
+  if (Number(a.tokHoy) > 0 && prev && prev.tokHoy == null && !a.ultimoEvento) ts.push(ahora);
+  const v = ts.filter(Number.isFinite);
+  return v.length ? new Date(Math.max(...v)).toISOString() : null;
+}
+
 export function aplicarPulso(doc, pulso, ahora) {
   const d = doc && typeof doc === "object" && doc.agentes ? doc : { maquina: pulso.maquina, agentes: {} };
   if (d.ultimoPulso && ahora - d.ultimoPulso < MIN_ESCRITURA_MS) return { doc: d, guardar: false };
@@ -253,7 +263,10 @@ export function aplicarPulso(doc, pulso, ahora) {
       const ini = a.serie.length ? a.serie[0][0] : Infinity;
       serie = [...serie.filter((p) => p[0] < ini), ...a.serie.filter((p) => p[0] >= corte)];
     } else serie.push(a.porProyecto ? [t, a.tokHoy, a.cacheHoy, a.porProyecto] : [t, a.tokHoy, a.cacheHoy]);
-    d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, porProyecto: a.porProyecto || null,
+    // #7037: última actividad real (tokens > 0) que sobrevive al cambio de día: el último evento con tokens, o este pulso si
+    // tokHoy ha crecido. Sin ella, un agente con encargo abierto y 0 tokens parecía «trabajando» sin saber desde cuándo no hace nada.
+    const ultimaActividad = ultimaActividadDe(prev, a, ahora);
+    d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, ultimaActividad, porProyecto: a.porProyecto || null,
       conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlosDesde || null,
       ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}), ...(a.serie ? { serieEventos: true } : {}) };
   }
@@ -473,7 +486,7 @@ export function agentesDePulso(docs, ahora) {
       const ret = conRetraso(a);
       // r42: la bolsa de Grok Bot («Grok Bot (Consejo)») se enseña como Merovingio.
       out.push({ agente: agenteVisible(agente), maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
-        porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
+        porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimaActividad: a.ultimaActividad || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
         ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}),
         metodo: ret ? "cursor (con retraso)" : "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), proyectoAhora: proyectoDeAgente(a, ahora), _serie: a.serie || [] });
     }

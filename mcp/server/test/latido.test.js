@@ -44,3 +44,14 @@ test('GET /consejeros/latido es público y da el modo efectivo', async () => {
   assert.equal(d.consejeros.Wozniak.modo, 'trabajando');
   assert.ok(kv.m.has(CLAVE_LATIDO));
 });
+
+test('actividad de un consejero (encargar, mensaje, consumo) lo marca trabajando tras un reposo; agentes no', async () => {
+  const { latidoPorActividad } = await import('../src/latido.js');
+  const kv = kvFalso();
+  await latir(kv, 'Jobs', { modo: 'reposo', origen: 'equipo_handoff' });
+  await latidoPorActividad(kv, { tipo: 'consejero', persona: 'Jobs' }, 'agente_encargar');
+  const v = vigentes(await leerLatidos(kv));
+  assert.equal(v.Jobs.modo, 'trabajando'); assert.equal(v.Jobs.origen, 'actividad agente_encargar');
+  assert.equal(await latidoPorActividad(kv, { tipo: 'agente', persona: 'Neo' }, 'x'), null);
+  assert.equal(await latidoPorActividad(null, { tipo: 'consejero', persona: 'Jobs' }, 'x'), null);
+});

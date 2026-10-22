@@ -34,7 +34,7 @@ import { crearBandeja, agenteDestino } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
 import { crearEquipos } from './equipos.js';
 import { personaCanonica as personaFlota } from './flota.js';
-import { latir, leerLatidos, vigentes, latidoPorEncargo, MIN_DEFECTO, MIN_MAX } from './latido.js';
+import { latir, leerLatidos, vigentes, latidoPorEncargo, latidoPorActividad, MIN_DEFECTO, MIN_MAX } from './latido.js';
 const NOMBRE = 'admira-live-mcp';
 
 const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -180,7 +180,9 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       const donde = await flota.maquinaDe(agente).catch(() => '');
       if (donde) a = { ...a, maquina_agente: donde };
     }
-    return texto(await bandejaConsejo.enviar(a, identidad));
+    const r = await bandejaConsejo.enviar(a, identidad);
+    await latidoPorActividad(env.ADMIRA_LIVE_DESDE, identidad, 'consejero_mensaje');
+    return texto(r);
   }));
 
   server.registerTool('consejero_bandeja', {
@@ -254,7 +256,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       criterio: z.string().max(500).optional().describe('Criterio de hecho: cómo se comprobará que está terminado. Se añade al texto y a los metadatos.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  }, seguro(async (a) => texto(await flota.encargar(a))));
+  }, seguro(async (a) => { const r = await flota.encargar(a); await latidoPorActividad(env.ADMIRA_LIVE_DESDE, identidad, 'agente_encargar'); return texto(r); }));
 
   server.registerTool('encargo_estado', {
     title: 'Estado y respuesta de un encargo',
@@ -380,7 +382,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     description: 'Cuenta tus tokens: declara en las Notificaciones de Yokup lo que has gastado hoy (entrada, caché, salida, modelo, sesiones, despertares y qué los quemó). Obligatorio para consejeros de GrokBot y agentes sin medidor local; en los Mac lo hace consumo-tokens.py a diario. Un parte por agente y día; repetirlo actualiza las cifras.',
     inputSchema: { como: COMO, tokens_entrada: z.number().int().min(0).describe('Tokens de entrada no cacheados del día.'), tokens_cache: z.number().int().min(0).default(0).describe('Tokens de entrada servidos desde caché.'), tokens_salida: z.number().int().min(0).describe('Tokens generados.'), modelo: z.string().max(60).optional(), sesiones: z.number().int().min(1).default(1), llamadas: z.number().int().min(0).default(0).describe('Llamadas al modelo.'), despertares: z.number().int().min(0).default(0).describe('Veces que te despertó un webhook, rutina o encargo.'), duplicados: z.number().int().min(0).default(0).describe('Despertares repetidos por el mismo encargo.'), causa: z.string().max(200).optional().describe('Qué se llevó la mayor parte, en una frase.'), dia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  }, seguro(async (a) => texto(await crearFlota(env, idDe(a), deps).reportarConsumo(a))));
+  }, seguro(async (a) => { const id = idDe(a); const r = await crearFlota(env, id, deps).reportarConsumo(a); await latidoPorActividad(env.ADMIRA_LIVE_DESDE, id, 'consumo_reportar'); return texto(r); }));
 
   /* ── Yokup: el consejero dentro de la flota (FLT-1580) ─────────────────────── */
   const quien = identidad ? `${identidad.agent} (${identidad.persona} en ${identidad.machine}, runtime ${identidad.runtime})` : 'sin identidad (clave no asignada a un consejero)';

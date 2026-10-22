@@ -68,3 +68,18 @@ export async function latidoPorEncargo(kv, identidad, estado, encargo) {
   } catch (_) {}
   return null;
 }
+
+/**
+ * Señal automática por actividad (Carlos, 22-10-2026 19:37: «Jobs, Woz, Walt y Lucas activos toda la tarde y
+ * /consumos dice Consejeros: 0 trabajando»). Tras un handOFF o un «done» el consejero queda en reposo y, aunque siga
+ * encargando, escribiendo o reportando consumo, nadie renovaba su latido. Ahora cualquier acción suya por el MCP
+ * (agente_encargar, consejero_mensaje, consumo_reportar) lo marca trabajando 10 min, conservando la misión vigente.
+ * Nunca rompe la respuesta.
+ */
+export async function latidoPorActividad(kv, identidad, que = '') {
+  try {
+    if (!identidad || identidad.tipo !== 'consejero' || !identidad.persona || !kv) return null;
+    return await latir(kv, identidad.persona, { modo: 'trabajando', mision: '', origen: 'actividad ' + texto(que, 40) }, undefined);
+  } catch (_) {}
+  return null;
+}

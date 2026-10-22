@@ -3,7 +3,9 @@
  *
  * De aquí salen la identidad (MCP_KEYS → <Persona>GrokBot), el enum `como`,
  * /salud consejeros_con_carne, el censo de flota.js y el filtro de telegram.js.
- * Un coetáneo nuevo (Shotwell, Porat, Lasseter, Ive, Ratti, Reynolds)
+ * Lasseter (John Lasseter, CCO) e Ive (Jony Ive, CDO), coetáneos, tienen silla con clave propia
+ * (MCP_KEY_LASSETER / MCP_KEY_IVE) desde el 22-10-2026 (aprobado por Carlos). Sin MacBook.
+ * Un coetáneo nuevo (Shotwell, Porat, Ratti, Reynolds)
  * se añade en este objeto cuando tenga clave y webhook: el resto lo importa.
  *
  * Musk (Elon Musk, CEO, lado racional, generación coetáneos) no tiene MacBook.
@@ -30,6 +32,8 @@ export const SILLAS = {
   Disney:  { rol: 'CCO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirCrema', fleet_id: 'admira-macbookaircrema', alias: ['MBACrema', 'MBA Crema', 'Carla', 'admira-macbook-carla'] },
   Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'MacMini', deepagent_runtime: 'Grok CLI' },
   Huang:   { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jensen', 'Jensen Huang'], deepagent: 'Cypher', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b' },
+  Lasseter: { rol: 'CCO', lado: 'creativo', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['John Lasseter', 'Lasseter'] },
+  Ive:     { rol: 'CDO', lado: 'creativo', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jony', 'Jony Ive'] },
   Y:       { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: [] },
 };
 
@@ -49,10 +53,11 @@ export function sillaCanonica(persona) {
   if (!crudo) return null;
   const n = crudo.toLowerCase();
   // Un nombre de una letra («Y») solo casa entero: si no, «Trinity» y «Cypher»
-  // contienen esa letra y se los tragaría la silla.
+  // contienen esa letra y se los tragaría la silla. Igual «Ive» (3 letras): solo entero o por alias,
+  // para que «Olivetti» o «admira.live» no caigan en la silla de Jony Ive.
   const porNombre = CONSEJEROS_GROKBOT.find((c) => {
     const clave = c.toLowerCase();
-    return n === clave || (clave.length >= 3 && n.includes(clave));
+    return n === clave || (clave.length >= 4 && n.includes(clave));
   });
   if (porNombre) return porNombre;
   const p = plano(crudo);

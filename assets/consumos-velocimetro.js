@@ -500,7 +500,7 @@
     return fetch('/api/orquestar', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (o) {
       if (!o) return;
       var m = {};
-      (o.candidatos || []).concat(o.excluidos || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin', agotaAntes: !!c.agotaAntes, proyeccionTexto: c.proyeccionTexto || null }; });
+      (o.candidatos || []).concat(o.excluidos || [], o.margenes || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin', agotaAntes: !!c.agotaAntes, proyeccionTexto: c.proyeccionTexto || null }; });
       ORQ.margen = m; ORQ.leido = Date.now();
       if (estado.datos) pintaSelectorAgente(estado.datos);
     }).catch(function () {});

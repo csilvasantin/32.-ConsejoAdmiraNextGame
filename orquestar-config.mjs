@@ -32,7 +32,10 @@ export const PERSONAS = [
   { persona: "Oráculo", maquina: "MacMini", modelo: "Codex", cuenta: "oraculo-codex", perfil: "codex", alias: ["Oraculo", "Oráculo", "OraculoMacMini"] },
   // Smith: Grok 4.7 en el Grok CLI del Mac mini (~/.grok, sesión tmux «smith»; comprobado 09-10-2026: grok-4.7-build,
   // no cursor-agent). Sus tokens salen de ~/.grok/sessions/<cwd>/<id>/usage.json (pulso-tokens.py, motor «grok»).
-  { persona: "Smith", maquina: "MacMini", modelo: "Grok 4.7 (Grok CLI)", cuenta: "cursor", perfil: "grok-cursor", alias: ["Smith", "SmithMacMini"] },
+  // #7058 (22-oct-2026): Smith usa el Grok CLI con csilva@admira.com (norma de Carlos, 14-oct). Su margen es el medidor
+  // «SuperGrok Heavy semanal» de esa cuenta en grok.com Settings > Usage (ahí cuenta «Grok Build», que es el Grok CLI),
+  // no la bolsa de Cursor Pro. `medidor` elige esa serie dentro de la cuenta (sin él manda la serie principal).
+  { persona: "Smith", maquina: "MacMini", modelo: "Grok 4.7 (Grok CLI)", cuenta: "leyendas", medidor: "SuperGrok Heavy semanal", perfil: "grok-cursor", alias: ["Smith", "SmithMacMini"] },
   { persona: "Jobs", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Jobs", "JobsGrokBot", "Steve Jobs"] },
   { persona: "Wozniak", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Wozniak", "WozniakGrokBot", "Steve Wozniak"] },
   { persona: "Lucas", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", despierta: "webhook", alias: ["Lucas", "LucasGrokBot", "George Lucas"] },
@@ -51,3 +54,12 @@ export const PALABRAS = [
   ["web", /\b(web|home|landing|p[aá]gina|css|html|frontend|responsive|portada|bot[oó]n)/i],
 ];
 export const TIPO_POR_DEFECTO = "codigo";
+
+/**
+ * #7058 (22-oct-2026): margen de agentes que se enseñan en /consumos pero NO entran en el reparto del orquestador.
+ * Merovingio = la bolsa de Grok Bot de la cuenta csilvasantin (r42): su margen es el medidor «Grok Bot semanal» de
+ * csilvasantin@gmail.com en grok.com Settings > Usage (lectura de las 00:00/12:00). Cursor Pro no publica un % del plan.
+ */
+export const MARGEN_SOLO = [
+  { persona: "Merovingio", cuenta: "coetaneos", medidor: "Grok Bot semanal" },
+];

@@ -264,8 +264,8 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   }, seguro(async (a) => texto(await flota.estado(a))));
 
   /* ── handON / handOFF de un equipo (Carlos, 22-oct-2026): equipos.js ─────────── */
-  const equipos = crearEquipos({ flota, bandeja: bandejaConsejo, api, identidad });
-  const EQUIPO = z.string().min(3).max(40).describe('Equipo (Mac): MacMini o MacStudio. Sus agentes salen de CASA_AGENTE y sus consejeros de la norma «cada consejero dirige a un agente» (MacMini: Oráculo/Codex con Walt, Morfeo/Claude Code con Lucas).');
+  const equipos = crearEquipos({ flota, bandeja: bandejaConsejo, api, identidad, latir: env.ADMIRA_LIVE_DESDE ? (persona, a) => latir(env.ADMIRA_LIVE_DESDE, persona, a) : null });
+  const EQUIPO = z.string().min(3).max(40).describe('Equipo (Mac): MacMini, MacStudio, MacBookPro16 (MBP16) o MacBookProNegro14 (MBP14). Sus agentes salen de CASA_AGENTE y sus consejeros de la norma «cada consejero dirige a un agente» (MacMini: Oráculo/Codex con Walt, Morfeo/Claude Code con Lucas).');
   server.registerTool('equipo_handon', {
     title: 'handON: despertar un equipo',
     description: 'handON <equipo>: enciende los monitores del Mac (publica «handON <Equipo>» en AgoraMatrix y su agora-cmd-poller hace caffeinate -u -t 2 en ≤15 s), crea a cada agente de casa un encargo «handON: empieza la jornada» y manda consejero_mensaje a cada consejero que los dirige. prueba:true devuelve el plan sin escribir nada. También se lanza escribiendo «handON MacMini» en AgoraMatrix.',
@@ -278,14 +278,21 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   }, seguro(async (a) => texto(await equipos.handon(a))));
   server.registerTool('equipo_handoff', {
     title: 'handOFF: cerrar el día de un equipo',
-    description: 'handOFF <equipo>: pide a cada agente y consejero del equipo que cierre y resuma su día (y declare consumo), devuelve el resumen del equipo (encargos de hoy hechos y pendientes, consumo) y al final publica «handOFF <Equipo>» para que el agora-cmd-poller apague los monitores (pmset displaysleepnow). prueba:true: resumen y plan sin escribir ni apagar. apagar:false: no apaga monitores.',
+    description: 'handOFF <equipo>: cierre PROGRESIVO. Pide a cada agente (y sus subagentes) que termine o cierre limpio su paso, resuma su día y declare consumo; deja a cada consejero en reposo (consejero_latido); devuelve el resumen del equipo (encargos de hoy hechos y pendientes, consumo); publica «handOFF <Equipo> · [equipo_handoff pausa=N]» y el agora-cmd-poller de ese Mac apaga los monitores (y cierra Unreal/Epic solo si retienen la pantalla) y a los N min de gracia pausa sus vigilantes de encargos (SIGSTOP reversible). NUNCA apaga ni duerme el Mac: handON lo reanuda todo, también en remoto. prueba:true: en seco. apagar:false: sin monitores.',
     inputSchema: {
       equipo: EQUIPO,
       prueba: z.boolean().default(false).describe('true: en seco (resumen real, sin encargos, mensajes ni apagado).'),
       apagar: z.boolean().default(true).describe('false: no apagar monitores.'),
+      gracia: z.number().int().min(0).max(60).default(10).describe('Minutos para que cada agente cierre limpio su paso antes de pausar sus vigilantes de encargos.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, seguro(async (a) => texto(await equipos.handoff(a))));
+  server.registerTool('equipo_ahorro', {
+    title: 'setup modo ahorro: monitores en negro',
+    description: 'setup modo ahorro <equipo>: SOLO apaga los monitores de ese Mac (pmset displaysleepnow vía su agora-cmd-poller). Los agentes siguen trabajando; no cierra apps ni duerme el Mac. También escribiendo «setup modo ahorro <Equipo>» en AgoraMatrix.',
+    inputSchema: { equipo: EQUIPO, prueba: z.boolean().default(false).describe('true: en seco.') },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await equipos.ahorro(a))));
 
   /* ── Identidad por llamada (FLT-1603) ──────────────────────────────────────
    * Los conectores MCP de Grok Bot son DE LA CUENTA, no de cada bot: todos los consejeros
@@ -544,7 +551,7 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejero_webhook_borrar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar', 'consejero_latido', 'equipo_handon', 'equipo_handoff'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejero_webhook_borrar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar', 'consejero_latido', 'equipo_handon', 'equipo_handoff', 'equipo_ahorro'],
       latido_consejeros: `${url.origin}/consejeros/latido`,
       bandeja_consejeros: `${url.origin}/consejero/mensajes`,
       flota: `Con una clave por consejero (MCP_KEYS), ${CONSEJEROS_GROKBOT.join('/')} trabajan en yokup como ${CONSEJEROS_GROKBOT.map((c) => c + 'GrokBot').join('/')} (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…). Una clave de agente no firma como consejero aunque pase «como».`,

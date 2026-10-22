@@ -17,7 +17,9 @@ function falsos() {
   };
   const bandeja = { enviar: async (a) => { log.mensajes.push(a); return { ok: true, mensaje: { id: 'cm' + log.mensajes.length } }; } };
   const api = { agoraDecir: async (a) => { log.agora.push(a); return { ok: true }; } };
-  return { log, flota, bandeja, api };
+  const lat = [];
+  const latir = async (p, a) => { lat.push([p, a]); return { modo: a.modo }; };
+  return { log, flota, bandeja, api, latir, lat };
 }
 
 test('tabla por defecto: MacMini = Oráculo (Codex, Walt) + Morfeo (Claude Code, Lucas)', () => {
@@ -26,9 +28,14 @@ test('tabla por defecto: MacMini = Oráculo (Codex, Walt) + Morfeo (Claude Code,
   assert.deepEqual(t.macmini.agentes.map((a) => [a.persona, a.runtime, a.consejero]), [['Oraculo', 'Codex', 'Disney'], ['Morfeo', 'Claude Code', 'Lucas']]);
   assert.deepEqual(t.macmini.consejeros, ['Disney', 'Lucas']);
   assert.deepEqual(t.macstudio.agentes.map((a) => a.persona).sort(), ['Neo', 'Trinity']);
+  assert.deepEqual(t.macbookpro16.agentes.map((a) => [a.persona, a.consejero]), [['Smith', 'Jobs'], ['Neo', 'Jobs'], ['Trinity', 'Wozniak']]);
+  assert.deepEqual(t.macbookpronegro14.consejeros.sort(), ['Jobs', 'Wozniak']);
+  assert.equal(equipoCanonico('MBP16'), 'macbookpro16');
+  assert.equal(equipoCanonico('MBP14'), 'macbookpronegro14');
+  assert.equal(equipoCanonico('MacBook-Pro-16'), 'macbookpro16');
   assert.equal(equipoCanonico('Mac Mini'), 'macmini');
   assert.equal(equipoCanonico('MacStudio.local'), 'macstudio');
-  assert.equal(equipoCanonico('MBP16'), null);
+  assert.equal(equipoCanonico('MBP99'), null);
   assert.deepEqual(hoyMadrid(AHORA()), { mmdd: '10.22', iso: '2026-10-22' });
 });
 
@@ -68,16 +75,32 @@ test('handOFF: resumen de hoy, cierre a todos y apagado al final; en prueba no a
   assert.equal(p.resumen.totales.pendientes, 2);
   assert.equal(f.log.agora.length + f.log.encargos.length + f.log.mensajes.length, 0);
   const r = await eq.handoff({ equipo: 'macmini' });
+  assert.equal(r.pausa_en_min, 10);
   assert.equal(r.ok, true);
   assert.equal(f.log.encargos.length, 2);
   assert.ok(f.log.encargos.every((e) => e.texto.startsWith('handOFF: cierra la jornada')));
   assert.deepEqual(f.log.mensajes.map((m) => m.para), ['Disney', 'Lucas']);
-  assert.match(f.log.agora[0].texto, /^handOFF MacMini · \[equipo_handoff\] apaga monitores/);
+  assert.match(f.log.agora[0].texto, /^handOFF MacMini · \[equipo_handoff pausa=10\] apaga monitores/);
+  assert.deepEqual(f.lat.map((x) => [x[0], x[1].modo]), [['Disney', 'reposo'], ['Lucas', 'reposo']]);
   const sin = falsos();
   await crearEquipos({ ...sin, ahora: AHORA }).handoff({ equipo: 'macmini', apagar: false });
-  assert.doesNotMatch(sin.log.agora[0].texto, /equipo_handoff/);
+  assert.match(sin.log.agora[0].texto, /\[equipo_handoff pausa=10 monitores=no\]/);
 });
 
 test('equipo desconocido falla legible', async () => {
   await assert.rejects(() => crearEquipos(falsos()).handon({ equipo: 'Tostadora' }), /equipo desconocido/);
+});
+
+test('setup modo ahorro: solo monitores, sin encargos ni mensajes', async () => {
+  const f = falsos();
+  const r = await crearEquipos({ ...f, ahora: AHORA }).ahorro({ equipo: 'MBP16' });
+  assert.equal(r.ok, true);
+  assert.match(f.log.agora[0].texto, /^setup modo ahorro MacBookPro16 · \[equipo_ahorro\]/);
+  assert.equal(f.log.encargos.length + f.log.mensajes.length + f.lat.length, 0);
+});
+
+test('handON deja a los consejeros trabajando con su latido', async () => {
+  const f = falsos();
+  const r = await crearEquipos({ ...f, ahora: AHORA }).handon({ equipo: 'MacStudio' });
+  assert.deepEqual(r.latido.map((x) => [x.consejero, x.modo]), [['Jobs', 'trabajando'], ['Wozniak', 'trabajando']]);
 });

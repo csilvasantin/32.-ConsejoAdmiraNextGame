@@ -17,28 +17,30 @@
  * supervisión del código (supervisores.js: Musk a Oráculo y Morfeo) no se toca.
  */
 
-import { CASA_AGENTE, norm } from './flota.js';
+import { norm } from './flota.js';
 
 /** Quién dirige a cada agente (norma 11-10-2026). Silla de sillas.js. */
-export const DIRECTOR_AGENTE = { Oraculo: 'Disney', Morfeo: 'Lucas', Neo: 'Jobs', Trinity: 'Wozniak' };
-const NOMBRE = { Disney: 'Walt', Lucas: 'Lucas', Jobs: 'Jobs', Wozniak: 'Woz', Oraculo: 'Oráculo', Morfeo: 'Morfeo', Neo: 'Neo', Trinity: 'Trinity' };
-const RUNTIME = { Oraculo: 'Codex', Morfeo: 'Claude Code', Neo: 'Claude Code', Trinity: 'Codex' };
+export const DIRECTOR_AGENTE = { Oraculo: 'Disney', Morfeo: 'Lucas', Neo: 'Jobs', Trinity: 'Wozniak', Smith: 'Jobs' };
+const NOMBRE = { Disney: 'Walt', Lucas: 'Lucas', Jobs: 'Jobs', Wozniak: 'Woz', Oraculo: 'Oráculo', Morfeo: 'Morfeo', Neo: 'Neo', Trinity: 'Trinity', Smith: 'Smith' };
+const RUNTIME = { Oraculo: 'Codex', Morfeo: 'Claude Code', Neo: 'Claude Code', Trinity: 'Codex', Smith: 'Grok CLI' };
 
-/** Equipos: clave → máquina (como la escribe la flota) y alias. */
+/** Equipos: clave → máquina (como la escribe la flota), alias y agentes reales (CASA_AGENTE + latidos
+ *  de agentes_vivos, 22-10-2026). Smith lo dirige Jobs (avisos del 13-10: «Jobs→Smith»). */
 const MAQUINAS = {
-  macmini: { maquina: 'MacMini', alias: ['mini', 'mac mini', 'macmini.local'] },
-  macstudio: { maquina: 'MacStudio', alias: ['studio', 'mac studio', 'macstudio.local'] },
+  macmini: { maquina: 'MacMini', alias: ['mini', 'mac mini', 'macmini.local'], agentes: ['Oraculo', 'Morfeo'] },
+  macstudio: { maquina: 'MacStudio', alias: ['studio', 'mac studio', 'macstudio.local'], agentes: ['Neo', 'Trinity'] },
+  macbookpro16: { maquina: 'MacBookPro16', alias: ['mbp16', 'macbook pro 16', 'macbook-pro-16', 'macbook-pro-16.local'], agentes: ['Smith', 'Neo', 'Trinity'] },
+  macbookpronegro14: { maquina: 'MacBookProNegro14', alias: ['mbp14', 'macbook pro 14', 'macbookpro14', 'negro14', 'macbookpronegro14.local'], agentes: ['Neo', 'Trinity', 'Smith'] },
 };
 
 /** Tabla por defecto: { macmini: { maquina, agentes:[{persona, runtime, consejero}], consejeros:[…] } }. */
-export function tablaEquipos(casa = CASA_AGENTE) {
+export function tablaEquipos() {
   const t = {};
   for (const [clave, m] of Object.entries(MAQUINAS)) {
-    const agentes = Object.entries(casa).filter(([, c]) => norm(c) === clave).map(([p]) => p).sort((a, b) => (a === 'Oraculo' ? -1 : b === 'Oraculo' ? 1 : a.localeCompare(b)));
     t[clave] = {
       maquina: m.maquina,
-      agentes: agentes.map((p) => ({ persona: p, nombre: NOMBRE[p] || p, runtime: RUNTIME[p] || null, consejero: DIRECTOR_AGENTE[p] || null })),
-      consejeros: [...new Set(agentes.map((p) => DIRECTOR_AGENTE[p]).filter(Boolean))],
+      agentes: m.agentes.map((p) => ({ persona: p, nombre: NOMBRE[p] || p, runtime: RUNTIME[p] || null, consejero: DIRECTOR_AGENTE[p] || null })),
+      consejeros: [...new Set(m.agentes.map((p) => DIRECTOR_AGENTE[p]).filter(Boolean))],
     };
   }
   return t;
@@ -65,12 +67,12 @@ const deHoy = (e, mmdd) => !!(e && e.etiqueta && String(e.etiqueta).endsWith('.'
  * deps: { flota, bandeja, api, identidad, ahora }
  *   flota.encargar / flota.listarEncargos, bandeja.enviar(a, identidad), api.agoraDecir.
  */
-export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = () => new Date(), casa = CASA_AGENTE } = {}) {
+export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = () => new Date(), latir = null } = {}) {
   const quien = (identidad && identidad.agent) || 'MCP admira.live';
 
   function resolver(equipo) {
     const clave = equipoCanonico(equipo);
-    const tabla = tablaEquipos(casa);
+    const tabla = tablaEquipos();
     if (!clave || !tabla[clave]) throw new Error(`equipo desconocido «${equipo}»: vale ${Object.values(MAQUINAS).map((m) => m.maquina).join(', ')}`);
     const eq = tabla[clave];
     if (!eq.agentes.length) throw new Error(`${eq.maquina} no tiene agentes de casa en CASA_AGENTE`);
@@ -96,6 +98,22 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
     return { consejero: silla, ...e, ...(e.ok ? { nota: `consejero_mensaje falló: ${m.error}` } : { error: `consejero_mensaje: ${m.error}; encargo: ${e.error}` }) };
   }
 
+  async function latidos(eq, modo, mision) {
+    if (!latir) return eq.consejeros.map((c) => ({ consejero: c, ok: false, error: 'sin KV de latidos' }));
+    const out = [];
+    for (const c of eq.consejeros) out.push({ consejero: c, ...(await intentar(async () => { const r = await latir(c, { modo, mision, minutos: 10, origen: `equipo_${modo === 'reposo' ? 'handoff' : 'handon'}` }); return { modo: r.modo }; })) });
+    return out;
+  }
+
+  /** setup modo ahorro <equipo>: SOLO monitores en negro; los agentes siguen trabajando. */
+  async function ahorro({ equipo, prueba = false }) {
+    const eq = resolver(equipo);
+    const plan = `AgoraMatrix «setup modo ahorro ${eq.maquina} · [equipo_ahorro]» → agora-cmd-poller de ${eq.maquina}: pmset displaysleepnow (no toca agentes, apps ni el Mac)`;
+    if (prueba) return { ok: true, prueba: true, accion: 'ahorro', equipo: eq.maquina, plan };
+    const monitores = await intentar(async () => { await api.agoraDecir({ texto: `setup modo ahorro ${eq.maquina} · [equipo_ahorro] monitores en negro; los agentes siguen trabajando`, de: `ahorro · ${quien}`, tipo: 'ahorro' }); return { via: plan }; });
+    return { ok: monitores.ok, accion: 'ahorro', equipo: eq.maquina, monitores };
+  }
+
   async function handon({ equipo, prueba = false, nota = '' }) {
     const eq = resolver(equipo);
     const hora = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }).format(ahora());
@@ -109,6 +127,8 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
       monitores: `AgoraMatrix «handON ${eq.maquina}» → agora-cmd-poller en ${eq.maquina}: caffeinate -u -t 2`,
       agentes: eq.agentes.map((a) => ({ persona: a.persona, maquina: eq.maquina, texto: textoAgente(a) })),
       consejeros: eq.consejeros.map((s) => ({ consejero: s, texto: textoConsejero(s) })),
+      reanudar: `el poller de ${eq.maquina} reanuda sus vigilantes de encargos (SIGCONT) y quita la marca de handOFF`,
+      latido: eq.consejeros.map((c) => `${c}: consejero_latido trabajando (10 min)`),
     };
     if (prueba) return { ok: true, prueba: true, accion: 'handON', equipo: eq.maquina, plan, nota: 'modo prueba: no se ha escrito nada' };
 
@@ -125,11 +145,13 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
       await api.agoraDecir({ texto: `handON ${eq.maquina} · [equipo_handon] enciende monitores y empieza la jornada: ${eq.agentes.map((a) => a.nombre).join(', ')} + ${eq.consejeros.map((s) => NOMBRE[s] || s).join(', ')}`, de: `handON · ${quien}`, tipo: 'handon' });
       return { via: `AgoraMatrix → agora-cmd-poller ${eq.maquina} (≤15 s)` };
     });
+    const latido = await latidos(eq, 'trabajando', `handON ${eq.maquina}`);
     const ok = agentes.every((x) => x.ok) && consejeros.every((x) => x.ok) && monitores.ok;
-    return { ok, accion: 'handON', equipo: eq.maquina, agentes, consejeros, monitores };
+    return { ok, accion: 'handON', equipo: eq.maquina, agentes, consejeros, monitores, latido };
   }
 
-  async function handoff({ equipo, prueba = false, apagar = true }) {
+  async function handoff({ equipo, prueba = false, apagar = true, gracia = 10 }) {
+    gracia = Math.max(0, Math.min(60, Number(gracia) || 0));
     const eq = resolver(equipo);
     const { mmdd, iso } = hoyMadrid(ahora());
     // 1) Resumen del día por agente: encargos de hoy (etiqueta .MM.DD) hechos y pendientes.
@@ -159,12 +181,14 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
       consumo: `Tokens del día: https://www.admira.live/consumos (y Notificaciones de Yokup). A cada agente y consejero se le pide consumo_reportar en su cierre.`,
     };
     const lineas = porAgente.map((x) => `${NOMBRE[x.persona] || x.persona}: ${x.ok ? `${x.hechos.length} hechos hoy, ${x.pendientes.length} pendientes` : 'sin datos'}`).join('; ');
-    const textoAgente = (a) => `handOFF: cierra la jornada en ${eq.maquina}. ${a.nombre}: termina o deja a salvo lo que tengas (commit/push o nota), acusa en encargo_responder cada encargo abierto con su estado real, declara tu consumo de hoy con consumo_reportar y contesta este encargo con el resumen de tu día en 3-5 líneas (hecho, pendiente, bloqueos). Después deja de trabajar hasta el próximo handON.`;
+    const textoAgente = (a) => `handOFF: cierra la jornada en ${eq.maquina}. ${a.nombre}: termina tu paso actual o ciérralo limpio en los próximos ${gracia} min (commit/push o nota; no empieces nada nuevo, también tus subagentes), acusa en encargo_responder cada encargo abierto con su estado real, declara tu consumo de hoy con consumo_reportar y contesta este encargo con el resumen de tu día en 3-5 líneas (hecho, pendiente, bloqueos). Después deja de trabajar: en ${gracia} min tu vigilante deja de entregarte encargos hasta el próximo handON (no se mata ningún proceso ni se duerme el Mac).`;
     const textoConsejero = (s) => `handOFF: cierra tu día (${eq.maquina}, ${iso}). Resumen del equipo: ${lineas}. Contesta con tu resumen del día (3-5 líneas) y declara tu consumo con consumo_reportar.`;
     if (prueba) {
       return { ok: true, prueba: true, accion: 'handOFF', equipo: eq.maquina, resumen,
         plan: { agentes: eq.agentes.map((a) => ({ persona: a.persona, texto: textoAgente(a) })), consejeros: eq.consejeros.map((s) => ({ consejero: s, texto: textoConsejero(s) })),
-          monitores: apagar ? `AgoraMatrix «handOFF ${eq.maquina}» → agora-cmd-poller: pmset displaysleepnow` : 'no se apagan (apagar:false)' },
+          monitores: apagar ? `AgoraMatrix «handOFF ${eq.maquina}» → agora-cmd-poller: pmset displaysleepnow (y lo mantiene en negro si nadie toca el Mac); si Unreal/Epic retiene la pantalla con una aserción, se le pide salir` : 'no se apagan (apagar:false)',
+          pausa: `a los ${gracia} min el poller pausa (SIGSTOP, reversible) los vigilantes de encargos de ${eq.maquina}; handON los reanuda`,
+          latido: eq.consejeros.map((c) => `${c}: consejero_latido reposo`), nunca: 'no se apaga ni se duerme el ordenador' },
         nota: 'modo prueba: no se ha escrito nada ni se apagan monitores' };
     }
     const agentes = [];
@@ -178,13 +202,14 @@ export function crearEquipos({ flota, bandeja, api, identidad = null, ahora = ()
     for (const s of eq.consejeros) consejeros.push(await avisarConsejero(s, textoConsejero(s), eq));
     // 2) Publicar el resumen y, al final, apagar monitores (el poller lo hace al ver «handOFF <Equipo>»).
     const monitores = await intentar(async () => {
-      const cierre = apagar ? ' · [equipo_handoff] apaga monitores' : '';
+      const cierre = ` · [equipo_handoff pausa=${gracia}${apagar ? '' : ' monitores=no'}]${apagar ? ' apaga monitores' : ''}`;
       await api.agoraDecir({ texto: `handOFF ${eq.maquina}${cierre} · resumen ${iso}: ${lineas}. Hechos hoy ${resumen.totales.hechos_hoy}, pendientes ${resumen.totales.pendientes}.`.slice(0, 1900), de: `handOFF · ${quien}`, tipo: 'handoff' });
       return { via: apagar ? `AgoraMatrix → agora-cmd-poller ${eq.maquina}: pmset displaysleepnow (≤15 s)` : 'resumen publicado; monitores sin tocar' };
     });
+    const latido = await latidos(eq, 'reposo', `handOFF ${eq.maquina}`);
     const ok = agentes.every((x) => x.ok) && consejeros.every((x) => x.ok) && monitores.ok;
-    return { ok, accion: 'handOFF', equipo: eq.maquina, resumen, agentes, consejeros, monitores };
+    return { ok, accion: 'handOFF', equipo: eq.maquina, resumen, agentes, consejeros, monitores, latido, pausa_en_min: gracia };
   }
 
-  return { handon, handoff, resolver };
+  return { handon, handoff, ahorro, resolver };
 }

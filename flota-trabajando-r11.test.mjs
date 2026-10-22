@@ -15,7 +15,7 @@ test("Jobs y Wozniak: dualidad con Smith (incluidos en su Grok), como Musk/Huang
 });
 
 test("Jobs sin latido + Smith trabajando → Jobs activo vía Smith en Consejeros, una sola ficha, sin tokens propios", () => {
-  const t = tarjetas({ presencia: [smithVivo], ahoraS: T });
+  const t = tarjetas({ presencia: [smithVivo], velocidad: { porAgente: [{ agente: "Smith", tokHora: 500, tokHoy: 500, tokUltimaHora: 500 }] }, ahoraS: T });
   const s = de(t, "Smith"), j = de(t, "Jobs"), w = de(t, "Wozniak");
   assert.equal(t.filter((x) => x.agente === "Jobs").length, 1);
   assert.deepEqual([j.estado, j.grupo, j.via, j.maquina], [s.estado, "consejeros", "Smith", s.maquina]);

@@ -16,18 +16,18 @@ const presencia = [
 const carga = new Map([["Oraculo", { in_progress: 9, abiertos: 28 }], ["Merovingio", { in_progress: 0, abiertos: 5 }], ["Cypher", { in_progress: 0 }]]);
 const de = (t, n) => t.find((x) => x.agente === n);
 
-test("Oráculo (OpenCode gratis + Codex, 0 tokens, 9 en curso) sale trabajando, una vez, con Codex y nota plan C", () => {
+test("Oráculo (OpenCode gratis + Codex, 0 tokens, 9 en curso) sale una vez, con Codex y nota plan C; r53: sin tokens NO es verde", () => {
   const t = tarjetas({ presencia, velocidad: null, ahoraS: T, carga });
   const o = t.filter((x) => x.agente === "Oráculo");
   assert.equal(o.length, 1);
-  assert.equal(o[0].estado, "verde");
+  assert.notEqual(o[0].estado, "verde");
   assert.equal(o[0].motor, "Codex");
   assert.equal(o[0].planC, true);
   assert.equal(o[0].enCurso, 9);
 });
-test("Merovingio con latido sale trabajando, con Grok CLI y sin nota de plan C", () => {
+test("Merovingio con latido: Grok CLI y sin nota de plan C; r53: sin tokens no es verde", () => {
   const m = de(tarjetas({ presencia, velocidad: null, ahoraS: T, carga }), "Merovingio");
-  assert.equal(m.estado, "verde");
+  assert.notEqual(m.estado, "verde");
   assert.equal(m.motor, "GrokBot · GrokBot CLI");
   assert.equal(m.planC, false);
 });

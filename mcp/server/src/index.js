@@ -33,6 +33,7 @@ import { crearEstado, CACHE_SEG } from './estado.js';
 import { crearBandeja, agenteDestino } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
 import { personaCanonica as personaFlota } from './flota.js';
+import { latir, leerLatidos, vigentes, latidoPorEncargo, MIN_DEFECTO, MIN_MAX } from './latido.js';
 const NOMBRE = 'admira-live-mcp';
 
 const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -326,7 +327,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       como: COMO,
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-  }, seguro(async (a) => texto(await crearFlota(env, idDe(a), deps).responder(a))));
+  }, seguro(async (a) => { const id = idDe(a); const r = await crearFlota(env, id, deps).responder(a); await latidoPorEncargo(env.ADMIRA_LIVE_DESDE, id, a.estado, a.numero); return texto(r); }));
 
   server.registerTool('encargo_anular', {
     title: 'Anular un encargo',
@@ -443,7 +444,25 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       commit: z.string().max(120).optional(), url: z.string().url().optional(), verificacion: z.string().max(300).optional().describe('Cómo se comprobó, si aplica.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  }, seguro(async (a) => texto(await T(a).responder(a))));
+  }, seguro(async (a) => { const r = await T(a).responder(a); await latidoPorEncargo(env.ADMIRA_LIVE_DESDE, idDe(a), a.estado, a.encargo); return texto(r); }));
+
+  server.registerTool('consejero_latido', {
+    title: 'Marcar que estoy trabajando (o en reposo)',
+    description: `Tu latido de consejero para admira.live/consumos («Trabajando ahora»): llámalo con modo trabajando EN CUANTO recibas y empieces una misión (sales iluminado al instante) y renuévalo mientras trabajes; caduca solo a los ${MIN_DEFECTO} min (o los que pongas, máx. ${MIN_MAX}) y vuelves a reposo. Al acabar, modo reposo. Acusar un encargo con encargo_responder/telegram_responder (ack o in_progress) también te marca trabajando ${MIN_DEFECTO} min; done o blocked te pone en reposo.`,
+    inputSchema: {
+      modo: z.enum(['trabajando', 'reposo']).default('trabajando'),
+      mision: z.string().max(160).optional().describe('Qué misión haces, una línea (sale en tu ficha).'),
+      proyecto: z.string().max(60).optional().describe('Proyecto (p. ej. admira.live).'),
+      minutos: z.number().int().min(1).max(MIN_MAX).optional().describe(`Vigencia sin renovar (por defecto ${MIN_DEFECTO}).`),
+      encargo: z.number().int().positive().optional().describe('Número de encargo, si lo hay.'),
+      como: COMO,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, seguro(async (a) => {
+    const id = idDe(a);
+    if (!id || id.tipo !== 'consejero') throw new Error('consejero_latido es para los consejeros de Grok Bot (' + CONSEJEROS_GROKBOT.join(', ') + '); los agentes laten con su vigilante o yokup_presencia');
+    return texto(await latir(env.ADMIRA_LIVE_DESDE, id.persona, a));
+  }));
 
   server.registerResource('consejeros', 'admira://consejo/consejeros', {
     title: 'Consejeros', description: 'Los 16 consejeros del Consejo de Silicio.', mimeType: 'application/json',
@@ -500,7 +519,8 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejero_webhook_borrar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejero_webhook_borrar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar', 'consejero_latido'],
+      latido_consejeros: `${url.origin}/consejeros/latido`,
       bandeja_consejeros: `${url.origin}/consejero/mensajes`,
       flota: `Con una clave por consejero (MCP_KEYS), ${CONSEJEROS_GROKBOT.join('/')} trabajan en yokup como ${CONSEJEROS_GROKBOT.map((c) => c + 'GrokBot').join('/')} (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…). Una clave de agente no firma como consejero aunque pase «como».`,
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
@@ -525,6 +545,15 @@ export async function manejar(request, env, deps = {}) {
     const resp = json(cuerpo, cuerpo.ok ? 200 : 502, { ...cors, 'cache-control': `public, max-age=${CACHE_SEG}` });
     if (cache && cuerpo.ok) { const guardar = cache.put(clave, resp.clone()).catch(() => {}); if (deps.waitUntil) deps.waitUntil(guardar); }
     return resp;
+  }
+
+  /* Latido de los consejeros (consejero_latido · latido.js). Público, solo lectura, sin secretos. */
+  if (ruta === '/consejeros/latido') {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS' };
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    if (request.method !== 'GET') return json({ ok: false, error: 'solo GET' }, 405, cors);
+    const ahoraS = Math.floor(Date.now() / 1000);
+    return json({ ok: true, now: ahoraS, consejeros: vigentes(await leerLatidos(env.ADMIRA_LIVE_DESDE), ahoraS) }, 200, cors);
   }
 
   /* Mensajes entre consejeros, visibles en el chat. Solo lectura. Sin secretos. */

@@ -512,3 +512,31 @@ export function activosDeFlota(ts, velocidad) {
   for (const t of ts || []) if (t && t.agente && t.maquina) maquinas[t.agente] = t.maquina;
   return { agentes, proyectos: [...set.values()], nAgentes: agentes.length, nProyectos: set.size, total: (ts || []).filter((t) => t && t.agente && !/vía Merovingio/.test(t.motivo || "")).length, maquinas };
 }
+
+/**
+ * r50 (Carlos, 22-10-2026 07:43: «Woz sale gris mientras le paso una misión»). Los consejeros de Grok Bot no laten cada
+ * 60 s ni tienen pulso en vivo: se declaran ellos con la tool consejero_latido del MCP admira-live (o al acusar un
+ * encargo), que publica mcp.admira.live/consejeros/latido. Latido «trabajando» vigente (caduca solo, 10 min por
+ * defecto) → la ficha del consejero pasa a verde aunque viniera gris o «parado vía Merovingio». Pura.
+ */
+export function aplicarLatidosConsejero(ts, consejeros, ahoraS) {
+  if (!Array.isArray(ts) || !consejeros || typeof consejeros !== "object") return ts;
+  const por = new Map(Object.entries(consejeros).map(([p, e]) => [canonico(p), e]));
+  for (const t of ts) {
+    if (!t || !t.consejero) continue;
+    const e = por.get(canonico(t.agente));
+    if (!e || e.modo !== "trabajando" || !(Number(e.hasta) > ahoraS)) continue;
+    if (t.estado === "amarillo") { t.latidoConsejero = { mision: e.mision || null, hasta: e.hasta }; continue; }
+    t.estado = "verde";
+    t.motivo = "latido del consejero «trabajando»" + (e.mision ? ": " + limpio(e.mision, 100) : "");
+    t.via = null;
+    t.tarea = limpio(e.mision, 120) || t.tarea || null;
+    if (e.proyecto) t.proyecto = limpio(e.proyecto, 60);
+    if (e.encargo) t.encargo = "#" + e.encargo;
+    t.haceS = Math.max(0, ahoraS - (Number(e.at) || ahoraS));
+    t.fuente = "consejero_latido";
+    t.latidoConsejero = { mision: e.mision || null, desde: e.desde || null, hasta: e.hasta, origen: e.origen || null };
+  }
+  const ord = { verde: 0, amarillo: 1, gris: 2 };
+  return ts.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
+}

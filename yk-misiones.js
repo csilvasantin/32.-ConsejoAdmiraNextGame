@@ -1035,6 +1035,20 @@
   // su máquina (canónica) o su agente asignado está VIVO en presencia y la
   // misión no está resuelta. `live` = { machines:Set(canon), personas:Set(lower) }.
   // (Carlos, FLT-761 — prioridad absoluta.)
+  function nombresDe(t) {
+    var out = [];
+    if (t && t._agents && t._agents.length) out = out.concat(t._agents);
+    if (t && t.assignee) out.push(t.assignee);
+    return out;
+  }
+  /** Consejeros a la izquierda; deepagents, el resto y lo sin asignar, a la derecha. */
+  function ladoDe(t) {
+    var Y = (typeof window !== "undefined" && window.YkQuien) || (typeof globalThis !== "undefined" && globalThis.YkQuien);
+    if (!t || !Y || typeof Y.consejero !== "function") return "agentes";
+    var names = nombresDe(t), i;
+    for (i = 0; i < names.length; i++) if (names[i] && Y.consejero(names[i])) return "consejeros";
+    return "agentes";
+  }
   function markWorking(container, tickets, live) {
     live = live || {};
     var lm = live.machines, lp = live.personas;
@@ -1042,7 +1056,6 @@
     (tickets || []).forEach(function (t) { byId[t.id] = t; });
     (container || document).querySelectorAll(".tk").forEach(function (row) {
       var t = byId[row.dataset.id]; if (!t) return;
-      var img = row.querySelector(".shot-img"); if (!img) return;
       var maq = machineOf(t);   // ya canónica
       // una misión difundida agrupa varios agentes (_agents); vale con que UNO viva
       var pers = (t._agents && t._agents.length ? t._agents : [t.assignee])
@@ -1050,7 +1063,10 @@
       var alive = (maq && lm && lm.has(maq)) ||
         (lp && pers.some(function (p) { return p && lp.has(p); }));
       var activa = t.status !== "resolved";
-      img.classList.toggle("working", !!(alive && activa));
+      var enCurso = t.status === "in_progress" || t.visible_state === "in_progress";
+      row.classList.toggle("pulso", !!(alive && enCurso));
+      var img = row.querySelector(".shot-img");
+      if (img) img.classList.toggle("working", !!(alive && activa));
     });
   }
 
@@ -1254,7 +1270,7 @@
     if (SELECTED && document.querySelector('.tk[data-id="' + cssq(SELECTED) + '"]')) renderTaskTree(SELECTED);
   }
 
-  window.YkMisiones = {
+  var apiMisiones = {
     init: init, selected: selected, selectMission: selectMission,
     rowHtml: rowHtml, cacheMission: cacheMission, bindRows: bindRows, machineOf: machineOf, canonMachine: canonMachine, rcId: rcId, estadoDe: estadoDe, coincideEstado: coincideEstado, visibleId: visibleId, dailyClosureMeta: dailyClosureMeta,
     machOffOf: machOffOf, whoHtml: whoHtml,
@@ -1268,6 +1284,9 @@
     nextStatus: nextStatus, postStatus: postStatus, postPlan: postPlan,
     fetchTasks: fetchTasks, fetchAllTasks: fetchAllTasks, groupByMission: groupByMission,
     markWorking: markWorking, fillActivity: fillActivity, esc: esc, ago: ago, slaLeft: slaLeft,
+    ladoDe: ladoDe,
     customizeReady: customizeReady, boardPrefs: boardPrefs, machVisual: machVisual
   };
+  if (typeof window !== "undefined") window.YkMisiones = apiMisiones;
+  if (typeof globalThis !== "undefined") globalThis.YkMisiones = apiMisiones;
 })();

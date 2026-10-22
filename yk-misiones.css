@@ -50,6 +50,23 @@
 }
 .shot-img.working{ border-color:var(--brand,#78f3ff); animation:yk-working-halo 1.7s ease-in-out infinite; }
 @media (prefers-reduced-motion:reduce){ .shot-img.working{ animation:none; box-shadow:0 0 0 1px var(--brand,#78f3ff),0 0 14px 3px rgba(120,243,255,.6); } }
+/* Latido de quien está ahora en una misión en curso: doble pulso en la barra, el punto y el retrato. */
+@keyframes yk-pulso-dot{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(136,255,170,0)}
+  12%{transform:scale(1.45);box-shadow:0 0 0 5px rgba(136,255,170,0)}
+  24%{transform:scale(1)}
+  40%{transform:scale(1.28);box-shadow:0 0 8px 1px rgba(136,255,170,.85)}
+  62%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(136,255,170,0)}
+}
+@keyframes yk-pulso-bar{0%,100%{opacity:.4}12%{opacity:1}24%{opacity:.45}40%{opacity:1}62%,100%{opacity:.4}}
+.tk.pulso{position:relative}
+.tk.pulso::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--good,#88ffaa);box-shadow:0 0 10px var(--good,#88ffaa);pointer-events:none;z-index:3;animation:yk-pulso-bar 1.5s ease-in-out infinite}
+.tk.pulso .badge i,.tk.pulso .agava{animation:yk-pulso-dot 1.5s ease-in-out infinite;transform-origin:center}
+@media (prefers-reduced-motion:reduce){
+  .tk.pulso::before,.tk.pulso .badge i,.tk.pulso .agava{animation:none}
+  .tk.pulso::before{opacity:1}
+  .tk.pulso .badge i,.tk.pulso .agava{box-shadow:0 0 0 2px rgba(136,255,170,.85)}
+}
 .shot-none{color:var(--dim);font-family:var(--mono);font-size:12px}
 /* Placeholder por defecto cuando la misión no tiene proof NI proyecto detectado:
    logo AdmiraNeXT (Carlos, 2026-07-18: nunca «—», siempre una imagen). Sobrio y

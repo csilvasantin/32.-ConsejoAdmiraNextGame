@@ -483,7 +483,7 @@
     var activos = ACT ? ACT.nAgentes : nAgActivos(d), conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
     var estF = d && d.tokHora != null ? E.estadoFila(d.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
-      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + activos + ' ' + T(activos === 1 ? 'agente activo' : 'agentes activos', activos === 1 ? 'active agent' : 'active agents') + ' ' + T('de ', 'of ') + (ACT ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + T('agentes ', 'agents ') + '<b>' + xy(nAgTrab(), nAgCon()) + '</b> ' + T('(trabajando / conectados)', '(working / connected)') + ' · ' + (ACT ? ACT.total : ags.length) + T(' en la flota', ' in the fleet') + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     var unico = agUnico(d);
     if (unico && !ags.some(function (a) { return a.agente === unico; })) ags.push({ agente: unico, tokHora: null, tokHoy: 0, sinDatos: true });
@@ -500,7 +500,7 @@
     return fetch('/api/orquestar', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (o) {
       if (!o) return;
       var m = {};
-      (o.candidatos || []).concat(o.excluidos || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin', agotaAntes: !!c.agotaAntes, proyeccionTexto: c.proyeccionTexto || null }; });
+      (o.candidatos || []).concat(o.excluidos || [], o.margenes || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin', agotaAntes: !!c.agotaAntes, proyeccionTexto: c.proyeccionTexto || null }; });
       ORQ.margen = m; ORQ.leido = Date.now();
       if (estado.datos) pintaSelectorAgente(estado.datos);
     }).catch(function () {});
@@ -669,8 +669,18 @@
   var ACT = null;
   function nProyAct() { return ACT ? ACT.nProyectos : E.proyectosActivos((estado.datos && estado.datos.porProyecto) || []).length; }
   function nAgAct() { return ACT ? ACT.nAgentes : nAgActivos(estado.datos); }
-  function rotProy() { return T('Proyectos', 'Projects') + ' (' + nProyAct() + ')'; }
-  function rotAg() { return T('Agentes', 'Agents') + ' (' + nAgAct() + ')'; }
+  /** #7056 (Carlos, 22-10-2026): x = agentes trabajando ahora (en verde: tokens en los últimos 15 min). */
+  function nAgTrab15(d) { return ((d && d.porAgente) || []).filter(function (a) { return a && Number(a.tokHora) > 0; }).length; }
+  function nAgTrab() { return ACT && ACT.nTrabajando != null ? ACT.nTrabajando : nAgTrab15(estado.datos); }
+  function nAgCon() { return ACT && ACT.nConectados != null ? ACT.nConectados : nAgAct(); }
+  /** «3/6»: x nunca supera a y (si un agente tiene tokens pero aún no está en la flota, y sube con él). */
+  function xy(x, y) { return x + '/' + Math.max(x, y); }
+  /** Carlos 22-10-2026: «Proyectos (x/y)»: x = proyectos con tokens en los últimos 15 min (tokHora > 0), y = proyectos con consumo hoy (Madrid). «otros» no cuenta. */
+  function proysPP() { return ((estado.datos && estado.datos.porProyecto) || []).filter(function (p) { return p && p.proyecto && p.proyecto !== 'otros'; }); }
+  function nProyTrab() { return proysPP().filter(function (p) { return Number(p.tokHora) > 0; }).length; }
+  function nProyHoy() { return proysPP().filter(function (p) { return Number(p.tokHoy) > 0; }).length; }
+  function rotProy() { return T('Proyectos', 'Projects') + ' (' + xy(nProyTrab(), nProyHoy()) + ')'; }
+  function rotAg() { return T('Agentes', 'Agents') + ' (' + xy(nAgTrab(), nAgCon()) + ')'; }
   try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (!a) return; ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
   var H1_ES = null, TIT_ES = null;
   function rotulos() {

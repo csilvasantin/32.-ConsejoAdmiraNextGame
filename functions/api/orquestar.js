@@ -43,13 +43,16 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const ahora = Date.now();
   const [lecturas, pres, band, docs] = await Promise.all([leerLecturas(env), leerJson(PRESENCIA, f), leerJson(BANDEJA, f), leerPulsos(kv(env)).catch(() => [])]);
   const conCarlos = conCarlosDePulso(docs, ahora);
-  const cuentas = lecturas ? resumirCuentas(lecturas, null, { ahora }).map(({ id, nombre, cuenta, margen, semaforo, agotaAntes, proyeccion }) => ({ id, nombre, cuenta, margen, semaforo, agotaAntes, proyeccion: proyeccion && proyeccion.texto ? { texto: proyeccion.texto } : null })) : [];
+  // #7058: cada cuenta lleva también sus medidores (series de %), para que un agente lea el suyo (Smith = Grok CLI, Merovingio = Grok Bot).
+  // Un medidor cuyo reinicio ya pasó desde la lectura se da por renovado (0 % usado).
+  const medidor = (s) => { const r = s.ultima && s.ultima.reset; const renovado = !!(r && Date.parse(r) <= ahora); return { agente: s.agente, pct: renovado ? 0 : s.pct, agotaAntes: !renovado && !!(s.proy && s.proy.agotaAntes), proyeccionTexto: !renovado && s.proy && s.proy.texto ? s.proy.texto : null, ts: s.ultima ? s.ultima.ts : null, renovado }; };
+  const cuentas = lecturas ? resumirCuentas(lecturas, null, { ahora }).map(({ id, nombre, cuenta, margen, semaforo, agotaAntes, proyeccion, series }) => ({ id, nombre, cuenta, margen, semaforo, agotaAntes, proyeccion: proyeccion && proyeccion.texto ? { texto: proyeccion.texto } : null, medidores: (series || []).map(medidor) })) : [];
   const presencia = pres && Array.isArray(pres.presence) ? pres.presence : [];
   const bandeja = band && Array.isArray(band.items) ? band.items : [];
   const r = orquestar({ tipo, cuentas, presencia, bandeja, ahora, conCarlos: conCarlos.map((x) => x.agente) });
   return new Response(JSON.stringify({
     ok: true, tipo: r.tipo, tipoInferido: inferido, texto: texto || null,
-    elegido: r.elegido, candidatos: r.candidatos, excluidos: r.excluidos, conCarlos,
+    elegido: r.elegido, candidatos: r.candidatos, excluidos: r.excluidos, margenes: r.margenes, conCarlos,
     regla: "aptitud (≥0,4) → libre (flota: latido <" + LATIDO_VIVO_S / 60 + " min y sin encargo ack/in_progress; consejeros GrokBot: se despiertan al recibir encargo, solo cuenta el encargo en curso) → más margen de uso; sin lectura de margen penaliza; quien está con Carlos queda excluido («ocupado con Carlos») salvo que no haya nadie más apto",
     fuentes: {
       margen: lecturas ? "consumos-lecturas (" + lecturas.length + " lecturas)" : "sin KV",

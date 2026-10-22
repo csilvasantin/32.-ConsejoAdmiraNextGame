@@ -4,7 +4,7 @@
  * uso; nunca gastar de quien tiene menos margen si hay alguien apto con más.
  * Funciones puras: sin red ni KV (los datos los trae functions/api/orquestar.js).
  */
-import { PERSONAS, APTITUD, PALABRAS, TIPO_POR_DEFECTO } from "./orquestar-config.mjs";
+import { PERSONAS, APTITUD, PALABRAS, TIPO_POR_DEFECTO, MARGEN_SOLO } from "./orquestar-config.mjs";
 
 export const UMBRAL_APTO = 0.4;
 export const LATIDO_VIVO_S = 600; // 10 min
@@ -95,11 +95,12 @@ export function estaConCarlos(cfg, conCarlos) {
  * @param {Array|Set} [p.conCarlos] agentes con los que Carlos trabaja ahora (pulso r20): se excluyen
  *   («ocupado con Carlos») salvo que no quede ningún otro apto.
  */
-export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ahora = Date.now(), personas = PERSONAS, conCarlos = [] }) {
+export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ahora = Date.now(), personas = PERSONAS, conCarlos = [], margenSolo = MARGEN_SOLO }) {
   const ahoraS = Math.floor(ahora / 1000);
   const porId = new Map((cuentas || []).map((c) => [c.id, c]));
   const todos = personas.map((cfg) => {
-    const c = cfg.cuenta ? porId.get(cfg.cuenta) : null;
+    const c0 = cfg.cuenta ? porId.get(cfg.cuenta) : null;
+    const c = medidorDe(c0, cfg.medidor);
     const margenPct = c && c.margen !== null && c.margen !== undefined ? c.margen : null;
     const apto = aptitud(cfg.perfil, tipo);
     const lat = ultimoLatido(cfg, presencia);
@@ -136,5 +137,34 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
     persona: top.persona,
     motivo: top.persona + ": " + etiquetaTipo + ", " + (top.conCarlos ? "ocupado con Carlos pero no queda nadie más apto, " : "") + (top.libre.libre ? "libre" : "no libre (" + top.libre.why + ")") + ", " + (top.margenPct === null ? (top.grupo ? "sin lectura de margen" : "margen desconocido") : fmt(top.margenPct) + " de margen"),
   } : null;
-  return { tipo, candidatos, excluidos, elegido, conCarlos: todos.filter((x) => x.conCarlos).map((x) => x.persona) };
+  return { tipo, candidatos, excluidos, elegido, conCarlos: todos.filter((x) => x.conCarlos).map((x) => x.persona), margenes: margenesSolo(porId, margenSolo) };
+}
+
+/** Semáforo del margen de un medidor: verde <60 % usado, ámbar 60-85, rojo >85 o si se agota antes del reset. */
+function semaforoUso(pct, agota) {
+  if (pct === null || pct === undefined) return "sin";
+  if (pct > 85 || agota) return "rojo";
+  return pct >= 60 ? "ambar" : "verde";
+}
+
+/**
+ * #7058: la cuenta vista a través de UN medidor (p. ej. «SuperGrok Heavy semanal» = Grok CLI, «Grok Bot semanal» = GrokBot).
+ * Sin medidor, o si la cuenta no trae medidores, la cuenta tal cual. Si el medidor no tiene lectura: margen null.
+ */
+export function medidorDe(c, medidor) {
+  if (!c || !medidor || !Array.isArray(c.medidores)) return c;
+  const m = c.medidores.find((x) => x && x.agente === medidor);
+  if (!m || m.pct === null || m.pct === undefined) return { ...c, margen: null, semaforo: "sin", agotaAntes: false, proyeccion: null, medidor };
+  return { ...c, margen: Math.round((100 - m.pct) * 100) / 100, semaforo: semaforoUso(m.pct, !!m.agotaAntes), agotaAntes: !!m.agotaAntes,
+    proyeccion: m.proyeccionTexto ? { texto: m.proyeccionTexto } : null, medidor };
+}
+
+/** #7058: margen de los agentes que solo se enseñan (Merovingio): [{ persona, margenPct, semaforo, agotaAntes, proyeccionTexto, medidor }]. */
+export function margenesSolo(porId, lista = MARGEN_SOLO) {
+  return (lista || []).map((x) => {
+    const c = medidorDe(porId.get(x.cuenta) || null, x.medidor);
+    const margenPct = c && c.margen !== null && c.margen !== undefined ? c.margen : null;
+    return { persona: x.persona, cuenta: x.cuenta, medidor: x.medidor || null, margenPct, semaforo: c ? c.semaforo || "sin" : "sin",
+      agotaAntes: !!(c && c.agotaAntes), proyeccionTexto: c && c.proyeccion && c.proyeccion.texto ? c.proyeccion.texto : null };
+  });
 }

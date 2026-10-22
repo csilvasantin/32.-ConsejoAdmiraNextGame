@@ -158,8 +158,8 @@ test("r26 · rótulos de /consumos: «Consumo Agentes AdmiraNeXT», «Tokens por
   assert.match(html, /<h1>Consumo Agentes AdmiraNeXT<\/h1>/);
   // r36 (Carlos): sin cabecera visible «TOKENS POR HORA»; queda solo para lectores de pantalla.
   assert.match(html, /<h2 id="vel-titulo" class="sr">Tokens por hora<\/h2>/);
-  assert.match(html, /<span id="vel-ag-titulo">Agentes \(0\)<\/span> · /);
-  assert.match(html, /<span id="vel-proy-titulo">Proyectos \(0\)<\/span> · /);
+  assert.match(html, /<span id="vel-ag-titulo">Agentes \(0\/0\)<\/span> · /);
+  assert.match(html, /<span id="vel-proy-titulo">Proyectos \(0\/0\)<\/span> · /);
   assert.doesNotMatch(html, /Qué estamos gastando|Una tarjeta por cuenta|ahora mismo<\/h2>|Por proyecto ·/);
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
   assert.match(js, /AdmiraNeXT Agents Usage/);

@@ -522,7 +522,7 @@ export function activosDeFlota(ts, velocidad) {
     const porTokens = Number(t.tokUltimaHora) > 0;
     if (!porLatido && !porTokens) continue;
     if (/vía Merovingio/.test(t.motivo || "")) continue; // espejo (Musk/Huang) de Merovingio
-    agentes.push({ agente: t.agente, maquina: t.maquina || null, proyecto: normProyecto(t.proyecto, conocidos), por: porLatido ? (t.motivo || t.estado) : "tokens última hora" });
+    agentes.push({ agente: t.agente, maquina: t.maquina || null, proyecto: normProyecto(t.proyecto, conocidos), por: porLatido ? (t.motivo || t.estado) : "tokens última hora", trabajando: Number(t.tokHora) > 0 });
   }
   const set = new Map();
   for (const a of agentes) if (a.proyecto && !set.has(a.proyecto)) set.set(a.proyecto, { proyecto: a.proyecto, agentes: [], tokUltimaHora: null });
@@ -530,7 +530,10 @@ export function activosDeFlota(ts, velocidad) {
   for (const a of agentes) if (a.proyecto) set.get(a.proyecto).agentes.push(a.agente);
   const maquinas = {};
   for (const t of ts || []) if (t && t.agente && t.maquina) maquinas[t.agente] = t.maquina;
-  return { agentes, proyectos: [...set.values()], nAgentes: agentes.length, nProyectos: set.size, total: (ts || []).filter((t) => t && t.agente && !/vía Merovingio/.test(t.motivo || "")).length, maquinas };
+  // #7056 (Carlos, 22-10-2026): «Agentes (x/y)»: x = trabajando ahora (en verde: tokens en los últimos 15 min),
+  // y = conectados a la flota (los activos de arriba: latido vigente, encargo, con Carlos o tokens última hora).
+  const nTrabajando = agentes.filter((a) => a.trabajando).length;
+  return { agentes, proyectos: [...set.values()], nAgentes: agentes.length, nTrabajando, nConectados: agentes.length, nProyectos: set.size, total: (ts || []).filter((t) => t && t.agente && !/vía Merovingio/.test(t.motivo || "")).length, maquinas };
 }
 
 /**

@@ -6,7 +6,7 @@
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe, activosDeFlota } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
@@ -27,6 +27,17 @@ export async function leerCarga(fetchImpl, personas) {
     } catch (e) { return [p, null]; }
   }));
   return new Map(filas.filter(([, c]) => c));
+}
+
+/** r50: latido propio de los consejeros (tool consejero_latido del MCP admira-live). Público, sin secretos. */
+export const LATIDO_CONSEJEROS = "https://mcp.admira.live/consejeros/latido";
+export async function leerLatidosConsejero(fetchImpl) {
+  try {
+    const r = await fetchImpl(LATIDO_CONSEJEROS, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(4000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && d.consejeros && typeof d.consejeros === "object" ? d.consejeros : null;
+  } catch (e) { return null; }
 }
 
 export const PRESENCIA = "https://bot.yokup.com/api/presence";
@@ -106,13 +117,14 @@ export function conSuperficies(m, ts) {
 
 export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const ahoraMs = ahoraFijo || Date.now();
-  const [pr, v] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null)]);
+  const [pr, v, lat] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null), leerLatidosConsejero(fetchImpl || fetch)]);
   const p = pr.d;
   const ahoraS = Math.floor(ahoraMs / 1000);
   const pres = p ? p.presence : [];
   const nombres = [...AGENTES_FLOTA, ...CONSEJEROS, ...pres.map((e) => e && e.persona && personaCenso(e.persona))];
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
   const ts = tarjetas({ presencia: pres, velocidad: v, ahoraS, carga });
+  aplicarLatidosConsejero(ts, lat, ahoraS);
   // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
   const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));
   for (const t of ts) t.foco = focoDe(t, focos, ahoraMs);
@@ -130,7 +142,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
     appsGrokBot: (v && Array.isArray(v.grokbotApps) ? v.grokbotApps : []).map((a) => ({ maquina: a.maquina, cuenta: a.cuenta || null,
       alFrente: !!a.alFrente, usoS: a.usoS ?? null, fuente: a.fuente || null })),
     presencia: pr.estado, presenciaEdadS: pr.edadS, pulso: v && v.ok ? "ok" : "sin datos",
-    fuentes: [PRESENCIA, "/api/consumos/velocidad"], generado: new Date(ahoraMs).toISOString(),
+    latidoConsejeros: lat ? "ok" : "sin datos", fuentes: [PRESENCIA, "/api/consumos/velocidad", LATIDO_CONSEJEROS], generado: new Date(ahoraMs).toISOString(),
   };
 }
 

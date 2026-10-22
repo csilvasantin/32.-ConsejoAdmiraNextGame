@@ -654,7 +654,7 @@
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
       T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y GrokBot CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and GrokBot CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
-      T('Merovingio (bolsa de GrokBot · Cursor Pro) por el export CSV de cursor.com, cada hora y con retraso', 'Merovingio (GrokBot pool · Cursor Pro) from the cursor.com CSV export, hourly and delayed') +
+      T('Grok Bot (Consejo) · Cursor Pro por el export CSV de cursor.com, cada hora y con retraso', 'Grok Bot (Council) · Cursor Pro from the cursor.com CSV export, hourly and delayed') +
       (d && d.excluidosYokup && d.excluidosYokup.length ? ' (' + T('no se suman aparte: ', 'not added twice: ') + esc(gb(d.excluidosYokup.map(function (x) { return x.agente; }).join(', '))) + ')' : '') + ' + ' +
       T('partes de Yokup para el resto (', 'Yokup reports for the rest (') + '<a href="https://api.yokup.com/fleet/consumo?dias=1">fleet/consumo</a>) · ' +
       T('proyecto = carpeta de trabajo → repo git → uno de los 13 de la Galaxia · ', 'project = working folder → git repo → one of the 13 Galaxy projects · ') + T('se refresca cada 10 s', 'refreshes every 10 s');

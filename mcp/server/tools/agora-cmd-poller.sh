@@ -4,63 +4,103 @@
 # Lo dispara el LaunchAgent com.admira.agora-cmd-poller cada ~15 s.
 # Fuente: repo 32.-ConsejoAdmiraNextGame, mcp/server/tools/agora-cmd-poller.sh
 #
-# Comandos (SIN barra: la barra la traga Telegram como comando de bot):
-#   "apaga monitores" / "apaga las pantallas"   -> pmset displaysleepnow
-#   "handON <Equipo>"  (Equipo = este Mac: MacMini, MacStudio…)
-#        · escrito por una persona  -> caffeinate -u -t 2 (enciende monitores) y llama a la
-#          tool MCP equipo_handon (encargos a los agentes + consejero_mensaje a sus consejeros)
-#        · publicado por la tool (lleva [equipo_handon]) -> caffeinate -u -t 2
-#   "handOFF <Equipo>"
-#        · escrito por una persona  -> llama a equipo_handoff (resumen del día; la tool
-#          publica al final «handOFF <Equipo> · [equipo_handoff] apaga monitores»)
-#        · publicado por la tool (lleva [equipo_handoff]) -> pmset displaysleepnow
+# Comandos (SIN barra; se pueden escribir desde cualquier Mac o desde Telegram):
+#   "apaga monitores"                 -> pmset displaysleepnow (como siempre, este Mac)
+#   "handON <Equipo>"                 -> tool equipo_handon; el poller de <Equipo> enciende
+#                                        monitores (caffeinate -u -t 2) y reanuda sus vigilantes
+#   "handOFF <Equipo>"                -> tool equipo_handoff (cierre progresivo); el poller de
+#                                        <Equipo> apaga monitores, los mantiene en negro mientras
+#                                        nadie toque el Mac y, pasada la gracia, PAUSA (SIGSTOP,
+#                                        reversible) sus vigilantes de encargos. Nunca duerme el Mac.
+#   "setup modo ahorro <Equipo>"      -> tool equipo_ahorro; el poller de <Equipo> SOLO apaga monitores.
+# Equipos: MacMini, MacStudio, MacBookPro16 (MBP16), MacBookProNegro14 (MBP14).
 #
-# Lee inbox (consume=0, PEEK) y feed de Agora sin consumir ni latir. Dedup por `ts`
-# (high-water mark); el feed tiene su propio marcador, que arranca en «ahora».
-# Clave MCP (solo para la llamada de una persona): $HANDON_MCP_KEY_FILE
-# (~/.config/admiranext/handon-mcp.key) o, si no existe, la del conector admira_live de
-# Codex en este Mac (~/.codex/config.toml). Nunca se imprime.
-#
+# Reglas: · Monitores/pausa: solo actúa el poller del Mac nombrado (marca [equipo_*] de la tool).
+#         · La tool se llama UNA vez: solo el poller «llamador» (fichero
+#           ~/.agents-comms/cmd-poller.llamador o CMD_POLLER_LLAMADOR=1; hoy, el MacMini).
+# Clave MCP (solo el llamador): $HANDON_MCP_KEY_FILE (~/.config/admiranext/handon-mcp.key) o la del
+# conector admira_live de Codex del Mac (~/.codex/config.toml). Nunca se imprime.
 # Modo prueba:  CMD_POLLER_DRY=1 bash agora-cmd-poller.sh   (detecta y loguea, NO actúa)
 # ============================================================
 set -uo pipefail
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-KEY="$(cat "$HOME/.agents-comms/.synckey" 2>/dev/null || true)"
+C="$HOME/.agents-comms"
+KEY="$(cat "$C/.synckey" 2>/dev/null || true)"
 WORKER="https://api.admira.store"
 MCP_URL="${HANDON_MCP_URL:-https://mcp.admira.live/mcp}"
-STATE="$HOME/.agents-comms/cmd-poller.state"
-FEED_STATE="$HOME/.agents-comms/cmd-poller.feed.state"
-LOG="$HOME/.agents-comms/cmd-poller.log"
+STATE="$C/cmd-poller.state"; FEED_STATE="$C/cmd-poller.feed.state"; LOG="$C/cmd-poller.log"
+OFF="$C/handoff.estado"          # marca de handOFF: pausa_at=<epoch> monitores=<1|0>
+PIDS="$C/handoff.pids"           # PIDs pausados (SIGSTOP) para reanudar con SIGCONT
 AGORA="$HOME/.local/bin/agora"
 DRY="${CMD_POLLER_DRY:-0}"
+VIGIL_PAT="${CMD_POLLER_VIGIL_PAT:-agent-inbox}"
 IDENTITIES=("Claude·admira" "Codex·admira" "Claude·gmail" "Codex·gmail")
-EQUIPO="${CMD_POLLER_EQUIPO:-$(hostname -s)}"              # MacMini / MacStudio
-case "$(echo "$EQUIPO" | tr '[:upper:]' '[:lower:]')" in
+HOST="${CMD_POLLER_EQUIPO:-$(hostname -s)}"
+LLAMADOR="${CMD_POLLER_LLAMADOR:-$([ -f "$C/cmd-poller.llamador" ] && echo 1 || echo 0)}"
+case "$(echo "$HOST" | tr '[:upper:]' '[:lower:]')" in
   macstudio*) FIRMA_FROM="${CMD_POLLER_FROM:-Merovingio}"; FIRMA="Merovingio · MacStudio" ;;
-  *)          FIRMA_FROM="${CMD_POLLER_FROM:-Claude}";     FIRMA="Morfeo" ;;
+  macbook-pro-16*|macbookpro16*) FIRMA_FROM="${CMD_POLLER_FROM:-Claude}"; FIRMA="Neo · MBP16" ;;
+  macbookpronegro14*) FIRMA_FROM="${CMD_POLLER_FROM:-Claude}"; FIRMA="Neo · MBP14" ;;
+  *) FIRMA_FROM="${CMD_POLLER_FROM:-Claude}"; FIRMA="Morfeo" ;;
 esac
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+say() { [ "$DRY" = 1 ] && { log "[DRY] diría: $1"; return; }; "$AGORA" send --from "$FIRMA_FROM" "$1 — $FIRMA" >/dev/null 2>&1 || true; }
+run() { if [ "$DRY" = 1 ]; then log "[DRY] ejecutaría: $*"; else "$@"; fi; }
 
-[ -n "$KEY" ] || { echo "$(date '+%F %T') ERROR sin synckey" >> "$LOG"; exit 1; }
-
+[ -n "$KEY" ] || { log "ERROR sin synckey"; exit 1; }
 now_ms() { python3 -c 'import time;print(int(time.time()*1000))'; }
 [ -f "$STATE" ] || now_ms > "$STATE"
 [ -f "$FEED_STATE" ] || now_ms > "$FEED_STATE"
-last_ts="$(cat "$STATE" 2>/dev/null || echo 0)"
-last_feed="$(cat "$FEED_STATE" 2>/dev/null || echo 0)"
+last_ts="$(cat "$STATE" 2>/dev/null || echo 0)"; last_feed="$(cat "$FEED_STATE" 2>/dev/null || echo 0)"
 
+# ---------- acciones locales ----------
+idle_s() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}'; }
+monitores_off() {
+  # Unreal/Epic: solo si retienen la pantalla con una aserción (NoDisplaySleep / PreventUserIdleDisplaySleep).
+  if [ "${1:-}" = "cerrar-unreal" ]; then
+    for app in UnrealEditor EpicGamesLauncher; do
+      if pmset -g assertions | grep -E "\(${app}[^)]*\).*(NoDisplaySleep|PreventUserIdleDisplaySleep)" >/dev/null; then
+        log "handOFF: $app retiene la pantalla → se le pide salir (quit, sin matar)"
+        case $app in UnrealEditor) run osascript -e 'tell application id "com.epicgames.UnrealEditor" to quit' ;; *) run osascript -e 'tell application "Epic Games Launcher" to quit' ;; esac
+      fi
+    done
+  fi
+  run pmset displaysleepnow
+}
+pausar_vigilantes() {
+  local pids; pids="$(pgrep -f "$VIGIL_PAT" | grep -v "^$$\$" | tr '\n' ' ')"
+  [ -n "$pids" ] || { log "handOFF: no hay vigilantes «$VIGIL_PAT» que pausar"; return; }
+  log "handOFF: pauso (SIGSTOP) vigilantes $pids"
+  [ "$DRY" = 1 ] && { log "[DRY] kill -STOP $pids"; return; }
+  echo "$pids" >> "$PIDS"; kill -STOP $pids 2>/dev/null || true
+}
+reanudar() {
+  if [ -s "$PIDS" ]; then local pids; pids="$(tr '\n' ' ' < "$PIDS")"; log "handON: reanudo (SIGCONT) $pids"; run kill -CONT $pids 2>/dev/null || true; fi
+  [ "$DRY" = 1 ] || rm -f "$PIDS" "$OFF"
+}
+
+# ---------- leer Agora ----------
 tmp="$(mktemp)"; tmpf="$(mktemp)"
 for idraw in "${IDENTITIES[@]}"; do
   id="$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$idraw")"
-  curl -fsS -m 10 "$WORKER/agora/inbox?key=$KEY&id=$id&consume=0" 2>/dev/null >> "$tmp" || true
-  echo >> "$tmp"
+  curl -fsS -m 10 "$WORKER/agora/inbox?key=$KEY&id=$id&consume=0" 2>/dev/null >> "$tmp" || true; echo >> "$tmp"
 done
 curl -fsS -m 10 "$WORKER/agora/feed?key=$KEY&limit=40" 2>/dev/null > "$tmpf" || true
 
-# python imprime: <inbox_ts>\t<feed_ts>\t<acciones separadas por ;>\t<texto>
-IFS=$'\t' read -r new_ts new_feed acts trig < <(python3 - "$last_ts" "$tmp" "$last_feed" "$tmpf" "$EQUIPO" <<'PY'
+# salida: línea 1 "<inbox_ts>\t<feed_ts>"; luego una acción por línea: ACCION\tEQUIPO\tARG
+out="$(python3 - "$last_ts" "$tmp" "$last_feed" "$tmpf" "$HOST" <<'PY'
 import sys, json, re
-last_ts, f_inbox, last_feed, f_feed, equipo = int(sys.argv[1] or 0), sys.argv[2], int(sys.argv[3] or 0), sys.argv[4], sys.argv[5]
+last_ts, f_inbox, last_feed, f_feed, host = int(sys.argv[1] or 0), sys.argv[2], int(sys.argv[3] or 0), sys.argv[4], sys.argv[5]
+N = lambda s: re.sub(r'[^a-z0-9]', '', (s or '').lower())
+EQ = {'MacMini': ['macmini', 'mini'], 'MacStudio': ['macstudio', 'studio'],
+      'MacBookPro16': ['macbookpro16', 'mbp16'], 'MacBookProNegro14': ['macbookpronegro14', 'mbp14', 'macbookpro14', 'negro14']}
+def canon(s):
+    n = N(s)
+    for k, al in EQ.items():
+        if n in al: return k
+    return None
+ME = canon(host)
 def items(path):
     out = []
     for line in open(path):
@@ -69,41 +109,44 @@ def items(path):
         try: out += json.loads(line).get("items", [])
         except Exception: pass
     return out
-eq = re.sub(r'[^a-z0-9]', '', equipo.lower())
-pat = re.compile(r'^\W*hand\s*(on|off)\W+' + r'\W*'.join(map(re.escape, eq)) + r'(?![a-z0-9])', re.I)
-acts, trig = [], ""
+cmd = re.compile(r'^\W*(hand\s*on|hand\s*off|setup\s+modo\s+ahorro)\s+([A-Za-z0-9 .\-]{2,30}?)\s*(?:·|$)', re.I)
+acts = []
 def scan(lista, last, inbox):
-    global trig
     mx = last
     for it in lista:
         try: ts = int(it.get("ts", 0))
         except Exception: ts = 0
         mx = max(mx, ts)
         if ts <= last: continue
-        text = it.get("text") or ""
-        norm = re.sub(r'[^a-z0-9]', '', text.lower())
-        if inbox and 'apaga' in norm and ('monitor' in norm or 'pantalla' in norm):
-            acts.append("APAGA"); trig = text[:80]
-        m = pat.match(text)
-        if m:
-            on = m.group(1).lower() == 'on'
-            if '[equipo_handon]' in text and on: acts.append("WAKE")
-            elif '[equipo_handoff]' in text and not on: acts.append("APAGA")
-            elif not re.match(r'^\s*hand(on|off)\b[^·]*·\s*\[equipo_', text, re.I) and len(text) <= 120:
-                acts.append("HUMANO_ON" if on else "HUMANO_OFF")
-            trig = text[:80]
+        text = (it.get("text") or "").strip()
+        if inbox and 'apaga' in N(text) and ('monitor' in N(text) or 'pantalla' in N(text)) and not cmd.match(text):
+            acts.append(("APAGA", ME or '', '')); continue
+        m = cmd.match(text)
+        if not m: continue
+        verbo = N(m.group(1)); eq = canon(m.group(2))
+        if not eq: continue
+        mk = re.search(r'\[equipo_(handon|handoff|ahorro)([^\]]*)\]', text)
+        if mk:
+            if eq != ME: continue
+            if mk.group(1) == 'handon': acts.append(("WAKE", eq, ''))
+            elif mk.group(1) == 'ahorro': acts.append(("AHORRO", eq, ''))
+            else:
+                p = re.search(r'pausa=(\d+)', mk.group(2)); mon = 'monitores=no' not in mk.group(2)
+                acts.append(("OFF", eq, f"{p.group(1) if p else 10}:{1 if mon else 0}"))
+        elif len(text) <= 120:
+            acts.append(({"handon": "CALL_ON", "handoff": "CALL_OFF", "setupmodoahorro": "CALL_AHORRO"}[verbo], eq, ''))
     return mx
-a = scan(items(f_inbox), last_ts, True)
-b = scan(items(f_feed), last_feed, False)
-seen = []
+a = scan(items(f_inbox), last_ts, True); b = scan(items(f_feed), last_feed, False)
+print(f"{a}\t{b}")
+seen = set()
 for x in acts:
-    if x not in seen: seen.append(x)
-print(f"{a}\t{b}\t{';'.join(seen) or '-'}\t{trig.replace(chr(9),' ').replace(chr(10),' ') or '-'}")
+    if x in seen: continue
+    seen.add(x); print("\t".join(x))
 PY
-)
+)"
 rm -f "$tmp" "$tmpf"
-echo "${new_ts:-$last_ts}" > "$STATE"
-echo "${new_feed:-$last_feed}" > "$FEED_STATE"
+read -r new_ts new_feed <<< "$(echo "$out" | head -1)"
+echo "${new_ts:-$last_ts}" > "$STATE"; echo "${new_feed:-$last_feed}" > "$FEED_STATE"
 
 mcp_key() {
   local f="${HANDON_MCP_KEY_FILE:-$HOME/.config/admiranext/handon-mcp.key}"
@@ -116,37 +159,45 @@ m = re.search(r'\[mcp_servers\.admira_live\][^\[]*?Bearer ([A-Za-z0-9._~+/=-]+)'
 if m: print(m.group(1), end='')
 PY
 }
-llamar_tool() {  # llamar_tool <equipo_handon|equipo_handoff>
+llamar_tool() {  # llamar_tool <tool> <equipo>
+  [ "$DRY" = 1 ] && { log "[DRY] llamaría a $1 equipo=$2"; return 0; }
   local k; k="$(mcp_key)"
-  [ -n "$k" ] || { echo "$(date '+%F %T') $1: sin clave MCP en este Mac" >> "$LOG"; return 1; }
-  local body; body="$(python3 -c 'import json,sys;print(json.dumps({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":sys.argv[1],"arguments":{"equipo":sys.argv[2]}}}))' "$1" "$EQUIPO")"
-  local out; out="$(curl -sS -m 60 -X POST "$MCP_URL" -H "authorization: Bearer $k" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' --data "$body" 2>&1)"
-  echo "$(date '+%F %T') $1 → $(echo "$out" | tr '\n' ' ' | cut -c1-300)" >> "$LOG"
-  [ -n "$out" ] || return 1
-  echo "$out" | grep -q '"isError": *true' && return 1
-  echo "$out" | grep -q '"error"' && ! echo "$out" | grep -q '"result"' && return 1
+  [ -n "$k" ] || { log "$1: sin clave MCP en este Mac"; return 1; }
+  local body; body="$(python3 -c 'import json,sys;print(json.dumps({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":sys.argv[1],"arguments":{"equipo":sys.argv[2]}}}))' "$1" "$2")"
+  local r; r="$(curl -sS -m 90 -X POST "$MCP_URL" -H "authorization: Bearer $k" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' --data "$body" 2>&1)"
+  log "$1 $2 → $(echo "$r" | tr '\n' ' ' | cut -c1-300)"
+  [ -n "$r" ] || return 1
+  echo "$r" | grep -q '"isError": *true' && return 1
   return 0
 }
 
-[ "${acts:--}" = "-" ] && exit 0
-echo "$(date '+%F %T') TRIGGER $acts  («$trig»)" >> "$LOG"
-if [ "$DRY" = "1" ]; then echo "$(date '+%F %T') [DRY] no ejecuto: $acts" >> "$LOG"; exit 0; fi
-
-IFS=';' read -ra LISTA <<< "$acts"
-for act in "${LISTA[@]}"; do
+# ---------- ejecutar ----------
+while IFS=$'\t' read -r act eq arg; do
+  [ -n "${act:-}" ] || continue
+  log "TRIGGER $act ${eq:-} ${arg:-} (yo=$HOST, llamador=$LLAMADOR)"
   case "$act" in
-    WAKE)
-      caffeinate -u -t 2 ;;
-    HUMANO_ON)
-      caffeinate -u -t 2
-      llamar_tool equipo_handon \
-        || "$AGORA" send --from "$FIRMA_FROM" "🖥️ handON $EQUIPO: monitores encendidos, pero no pude llamar a equipo_handon (sin clave MCP en este Mac). — $FIRMA" >/dev/null 2>&1 || true ;;
-    HUMANO_OFF)
-      llamar_tool equipo_handoff \
-        || "$AGORA" send --from "$FIRMA_FROM" "⚠️ handOFF $EQUIPO: no pude llamar a equipo_handoff (sin clave MCP); no apago monitores sin resumen. Usa «apaga monitores» si quieres solo apagar. — $FIRMA" >/dev/null 2>&1 || true ;;
-    APAGA)
-      pmset displaysleepnow
-      "$AGORA" send --from "$FIRMA_FROM" "🖥️ Monitores apagados — el Mac sigue encendido. (toca una tecla para encenderlos). — $FIRMA" >/dev/null 2>&1 || true ;;
+    APAGA) monitores_off; say "🖥️ Monitores apagados — el Mac sigue encendido (toca una tecla para encenderlos)." ;;
+    WAKE)  reanudar; run caffeinate -u -t 2; say "☀️ handON $eq: monitores encendidos y vigilantes de encargos reanudados." ;;
+    AHORRO) monitores_off; say "🌙 Modo ahorro $eq: monitores en negro; los agentes siguen trabajando." ;;
+    OFF)
+      gr="${arg%%:*}"; mon="${arg##*:}"
+      [ "$DRY" = 1 ] || echo "pausa_at=$(( $(date +%s) + gr*60 )) monitores=$mon" > "$OFF"
+      [ "$mon" = 1 ] && monitores_off cerrar-unreal
+      say "🌙 handOFF $eq: monitores en negro; los agentes cierran su paso y en $gr min se pausan sus vigilantes. El Mac sigue encendido: «handON $eq» lo reanuda." ;;
+    CALL_ON|CALL_OFF|CALL_AHORRO)
+      [ "$act" = CALL_ON ] && [ "$(echo "$eq" | tr A-Z a-z)" = "$(echo "$HOST" | tr A-Z a-z | tr -d '-')" ] && run caffeinate -u -t 2
+      [ "$LLAMADOR" = 1 ] || continue
+      t=$( [ "$act" = CALL_ON ] && echo equipo_handon || { [ "$act" = CALL_OFF ] && echo equipo_handoff || echo equipo_ahorro; } )
+      llamar_tool "$t" "$eq" || say "⚠️ No pude llamar a $t para $eq (sin clave MCP o error)." ;;
   esac
-done
+done <<< "$(echo "$out" | tail -n +2)"
+
+# ---------- handOFF en curso: pausa diferida y monitores en negro ----------
+if [ -f "$OFF" ]; then
+  pa="$(sed -nE 's/.*pausa_at=([0-9]+).*/\1/p' "$OFF")"; mon="$(sed -nE 's/.*monitores=([01]).*/\1/p' "$OFF")"
+  if [ -n "$pa" ] && [ "$(date +%s)" -ge "$pa" ] && ! grep -q pausado "$OFF"; then
+    pausar_vigilantes; [ "$DRY" = 1 ] || echo " pausado" >> "$OFF"
+  fi
+  if [ "${mon:-0}" = 1 ] && [ "$(idle_s 2>/dev/null || echo 0)" -ge 120 ]; then run pmset displaysleepnow; fi
+fi
 exit 0

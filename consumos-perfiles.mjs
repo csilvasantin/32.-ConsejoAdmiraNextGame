@@ -15,10 +15,12 @@ export const GROKBOT_CONSEJO = "Grok Bot (Consejo)";
  * consejeros) comparten UNA bolsa de uso de Grok Bot. En /consumos ese consumo va SIEMPRE con el nombre de Merovingio,
  * para que se vea de un vistazo cuánto queda. El pulso se sigue guardando con el nombre que mande el emisor
  * (fleet/cursor-uso.py: «Grok Bot (Consejo)»); el cambio de nombre se hace al LEER (agenteVisible).
+ * Ventana de mejora 22:35 (Jobs, 22-10-2026): Merovingio ya corre con Grok CLI en el Mac mini y la cuenta Cursor Pro
+ * de Grok Bot cubre a Jobs, Wozniak, Lucas y Disney. Su consumo sale como «Grok Bot (Consejo)», no como Merovingio.
  */
-export const POOL_GROKBOT = "Merovingio";
+export const POOL_GROKBOT = GROKBOT_CONSEJO;
 const ALIAS_POOL = /^\s*(tokens\s+)?grok\s*bot(\s*\((consejo|pool|cursor[^)]*)\))?\s*$/i;
-/** Nombre con el que se enseña un agente del pulso: «Grok Bot (Consejo)» → «Merovingio»; el resto, tal cual. */
+/** Nombre con el que se enseña un agente del pulso: «Grok Bot», «Tokens Grok Bot (Consejo)»… → «Grok Bot (Consejo)»; el resto, tal cual. */
 export function agenteVisible(nombre) {
   return ALIAS_POOL.test(String(nombre || "")) ? POOL_GROKBOT : nombre;
 }
@@ -26,7 +28,7 @@ export function agenteVisible(nombre) {
 export const CUBRE_CURSOR = ["Jobs", "Wozniak", "Lucas", "Disney"];
 export const EXTRA = [
   { agente: POOL_GROKBOT, maquina: "GrokBotBox", modelo: "Grok Bot / Cursor Pro", cuentaId: "cursor", plan: "Cursor Pro (Carlos Silva Santin)", email: null,
-    nota: "Bolsa de GrokBot de la cuenta csilvasantin: Merovingio, Mouse y los consejeros (Jobs, Wozniak, Lucas, Disney…) · Cursor · datos del export CSV, con horas de retraso", cubre: CUBRE_CURSOR },
+    nota: "Cuenta Cursor Pro de Grok Bot: los consejeros Jobs, Wozniak, Lucas y Disney · Cursor · datos del export CSV, con horas de retraso", cubre: CUBRE_CURSOR },
 ];
 
 export function perfilesFlota(personas = PERSONAS, cuentas = CUENTAS, extra = EXTRA) {

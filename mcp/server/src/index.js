@@ -265,12 +265,14 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   /* ── handON / handOFF de un equipo (Carlos, 22-oct-2026): equipos.js ─────────── */
   const equipos = crearEquipos({ flota, bandeja: bandejaConsejo, api, identidad, latir: env.ADMIRA_LIVE_DESDE ? (persona, a) => latir(env.ADMIRA_LIVE_DESDE, persona, a) : null });
-  const EQUIPO = z.string().min(3).max(40).describe('Equipo (Mac): MacMini, MacStudio, MacBookPro16 (MBP16) o MacBookProNegro14 (MBP14). Sus agentes salen de CASA_AGENTE y sus consejeros de la norma «cada consejero dirige a un agente» (MacMini: Oráculo/Codex con Walt, Morfeo/Claude Code con Lucas).');
+  const EQUIPO = z.string().min(3).max(40).optional().describe('Equipo (Mac): MacMini, MacStudio, MacBookPro16 (MBP16) o MacBookProNegro14 (MBP14), o un XPACIO (grupo de equipos, p. ej. AdmiraNeXT = MacMini + MacStudio). Sus agentes salen de CASA_AGENTE y sus consejeros de la norma «cada consejero dirige a un agente» (MacMini: Oráculo/Codex con Walt, Morfeo/Claude Code con Lucas).');
+  const XPACIO = z.string().min(3).max(40).optional().describe('XPACIO (grupo de equipos): AdmiraNeXT = MacMini + MacStudio. Se expande a sus equipos; manda sobre «equipo».');
   server.registerTool('equipo_handon', {
     title: 'handON: despertar un equipo',
-    description: 'handON <equipo>: enciende los monitores del Mac (publica «handON <Equipo>» en AgoraMatrix y su agora-cmd-poller hace caffeinate -u -t 2 en ≤15 s), crea a cada agente de casa un encargo «handON: empieza la jornada» y manda consejero_mensaje a cada consejero que los dirige. prueba:true devuelve el plan sin escribir nada. También se lanza escribiendo «handON MacMini» en AgoraMatrix.',
+    description: 'handON <equipo|xpacio> (xpacio = grupo de equipos, p. ej. «handON AdmiraNeXT» = MacMini + MacStudio, un solo aviso en Agora y cada poller actúa si su Mac está en él): enciende los monitores del Mac (publica «handON <Equipo>» en AgoraMatrix y su agora-cmd-poller hace caffeinate -u -t 2 en ≤15 s), crea a cada agente de casa un encargo «handON: empieza la jornada» y manda consejero_mensaje a cada consejero que los dirige. prueba:true devuelve el plan sin escribir nada. También se lanza escribiendo «handON MacMini» en AgoraMatrix.',
     inputSchema: {
       equipo: EQUIPO,
+      xpacio: XPACIO,
       prueba: z.boolean().default(false).describe('true: en seco, solo el plan.'),
       nota: z.string().max(300).optional().describe('Prioridad o nota del día para los encargos.'),
     },
@@ -278,9 +280,10 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   }, seguro(async (a) => texto(await equipos.handon(a))));
   server.registerTool('equipo_handoff', {
     title: 'handOFF: cerrar el día de un equipo',
-    description: 'handOFF <equipo>: cierre PROGRESIVO. Pide a cada agente (y sus subagentes) que termine o cierre limpio su paso, resuma su día y declare consumo; deja a cada consejero en reposo (consejero_latido); devuelve el resumen del equipo (encargos de hoy hechos y pendientes, consumo); publica «handOFF <Equipo> · [equipo_handoff pausa=N]» y el agora-cmd-poller de ese Mac apaga los monitores (y cierra Unreal/Epic solo si retienen la pantalla) y a los N min de gracia pausa sus vigilantes de encargos (SIGSTOP reversible). NUNCA apaga ni duerme el Mac: handON lo reanuda todo, también en remoto. prueba:true: en seco. apagar:false: sin monitores.',
+    description: 'handOFF <equipo|xpacio> (p. ej. «handOFF AdmiraNeXT» = MacMini + MacStudio): cierre PROGRESIVO. Pide a cada agente (y sus subagentes) que termine o cierre limpio su paso, resuma su día y declare consumo; deja a cada consejero en reposo (consejero_latido); devuelve el resumen del equipo (encargos de hoy hechos y pendientes, consumo); publica «handOFF <Equipo> · [equipo_handoff pausa=N]» y el agora-cmd-poller de ese Mac apaga los monitores (y cierra Unreal/Epic solo si retienen la pantalla) y a los N min de gracia pausa sus vigilantes de encargos (SIGSTOP reversible). NUNCA apaga ni duerme el Mac: handON lo reanuda todo, también en remoto. prueba:true: en seco. apagar:false: sin monitores.',
     inputSchema: {
       equipo: EQUIPO,
+      xpacio: XPACIO,
       prueba: z.boolean().default(false).describe('true: en seco (resumen real, sin encargos, mensajes ni apagado).'),
       apagar: z.boolean().default(true).describe('false: no apagar monitores.'),
       gracia: z.number().int().min(0).max(60).default(10).describe('Minutos para que cada agente cierre limpio su paso antes de pausar sus vigilantes de encargos.'),
@@ -289,8 +292,8 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   }, seguro(async (a) => texto(await equipos.handoff(a))));
   server.registerTool('equipo_ahorro', {
     title: 'setup modo ahorro: monitores en negro',
-    description: 'setup modo ahorro <equipo>: SOLO apaga los monitores de ese Mac (pmset displaysleepnow vía su agora-cmd-poller). Los agentes siguen trabajando; no cierra apps ni duerme el Mac. También escribiendo «setup modo ahorro <Equipo>» en AgoraMatrix.',
-    inputSchema: { equipo: EQUIPO, prueba: z.boolean().default(false).describe('true: en seco.') },
+    description: 'setup modo ahorro <equipo|xpacio> (p. ej. AdmiraNeXT): SOLO apaga los monitores de ese Mac (pmset displaysleepnow vía su agora-cmd-poller). Los agentes siguen trabajando; no cierra apps ni duerme el Mac. También escribiendo «setup modo ahorro <Equipo>» en AgoraMatrix.',
+    inputSchema: { equipo: EQUIPO, xpacio: XPACIO, prueba: z.boolean().default(false).describe('true: en seco.') },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, seguro(async (a) => texto(await equipos.ahorro(a))));
 

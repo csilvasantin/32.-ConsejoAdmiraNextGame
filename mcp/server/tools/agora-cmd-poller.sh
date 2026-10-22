@@ -14,6 +14,10 @@
 #                                        reversible) sus vigilantes de encargos. Nunca duerme el Mac.
 #   "setup modo ahorro <Equipo>"      -> tool equipo_ahorro; el poller de <Equipo> SOLO apaga monitores.
 # Equipos: MacMini, MacStudio, MacBookPro16 (MBP16), MacBookProNegro14 (MBP14).
+# XPACIOS (grupos de equipos): AdmiraNeXT = MacMini + MacStudio. «handOFF AdmiraNeXT» → el llamador
+#   llama UNA vez a la tool con el xpacio; la tool publica UN aviso con la marca
+#   [equipo_* … equipos=MacMini,MacStudio] y actúa cada poller cuyo Mac esté en la lista.
+#   Xpacio nuevo: tabla XPACIOS de mcp/server/src/equipos.js y (para escribirlo a mano) XP aquí abajo.
 #
 # Reglas: · Monitores/pausa: solo actúa el poller del Mac nombrado (marca [equipo_*] de la tool).
 #         · La tool se llama UNA vez: solo el poller «llamador» (fichero
@@ -95,10 +99,16 @@ last_ts, f_inbox, last_feed, f_feed, host = int(sys.argv[1] or 0), sys.argv[2], 
 N = lambda s: re.sub(r'[^a-z0-9]', '', (s or '').lower())
 EQ = {'MacMini': ['macmini', 'mini'], 'MacStudio': ['macstudio', 'studio'],
       'MacBookPro16': ['macbookpro16', 'mbp16'], 'MacBookProNegro14': ['macbookpronegro14', 'mbp14', 'macbookpro14', 'negro14']}
+XP = {'AdmiraNeXT': {'alias': ['admiranext', 'xpacioadmiranext'], 'equipos': ['MacMini', 'MacStudio']}}
 def canon(s):
     n = N(s)
     for k, al in EQ.items():
         if n in al: return k
+    return None
+def xpacio(s):
+    n = N(s)
+    for k, x in XP.items():
+        if n in x['alias']: return k
     return None
 ME = canon(host)
 def items(path):
@@ -123,18 +133,22 @@ def scan(lista, last, inbox):
             acts.append(("APAGA", ME or '', '')); continue
         m = cmd.match(text)
         if not m: continue
-        verbo = N(m.group(1)); eq = canon(m.group(2))
-        if not eq: continue
+        verbo = N(m.group(1)); eq = canon(m.group(2)); xp = xpacio(m.group(2))
+        if not eq and not xp: continue
+        miembros = [eq] if eq else XP[xp]['equipos']
         mk = re.search(r'\[equipo_(handon|handoff|ahorro)([^\]]*)\]', text)
         if mk:
-            if eq != ME: continue
+            le = re.search(r'equipos=([A-Za-z0-9,]+)', mk.group(2))
+            if le: miembros = [canon(x) for x in le.group(1).split(',')]
+            if ME not in miembros: continue
+            eq = ME
             if mk.group(1) == 'handon': acts.append(("WAKE", eq, ''))
             elif mk.group(1) == 'ahorro': acts.append(("AHORRO", eq, ''))
             else:
                 p = re.search(r'pausa=(\d+)', mk.group(2)); mon = 'monitores=no' not in mk.group(2)
                 acts.append(("OFF", eq, f"{p.group(1) if p else 10}:{1 if mon else 0}"))
         elif len(text) <= 120:
-            acts.append(({"handon": "CALL_ON", "handoff": "CALL_OFF", "setupmodoahorro": "CALL_AHORRO"}[verbo], eq, ''))
+            acts.append(({"handon": "CALL_ON", "handoff": "CALL_OFF", "setupmodoahorro": "CALL_AHORRO"}[verbo], eq or xp, ','.join(miembros)))
     return mx
 a = scan(items(f_inbox), last_ts, True); b = scan(items(f_feed), last_feed, False)
 print(f"{a}\t{b}")
@@ -185,7 +199,11 @@ while IFS=$'\t' read -r act eq arg; do
       [ "$mon" = 1 ] && monitores_off cerrar-unreal
       say "🌙 handOFF $eq: monitores en negro; los agentes cierran su paso y en $gr min se pausan sus vigilantes. El Mac sigue encendido: «handON $eq» lo reanuda." ;;
     CALL_ON|CALL_OFF|CALL_AHORRO)
-      [ "$act" = CALL_ON ] && [ "$(echo "$eq" | tr A-Z a-z)" = "$(echo "$HOST" | tr A-Z a-z | tr -d '-')" ] && run caffeinate -u -t 2
+      # handON: enciende ya los monitores si este Mac es el equipo o está en el xpacio (arg = miembros)
+      if [ "$act" = CALL_ON ]; then
+        yo="$(echo "$HOST" | tr A-Z a-z | tr -d '-')"
+        for m in ${arg//,/ }; do [ "$(echo "$m" | tr A-Z a-z)" = "$yo" ] && run caffeinate -u -t 2; done
+      fi
       [ "$LLAMADOR" = 1 ] || continue
       t=$( [ "$act" = CALL_ON ] && echo equipo_handon || { [ "$act" = CALL_OFF ] && echo equipo_handoff || echo equipo_ahorro; } )
       llamar_tool "$t" "$eq" || say "⚠️ No pude llamar a $t para $eq (sin clave MCP o error)." ;;

@@ -18,9 +18,17 @@ test("r51: uso viejo (> 2 min) no enciende", () => {
   assert.equal(out[0].estado, "gris");
 });
 
-test("r51: con Carlos sigue amarillo", () => {
+test("r52: con Carlos + app en uso → VERDE gana (consejero)", () => {
   const out = [{ agente: "Musk", estado: "gris", motivo: "x", via: "Merovingio", maquina: "GrokBot" }];
   colocarPorAppGrokBot(out, [app({ alFrente: true, reposoS: 10 })]);
+  assert.equal(out[0].estado, "verde");
+  assert.equal(out[0].fuente, "app_grokbot");
+  assert.match(out[0].motivo, /app GrokBot trabajando.*con Carlos en Mini/);
+});
+
+test("r52: con Carlos sin uso reciente de la app sigue amarillo", () => {
+  const out = [{ agente: "Musk", estado: "gris", motivo: "x", via: "Merovingio", maquina: "GrokBot" }];
+  colocarPorAppGrokBot(out, [app({ alFrente: true, reposoS: 10, usoS: 600 })]);
   assert.equal(out[0].estado, "amarillo");
 });
 

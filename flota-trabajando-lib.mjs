@@ -112,7 +112,16 @@ export function colocarPorAppGrokBot(out, apps) {
     t.appMaquinas = orden.map((a) => ({ maquina: a.maquina, corta: maquinaCorta(a.maquina), conCarlos: a === app && conCarlos, alFrente: !!a.alFrente, reposoS: a.reposoS ?? null }));
     t.app = { nombre: "GrokBot", cuenta, alFrente: !!app.alFrente, reposoS: app.reposoS ?? null };
     const todas = t.appMaquinas.map((m) => m.corta).join(" + ");
-    if (conCarlos) {
+    // r52: consejero trabajando (uso de su app < 2 min) → verde aunque Carlos la tenga al frente.
+    const usoYa = conCarlos && esConsejero(t.agente) ? usoAppReciente(t.agente, conCuenta) : null;
+    if (usoYa) {
+      t.estado = "verde";
+      t.conCarlosEn = maquinaCorta(app.maquina);
+      t.motivo = "app GrokBot trabajando: cuenta en uso hace " + usoYa.usoS + " s en " + maquinaCorta(usoYa.maquina) + " · con Carlos en " + t.conCarlosEn;
+      t.via = null;
+      t.fuente = "app_grokbot";
+      t.haceS = usoYa.usoS;
+    } else if (conCarlos) {
       t.estado = "amarillo"; // como estadoTrabajo: «con Carlos» manda sobre verde
       t.conCarlosEn = maquinaCorta(app.maquina);
       t.motivo = "con Carlos: app GrokBot al frente en " + t.conCarlosEn + (orden.length > 1 ? " · abierta también en " + t.appMaquinas.slice(1).map((m) => m.corta).join(" + ") : "") + (t.via ? " · tokens vía " + t.via : "");
@@ -332,7 +341,13 @@ export function conCarlosPorPresencia(latidos, activas, ahoraS, enUso = new Set(
 }
 
 /** Estado de una tarjeta: { estado:'amarillo'|'verde'|'gris', motivo }. */
-export function estadoTrabajo({ tokHora = null, conCarlos = false, latidos = [], ahoraS, enCurso = 0, siempreVivo = false }) {
+// r52 (Carlos, 22-10-2026 22:10): si un CONSEJERO está trabajando de verdad (cualquier señal verde), VERDE gana a
+// «con Carlos». verdeGana=true lo activa (consejeros); los agentes siguen con amarillo por delante.
+export function estadoTrabajo({ tokHora = null, conCarlos = false, latidos = [], ahoraS, enCurso = 0, siempreVivo = false, verdeGana = false }) {
+  if (conCarlos && verdeGana) {
+    const v = estadoTrabajo({ tokHora, latidos, ahoraS, enCurso, siempreVivo });
+    if (v.estado === "verde") return { ...v, conCarlos: typeof conCarlos === "string" ? conCarlos : "con Carlos" };
+  }
   if (conCarlos) return { estado: "amarillo", motivo: typeof conCarlos === "string" ? conCarlos : "con Carlos" };
   if (Number(tokHora) > 0) return { estado: "verde", motivo: "tokens en los últimos 15 min" };
   const l = (latidos || []).find((e) => latidoTrabajando(e, ahoraS));
@@ -431,7 +446,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const conCarlosEn = p && p.conCarlos ? maquinaCorta(p.maquina) : ccPres ? maquinaCorta(ccPres.maquina) : null;
     const cg = carga && typeof carga.get === "function" ? carga.get(personaCenso(x.agente)) || null : null;
     const enCurso = cg ? Number(cg.in_progress) || 0 : 0;
-    const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS, enCurso, siempreVivo: VIVO_SIEMPRE.includes(x.agente) });
+    const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS, enCurso, siempreVivo: VIVO_SIEMPRE.includes(x.agente), verdeGana: esConsejero(x.agente) });
     // r4: instancias vivas (< 15 min) por máquina+runtime; las de OpenCode/DeepAgents/Nemotron son el plan C gratis.
     const inst = new Map();
     for (const e of x.latidos) if (ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S) inst.set(claveMaquina(e.machine) + "|" + sinTilde(e.runtime), esGratis(e.runtime, e.model));
@@ -570,7 +585,8 @@ export function aplicarLatidosConsejero(ts, consejeros, ahoraS) {
     if (!t || !t.consejero) continue;
     const e = por.get(canonico(t.agente));
     if (!e || e.modo !== "trabajando" || !(Number(e.hasta) > ahoraS)) continue;
-    if (t.estado === "amarillo") { t.latidoConsejero = { mision: e.mision || null, hasta: e.hasta }; continue; }
+    // r52: el latido «trabajando» del consejero gana a «con Carlos» (antes: amarillo mandaba).
+    if (t.estado === "amarillo") { t.latidoConsejero = { mision: e.mision || null, hasta: e.hasta }; t.conCarlosAntes = t.motivo || "con Carlos"; }
     t.estado = "verde";
     t.motivo = "latido del consejero «trabajando»" + (e.mision ? ": " + limpio(e.mision, 100) : "");
     t.via = null;

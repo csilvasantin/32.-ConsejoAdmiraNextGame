@@ -104,6 +104,17 @@
   "¿A quién va la siguiente tarea?": "Who does the next task go to?",
   "Ámbar": "Amber",
   "Última lectura": "Last reading",
+  // Ventana 00:51 (23-10-2026): detalle desplegado de la tarjeta Accounts.
+  "Sin hora de reset en la lectura": "No reset time in the reading",
+  "Falta otra lectura para saber el ritmo": "Needs another reading to know the pace",
+  "Sesión (5 h)": "Session (5 h)",
+  "Esta semana": "This week",
+  "Otro límite": "Other limit",
+  "ya se renovó": "already renewed",
+  "usado": "used",
+  "% usado": "% used",
+  "Pantalla de uso": "Usage screen",
+  "La última lectura tiene más de 6 h": "The last reading is more than 6 h old",
   "Último %": "Last %",
   "última hora:": "last hour:"
 };
@@ -175,6 +186,20 @@
       var r = m[3].replace("sin ritmo todavía (falta una segunda lectura)", "no pace yet (needs a second reading)").replace(/^quema (.+) cada 12 h/, "burns $1 every 12 h").replace(/, llegaría al 100 % el (.+) \(Madrid\)/, ", would reach 100 % on $1 (Madrid)");
       return "Most margin: " + m[1] + " — " + m[2] + " used, " + r + ". Let it take the next load." + m[4].replace(" Ojo: su última lectura tiene más de 36 h.", " Careful: its last reading is more than 36 h old.");
     }],
+    // Ventana 00:51 (23-10-2026): subtítulo y detalle desplegado de la tarjeta Accounts.
+    [/^(\d+) cuentas?((?: · \d+ en (?:rojo|ámbar))*) · % usado de cada plan$/, function (m) {
+      return m[1] + (m[1] === "1" ? " account" : " accounts") + m[2].replace(/ en rojo/g, " in red").replace(/ en ámbar/g, " in amber") + " · % used of each plan";
+    }],
+    [/^([\d,.]+ %|—) usado$/, function (m) { return m[1].replace(/(\d),(\d)/g, "$1.$2") + " used"; }],
+    [/^se restablece (.+)$/, function (m) { return "resets " + (cuandoEn(m[1]) || m[1]); }],
+    [/^vencen (.+)$/, function (m) { return "expire " + m[1].split(", ").map(function (x) { return cuandoEn(x) || x; }).join(", "); }],
+    [/^Créditos: ([\s\S]+)$/, function (m) {
+      return "Credits: " + m[1].split(" · ").map(function (p, i) {
+        if (i === 0) return p.replace(/ de (\S+)$/, " of $1");
+        var v = p.match(/^vencen (.+)$/); return v ? "expire " + (cuandoEn(v[1]) || v[1]) : p;
+      }).join(" · ");
+    }],
+    [/^lectura (web|manual)( \(.+\))?$/, function (m) { return m[1] + " reading" + (m[2] || ""); }],
     [/^Sin lecturas: anota una por cuenta para poder repartir el trabajo\.$/, "No readings: log one per account to be able to split the work."]
   ];
   var I = G.AdmiraIdioma;

@@ -80,3 +80,21 @@ test("consumos: tarjeta Accounts en inglés (edad, sesión/semana, reinicios gra
   assert.match(frase("Mover encargos pesados a claude max (Max de Carlos, no GrokBot): les sobra 60 %. Sin lectura: GrokBot (Consejo) · Cursor Pro."), /No reading: GrokBot \(Council\) · Cursor Pro\.$/);
   assert.match(frase("Todas las cuentas con lectura van justas.  Frenar X. Sin lectura: GrokBot (Consejo) · Cursor Pro."), /^All accounts with a reading are tight\..*No reading: GrokBot \(Council\)/);
 });
+
+test("consumos: subtítulo y detalle desplegado de Accounts en inglés — ventana 00:51", () => {
+  const { frase } = carga("./admira-idioma-sitio.js", "./admira-idioma-consumos.js");
+  assert.equal(frase("6 cuentas · % usado de cada plan"), "6 accounts · % used of each plan");
+  assert.equal(frase("6 cuentas · 1 en rojo · 2 en ámbar · % usado de cada plan"), "6 accounts · 1 in red · 2 in amber · % used of each plan");
+  assert.equal(frase("1 cuentas · 1 en ámbar · % usado de cada plan"), "1 account · 1 in amber · % used of each plan");
+  assert.equal(frase("Sin hora de reset en la lectura"), "No reset time in the reading");
+  assert.equal(frase("Falta otra lectura para saber el ritmo"), "Needs another reading to know the pace");
+  assert.equal(frase("Sesión (5 h)"), "Session (5 h)");
+  assert.equal(frase("Esta semana"), "This week");
+  assert.equal(frase("42,5 % usado · se restablece hoy 03:00"), "42.5 % used · resets today 03:00");
+  assert.equal(frase("0 % usado · ya se renovó"), "0 % used · already renewed");
+  assert.equal(frase("12 % usado · se restablece 28 oct 19:34"), "12 % used · resets Oct 28 19:34");
+  assert.equal(frase("vencen 22 oct, 5 nov"), "expire Oct 22, Nov 5");
+  assert.equal(frase("Créditos: USD 4,2 de 10 · vencen 22 oct"), "Credits: USD 4,2 of 10 · expire Oct 22");
+  assert.equal(frase("Pantalla de uso · plan Max · lectura web (claude.ai/settings/usage) · 23/10 00:12"), "Usage screen · plan Max · web reading (claude.ai/settings/usage) · 23/10 00:12");
+  assert.equal(frase("Pantalla de uso · lectura manual · 23/10 00:12"), "Usage screen · manual reading · 23/10 00:12");
+});

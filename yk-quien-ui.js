@@ -59,7 +59,7 @@
       (sub ? '<p class="quien-sub">' + esc(sub) + "</p>" : "") +
       '<div class="quien-stats" aria-label="Estados">' + stats + "</div>" +
       '<p class="quien-ultima">' + esc(model.ultima) + "</p>" +
-      '<div class="quien-block"><h3>Encargos y misiones</h3>' + rows(model.misiones, "Sin encargos ni misiones de esta persona.") + "</div>" +
+      '<div class="quien-block"><h3>Misiones</h3>' + rows(model.misiones, "Sin misiones de esta persona.") + "</div>" +
       '<div class="quien-block"><h3>Informes</h3>' + rows(model.informes, "Sin informes recientes de esta persona.") + "</div>" +
       '<a class="quien-more" href="' + esc(other) + '">' + otherLabel + " →</a>";
   }

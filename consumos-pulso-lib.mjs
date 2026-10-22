@@ -362,6 +362,29 @@ export function ventanaAgente(a, ahora) {
   return { desde: hasta - VENTANA_CURSOR_MS, hasta };
 }
 
+/** Retraso nominal con el que Cursor publica su uso (~25 min). */
+export const RETRASO_CURSOR_MIN = 25;
+/** Cursor se considera «sin datos nuevos» si su último export tiene más de ~60 min. */
+export const SIN_DATOS_CURSOR_MS = 60 * 60 * 1000;
+/**
+ * #mero-consumos (Carlos): el mero retraso de Cursor NO es «parado». tokHoraCursor = tasa de la última ventana publicada
+ * (tokHoraRetraso) o, si no hay ventana, la media de hoy (tokHoy / horas desde medianoche Madrid). Solo informativa: la aguja
+ * de la flota sigue sin contarla (tokHora null). cursorSinDatos = true si el último export tiene > 60 min.
+ */
+export function tasaCursor(a, ahora, ventana) {
+  const ult = a && a.ultimoPulso ? (typeof a.ultimoPulso === "number" ? a.ultimoPulso : Date.parse(a.ultimoPulso)) : NaN;
+  const sinDatos = !Number.isFinite(ult) || ahora - ult > SIN_DATOS_CURSOR_MS;
+  let tasa = null, fuente = null;
+  if (!sinDatos) {
+    if (Number.isFinite(ventana) && ventana > 0) { tasa = Math.round(ventana); fuente = "ventana"; }
+    else {
+      const h = madrid(ahora).horas, hoy = Number(a.tokHoy) || 0;
+      if (hoy > 0 && h > 0) { tasa = Math.round(hoy / Math.max(h, 0.25)); fuente = "media_hoy"; }
+    }
+  }
+  return { tokHoraCursor: tasa, tokHoraCursorFuente: fuente, cursorSinDatos: sinDatos, retrasoCursorMin: RETRASO_CURSOR_MIN };
+}
+
 /** Medidas de un agente: tokUltimos5min, tokUltimos15min, tokUltimaHora, tokHora (15 min × 4), stale. */
 export function medirAgente(a, ahora) {
   const serie = (a.serie || []).slice().sort((x, y) => x[0] - y[0]);
@@ -381,6 +404,7 @@ export function medirAgente(a, ahora) {
       tokUltimaHora: ahora - v.hasta <= RETRASO_RECIENTE_MS ? tok60 : 0, tokUltimaHoraConDatos: tok60,
       ventanaMin: 60, stale, haceS: a.ultimoPulso ? Math.max(0, Math.round((ahora - a.ultimoPulso) / 1000)) : null,
       conRetraso: true, retrasoS: Math.max(0, Math.round((ahora - v.hasta) / 1000)), datosHasta: new Date(v.hasta).toISOString(),
+      ...tasaCursor(a, ahora, !stale && serie.length >= 2 && ahora - v.hasta <= RETRASO_RECIENTE_MS ? tok60 : null),
     };
   }
   const stale = !a.ultimoPulso || ahora - a.ultimoPulso > STALE_MS;

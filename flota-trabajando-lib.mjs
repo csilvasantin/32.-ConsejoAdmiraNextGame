@@ -80,6 +80,16 @@ export const DUALIDAD = { Musk: "Merovingio", Huang: "Merovingio", Jobs: "Smith"
 /** r14: cuenta de Grok Bot de cada consejero principal (la app de escritorio donde Carlos los tiene abiertos). */
 export const CUENTA_GROKBOT = { Jobs: "csilva@admira.com", Wozniak: "csilva@admira.com", Musk: "csilvasantin@gmail.com", Huang: "csilvasantin@gmail.com" };
 export const REPOSO_CON_CARLOS_S = 300;
+/** r51: consejeros que son el titular de su cuenta de Grok Bot (la cuenta compartida no enciende a los demás). */
+export const TITULAR_APP_GROKBOT = ["Jobs", "Musk"];
+export const USO_APP_ACTIVA_S = 120;
+/** r51: uso reciente (< 2 min) de la cuenta del consejero en alguna app Grok Bot abierta → { maquina, usoS } | null. Pura. */
+export function usoAppReciente(agente, apps) {
+  if (!TITULAR_APP_GROKBOT.includes(agente) || !Array.isArray(apps)) return null;
+  const v = apps.filter((a) => a && a.fuente === "app" && a.usoS != null && Number(a.usoS) < USO_APP_ACTIVA_S)
+    .sort((a, b) => Number(a.usoS) - Number(b.usoS));
+  return v.length ? { maquina: v[0].maquina, usoS: Math.round(Number(v[0].usoS)) } : null;
+}
 /** r14: coloca a cada consejero en el Mac donde su app Grok Bot está abierta (la más fresca; al frente gana). */
 export function colocarPorAppGrokBot(out, apps) {
   if (!Array.isArray(apps) || !apps.length) return out;
@@ -110,6 +120,17 @@ export function colocarPorAppGrokBot(out, apps) {
       if (t.conCarlosEn && t.estado === "amarillo") t.estado = t.via ? "verde" : "gris";
       t.conCarlosEn = null;
       t.motivo = (t.motivo || "") + " · app GrokBot abierta en " + todas;
+      // r51 (Carlos, 22-10-2026 21:50: «Musk en espera y lo veo trabajando en la pantalla del Mini»): la app escribe el estado
+      // de la cuenta (sand-client-persistence) mientras el asistente trabaja. Uso < 2 min de la cuenta de un consejero
+      // principal → verde por actividad real de su app, aunque Carlos no la tenga al frente ni haya latido manual.
+      const uso = usoAppReciente(t.agente, conCuenta);
+      if (uso && t.estado !== "verde") {
+        t.estado = "verde";
+        t.motivo = "app GrokBot trabajando: cuenta en uso hace " + uso.usoS + " s en " + maquinaCorta(uso.maquina);
+        t.via = null;
+        t.fuente = "app_grokbot";
+        t.haceS = uso.usoS;
+      }
     }
   }
   return out;

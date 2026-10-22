@@ -68,3 +68,15 @@ test("páginas sueltas cargan el selector; las de Yokup lo piden al cargar", () 
   assert.match(readFileSync(new URL("./yk-frame.js", import.meta.url), "utf8"), /expertScript\("\/admira-idioma\.js\?v=" \+ EXPERT_CMD_V, "AdmiraIdioma"\);\n  \}/);
   assert.match(readFileSync(new URL("./consumos.html", import.meta.url), "utf8"), /admira-idioma-consumos\.js/);
 });
+
+test("consumos: tarjeta Accounts en inglés (edad, sesión/semana, reinicios gratis, Sin lectura) — ventana 00:21", () => {
+  const { frase } = carga("./admira-idioma-sitio.js", "./admira-idioma-consumos.js");
+  assert.equal(frase("dato de hace 26 h"), "data from 26 h ago");
+  assert.equal(frase("dato de hace 2 días"), "data from 2 days ago");
+  assert.equal(frase("sesión 42 % · hoy 03:00 · semana 10,5 % · lun 09:00"), "session 42 % · today 03:00 · week 10.5 % · Mon 09:00");
+  assert.equal(frase("sesión 0 % (renovado) · semana 0 % (renovado)"), "session 0 % (renewed) · week 0 % (renewed)");
+  assert.equal(frase("Reinicio gratis disponible · vence 22 oct"), "Free reset available · expires Oct 22");
+  assert.equal(frase("3 reinicios gratis · el primero vence 22 oct"), "3 free resets · the first expires Oct 22");
+  assert.match(frase("Mover encargos pesados a claude max (Max de Carlos, no GrokBot): les sobra 60 %. Sin lectura: GrokBot (Consejo) · Cursor Pro."), /No reading: GrokBot \(Council\) · Cursor Pro\.$/);
+  assert.match(frase("Todas las cuentas con lectura van justas.  Frenar X. Sin lectura: GrokBot (Consejo) · Cursor Pro."), /^All accounts with a reading are tight\..*No reading: GrokBot \(Council\)/);
+});

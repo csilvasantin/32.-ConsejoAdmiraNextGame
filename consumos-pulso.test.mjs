@@ -274,3 +274,17 @@ test("r48: la última hora de Cursor entra en la aguja solo si acaba hace ≤ 1 
   assert.equal(medirAgente(a, fin + 30 * 60000).tokHoraRetraso, 600000, "30 min de retraso → cuenta");
   assert.equal(medirAgente(a, fin + 61 * 60000).tokHoraRetraso, null, "61 min → ventana vieja, no cuenta");
 });
+
+// #mero-consumos: el mero retraso de Cursor no deja a Merovingio «sin cifra»: tokHoraCursor + cursorSinDatos.
+test("tasaCursor: ventana publicada, media de hoy y > 60 min sin datos", async () => {
+  const { tasaCursor } = await import("./consumos-pulso-lib.mjs");
+  const ahora = Date.parse("2026-10-22T08:00:00Z"); // 10:00 Madrid
+  const fresco = { ultimoPulso: ahora - 10 * 60000, tokHoy: 1000000 };
+  assert.deepEqual([tasaCursor(fresco, ahora, 461221).tokHoraCursor, tasaCursor(fresco, ahora, 461221).tokHoraCursorFuente, tasaCursor(fresco, ahora, 461221).cursorSinDatos], [461221, "ventana", false]);
+  const m = tasaCursor(fresco, ahora, null);
+  assert.equal(m.tokHoraCursorFuente, "media_hoy");
+  assert.equal(m.tokHoraCursor, 100000, "1 M en 10 h → 100 k/h");
+  const viejo = tasaCursor({ ultimoPulso: ahora - 61 * 60000, tokHoy: 1000000 }, ahora, 5);
+  assert.equal(viejo.cursorSinDatos, true);
+  assert.equal(viejo.tokHoraCursor, null);
+});

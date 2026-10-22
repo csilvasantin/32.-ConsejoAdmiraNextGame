@@ -414,6 +414,8 @@
   /** r27: «Cursor · datos con ~X h de retraso» (o min si < 1 h). */
   function txtRetraso(a) {
     if (!a || !a.conRetraso) return '';
+    // #mero-consumos: con datos de Cursor al día (≤ 60 min) se dice el retraso nominal de Cursor, no «sin cifra».
+    if (a.cursorSinDatos === false) return T('Cursor · con ~' + (a.retrasoCursorMin || 25) + ' min de retraso', 'Cursor · ~' + (a.retrasoCursorMin || 25) + ' min behind');
     var s = Number(a.retrasoS) || 0, h = s / 3600;
     var cuanto = h >= 1 ? '~' + (h >= 10 ? Math.round(h) : Math.round(h * 10) / 10).toString().replace('.', en() ? '.' : ',') + ' h' : '~' + Math.max(1, Math.round(s / 60)) + ' min';
     return T('Cursor · datos con ' + cuanto + ' de retraso', 'Cursor · data ' + cuanto + ' behind');
@@ -457,16 +459,19 @@
     if (!mf || k(mf) === k(mp)) return mp || mf;
     return mf + (mp ? ' (' + T('tokens de ', 'tokens from ') + mp + ')' : '');
   }
+  /** #mero-consumos: tok/h a enseñar de un agente Cursor con retraso (null si Cursor lleva > 60 min sin datos). */
+  function tasaVista(a) { return a && a.conRetraso && a.cursorSinDatos === false && a.tokHoraCursor != null ? a.tokHoraCursor : null; }
   function filaAgenteInfo(a, pf) {
-    var est = a.sinDatos ? 'rojo' : E.estadoFila(a.tokHora, a.tokHoy);
+    var tv = tasaVista(a);
+    var est = a.sinDatos ? 'rojo' : E.estadoFila(tv != null ? tv : a.tokHora, a.tokHoy);
     var motor = nombreMotor(a.motor);
     var modelo = gb(a.modelo || (pf && pf.modelo ? pf.modelo : motor));
     var cuenta = (a.motor === 'cursor' || a.motor === 'grok') && a.cuenta ? a.cuenta : pf ? (pf.email || pf.plan || '') : '';
     var m = ORQ.margen[a.agente];
     var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
-      '<b>' + (a.conRetraso ? T('sin cifra en vivo', 'no live figure') : a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
+      '<b>' + (tv != null ? fmt(tv) + ' ' + T('tokens/hora', 'tokens/hour') : a.conRetraso ? T('sin cifra en vivo', 'no live figure') : a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
       (maqDe(a, pf) ? ' · ' + esc(maqDe(a, pf)) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '') +
-      (a.conRetraso ? ' · <span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : '');
+      (a.conRetraso ? ' · <span class="dd-retraso' + (tv != null ? ' dd-retraso-ok' : '') + '">' + esc(txtRetraso(a)) + '</span>' : '');
     if (a.sinDatos && pf && pf.nota) lin1 += ' · ' + esc(pf.nota);
     var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + E.colorMargen(m.pct) + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' + notaHtml(m) : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
     return { est: est, html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(vis(a.agente)) + (a.conCarlos ? ' <em class="con-carlos">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><small>' + lin1 + '</small>' + (lin2 ? '<small class="dd-sub">' + lin2 + '</small>' : '') + '</span>' };
@@ -545,11 +550,12 @@
     var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0);
     max = escala(maxAg, 5e6);
     var sinA = sin || !f;
-    estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA, f ? (f.conRetraso ? 0 : f.tokHoy) : null);
+    estado.d1.pinta(f ? (tasaVista(f) != null ? tasaVista(f) : f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA, f ? (f.conRetraso ? 0 : f.tokHoy) : null);
     if (tit) tit.textContent = rotAg();
     if (rot) rot.textContent = vis(r.agente) + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
-      (f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: la aguja no la cuenta', 'no live figure: not on the needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
+      (f.conRetraso && tasaVista(f) != null ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T(f.tokHoraCursorFuente === 'media_hoy' ? 'media de hoy' : 'última ventana publicada', f.tokHoraCursorFuente === 'media_hoy' ? 'today average' : 'last published window') + ' <b>' + fmt(tasaVista(f)) + '</b> ' + T('tokens/hora', 'tokens/hour') :
+       f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: la aguja no la cuenta', 'no live figure: not on the needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
        f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') +
         (f.conRetraso ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('tokens/hora de la última hora con datos', 'tokens/hour of the last hour with data') : f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
     return d && d.escalaMax || max;
@@ -601,7 +607,7 @@
       return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + vis(a.agente) + T(' en el velocímetro', ' on the gauge')) + '">' +
         '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(gb(vis(a.agente))) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
         (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
-        '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (a.conRetraso ? '<span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b>' +
+        '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (tasaVista(a) != null ? fmt(tasaVista(a)) + ' ' + T('tokens/hora', 'tokens/hour') : a.conRetraso ? '<span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b>' +
         '<small>' + T('hoy ', 'today ') + '<b>' + fmt(a.tokHoy) + '</b>' + (a.maquina ? ' · ' + esc(a.maquina) : '') + (a.proyectoAhora ? ' · ' + T('proyecto ', 'project ') + '<b>' + esc(nomP(a.proyectoAhora)) + '</b>' : '') +
         (a.tokUltimos5min != null ? ' · 5 min ' + fmt(a.tokUltimos5min) : '') + ' · ' + origen + '</small></li>';
     }).join('');

@@ -37,7 +37,7 @@ test("r19: gb() también el motor «grok» suelto, nombres de agente «Grok Bot�
   assert.equal(gb("Grok Bot"), "GrokBot");
   assert.equal(gb("grok-4.7"), "grok-4.7");
   const lib = readFileSync(new URL("./consumos-lecturas-lib.mjs", import.meta.url), "utf8");
-  assert.match(lib, /", no GrokBot\)"/); assert.match(lib, /Merovingio · GrokBot \(Cursor Pro\)/);
+  assert.match(lib, /", no GrokBot\)"/); assert.match(lib, /Grok Bot \(Consejo\) · Cursor Pro/); assert.doesNotMatch(lib, /Merovingio · GrokBot \(Cursor Pro\)/);
 });
 
 test("r20: «Grok Bot» con espacio → «GrokBot» en cupos de lecturas y en la nota de Merovingio", () => {

@@ -675,7 +675,11 @@
   function nAgCon() { return ACT && ACT.nConectados != null ? ACT.nConectados : nAgAct(); }
   /** «3/6»: x nunca supera a y (si un agente tiene tokens pero aún no está en la flota, y sube con él). */
   function xy(x, y) { return x + '/' + Math.max(x, y); }
-  function rotProy() { return T('Proyectos', 'Projects') + ' (' + nProyAct() + ')'; }
+  /** Carlos 22-10-2026: «Proyectos (x/y)»: x = proyectos con tokens en los últimos 15 min (tokHora > 0), y = proyectos con consumo hoy (Madrid). «otros» no cuenta. */
+  function proysPP() { return ((estado.datos && estado.datos.porProyecto) || []).filter(function (p) { return p && p.proyecto && p.proyecto !== 'otros'; }); }
+  function nProyTrab() { return proysPP().filter(function (p) { return Number(p.tokHora) > 0; }).length; }
+  function nProyHoy() { return proysPP().filter(function (p) { return Number(p.tokHoy) > 0; }).length; }
+  function rotProy() { return T('Proyectos', 'Projects') + ' (' + xy(nProyTrab(), nProyHoy()) + ')'; }
   function rotAg() { return T('Agentes', 'Agents') + ' (' + xy(nAgTrab(), nAgCon()) + ')'; }
   try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (!a) return; ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
   var H1_ES = null, TIT_ES = null;

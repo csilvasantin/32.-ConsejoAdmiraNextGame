@@ -494,7 +494,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     if (CONSEJEROS_ASISTENTE.includes(t.agente)) { t.motor = RUNTIME_ASISTENTE; t.modelo = null; t.runtime = RUNTIME_ASISTENTE; }
     t.superficies = superficiesDe(t, { latidos: (porAg.get(t.agente) || {}).latidos || [], supPulso, apps: (velocidad && velocidad.grokbotApps) || [], ahoraS });
   }
-  const ord = { verde: 0, amarillo: 1, gris: 2 };
+  const ord = ORDEN_ESTADO;
   return out.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }
 
@@ -557,6 +557,38 @@ export function aplicarLatidosConsejero(ts, consejeros, ahoraS) {
     t.fuente = "consejero_latido";
     t.latidoConsejero = { mision: e.mision || null, desde: e.desde || null, hasta: e.hasta, origen: e.origen || null };
   }
-  const ord = { verde: 0, amarillo: 1, gris: 2 };
+  const ord = ORDEN_ESTADO;
   return ts.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
+}
+
+/** Orden de las fichas: verde, amarillo, rojo, gris. */
+export const ORDEN_ESTADO = { verde: 0, amarillo: 1, rojo: 2, gris: 3 };
+export const UMBRAL_ROJO_S = 3600;
+/** Fecha (AAAA-MM-DD) de un instante en Europe/Madrid. */
+export function diaMadrid(ms) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+}
+/**
+ * Rojo (Carlos, 22-10-2026): parado cuya última actividad (latido / proceso / pulso de tokens / consejero_latido) fue
+ * hace más de 1 h pero que SÍ hizo algo hoy (día de Madrid: actividad fechada hoy o tokens hoy). Gris = nada hoy.
+ * Solo toca fichas grises; verde y amarillo no cambian. Pura; reordena.
+ */
+export function aplicarRojo(ts, ahoraS) {
+  if (!Array.isArray(ts)) return ts;
+  const hoy = diaMadrid(ahoraS * 1000);
+  for (const t of ts) {
+    if (!t || t.estado !== "gris") continue;
+    const cand = [];
+    if (t.haceS != null && isFinite(t.haceS)) cand.push(ahoraS - Number(t.haceS));
+    const ua = t.ultimaActividad ? Date.parse(t.ultimaActividad) : NaN;
+    if (isFinite(ua)) cand.push(Math.floor(ua / 1000));
+    const ult = cand.length ? Math.max(...cand) : null;
+    const hoyAlgo = (ult != null && diaMadrid(ult * 1000) === hoy) || Number(t.tokHoy) > 0;
+    if (!hoyAlgo) continue;
+    if (ult != null && ahoraS - ult <= UMBRAL_ROJO_S) continue;
+    t.estado = "rojo";
+    t.motivo = "sin actividad desde hace más de 1 h (activo hoy)";
+    if (ult != null) t.haceS = Math.max(0, ahoraS - ult);
+  }
+  return ts.sort((a, b) => ORDEN_ESTADO[a.estado] - ORDEN_ESTADO[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }

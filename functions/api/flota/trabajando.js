@@ -2,11 +2,11 @@
  * /api/flota/trabajando — ¿quién trabaja AHORA? (GrokBotBox, 09-10-2026 · r28; Carlos: «¿cómo puedo saber en tiempo
  * real quién trabaja?»). Une bot.yokup.com/api/presence (latidos y process_snapshot) con /api/consumos/velocidad
  * (tok/h de los últimos 15 min y «con Carlos»). Criterio en flota-trabajando-lib.mjs.
- * GET → { ok, tarjetas:[{agente, estado:'verde'|'amarillo'|'gris', motivo, maquina, motor, modelo, foco, tarea, proyecto,
+ * GET → { ok, tarjetas:[{agente, estado:'verde'|'amarillo'|'rojo'|'gris', motivo, maquina, motor, modelo, foco, tarea, proyecto,
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
@@ -125,6 +125,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
   const ts = tarjetas({ presencia: pres, velocidad: v, ahoraS, carga });
   aplicarLatidosConsejero(ts, lat, ahoraS);
+  aplicarRojo(ts, ahoraS); // rojo = parado > 1 h pero activo hoy (Madrid); gris = nada hoy
   // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
   const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));
   for (const t of ts) t.foco = focoDe(t, focos, ahoraMs);

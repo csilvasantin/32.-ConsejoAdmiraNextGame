@@ -347,6 +347,8 @@
         if (currentVerb === 'entrenar') renderEntrenarList();
         closeTableViewer();
         renderLegendStrip();
+        // Al cambiar de mesa sin elección explícita, el destinatario por defecto cambia con ella.
+        if (preguntarMode && currentVerb === 'preguntar' && (agentePorDefecto || !selectedAgent || selectedAgent.gen !== gen)) elegirCeoPorDefecto();
         if (window.CouncilTodo && window.CouncilTodo.isOpen()) {
             window.CouncilTodo.setGeneration(gen, (NAMEPLATE_POS[gen] || []).map(p => ({ persona: p.persona, role: p.role, x: p.x, y: p.y })));
         }
@@ -1270,6 +1272,7 @@
     let debateRunning = false;
     let selectedAgent = null; // { name, persona, side, icon } of selected agent for "Preguntar"
     let preguntarMode = false;
+    let agentePorDefecto = false; // true mientras el destinatario sea el CEO puesto por defecto (no un clic)
     let selectedLLM = "grok-4.6"; // Active LLM model key (default: Grok, FLT-1579)
     let selectedLeer = "audio";         // Sub-opción del verbo PENSAR
     let selectedMirar = "presentacion"; // [legacy] sub-opción del verbo MIRAR (sustituido por CREAR)
@@ -1474,7 +1477,21 @@
         document.getElementById("nameplates").classList.add("preguntar-active");
         document.getElementById("body-hotspots").classList.add("preguntar-active");
         _applyPreguntarStyles();
-        setActionLine(cliT('Preguntar · haz clic en un consejero de la mesa', 'Ask · click a councillor at the table'));
+        // Sin selección, se pregunta al CEO de la mesa activa (Elon en Coetáneos, Jobs en Leyendas).
+        if (currentVerb === 'preguntar') elegirCeoPorDefecto();
+        else setActionLine(cliT('Preguntar · haz clic en un consejero de la mesa', 'Ask · click a councillor at the table'));
+    }
+
+    function ceoDeMesa(gen) { return COUNCIL.find(m => m.gen === gen && m.name === "CEO") || null; }
+    function elegirCeoPorDefecto() {
+        const ceo = ceoDeMesa(currentGen);
+        if (!ceo) {
+            setActionLine(cliT('Preguntar · haz clic en un consejero de la mesa', 'Ask · click a councillor at the table'));
+            return;
+        }
+        selectAgentByPersona(ceo.persona);
+        agentePorDefecto = true;
+        setSentenceHtml('<span class="sl-verb">' + cliT("Preguntar a", "Ask") + '</span> <span class="sl-obj">' + _slEsc(ceo.persona) + '</span> · ' + cliT("escribe y pulsa Enviar", "type and press Send"));
     }
 
     function exitPreguntarMode() {
@@ -1533,6 +1550,7 @@
         const members = COUNCIL.filter(m => m.gen === currentGen);
         const agent = members.find(m => m.persona === persona);
         if (!agent) return;
+        agentePorDefecto = false;   // un clic explícito manda sobre el CEO por defecto
 
         // Highlight selected — sync both nameplate and body hotspot
         document.querySelectorAll('.np').forEach(n => n.classList.remove('selected'));
@@ -1598,7 +1616,7 @@
         } else if (preguntarMode && selectedAgent) {
             // Al salir el ratón de otro consejero, la barra vuelve a nombrar al SELECCIONADO
             // (antes se quedaba «Preguntar a George Lucas» con Jobs elegido en el panel).
-            setSentenceHtml('<span class="sl-verb">' + cliT("Preguntar", "Ask") + '</span> a <span class="sl-obj">' + _slEsc(selectedAgent.persona) + '</span> · ' + cliT("escribe y pulsa Enviar", "type and press Send"));
+            setSentenceHtml('<span class="sl-verb">' + cliT("Preguntar a", "Ask") + '</span> <span class="sl-obj">' + _slEsc(selectedAgent.persona) + '</span> · ' + cliT("escribe y pulsa Enviar", "type and press Send"));
         }
     }
 

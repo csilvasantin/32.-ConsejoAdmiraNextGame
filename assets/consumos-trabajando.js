@@ -169,6 +169,28 @@
     if (!s) return s;
     return String(s).split(' + ').map(function (m) { return LARGAS[m.toLowerCase().replace(/[^a-z0-9]/g, '')] || m; }).join(' + ');
   }
+  /** Carlos 22-10-2026: «Nombre // Máquina». Máquina canónica: MacMini · MacStudio · MBP16 · MBP14 · Android · iPhone;
+   *  donde corre ahora (con Carlos → su Mac; si no, la del último latido = t.maquina). «GrokBot» (caja en la nube) solo si
+   *  ningún Mac aplica. Desconocida → sin sufijo. */
+  function maqCanon(s) {
+    var k = String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!k) return '';
+    if (/^(mini|macmini)/.test(k)) return 'MacMini';
+    if (/studio/.test(k)) return 'MacStudio';
+    if (/(pro16|mbp16)/.test(k)) return 'MBP16';
+    if (/(pro14|negro14|mbp14)/.test(k)) return 'MBP14';
+    if (/(android|samsung|fold|galaxy|pixel)/.test(k)) return 'Android';
+    if (/iphone/.test(k)) return 'iPhone';
+    if (/(grokbot|box|cloud|nube)/.test(k)) return 'GrokBot';
+    return '';
+  }
+  function maqActual(t) {
+    var cands = [t.estado === 'amarillo' ? t.conCarlosEn : null, t.maquina, String(t.maqCorta || '').split(' + ')[0]].concat(t.maquinas || []);
+    var gbot = '';
+    for (var i = 0; i < cands.length; i++) { var c = maqCanon(cands[i]); if (c === 'GrokBot') gbot = c; else if (c) return c; }
+    return gbot;
+  }
+  function sufMaq(t) { var m = maqActual(t); return m ? '<span class="tr-maqsuf"><span class="tr-sl">//</span> ' + esc(m) + '</span>' : ''; }
   /** r45: misión del chip: «#6919 · título» si hay encargo, si no «FLT · título» (tarea o foco). */
   function misionTxt(t) {
     var tit = String(t.tarea || '').replace(/(?:encargo\s*)?#\d{3,6}\b|\bFLT-\d{3,6}\b/gi, '').replace(/^[\s·:—-]+|[\s·:—-]+$/g, '').trim() || focoTxt(t);
@@ -177,10 +199,12 @@
   }
   /** r45: LLM / modelo del chip («Claude · claude-opus-5», «GrokBot CLI»…). */
   function llmTxt(t) { return rt([t.motor || t.runtime, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ')); }
-  function altChip(t) {
+  function altChip(t, sinMaq) {
     // r45 (encargo #6919): cada 15 s, como el ciclo del panel: misión → ordenador → LLM/modelo.
     var maq = maqNombre(t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : (t.maquina || t.maqCorta));
     var a = misionTxt(t);
+    // Con «// Máquina» junto al nombre, la máquina no se repite a la derecha (quedan «gratis», «+C»).
+    if (sinMaq && maqActual(t)) maq = '';
     var b = [maq, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
     // La superficie (CLI / App · Carlos) acompaña al LLM; sin «GrokBot CLI · CLI».
     var c = llmTxt(t), sc = supCorta(t);
@@ -196,7 +220,7 @@
     function chip(t) {
       var gris = t.estado === 'gris', rojo = t.estado === 'rojo';
       var est = gris ? T('en espera', 'idle') : rojo ? T('sin actividad > 1 h (activo hoy)', 'inactive > 1 h (active today)') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
-      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + altChip(t) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc(hace(t.haceS) || T('hoy', 'today')) + '</small>' : '') + '</span>';
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc(hace(t.haceS) || T('hoy', 'today')) + '</small>' : '') + '</span>';
     }
     return vivos.map(chip).join('') + rojos.map(chip).join('') + grises.map(chip).join('');
   }
@@ -229,7 +253,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

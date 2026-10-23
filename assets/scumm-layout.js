@@ -13,8 +13,9 @@ const en = (node, { text, label, title } = {}) => {
   if (title != null) node.setAttribute('data-en-title', title);
   return node;
 };
-const KEY = 'admira.scumm.layout.v8';
+const KEY = 'admira.scumm.layout.v9';
 const PREVIOUS_KEYS = [
+  'admira.scumm.layout.v8',
   'admira.scumm.layout.v7',
   'admira.scumm.layout.v6',
   'admira.scumm.layout.v5',
@@ -24,8 +25,9 @@ const PREVIOUS_KEYS = [
   'admira.scumm.layout.v1'
 ];
 const INTEGRATED_ORDER = ['verbos', 'accesos', 'previos'];
-// Classic 22+22 / 56 with Accesos folded into Verbos → ~44 / 56.
-const DEFAULT_WEIGHTS = { verbos: 44, accesos: 1, previos: 56 };
+// v9 (2026-10-23): atajos debajo de los verbos → Verbos más estrecho, Previos
+// (conversación con consejeros) más ancho: 34 / 66 (antes 44 / 56).
+const DEFAULT_WEIGHTS = { verbos: 34, accesos: 1, previos: 66 };
 const DEFAULT_HIDDEN = ['accesos']; // Previos VISIBLE again
 const DEFAULT_HEIGHT = 220;
 export function normalizeLayout(raw = {}) {

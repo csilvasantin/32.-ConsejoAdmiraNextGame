@@ -94,7 +94,7 @@
       tq = T("Sin dato fresco de cuota de su cuenta (su CLI no lo informa o no ha trabajado en 6 h)", "No fresh quota data for its account");
     }
     var title = t.agente + " · " + estTxt + (t.motivo ? " — " + t.motivo : "") + "\n" +
-      (ab == null ? "" : T("Encargos abiertos: ", "Open tasks: ") + ab + (t.bloqueados ? " (" + t.bloqueados + T(" bloqueados", " blocked") + ")" : "") + "\n") + tq;
+      (ab == null ? "" : T("Misiones abiertas: ", "Open missions: ") + ab + (t.bloqueados ? " (" + t.bloqueados + T(" bloqueados", " blocked") + ")" : "") + "\n") + tq;
     return '<a class="ar ' + est + '" href="/asignaciones/" title="' + esc(title) + '" aria-label="' + esc(title) + '">' +
       '<span class="ar-dot" aria-hidden="true"></span><span class="ar-n">' + esc(t.agente) + "</span>" + enc + q + "</a>";
   }

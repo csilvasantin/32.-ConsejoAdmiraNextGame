@@ -106,6 +106,9 @@
   "Última lectura": "Last reading",
   // r56 (23-10-2026 08:06): restos en español vistos con ?lang=en.
   "Cuadrante de carga": "Load grid",
+  "Histórico": "History",
+  "Qué hizo cada agente: hoy, ayer, semana y mes": "What each agent did: today, yesterday, week and month",
+  "Qué se hizo en cada proyecto: hoy, ayer, semana y mes": "What was done in each project: today, yesterday, week and month",
   "excluido:": "excluded:",
   "Codex sesión 5 h": "Codex 5 h session",
   "Pulsa: hoy → ayer → semana (lunes–hoy) → mes (día 1–hoy), Madrid": "Press: today → yesterday → week (Monday–today) → month (1st–today), Madrid",

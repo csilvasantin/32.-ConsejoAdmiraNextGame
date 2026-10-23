@@ -145,6 +145,19 @@ export function colocarPorAppGrokBot(out, apps) {
   return out;
 }
 
+/** r54: segundos epoch del último token real de un agente (null si no hay): evento del pulso con tokens hoy y, para
+ *  el pool de Merovingio, el último uso de su cuenta en la app GrokBot (usoS medido hace haceS). Pura. */
+export function ultimoTokenS(agente, p, apps, ahoraS) {
+  const c = [];
+  if (p && Number(p.tokHoy) > 0 && p.ultimoEvento) { const t = Math.floor(Date.parse(p.ultimoEvento) / 1000); if (isFinite(t) && t <= ahoraS + 60) c.push(Math.min(t, ahoraS)); }
+  if (agente === "Merovingio" && Array.isArray(apps)) {
+    for (const a of apps) if (a && a.fuente === "app" && a.cuenta === CUENTA_APP_GROKBOT.Merovingio && a.usoS != null && isFinite(a.usoS))
+      c.push(ahoraS - Math.round(Number(a.usoS) + (Number(a.haceS) || 0)));
+  }
+  return c.length ? Math.max(...c) : null;
+}
+const masReciente = (iso, s) => { const t = iso ? Date.parse(iso) : NaN; return s != null && !(t >= s * 1000) ? new Date(s * 1000).toISOString() : iso; };
+
 /** r28-sup: consejeros principales de GrokBot: viven en el asistente de GrokBot (nube), despertados por rutinas/webhooks. */
 export const CONSEJEROS_ASISTENTE = ["Jobs", "Wozniak", "Musk", "Huang"];
 export const RUNTIME_ASISTENTE = "GrokBot (asistente)";
@@ -450,8 +463,14 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     // r53 (Carlos, 22-10-2026 22:43): SIN MARGEN para AGENTES. Verde solo si gasta tokens de verdad (tokHora del
     // pulso > 0 o tokUltimaHora > 0) o su app de escritorio está en uso. Proceso vivo / latido / encargos abiertos ya no
     // bastan: pasa a gris (y aplicarRojo lo pone en rojo si hubo actividad hoy). Consejeros: sin cambios.
+    // r54 (Carlos, 23-10-2026: «Merovingio en gris gastando tokens»): el color sale del ÚLTIMO TOKEN real del agente
+    // (fuente más fresca: evento del pulso, aunque llegue con retraso, o uso de la cuenta en la app GrokBot del pool),
+    // no de la última lectura guardada (tokUltimaHora del CSV de Cursor, con horas de retraso). Proceso / encargos: nunca.
+    const ultTok = ultimoTokenS(x.agente, p, velocidad && velocidad.grokbotApps, ahoraS);
+    const tokReciente = ultTok != null && ahoraS - ultTok <= UMBRAL_ROJO_S;
+    if (!esConsejero(x.agente) && tokReciente && st.estado === "gris") { st.estado = "verde"; st.motivo = "tokens hace " + Math.max(0, ahoraS - ultTok) + " s"; }
     if (st.estado === "verde" && !esConsejero(x.agente)) {
-      const gasta = Number(tokVivo) > 0 || !!(p && Number(p.tokUltimaHora) > 0);
+      const gasta = Number(tokVivo) > 0 || !!(p && Number(p.tokUltimaHora) > 0) || tokReciente;
       const appUso = (supPulso || []).some((s) => s && s.tipo === "app" && s.enUso && s.agente && canonico(s.agente) === x.agente);
       if (!gasta && !appUso) { st.estado = "gris"; st.motivo = "sin tokens en la última hora (" + st.motivo + ")"; }
     }
@@ -502,7 +521,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       tokUltimaHora: p && p.tokUltimaHora != null ? p.tokUltimaHora : null,
       tokHoraMetodo: p && p.tokHora != null && !p.conRetraso ? "15 min × 4" : null,
       sinMedicion: !p || (!Number(p.tokHoy) && !Number(p.tokHora) && !Number(p.tokUltimaHora)),
-      ultimaActividad: (p && p.ultimaActividad) || null,
+      ultimaActividad: masReciente((p && p.ultimaActividad) || null, ultTok),
       sinActividad: sinActividad({ estado: st.estado, enCurso, p, ahoraS }),
       haceS: gris ? Math.max(0, ahoraS - fresca.ts) : ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: gris ? fresca.fuente : l ? l.source : (p ? "pulso" : null),
       maquinas: [...new Set(x.latidos.map((e) => e.machine).filter(Boolean))],

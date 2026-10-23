@@ -79,7 +79,8 @@ test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pu
   ];
   const velocidad = { porAgente: [{ agente: "Neo", tokHora: 0, tokHoy: 9, maquina: "MacMini", ultimoEvento: new Date((T - 200) * 1000).toISOString() }] };
   let neo = tarjetas({ presencia, velocidad, ahoraS: T }).find((x) => x.agente === "Neo");
-  assert.deepEqual([neo.estado, neo.maquina, neo.haceS, neo.fuente], ["gris", "MacMini", 200, "pulso"]);
+  // r54: tokens hace 200 s = gasta de verdad → verde (antes gris con «hace 200 s»).
+  assert.deepEqual([neo.estado, neo.maquina, neo.haceS], ["verde", "MacMini", 200]);
   velocidad.porAgente[0].ultimoEvento = new Date((T - 5000) * 1000).toISOString();
   neo = tarjetas({ presencia, velocidad, ahoraS: T }).find((x) => x.agente === "Neo");
   assert.deepEqual([neo.maquina, neo.haceS, neo.fuente], ["MacBook Pro 16", 400, "process_snapshot"]);

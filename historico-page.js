@@ -4,7 +4,7 @@
   'use strict';
   var EN = (function () { try { var q = new URL(location.href).searchParams.get('lang'); if (q) return /^en/i.test(q); var s = localStorage.getItem('admiranext_expert_lang') || localStorage.getItem('xtanco_lang'); return !!s && /^en/i.test(s); } catch (e) { return false; } })();
   function T(es, en) { return EN ? en : es; }
-  var PER = { hoy: T('Hoy', 'Today'), ayer: T('Ayer', 'Yesterday'), semana: T('Esta semana (lunes–hoy)', 'This week (Monday–today)'), mes: T('Este mes (día 1–hoy)', 'This month (1st–today)') };
+  var PER = { hoy: T('Hoy', 'Today'), ayer: T('Ayer', 'Yesterday'), semanaPasada: T('Semana pasada (lunes–domingo)', 'Last week (Monday–Sunday)'), mesPasado: T('Mes pasado', 'Last month') };
   var SIN = T('sin datos todavía', 'no data yet');
   var url = new URL(location.href), tipo = url.searchParams.get('tipo') === 'proyecto' ? 'proyecto' : 'agente', nombre = url.searchParams.get('nombre') || '';
   var listas = null;
@@ -32,9 +32,9 @@
     var rej = document.getElementById('rejilla'), est = document.getElementById('estado');
     history.replaceState(null, '', '/historico?tipo=' + tipo + (nombre ? '&nombre=' + encodeURIComponent(nombre) : '') + (EN ? '&lang=en' : ''));
     if (!nombre) { rej.innerHTML = ''; est.textContent = T('Elige un agente o un proyecto.', 'Pick an agent or a project.'); return; }
-    est.textContent = T('Cargando… (las misiones de Yokup tardan hasta ~40 s la primera vez)', 'Loading… (Yokup missions can take ~40 s the first time)');
+    est.textContent = T('Cargando…', 'Loading…');
     fetch('/api/consumos/historico?tipo=' + tipo + '&nombre=' + encodeURIComponent(nombre)).then(function (r) { return r.json(); }).then(function (d) {
-      est.textContent = '';
+      est.textContent = d.fuentes && d.fuentes.actualizando ? T('Datos guardados; actualizando en segundo plano…', 'Stored data; refreshing in the background…') : '';
       rej.innerHTML = (d.periodos || []).map(per).join('');
       var f = d.fuentes || {};
       document.getElementById('pie').textContent = T('Fuentes: libro histórico KV desde ', 'Sources: KV history ledger since ') + (f.libro || T('hoy', 'today')) + T(' · partes de Yokup (~31 días) · bandeja de encargos de Yokup (80 últimos) + libro de encargos · misiones de Yokup (', ' · Yokup reports (~31 days) · Yokup task inbox (last 80) + task ledger · Yokup missions (') + (f.misiones || 0) + ')';

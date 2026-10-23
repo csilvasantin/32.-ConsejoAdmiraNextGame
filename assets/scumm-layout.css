@@ -139,6 +139,18 @@
 .scumm-module[hidden],.scumm-layout-tools [hidden],.scumm-bottom[data-layout-ready][hidden],.scumm-module-resizer[hidden],.scumm-height-resizer[hidden] { display:none!important; }
 .scumm-collapsed .scumm-height-resizer { display:none; }
 
+/* v9 (Carlos 2026-10-23): ATAJOS DEBAJO DE LOS VERBOS. El bloque Verbos pasa a
+   columna — verbos arriba (4 columnas), atajos en UNA fila compacta debajo — y
+   así ocupa menos ancho: Previos (conversación con los consejeros) gana espacio. */
+@media(min-width:601px) {
+  .scumm-module[data-module="verbos"] .scumm-module-content { flex-direction:column; justify-content:center; gap:4px; overflow:auto; }
+  .scumm-module[data-module="verbos"] .verb-grid { flex:0 0 auto; width:100%; max-width:none; box-sizing:border-box; padding:4px 8px 0; grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .scumm-module[data-module="verbos"] .verb-pager { align-self:center; }
+  .scumm-module[data-module="verbos"] .inventory { flex:0 0 auto; width:100%; border-left:0; border-top:1px solid #3a2410; padding:4px 8px; overflow:visible; }
+  .scumm-module[data-module="verbos"] .inv-objetos { grid-template-columns:repeat(9,minmax(0,40px)); gap:4px; }
+  .scumm-module[data-module="verbos"] .obj { padding:1px; min-width:0; }
+}
+
 @media(max-width:600px) {
   .scumm-bottom[data-layout-ready] { flex-direction:column; height:auto; max-height:none; }
   .scumm-module { flex:none!important; width:100%; border-right:0; border-bottom:1px solid #291b0c; }

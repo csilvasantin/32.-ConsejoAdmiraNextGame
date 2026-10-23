@@ -22,10 +22,14 @@ test('SCUMM CSS: sin order:-1 (ya no fuerza arriba); radio inferior clásico', (
 
 test('v8: Accesos en Verbos + Previos third block wired', () => {
   assert.match(html, /assets\/scumm-layout\.js\?v=[^\"]+/);
-  assert.match(html, /assets\/scumm-layout\.css\?v=20261005-sello-previos/);
+  assert.match(html, /assets\/scumm-layout\.css\?v=20261023-atajos-bajo-verbos/);
   assert.match(html, /assets\/sello-novedades\.js/);
   const js = fs.readFileSync(new URL('./assets/scumm-layout.js', import.meta.url), 'utf8');
-  assert.match(js, /layout\.v8/);
+  assert.match(js, /layout\.v9/);
+  assert.match(js, /layout\.v8/); // v8 se migra
+  const css = fs.readFileSync(new URL('./assets/scumm-layout.css', import.meta.url), 'utf8');
+  assert.match(css, /ATAJOS DEBAJO DE LOS VERBOS/);
+  assert.match(css, /\.inv-objetos \{ grid-template-columns:repeat\(9/);
   assert.match(js, /grid, pager, inventory/);
   assert.match(js, /DEFAULT_HIDDEN = \['accesos'\]/);
   assert.match(js, /previos: \[preview\]/);

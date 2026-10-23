@@ -9,7 +9,7 @@ test('saved layout cannot lose or duplicate a module; bad storage recovers safel
   const layout = normalizeLayout({order:['previos','previos','invalid'], hidden:['accesos','invalid'], weights:{verbos:NaN,accesos:-1},height:999999});
   assert.deepEqual(layout.order,['previos','verbos','accesos']);
   assert.ok(layout.hidden.includes('accesos'));
-  assert.equal(layout.weights.verbos,44); assert.equal(layout.height,600);
+  assert.equal(layout.weights.verbos,34); assert.equal(layout.height,600);
 });
 
 test('resizing visible neighbours conserves their space and leaves a hidden block intact', () => {
@@ -33,7 +33,7 @@ test('v8 defaults: Accesos icons in Verbos, Previos visible as third block', () 
   assert.deepEqual(d.order, ['verbos','accesos','previos']);
   assert.deepEqual(d.hidden, ['accesos']);
   assert.ok(!d.hidden.includes('previos'), 'Previos must be visible');
-  assert.deepEqual(d.weights, {verbos:44, accesos:1, previos:56});
+  assert.deepEqual(d.weights, {verbos:34, accesos:1, previos:66});
   assert.equal(d.height, 220);
 });
 
@@ -46,7 +46,7 @@ test('normalizeLayout always keeps Accesos module hidden', () => {
 test('v4-v7 layouts migrate to Verbos+icons | Previos visible', () => {
   const m1 = migrateLegacyLayout({weights:{verbos:100,accesos:1,previos:40},height:168,hidden:['accesos','previos']});
   assert.deepEqual(m1.hidden, ['accesos']);
-  assert.deepEqual(m1.weights, {verbos:44, accesos:1, previos:56});
+  assert.deepEqual(m1.weights, {verbos:34, accesos:1, previos:66});
   assert.equal(m1.height, 220);
   const m2 = migrateLegacyLayout({weights:{verbos:62,accesos:38,previos:40},hidden:['previos']});
   assert.deepEqual(m2.hidden, ['accesos']);

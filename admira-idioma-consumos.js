@@ -247,6 +247,7 @@
         [/^encargo enviado a las (.+)$/, "task sent at $1"], [/^mensaje de consejero a las (.+)$/, "councillor message at $1"],
         [/^handON a las (.+)$/, "handON at $1"], [/^acción de consejero a las (.+)$/, "councillor action at $1"],
         [/^sin tokens desde hace (.+)$/, "no tokens for $1"], [/^sin tokens hoy$/, "no tokens today"], [/^nada hoy$/, "nothing today"],
+        [/^tokens de la cuenta Cursor compartida: no atribuibles$/, "shared Cursor account tokens: not attributable"],
         [/^uso de la app GrokBot de csilvasantin compartido \(Merovingio, Musk, Huang\): no atribuible$/, "csilvasantin GrokBot app usage is shared (Merovingio, Musk, Huang): not attributable"]];
       return m[0].split(" · ").map(function (p) { for (var i = 0; i < R.length; i++) if (R[i][0].test(p)) return p.replace(R[i][0], R[i][1]); return p; }).join(" · ");
     }],

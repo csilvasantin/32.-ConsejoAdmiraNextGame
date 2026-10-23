@@ -18,10 +18,10 @@ test("r55: la cuenta GrokBot csilvasantin (compartida con Musk/Huang) NO pone ve
   assert.match(m.notaPool, /no atribuible/);
 });
 
-test("r54: lectura retrasada (Cursor, tokUltimaHora 0) pero evento de tokens reciente → verde", () => {
+test("r57: evento reciente de la cuenta Cursor COMPARTIDA → no da verde a Merovingio (no atribuible)", () => {
   const p = { agente: "Grok Bot (Consejo)", motor: "cursor", conRetraso: true, tokHora: null, tokHoy: 9e5, tokUltimaHora: 0, ultimoEvento: iso(T - 600) };
   const ts = tarjetas({ presencia: [latMero], velocidad: { porAgente: [p] }, ahoraS: T, carga });
-  assert.equal(card(ts, "Merovingio").estado, "verde");
+  assert.notEqual(card(ts, "Merovingio").estado, "verde");
 });
 
 test("r54: sin tokens recientes (último uso hace 2 h) → no verde aunque latido trabajando y encargos", () => {

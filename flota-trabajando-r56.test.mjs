@@ -15,14 +15,14 @@ test("r56: latido del consejero «trabajando» sin tokens ni app → ROJO, nunca
   assert.match(porqueColor(ts[0], T), /latido del consejero «trabajando» a las 08:09/);
 });
 
-test("r56: verde se mantiene con tokens reales o con app GrokBot titular en uso", () => {
+test("r56/r57: verde solo con tokens reales; la app GrokBot compartida ya no (Musk)", () => {
   const ts = [
     { agente: "Neo", estado: "verde", ultimoToken: iso(T - 120) },
     { agente: "Musk", estado: "verde", fuente: "app_grokbot", consejero: true },
     { agente: "Jobs", estado: "verde", fuente: "consejero_latido", consejero: true },
   ];
   soloVerdeReal(ts, T);
-  assert.deepEqual(ts.map((t) => t.estado), ["verde", "verde", "gris"]);
+  assert.deepEqual(ts.map((t) => t.estado), ["verde", "gris", "gris"]);
 });
 
 test("r56: Merovingio gris no dice «app abierta en uso»; la nota «no atribuible» solo en Merovingio", () => {

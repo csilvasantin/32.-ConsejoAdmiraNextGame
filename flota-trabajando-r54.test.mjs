@@ -10,10 +10,12 @@ const app = (usoS, extra = {}) => ({ maquina: "MacMini", cuenta: "csilvasantin@g
 const card = (ts, n) => ts.find((x) => x.agente === n);
 const carga = { get: () => ({ in_progress: 2, abiertos: 2, blocked: 0 }) };
 
-test("r54: Merovingio sin lectura guardada fresca pero con su cuenta GrokBot gastando hace 27 s → verde", () => {
+test("r55: la cuenta GrokBot csilvasantin (compartida con Musk/Huang) NO pone verde a Merovingio y se dice", () => {
   const ts = tarjetas({ presencia: [latMero], velocidad: { porAgente: [], grokbotApps: [app(27)] }, ahoraS: T, carga });
   aplicarRojo(ts, T);
-  assert.equal(card(ts, "Merovingio").estado, "verde");
+  const m = card(ts, "Merovingio");
+  assert.notEqual(m.estado, "verde");
+  assert.match(m.notaPool, /no atribuible/);
 });
 
 test("r54: lectura retrasada (Cursor, tokUltimaHora 0) pero evento de tokens reciente → verde", () => {
@@ -42,7 +44,7 @@ test("r54: Neo con último evento de hace 7 h → no verde (rojo si activo hoy)"
 
 test("r54: ultimoTokenS toma la fuente más fresca", () => {
   const p = { tokHoy: 5, ultimoEvento: iso(T - 900) };
-  assert.equal(ultimoTokenS("Merovingio", p, [app(100)], T), T - 120);
+  assert.equal(ultimoTokenS("Merovingio", p, [app(100)], T), T - 900);
   assert.equal(ultimoTokenS("Neo", p, [app(100)], T), T - 900);
   assert.equal(ultimoTokenS("Neo", null, [], T), null);
 });

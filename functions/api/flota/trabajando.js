@@ -6,7 +6,7 @@
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
@@ -23,7 +23,7 @@ export async function leerCarga(fetchImpl, personas) {
       const r = await fetchImpl(BANDEJA + "?persona=" + encodeURIComponent(p), { headers: { accept: "application/json" }, signal: AbortSignal.timeout(6000) });
       if (!r.ok) return [p, null];
       const d = await r.json();
-      return [p, cargaDe((d && d.items) || [], p)];
+      return [p, { ...cargaDe((d && d.items) || [], p), ultAccion: ultimaAccionEncargos((d && d.items) || [], p, personaCenso) }];
     } catch (e) { return [p, null]; }
   }));
   return new Map(filas.filter(([, c]) => c));
@@ -125,10 +125,12 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
   const ts = tarjetas({ presencia: pres, velocidad: v, ahoraS, carga });
   aplicarLatidosConsejero(ts, lat, ahoraS);
+  aplicarActividadConsejero(ts, lat); // r55: mensajes / encargos / handON de los consejeros = actividad de hoy
   aplicarRojo(ts, ahoraS); // rojo = parado > 1 h pero activo hoy (Madrid); gris = nada hoy
   // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
   const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));
   for (const t of ts) t.foco = focoDe(t, focos, ahoraMs);
+  for (const t of ts) t.porqueColor = porqueColor(t, ahoraS); // r55: tooltip de cada pastilla
   // r41 barra de agentes: cuota de su cuenta (% usado + reinicio) del pulso de tokens; sin dato fresco → null.
   const lims = new Map(((v && v.limites) || []).map((l) => [l.persona, l]));
   for (const t of ts) {

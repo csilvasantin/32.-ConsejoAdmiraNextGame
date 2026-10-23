@@ -81,11 +81,14 @@ export function tokensPorDia({ tipo, nombre, libro, partes }) {
 }
 
 /** Histórico de una entidad. fuentes: { libro, partes, encargos:[items], misiones:[...], minPartes, minEncargos, minMisiones }. */
-export function historico({ tipo, nombre, ahoraMs, libro = null, partes = null, encargos = [], misiones = null }) {
+export function historico({ tipo, nombre, ahoraMs, libro = null, partes = null, encargos = [], misiones = null, ventanaEncargos = null }) {
   const es = casa(tipo, nombre);
   const tk = tokensPorDia({ tipo, nombre, libro, partes });
   const encDe = (encargos || []).filter((x) => (tipo === "proyecto" ? es(x.proyecto) : es(x.persona)));
-  const minEnc = (encargos || []).reduce((m, x) => { const d = diaDe(x.ts || x.ack_at || x.done_at); return d && (!m || d < m) ? d : m; }, null);
+  // Cobertura honesta de encargos: agente = desde el más antiguo de SU bandeja (80 últimos, completa desde ahí);
+  // proyecto = siempre «parcial» (solo lo que quedaba en las bandejas o en el libro, que empieza el 23-10-2026).
+  const minTodos = (encargos || []).reduce((m, x) => { const d = diaDe(x.ts || x.ack_at || x.done_at); return d && (!m || d < m) ? d : m; }, null);
+  const minEnc = tipo === "agente" ? (ventanaEncargos ? diaDe(ventanaEncargos) : null) : minTodos;
   const misDe = (misiones || []).filter((m) => (tipo === "proyecto" ? es(m.project_id || m.project) : es(m.assignee) || es(m.persona)));
   const minMis = (misiones || []).reduce((m, x) => { const d = diaDe(Math.floor((x.created_at || 0) / 1000)); return d && (!m || d < m) ? d : m; }, null);
   const tit = (s) => String(s || "").replace(/\s+/g, " ").trim().slice(0, 140);
@@ -101,7 +104,7 @@ export function historico({ tipo, nombre, ahoraMs, libro = null, partes = null, 
         id: p.id, desde: p.desde, hasta: p.hasta,
         tokens: cubTok && conTok.length ? { total: conTok.reduce((n, d) => n + tk.dias[d].tok, 0), diasConDatos: conTok.length, dias: dias.length, cobertura: cubTok, datosDesde: tk.desde,
           fuentes: [...new Set(conTok.map((d) => tk.dias[d].fuente))] } : null,
-        encargos: cub(minEnc) ? { cobertura: cub(minEnc), datosDesde: minEnc,
+        encargos: cub(minEnc) ? { cobertura: tipo === "proyecto" ? "parcial" : cub(minEnc), datosDesde: minEnc,
           aceptados: encDe.filter((x) => enRango(x.ack_at)).map((x) => ({ id: x.id, etiqueta: x.etiqueta, titulo: tit(x.texto), persona: x.persona, proyecto: x.proyecto, cuando: x.ack_at })),
           cerrados: encDe.filter((x) => /^(done|completed)$/.test(x.status || "") && enRango(x.done_at)).map((x) => ({ id: x.id, etiqueta: x.etiqueta, titulo: tit(x.texto), persona: x.persona, proyecto: x.proyecto, cuando: x.done_at })) } : null,
         misiones: cub(minMis) ? { cobertura: cub(minMis), datosDesde: minMis,

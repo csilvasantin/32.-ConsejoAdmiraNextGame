@@ -28,7 +28,7 @@ test("agente: tokens de partes Yokup y libro; encargos aceptados/cerrados con t�
     { id: 1, etiqueta: "#1.10.23", persona: "Neo", texto: "Arreglar X", status: "done", ts: S - 3600, ack_at: S - 3500, done_at: S - 60 },
     { id: 2, persona: "Morfeo", texto: "otro", status: "done", ts: S - 3600, ack_at: S - 3500, done_at: S - 60 },
   ];
-  const h = historico({ tipo: "agente", nombre: "Neo", ahoraMs: AHORA, libro, partes, encargos, misiones: null });
+  const h = historico({ tipo: "agente", nombre: "Neo", ahoraMs: AHORA, libro, partes, encargos, misiones: null, ventanaEncargos: S - 3600 });
   const [hoy, ayer, semana] = h.periodos;
   assert.equal(hoy.tokens.total, 300);
   assert.equal(ayer.tokens.total, 600, "sin caché");
@@ -59,4 +59,10 @@ test("/consumos enlaza «Histórico» junto a Agentes y Proyectos; EN «History�
   assert.equal((html.match(/href="\/historico\?tipo=(agente|proyecto)"[^>]*>Histórico</g) || []).length, 2);
   assert.match(readFileSync(new URL("./admira-idioma-consumos.js", import.meta.url), "utf8"), /"Histórico": "History"/);
   assert.match(readFileSync(new URL("./historico-page.js", import.meta.url), "utf8"), /sin datos todavía/);
+});
+
+test("proyecto: encargos siempre «parcial»", () => {
+  const h = historico({ tipo: "proyecto", nombre: "admira-live", ahoraMs: AHORA, encargos: [{ id: 9, proyecto: "admira-live", texto: "z", status: "done", ts: S - 9e5, done_at: S - 10 }] });
+  assert.equal(h.periodos[0].encargos.cobertura, "parcial");
+  assert.equal(h.periodos[0].encargos.cerrados.length, 1);
 });

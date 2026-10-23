@@ -11,7 +11,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function fmt(n) { n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', EN ? '.' : ',') + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n); }
   function hora(s) { return s ? new Date(s * 1000).toLocaleString(EN ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
-  function cob(x) { return x && x.cobertura === 'parcial' ? ' <span class="nota">(' + T('datos desde ', 'data since ') + esc(x.datosDesde) + ')</span>' : ''; }
+  function cob(x) { return x && x.cobertura === 'parcial' ? ' <span class="nota">(' + T('parcial · datos desde ', 'partial · data since ') + esc(x.datosDesde) + ')</span>' : ''; }
   function lista(arr, f) { return arr.length ? '<ul>' + arr.slice(0, 40).map(f).join('') + '</ul>' + (arr.length > 40 ? '<p class="nota">+' + (arr.length - 40) + '</p>' : '') : '<p class="nota">' + T('ninguno', 'none') + '</p>'; }
   function enc(e) { return '<li>' + esc(e.etiqueta || ('#' + e.id)) + ' · ' + esc(e.titulo) + ' <span class="nota">' + esc(hora(e.cuando)) + (tipo === 'proyecto' && e.persona ? ' · ' + esc(e.persona) : '') + '</span></li>'; }
   function per(p) {

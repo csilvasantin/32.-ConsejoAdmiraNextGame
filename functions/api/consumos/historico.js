@@ -26,9 +26,11 @@ export async function construir({ env, fetchImpl = fetch, tipo, nombre, ahoraMs 
   const misiones = []; const vistos = new Set();
   for (const d of mis) for (const m of (d && d.missions) || []) if (m && m.id && !vistos.has(m.id)) { vistos.add(m.id); misiones.push(m); }
   let encargos = Array.isArray(encKV) ? encKV : [];
+  let ventanaEncargos = null;
   if (tipo && nombre) {
     const d = await leer(fetchImpl, BANDEJA + (tipo === "agente" ? "?persona=" + encodeURIComponent(nombre) : ""), 8000);
     const ids = new Set(encargos.map((x) => x.id));
+    if (tipo === "agente") ventanaEncargos = ((d && d.items) || []).reduce((m, x) => (x.ts && (!m || x.ts < m) ? x.ts : m), null);
     for (const x of (d && d.items) || []) if (!ids.has(x.id)) encargos.push({ id: x.id, etiqueta: x.etiqueta || null, persona: x.target_persona, proyecto: x.project_id, texto: String(x.text || "").slice(0, 160), status: x.status, ts: x.ts, ack_at: x.ack_at, done_at: x.done_at });
   }
   if (!tipo || !nombre) {
@@ -39,7 +41,7 @@ export async function construir({ env, fetchImpl = fetch, tipo, nombre, ahoraMs 
     for (const k of proys) if (!nombresProy.has(k)) nombresProy.set(k, k);
     return { ok: true, agentes: [...AGENTES_FLOTA, ...CONSEJEROS], proyectos: [...nombresProy.values()].sort(), libro: libro ? "ok" : "vacío", misiones: misiones.length };
   }
-  return { ok: true, ...historico({ tipo, nombre, ahoraMs, libro, partes: dPartes && dPartes.partes, encargos, misiones: misiones.length ? misiones : null }),
+  return { ok: true, ...historico({ tipo, nombre, ahoraMs, libro, partes: dPartes && dPartes.partes, encargos, misiones: misiones.length ? misiones : null, ventanaEncargos }),
     fuentes: { libro: libro ? Object.keys(libro).sort()[0] : null, partes: dPartes ? "ok" : "sin respuesta", misiones: misiones.length, encargosLibro: Array.isArray(encKV) ? encKV.length : 0 }, generado: new Date(ahoraMs).toISOString() };
 }
 

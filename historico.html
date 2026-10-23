@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Histórico · Consumos AdmiraNeXT</title>
+<style>
+body{margin:0;background:#0b0f17;color:#e6edf3;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:18px}
+a{color:#7cc4ff}
+h1{font-size:1.4em;margin:.2em 0 .6em}
+.barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+select,button{background:#141b26;color:#e6edf3;border:1px solid #2b3647;border-radius:6px;padding:6px 10px;font:inherit}
+button.on{background:#1f6feb;border-color:#1f6feb}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.per{background:#111823;border:1px solid #233044;border-radius:10px;padding:12px}
+.per h2{font-size:1.05em;margin:0 0 4px}
+.per .rango{color:#8b98a9;font-size:.85em;margin-bottom:8px}
+.per h3{font-size:.9em;margin:10px 0 4px;color:#9fb3c8;text-transform:uppercase;letter-spacing:.04em}
+.cifra{font-size:1.5em;font-weight:700}
+.nota{color:#8b98a9;font-size:.82em}
+.sin{color:#8b98a9;font-style:italic}
+ul{margin:0;padding-left:18px}
+li{margin:2px 0;font-size:.88em}
+.cargando{color:#8b98a9}
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/consumos" id="volver">← Consumos</a></p>
+  <h1 id="titulo">Histórico</h1>
+  <div class="barra">
+    <button id="b-agente" data-tipo="agente">Agentes</button>
+    <button id="b-proyecto" data-tipo="proyecto">Proyectos</button>
+    <select id="sel" aria-label="Elegir"></select>
+    <span class="nota" id="estado"></span>
+  </div>
+  <div class="rejilla" id="rejilla"></div>
+  <p class="nota" id="pie"></p>
+</main>
+<script src="/historico-page.js"></script>
+</body>
+</html>

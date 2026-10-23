@@ -9,6 +9,7 @@
 import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, soloVerdeReal, autoreportesDeHoy, aplicarAutoreportes } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
+import { KEY_ENCARGOS, anotarEncargos } from "../../../historico-lib.mjs";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
 import { persona as personaPulso } from "../../../consumos-pulso-lib.mjs";
 import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS, llave } from "../../../flota-matriz-lib.mjs";
@@ -16,6 +17,16 @@ import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS, ll
 /** r4 (Jensen, 10-10-2026): carga de encargos por persona, la MISMA fuente que agentes_vivos (bandeja pública de Yokup,
  *  los 80 más recientes por persona). Con ella: trabajando = latido < 15 min + encargo in_progress. */
 export const BANDEJA = "https://bot.yokup.com/api/public/inbox";
+/** Mejora 5: encargos vistos en esta lectura (para el libro histórico de encargos). */
+let itemsVistos = [];
+let ultimaEscrituraEnc = 0;
+export async function guardarEncargos(env, ahoraMs) {
+  const store = env && (env.CONSUMOS_KV || env.RECORTE_KV);
+  const items = itemsVistos; itemsVistos = [];
+  if (!store || !items.length || ahoraMs - ultimaEscrituraEnc < 5 * 60 * 1000) return false;
+  ultimaEscrituraEnc = ahoraMs;
+  try { const raw = await store.get(KEY_ENCARGOS); await store.put(KEY_ENCARGOS, JSON.stringify(anotarEncargos(raw ? JSON.parse(raw) : [], items, ahoraMs))); return true; } catch (e) { return false; }
+}
 export async function leerCarga(fetchImpl, personas) {
   const unicas = [...new Set(personas.filter(Boolean))];
   const filas = await Promise.all(unicas.map(async (p) => {
@@ -23,6 +34,7 @@ export async function leerCarga(fetchImpl, personas) {
       const r = await fetchImpl(BANDEJA + "?persona=" + encodeURIComponent(p), { headers: { accept: "application/json" }, signal: AbortSignal.timeout(6000) });
       if (!r.ok) return [p, null];
       const d = await r.json();
+      if (Array.isArray(d && d.items)) itemsVistos.push(...d.items);
       return [p, { ...cargaDe((d && d.items) || [], p), ultAccion: ultimaAccionEncargos((d && d.items) || [], p, personaCenso) }];
     } catch (e) { return [p, null]; }
   }));
@@ -134,6 +146,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const pres = p ? p.presence : [];
   const nombres = [...AGENTES_FLOTA, ...CONSEJEROS, ...pres.map((e) => e && e.persona && personaCenso(e.persona))];
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
+  await guardarEncargos(env, ahoraMs).catch(() => false);
   const ts = tarjetas({ presencia: pres, velocidad: v, ahoraS, carga });
   aplicarLatidosConsejero(ts, lat, ahoraS);
   aplicarActividadConsejero(ts, lat); // r55: mensajes / encargos / handON de los consejeros = actividad de hoy

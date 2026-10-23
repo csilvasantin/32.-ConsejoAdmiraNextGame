@@ -301,6 +301,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .dd-retraso{color:#ffd866}.dd-retraso.dd-retraso-ok{color:inherit;opacity:.8}
 .tok-cursor{margin-top:8px;color:var(--mut);font-size:14px}.tok-cursor b{color:var(--ink)}
 .con-carlos{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:#ffcf5a;color:#1a1200;font-size:11px;font-style:normal;font-weight:700;vertical-align:middle}
+.vel-hist{font-size:.8em;text-transform:none;letter-spacing:0;color:#7cc4ff;text-decoration:underline;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -327,13 +328,13 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <h2 id="vel-titulo" class="sr">Tokens por hora</h2>
     <div class="vel-par">
       <div class="vel-g" id="vel-g-total">
-        <h3><span id="vel-ag-titulo">Agentes (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-ag-dd"></span></h3>
+        <h3><span id="vel-ag-titulo">Agentes (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-ag-dd"></span><span class="vel-sep" aria-hidden="true"> · </span><a class="vel-hist" href="/historico?tipo=agente" title="Qué hizo cada agente: hoy, ayer, semana y mes">Histórico</a></h3>
         <p class="vel-xy-nota" id="vel-ag-nota" data-en="working in the last 15 min / connected to the fleet">trabajando en los últimos 15 min / conectados a la flota</p>
         <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Tokens acumulados hoy (Madrid)"></div><p class="odo-rotulo" id="vel-ag-rotulo">tokens hoy</p></div>
         <div class="vel-lectura"><span class="vel-cifra" id="vel-cifra">…</span><span class="vel-unidad" id="vel-unidad">tokens/hora</span><p class="vel-que"></p><p class="vel-extra" id="vel-ag-metodo"></p><p class="vel-extra vel-ag-lineas" id="vel-ag-lineas"></p></div>
       </div>
       <div class="vel-g" id="vel-g-proy">
-        <h3><span id="vel-proy-titulo">Proyectos (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-proy-dd"></span></h3>
+        <h3><span id="vel-proy-titulo">Proyectos (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-proy-dd"></span><span class="vel-sep" aria-hidden="true"> · </span><a class="vel-hist" href="/historico?tipo=proyecto" title="Qué se hizo en cada proyecto: hoy, ayer, semana y mes">Histórico</a></h3>
         <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Tokens del proyecto hoy (Madrid)"></div><p class="odo-rotulo"><span id="vel-proy-nombre">…</span> · tokens hoy</p></div>
         <div class="vel-lectura"><span class="vel-cifra">…</span><span class="vel-unidad">tokens/hora</span><p class="vel-que"></p><p class="vel-extra" id="vel-proy-metodo"></p></div>
       </div>

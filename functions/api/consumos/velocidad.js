@@ -19,6 +19,7 @@
 import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora, madrid, KEY_DIAS, anotarDia, yokupPorDia, periodosTokens, diasPeriodo } from "../../../consumos-velocidad-lib.mjs";
 import { mezclar, appsGrokBot, superficiesDePulso, limitesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
+import { KEY_HIST, anotarHistorico } from "../../../historico-lib.mjs";
 import { perfilesFlota } from "../../../consumos-perfiles.mjs";
 
 export const FUENTE = "https://api.yokup.com/fleet/consumo?dias=1";
@@ -68,8 +69,8 @@ export async function onRequestGet(ctx) {
 export async function calcular({ env, fetchImpl }) {
   const ahora = Date.now();
   const store = kv(env);
-  const [d, docs, dMes, libroRaw] = await Promise.all([leerYokup(fetchImpl || fetch), leerPulsos(store).catch(() => []), leerYokup(fetchImpl || fetch, FUENTE_MES, 600),
-    store ? store.get(KEY_DIAS).catch(() => null) : null]);
+  const [d, docs, dMes, libroRaw, histRaw] = await Promise.all([leerYokup(fetchImpl || fetch), leerPulsos(store).catch(() => []), leerYokup(fetchImpl || fetch, FUENTE_MES, 600),
+    store ? store.get(KEY_DIAS).catch(() => null) : null, store ? store.get(KEY_HIST).catch(() => null) : null]);
   let yk = null, propias = [], deYokup = [];
   if (d) {
     const { hoy, nombres } = partesDeHoy(d, ahora);
@@ -93,6 +94,14 @@ export async function calcular({ env, fetchImpl }) {
     if (!prev || (tokHoyFlota > prev.tok && ahora - (prev.ts || 0) >= 5 * 60 * 1000)) {
       libro = anotarDia(libro, dia, tokHoyFlota, ahora);
       try { await store.put(KEY_DIAS, JSON.stringify(libro)); } catch (e) {}
+    }
+  }
+  // Mejora 5 (23-10-2026): libro histórico por agente y proyecto (máximo tokHoy del día), una escritura cada ≥ 5 min.
+  if (store && !m.sinDatos) {
+    let h = null; try { h = histRaw ? JSON.parse(histRaw) : null; } catch (e) {}
+    const dia = madrid(ahora).dia, prev = h && h[dia];
+    if (!prev || ahora - (prev.ts || 0) >= 5 * 60 * 1000) {
+      try { await store.put(KEY_HIST, JSON.stringify(anotarHistorico(h, dia, m.porAgente, m.porProyecto, ahora))); } catch (e) {}
     }
   }
   const periodos = { ...periodosTokens({ tokHoy: Number.isFinite(tokHoyFlota) ? tokHoyFlota : null, libro, yokup: dMes ? yokupPorDia(dMes) : null,

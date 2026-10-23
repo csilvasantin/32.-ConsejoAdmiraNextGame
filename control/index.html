@@ -2865,11 +2865,11 @@ let _capArranqueHecho=false;
 function _capturaDeArranque(){
   if(esSoloLectura()){ _capArranqueHecho=true; return; }
   if(_capArranqueHecho) return;
-  try{ if(sessionStorage.getItem('fleet_cap_arranque')==='1'){ _capArranqueHecho=true; return; } }catch(e){}
+  // (19-10-2026) Ya NO se bloquea por sessionStorage: con la pestaña abierta todo el día,
+  // un recargado (p. ej. tras un despliegue) volvía a dejar todas las tarjetas sin previo.
   const online=(MACHINES||[]).filter(m=>m.online);
   if(!online.length) return;                 // aún sin flota: se reintenta en el siguiente refresh
   _capArranqueHecho=true;
-  try{ sessionStorage.setItem('fleet_cap_arranque','1'); }catch(e){}
   // Se declara el trabajo ANTES de empezarlo: cuántas van a venir y cuáles están
   // pendientes. Así el panel puede decir «3 de 12» y marcar cada hueco (FLT-1378).
   CAP_PROG={total:online.length, hechas:0, activo:true, pendientes:new Set(online.map(m=>m.id))};
@@ -2898,10 +2898,24 @@ function captureMachine(id){
     }
   };
   return api('/action',{method:'POST',body:JSON.stringify({machine:id,action:'screenshot'})})
-    .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); } else { setCapFail(id,true); } })
+    .then(async d=>{
+      if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); return; }
+      // Misma red que el botón 📸 de la tarjeta: si el hub no trae imagen, prueba el watcher.
+      const sl=ranuraCaptura(id); const img=sl?await capturaPorWatcher(id,sl):null;
+      if(img){ showShot(id,'data:image/jpeg;base64,'+img); setCapFail(id,false); markCaptured(id); } else { setCapFail(id,true); }
+    })
     .catch(()=>{ setCapFail(id,true); })   // en auto: deja la miniatura anterior, pero marca el aviso
     .finally(cerrar);
 }
+// PREVIOS QUE SE REFRESCAN SOLOS (19-10-2026). Sin «repetir cada X s» activado, el tablero
+// sólo pedía capturas una vez por pestaña; con /control abierto horas, los previos no
+// volvían a llegar aunque el preflight (cada 2 min) SÍ captura en cada Mac. Refresco suave:
+// cada 5 min, sólo con la pestaña visible, sin modo lectura y si el bucle manual no corre.
+const PREVIO_AUTO_MS=300000;
+setInterval(()=>{ try{
+  if(AUTOCAP.on || _acBusy || !SESSION || document.visibilityState!=='visible' || esSoloLectura()) return;
+  autoCapTick();
+}catch(e){} }, PREVIO_AUTO_MS);
 async function autoCapTick(){
   if(_acBusy || !SESSION) return; _acBusy=true;
   try{ for(const m of MACHINES){ if(m.online) await captureMachine(m.id); } }

@@ -5,11 +5,10 @@
  * el agregado historico:fuentes:v2 = partes de Yokup 60 días + misiones + ventana de cada bandeja). Si el agregado tiene
  * más de 10 min (o no existe), se refresca EN SEGUNDO PLANO (stale-while-revalidate; las misiones de Yokup tardan 25-40 s).
  */
-import { historico, KEY_HIST, KEY_ENCARGOS, claveProyecto, claveAgente } from "../../../historico-lib.mjs";
+import { historico, KEY_HIST, KEY_ENCARGOS, claveProyecto, claveAgente, anotarEncargos } from "../../../historico-lib.mjs";
 import { AGENTES_FLOTA, CONSEJEROS } from "../../../flota-matriz-lib.mjs";
 
 const cab = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" };
-export const KEY_FUENTES = "historico:fuentes:v2";
 export const FRESCO_MS = 10 * 60 * 1000;
 export const PARTES = "https://api.yokup.com/fleet/consumo?dias=60";
 export const MISIONES = ["https://api.yokup.com/fleet/missions?status=resolved&limit=500", "https://api.yokup.com/fleet/missions?limit=500"];
@@ -24,60 +23,58 @@ async function leerKV(store, k) { if (!store) return null; try { const s = await
 const slimMision = (m) => ({ id: m.id, subject: String(m.subject || "").slice(0, 160), status: m.status, project_id: m.project_id || m.project || null, assignee: m.assignee || null, persona: m.persona || null, created_at: m.created_at, updated_at: m.updated_at });
 const slimParte = (p) => ({ owner: p.owner, machine: p.machine, dia: p.dia, datos: { persona: p.datos && p.datos.persona, total: p.datos && p.datos.total, cache: p.datos && p.datos.cache, causa: p.datos && p.datos.causa, origen: p.datos && p.datos.origen } });
 
-/** Refresca el agregado lento (partes + misiones + ventanas de bandeja) y lo guarda. Conserva lo anterior si una fuente falla. */
-export async function refrescarFuentes({ env, fetchImpl = fetch, ahoraMs = Date.now(), previo = null }) {
+/**
+ * Fuentes lentas en claves KV INDEPENDIENTES (cada una se guarda en cuanto llega: waitUntil solo da ~30 s tras la
+ * respuesta y las misiones de Yokup tardan 20-25 s cada lista): partes (60 días), ventanas de bandeja (+ encargos al libro),
+ * misiones resueltas y misiones recientes. { ts, datos }. Si una fuente falla, se queda la anterior.
+ */
+export const CLAVES = { partes: "historico:partes:v1", ventanas: "historico:ventanas:v1", resueltas: "historico:misiones:resueltas:v1", recientes: "historico:misiones:recientes:v1" };
+export async function refrescarFuentes({ env, fetchImpl = fetch, ahoraMs = Date.now(), viejas = Object.keys(CLAVES) }) {
   const store = kv(env);
-  const personas = [...AGENTES_FLOTA, ...CONSEJEROS];
-  const [dPartes, bandejas, ...mis] = await Promise.all([leer(fetchImpl, PARTES, 20000),
-    Promise.all(personas.map((p) => leer(fetchImpl, BANDEJA + "?persona=" + encodeURIComponent(p), 15000).then((d) => [p, d]))),
-    ...MISIONES.map((u) => leer(fetchImpl, u, 60000))]);
-  const vistos = new Set(), misiones = [];
-  for (const d of mis) for (const m of (d && d.missions) || []) if (m && m.id && !vistos.has(m.id)) { vistos.add(m.id); misiones.push(slimMision(m)); }
-  const ventanas = { ...((previo && previo.ventanas) || {}) }, items = [];
-  for (const [p, d] of bandejas) {
-    const its = (d && d.items) || [];
-    if (its.length) { ventanas[claveAgente(p)] = its.reduce((m, x) => (x.ts && (!m || x.ts < m) ? x.ts : m), null); items.push(...its); }
-  }
-  const nuevo = {
-    ts: ahoraMs,
-    partes: dPartes && Array.isArray(dPartes.partes) ? dPartes.partes.map(slimParte) : (previo && previo.partes) || null,
-    misiones: misiones.length ? misiones : (previo && previo.misiones) || null,
-    misionesTs: misiones.length ? ahoraMs : (previo && previo.misionesTs) || null,
-    ventanas,
-  };
-  if (store) {
-    try { await store.put(KEY_FUENTES, JSON.stringify(nuevo)); } catch (e) {}
-    if (items.length) {
-      try {
-        const { anotarEncargos } = await import("../../../historico-lib.mjs");
-        const enc = await leerKV(store, KEY_ENCARGOS);
-        await store.put(KEY_ENCARGOS, JSON.stringify(anotarEncargos(enc || [], items, ahoraMs)));
-      } catch (e) {}
+  const guarda = async (k, datos) => { if (store && datos) { try { await store.put(CLAVES[k], JSON.stringify({ ts: ahoraMs, datos })); } catch (e) {} } return datos; };
+  const tareas = [];
+  if (viejas.includes("partes")) tareas.push(leer(fetchImpl, PARTES, 25000).then((d) => guarda("partes", d && Array.isArray(d.partes) ? d.partes.map(slimParte) : null)));
+  if (viejas.includes("resueltas")) tareas.push(leer(fetchImpl, MISIONES[0], 28000).then((d) => guarda("resueltas", d && Array.isArray(d.missions) ? d.missions.map(slimMision) : null)));
+  if (viejas.includes("recientes")) tareas.push(leer(fetchImpl, MISIONES[1], 28000).then((d) => guarda("recientes", d && Array.isArray(d.missions) ? d.missions.map(slimMision) : null)));
+  if (viejas.includes("ventanas")) tareas.push((async () => {
+    const personas = [...AGENTES_FLOTA, ...CONSEJEROS];
+    const bandejas = await Promise.all(personas.map((p) => leer(fetchImpl, BANDEJA + "?persona=" + encodeURIComponent(p), 20000).then((d) => [p, d])));
+    const ventanas = {}, items = [];
+    for (const [p, d] of bandejas) { const its = (d && d.items) || []; if (its.length) { ventanas[claveAgente(p)] = its.reduce((m, x) => (x.ts && (!m || x.ts < m) ? x.ts : m), null); items.push(...its); } }
+    if (!Object.keys(ventanas).length) return null;
+    if (store && items.length) {
+      try { const enc = await leerKV(store, KEY_ENCARGOS); await store.put(KEY_ENCARGOS, JSON.stringify(anotarEncargos(enc || [], items, ahoraMs))); } catch (e) {}
     }
-  }
-  return nuevo;
+    return guarda("ventanas", ventanas);
+  })());
+  return Promise.allSettled(tareas);
 }
 
 export async function construir({ env, fetchImpl = fetch, tipo, nombre, ahoraMs = Date.now(), enFondo = null }) {
   const store = kv(env);
-  const [libro, encKV, fuentes] = await Promise.all([leerKV(store, KEY_HIST), leerKV(store, KEY_ENCARGOS), leerKV(store, KEY_FUENTES)]);
-  const viejo = !fuentes || !fuentes.ts || ahoraMs - fuentes.ts > FRESCO_MS;
-  if (viejo && !refrescando) {
+  const ks = Object.keys(CLAVES);
+  const [libro, encKV, ...fs] = await Promise.all([leerKV(store, KEY_HIST), leerKV(store, KEY_ENCARGOS), ...ks.map((k) => leerKV(store, CLAVES[k]))]);
+  const F = Object.fromEntries(ks.map((k, i) => [k, fs[i]]));
+  const viejas = ks.filter((k) => !F[k] || !F[k].ts || ahoraMs - F[k].ts > FRESCO_MS);
+  if (viejas.length && !refrescando) {
     refrescando = true;
-    const p = refrescarFuentes({ env, fetchImpl, ahoraMs, previo: fuentes }).catch(() => null).finally(() => { refrescando = false; });
+    const p = refrescarFuentes({ env, fetchImpl, ahoraMs, viejas }).catch(() => null).finally(() => { refrescando = false; });
     if (enFondo) enFondo(p);
   }
-  const misiones = (fuentes && fuentes.misiones) || null;
+  const vistos = new Set(), misiones = [];
+  for (const k of ["recientes", "resueltas"]) for (const m of (F[k] && F[k].datos) || []) if (m && m.id && !vistos.has(m.id)) { vistos.add(m.id); misiones.push(m); }
+  const actualizando = viejas.length > 0;
   if (!tipo || !nombre) {
     const nombresProy = new Map();
-    for (const m of misiones || []) if (m.project_id) nombresProy.set(claveProyecto(m.project_id), m.project_id);
+    for (const m of misiones) if (m.project_id) nombresProy.set(claveProyecto(m.project_id), m.project_id);
     for (const e of Object.values(libro || {})) for (const k of Object.keys((e && e.proyectos) || {})) if (!nombresProy.has(k)) nombresProy.set(k, k);
-    return { ok: true, agentes: [...AGENTES_FLOTA, ...CONSEJEROS], proyectos: [...nombresProy.values()].sort(), actualizando: viejo };
+    return { ok: true, agentes: [...AGENTES_FLOTA, ...CONSEJEROS], proyectos: [...nombresProy.values()].sort(), actualizando };
   }
-  const ventanaEncargos = tipo === "agente" && fuentes && fuentes.ventanas ? fuentes.ventanas[claveAgente(nombre)] || null : null;
-  return { ok: true, ...historico({ tipo, nombre, ahoraMs, libro, partes: fuentes && fuentes.partes, encargos: Array.isArray(encKV) ? encKV : [], misiones, ventanaEncargos }),
-    fuentes: { libro: libro ? Object.keys(libro).sort()[0] : null, partes: fuentes && fuentes.partes ? fuentes.partes.length : 0, misiones: misiones ? misiones.length : 0,
-      encargosLibro: Array.isArray(encKV) ? encKV.length : 0, agregado: fuentes && fuentes.ts ? new Date(fuentes.ts).toISOString() : null, actualizando: viejo },
+  const ventanaEncargos = tipo === "agente" && F.ventanas && F.ventanas.datos ? F.ventanas.datos[claveAgente(nombre)] || null : null;
+  const iso = (k) => (F[k] && F[k].ts ? new Date(F[k].ts).toISOString() : null);
+  return { ok: true, ...historico({ tipo, nombre, ahoraMs, libro, partes: F.partes && F.partes.datos, encargos: Array.isArray(encKV) ? encKV : [], misiones: misiones.length ? misiones : null, ventanaEncargos }),
+    fuentes: { libro: libro ? Object.keys(libro).sort()[0] : null, partes: F.partes && F.partes.datos ? F.partes.datos.length : 0, misiones: misiones.length, encargosLibro: Array.isArray(encKV) ? encKV.length : 0,
+      leido: { partes: iso("partes"), ventanas: iso("ventanas"), resueltas: iso("resueltas"), recientes: iso("recientes") }, actualizando, pendientes: viejas },
     generado: new Date(ahoraMs).toISOString() };
 }
 

@@ -74,7 +74,7 @@ test("proyecto: encargos siempre «parcial»", () => {
 
 test("mejora 6 · el endpoint sirve de KV sin esperar a Yokup (stale-while-revalidate)", async () => {
   const { construir } = await import("./functions/api/consumos/historico.js");
-  const datos = new Map([["historico:fuentes:v2", JSON.stringify({ ts: AHORA - 3600e3, partes: [], misiones: [{ id: "FLT-9", subject: "s", status: "resolved", project_id: "admira-live", created_at: AHORA - 1000, updated_at: AHORA - 500 }], ventanas: {} })]]);
+  const datos = new Map([["historico:misiones:resueltas:v1", JSON.stringify({ ts: AHORA - 3600e3, datos: [{ id: "FLT-9", subject: "s", status: "resolved", project_id: "admira-live", created_at: AHORA - 1000, updated_at: AHORA - 500 }] })]]);
   const env = { CONSUMOS_KV: { get: async (k) => datos.get(k) || null, put: async (k, v) => { datos.set(k, v); } } };
   let lento = null;
   const fetchImpl = () => new Promise(() => {}); // Yokup colgado: no debe bloquear
@@ -84,4 +84,17 @@ test("mejora 6 · el endpoint sirve de KV sin esperar a Yokup (stale-while-reval
   assert.equal(r.fuentes.actualizando, true);
   assert.ok(lento, "refresco lanzado en segundo plano");
   assert.equal(r.periodos[0].misiones.lista[0].id, "FLT-9");
+});
+
+test("mejora 6 · cada fuente lenta se guarda en su clave en cuanto llega", async () => {
+  const { refrescarFuentes, CLAVES } = await import("./functions/api/consumos/historico.js");
+  const datos = new Map();
+  const env = { CONSUMOS_KV: { get: async (k) => datos.get(k) || null, put: async (k, v) => { datos.set(k, v); } } };
+  const fetchImpl = async (u) => String(u).includes("consumo") ? new Response(JSON.stringify({ partes: [{ owner: "o", machine: "m", dia: "2026-10-22", datos: { persona: "Neo", total: 5 } }] }))
+    : String(u).includes("resolved") ? new Response(JSON.stringify({ missions: [{ id: "FLT-1", subject: "x", status: "resolved" }] }))
+    : new Response("no", { status: 503 });
+  await refrescarFuentes({ env, fetchImpl, ahoraMs: AHORA });
+  assert.equal(JSON.parse(datos.get(CLAVES.partes)).datos.length, 1);
+  assert.equal(JSON.parse(datos.get(CLAVES.resueltas)).datos[0].id, "FLT-1");
+  assert.equal(datos.get(CLAVES.recientes), undefined, "la que falla no pisa nada");
 });

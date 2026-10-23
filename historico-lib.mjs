@@ -21,10 +21,14 @@ const sumaDias = (dia, n) => { const d = new Date(dia + "T12:00:00Z"); d.setUTCD
 export const claveProyecto = (p) => llave(String(p || "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\.com$/, ""));
 export const claveAgente = (a) => { const s = String(a || "").replace(/\s*·.*$/, ""); return llave(personaCenso(s) || s); };
 
-/** Periodos: [{ id, desde, hasta }] (días AAAA-MM-DD, Madrid). */
+/** Mejora 6 (Carlos, 23-10-2026 09:09): HOY, AYER, SEMANA PASADA (lunes–domingo anterior) y MES PASADO (mes natural
+ *  anterior), días AAAA-MM-DD de Europe/Madrid. → [{ id, desde, hasta }] */
 export function periodos(ahoraMs) {
   const d = diasPeriodo(ahoraMs);
-  return [{ id: "hoy", desde: d.hoy, hasta: d.hoy }, { id: "ayer", desde: d.ayer, hasta: d.ayer }, { id: "semana", desde: d.lunes, hasta: d.hoy }, { id: "mes", desde: d.dia1, hasta: d.hoy }];
+  const finMesPasado = sumaDias(d.dia1, -1);
+  return [{ id: "hoy", desde: d.hoy, hasta: d.hoy }, { id: "ayer", desde: d.ayer, hasta: d.ayer },
+    { id: "semanaPasada", desde: sumaDias(d.lunes, -7), hasta: sumaDias(d.lunes, -1) },
+    { id: "mesPasado", desde: finMesPasado.slice(0, 8) + "01", hasta: finMesPasado }];
 }
 export function diasEntre(desde, hasta) { const o = []; for (let d = desde; d <= hasta; d = sumaDias(d, 1)) o.push(d); return o; }
 

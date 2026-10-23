@@ -7,8 +7,11 @@ import { historico, anotarHistorico, anotarEncargos, periodos, claveProyecto } f
 const AHORA = Date.parse("2026-10-23T06:30:00Z"); // vie 08:30 Madrid
 const S = Math.floor(AHORA / 1000);
 
-test("periodos Madrid: hoy, ayer, semana (lunes), mes (día 1)", () => {
-  assert.deepEqual(periodos(AHORA).map((p) => [p.id, p.desde, p.hasta]), [["hoy", "2026-10-23", "2026-10-23"], ["ayer", "2026-10-22", "2026-10-22"], ["semana", "2026-10-19", "2026-10-23"], ["mes", "2026-10-01", "2026-10-23"]]);
+test("mejora 6 · periodos Madrid: hoy, ayer, semana pasada (lun–dom anterior), mes pasado (mes natural)", () => {
+  assert.deepEqual(periodos(AHORA).map((p) => [p.id, p.desde, p.hasta]), [["hoy", "2026-10-23", "2026-10-23"], ["ayer", "2026-10-22", "2026-10-22"], ["semanaPasada", "2026-10-12", "2026-10-18"], ["mesPasado", "2026-09-01", "2026-09-30"]]);
+  // lunes 00:30 Madrid: ayer es domingo y la semana pasada acaba ese domingo; 1 de enero → mes pasado = diciembre del año anterior
+  assert.deepEqual(periodos(Date.parse("2026-10-18T22:30:00Z")).slice(1).map((p) => [p.desde, p.hasta]), [["2026-10-18", "2026-10-18"], ["2026-10-12", "2026-10-18"], ["2026-09-01", "2026-09-30"]]);
+  assert.deepEqual(periodos(Date.parse("2027-01-01T10:00:00Z"))[3], { id: "mesPasado", desde: "2026-12-01", hasta: "2026-12-31" });
 });
 
 test("libro histórico: máximo del día por agente y proyecto; Cursor compartido no se atribuye", () => {
@@ -21,7 +24,8 @@ test("libro histórico: máximo del día por agente y proyecto; Cursor compartid
 test("agente: tokens de partes Yokup y libro; encargos aceptados/cerrados con título; sin cobertura → null", () => {
   const partes = [
     { owner: "NeoMBP16", machine: "MacBookPro16", dia: "2026-10-22", datos: { persona: "Neo", total: 1000, cache: 400 } },
-    { owner: "NeoMBP16", machine: "MacBookPro16", dia: "2026-10-20", datos: { persona: "Neo", total: 500, cache: 0, causa: "ESTIMACIÓN (reparto)" } },
+    { owner: "NeoMBP16", machine: "MacBookPro16", dia: "2026-10-14", datos: { persona: "Neo", total: 500, cache: 0, causa: "ESTIMACIÓN (reparto)" } },
+    { owner: "NeoMBP16", machine: "MacBookPro16", dia: "2026-10-13", datos: { persona: "Neo", total: 200, cache: 0 } },
   ];
   const libro = { "2026-10-23": { agentes: { neo: 300 }, proyectos: {} } };
   const encargos = [
@@ -29,10 +33,11 @@ test("agente: tokens de partes Yokup y libro; encargos aceptados/cerrados con t�
     { id: 2, persona: "Morfeo", texto: "otro", status: "done", ts: S - 3600, ack_at: S - 3500, done_at: S - 60 },
   ];
   const h = historico({ tipo: "agente", nombre: "Neo", ahoraMs: AHORA, libro, partes, encargos, misiones: null, ventanaEncargos: S - 3600 });
-  const [hoy, ayer, semana] = h.periodos;
+  const [hoy, ayer, semana, mes] = h.periodos;
   assert.equal(hoy.tokens.total, 300);
   assert.equal(ayer.tokens.total, 600, "sin caché");
-  assert.equal(semana.tokens.total, 900, "la ESTIMACIÓN no cuenta");
+  assert.equal(semana.tokens.total, 200, "semana pasada: la ESTIMACIÓN no cuenta");
+  assert.equal(mes.tokens, null, "septiembre sin partes → sin datos todavía");
   assert.deepEqual(hoy.encargos.cerrados.map((e) => e.titulo), ["Arreglar X"]);
   assert.equal(hoy.misiones, null, "sin misiones → sin datos todavía");
   assert.equal(ayer.encargos, null, "encargos solo desde hoy → ayer sin datos");
@@ -45,7 +50,7 @@ test("proyecto: tokens solo del libro (desde hoy); antes → null", () => {
   assert.equal(h.periodos[0].tokens.total, 12345);
   assert.equal(h.periodos[1].tokens, null);
   assert.equal(h.periodos[0].misiones.lista[0].titulo, "Hacer Y");
-  assert.equal(h.periodos[3].misiones.cobertura, "parcial");
+  assert.equal(h.periodos[3].misiones, null, "mes pasado anterior a las misiones → sin datos todavía");
 });
 
 test("libro de encargos: une por id y conserva el estado nuevo", () => {
@@ -65,4 +70,18 @@ test("proyecto: encargos siempre «parcial»", () => {
   const h = historico({ tipo: "proyecto", nombre: "admira-live", ahoraMs: AHORA, encargos: [{ id: 9, proyecto: "admira-live", texto: "z", status: "done", ts: S - 9e5, done_at: S - 10 }] });
   assert.equal(h.periodos[0].encargos.cobertura, "parcial");
   assert.equal(h.periodos[0].encargos.cerrados.length, 1);
+});
+
+test("mejora 6 · el endpoint sirve de KV sin esperar a Yokup (stale-while-revalidate)", async () => {
+  const { construir } = await import("./functions/api/consumos/historico.js");
+  const datos = new Map([["historico:fuentes:v2", JSON.stringify({ ts: AHORA - 3600e3, partes: [], misiones: [{ id: "FLT-9", subject: "s", status: "resolved", project_id: "admira-live", created_at: AHORA - 1000, updated_at: AHORA - 500 }], ventanas: {} })]]);
+  const env = { CONSUMOS_KV: { get: async (k) => datos.get(k) || null, put: async (k, v) => { datos.set(k, v); } } };
+  let lento = null;
+  const fetchImpl = () => new Promise(() => {}); // Yokup colgado: no debe bloquear
+  const t0 = Date.now();
+  const r = await construir({ env, fetchImpl, tipo: "proyecto", nombre: "admira-live", ahoraMs: AHORA, enFondo: (p) => { lento = p; } });
+  assert.ok(Date.now() - t0 < 500);
+  assert.equal(r.fuentes.actualizando, true);
+  assert.ok(lento, "refresco lanzado en segundo plano");
+  assert.equal(r.periodos[0].misiones.lista[0].id, "FLT-9");
 });

@@ -14,7 +14,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
 <link rel="stylesheet" href="/yk-frame.css?v=r22-cmd">
-<link rel="stylesheet" href="/yk-misiones.css?v=v.2026.09.07.r1">
+<link rel="stylesheet" href="/yk-misiones.css?v=20261022-misiones-cols">
 <link rel="stylesheet" href="/yk-quien.css?v=20261004-quien">
 <link rel="stylesheet" href="/yk-cabezal.css?v=r3">
 <style>
@@ -35,7 +35,13 @@
 :root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
-.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 48px}
+.wrap{max-width:1560px;margin:0 auto;padding:22px 24px 48px}
+.misiones-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.misiones-cols>.list{min-width:0;overflow-x:auto}
+.misiones-cols>.board-err,.misiones-cols>.empty{grid-column:1/-1}
+.misiones-lado{margin:0;padding:10px 14px 0;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);display:flex;align-items:center;gap:8px}
+.misiones-n{color:var(--mut);font-weight:600}
+@media(max-width:900px){.misiones-cols{grid-template-columns:minmax(0,1fr)}}
 h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;display:flex;align-items:center;gap:10px}
 .tgl{font-size:15px;line-height:1;color:var(--dim);background:transparent;border:1px solid var(--line);border-radius:7px;padding:3px 8px;cursor:pointer;transition:.2s}
 .tgl:hover{color:var(--brand);border-color:var(--line2)}
@@ -300,7 +306,7 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
        se sigue pidiendo vaciando la fecha del cabezal, que ya lo anuncia en su
        tooltip: «vacío = todas las fechas». -->
   <div id="quienTrabaja"></div>
-  <div class="list" id="list"><div class="empty">Cargando misiones…</div></div>
+  <div class="misiones-cols" id="list"><div class="empty">Cargando misiones…</div></div>
 
   <!-- Barra de acción en bloque: aparece al seleccionar ≥1 misión (checkbox de la columna ID). -->
   <div class="bulkbar" id="bulkbar" hidden>
@@ -327,9 +333,9 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 
 <script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
 <script src="/yk-maquina.js?v=r1"></script>
-<script src="/yk-misiones.js?v=v.2026.09.19.r3"></script>
+<script src="/yk-misiones.js?v=20261022-misiones-cols"></script>
 <script src="/yk-quien.js?v=20261004-quien"></script>
-<script src="/yk-quien-ui.js?v=20261004-quien"></script>
+<script src="/yk-quien-ui.js?v=20261022-misiones"></script>
 <script src="/yk-adjuntos.js?v=r3"></script>
 <script src="/yk-cabezal.js?v=r4"></script>
 <script src="/mission-ledger.js?v=100640-1"></script>
@@ -376,7 +382,7 @@ const CAB=YkCabezal.mount($("cabezal"), {
   worker:WORKER, title:"Misiones globales", searchPlaceholder:"🔎 Buscar misión…", manageState:false,
   altaPlaceholder:"Título breve de la misión… (Enter para crearla)",
   getProjectId:()=>PROJECT_SCOPE,
-  intro:'Lo que hay que hacer. <b>Regla de los tercios</b>: cada misión se descompone en <b>3 tareas</b> a·b·c × <b>3 subtareas</b> cada una (a1…c3, máx 9 — la jornada completa de un agente; el denominador es SIEMPRE 3 y 9 para poder comparar dos misiones de un vistazo — un plan a medio definir se marca «◌ incompleto», no se le baja el denominador; los planes antiguos con pasos d…h se cuentan aparte como «+n»): el arquitecto y el agente principal definen el plan, los <b>subagentes</b> ⚙️ lo ejecutan y los <b>infraagentes</b> 📝 reportan. Las misiones de la <b>flota</b> son los encargos a los agentes (se ven vivos en <a href="https://www.admira.live/status/" target="_blank" rel="noopener" style="color:var(--brand)">admira.live/status</a>); las de <b>campo</b>, las incidencias de pantallas.',
+  intro:'Lo que hay que hacer. <b>Regla de los tercios</b>: cada misión se descompone en <b>3 tareas</b> a·b·c × <b>3 subtareas</b> cada una (a1…c3, máx 9 — la jornada completa de un agente; el denominador es SIEMPRE 3 y 9 para poder comparar dos misiones de un vistazo — un plan a medio definir se marca «◌ incompleto», no se le baja el denominador; los planes antiguos con pasos d…h se cuentan aparte como «+n»): el arquitecto y el agente principal definen el plan, los <b>subagentes</b> ⚙️ lo ejecutan y los <b>infraagentes</b> 📝 reportan. Las misiones de la <b>flota</b> van a los agentes (se ven vivos en <a href="https://www.admira.live/status/" target="_blank" rel="noopener" style="color:var(--brand)">admira.live/status</a>); las de <b>campo</b>, las incidencias de pantallas.',
   defaultView:"list",   // /misiones nace en LISTA; el conmutador la pasa a fichas (962)
   onView:()=>load(),
   onState:f=>aplicaFiltro(f), onSearch:()=>load(), onDay:()=>changeDay(CAB.getDay()), onCreated:()=>load()
@@ -479,19 +485,26 @@ function wireBulk(el, list){
     cb.addEventListener("change",e=>{ e.stopPropagation(); if(cb.checked)SEL.add(id); else SEL.delete(id); refreshBulk(el); });
     if(slot) slot.appendChild(cb); else cell.insertBefore(cb, cell.firstChild);
   });
-  const sa=el.querySelector(".selall");
-  if(sa) sa.onchange=()=>{
-    const cbs=[...el.querySelectorAll(".selrow")];
-    cbs.forEach(c=>{ c.checked=sa.checked; if(sa.checked)SEL.add(c.dataset.id); else SEL.delete(c.dataset.id); });
-    refreshBulk(el);
-  };
+  const tablas=[...el.querySelectorAll(".list")];
+  (tablas.length?tablas:[el]).forEach(tabla=>{
+    const sa=tabla.querySelector(".selall");
+    if(!sa) return;
+    sa.onchange=()=>{
+      const cbs=[...tabla.querySelectorAll(".selrow")];
+      cbs.forEach(c=>{ c.checked=sa.checked; if(sa.checked)SEL.add(c.dataset.id); else SEL.delete(c.dataset.id); });
+      refreshBulk(el);
+    };
+  });
   refreshBulk(el);
 }
 function refreshBulk(el){
-  const vis=[...el.querySelectorAll(".selrow")];
-  const nVis=vis.filter(c=>SEL.has(c.dataset.id)).length;
-  const sa=el.querySelector(".selall");
-  if(sa){ sa.checked=vis.length>0 && nVis===vis.length; sa.indeterminate=nVis>0 && nVis<vis.length; }
+  const tablas=[...el.querySelectorAll(".list")];
+  (tablas.length?tablas:[el]).forEach(tabla=>{
+    const vis=[...tabla.querySelectorAll(".selrow")];
+    const nVis=vis.filter(c=>SEL.has(c.dataset.id)).length;
+    const sa=tabla.querySelector(".selall");
+    if(sa){ sa.checked=vis.length>0 && nVis===vis.length; sa.indeterminate=nVis>0 && nVis<vis.length; }
+  });
   const n=SEL.size, bar=$("bulkbar");
   if(n>0){ bar.hidden=false; $("bulkN").textContent=n+" "+(n===1?"misión seleccionada":"misiones seleccionadas"); }
   else bar.hidden=true;
@@ -700,20 +713,36 @@ async function loadBoard(){
   $("missionCoverage").textContent=list.length+" de "+rawTickets.length+" misiones · "+formatScopeDay(requestedDay)
     +(first?" · Primera: "+first.id+" · Última: "+last.id:"")
     +" · Todos los proyectos · "+(FILTER==="todas"?"Todos los estados":"Vista filtrada");
-  // TABLERO a medida (Panel de control → Tablero): columnas ocultas y densidad.
-  {
+  // Dos tablas: Consejeros (izquierda) y Agentes (derecha). En móvil se apilan.
+  function claseTablero(){
     const bp=(YkMisiones.boardPrefs&&YkMisiones.boardPrefs())||{}, cols=bp.cols||{};
-    el.className="list project-id-board"
+    return "list project-id-board"
       +["proyecto","ordenador","agente","estado"].filter(c=>cols[c]===0).map(c=>" hide-"+c).join("")
       +(bp.density==="compacta"?" dens-c":"");
   }
-  if(!list.length){
-    el.innerHTML=headHtml()+'<div class="empty" id="missionEmpty"></div>';bindHead(el);wireBulk(el,[]);
-    const empty=$("missionEmpty"),stateName={activas:"activas",asignadas:"pendientes",in_progress:"en curso",unconcluded:"no concluidas",resolved:"finalizadas",cancelled:"eliminadas",todas:""}[FILTER]||"";
-    if(empty)empty.textContent="Sin misiones"+(stateName?(" "+stateName):"")+" en "+formatScopeDay(requestedDay)+(PROJECT_SCOPE?(" para "+PROJECT_SCOPE):"")+(quienSel.quien?(" de "+quienSel.quien):"")+". "+(requestedDay?"Elige otro día o pulsa Hoy para volver al registro actual.":"✓");
-    pintarQuien(rawTickets);
-    notifyMissionsRendered([]);return;
+  function tablaLado(lado, rows, emptyText){
+    const titulo=lado==="consejeros"?"Consejeros":"Agentes";
+    const cuerpo=rows.length?rows.map(t=>YkMisiones.rowHtml(t)).join(""):'<div class="empty">'+emptyText+"</div>";
+    return '<section class="'+claseTablero()+'" data-lado="'+lado+'"><h2 class="misiones-lado">'+titulo+' <span class="misiones-n">'+rows.length+"</span></h2>"+headHtml()+cuerpo+"</section>";
   }
+  function pintaTablas(){
+    const consejeros=[], agentes=[];
+    list.forEach(t=>{ ((YkMisiones.ladoDe&&YkMisiones.ladoDe(t))==="consejeros"?consejeros:agentes).push(t); });
+    const stateName={activas:"activas",asignadas:"pendientes",in_progress:"en curso",unconcluded:"no concluidas",resolved:"finalizadas",cancelled:"eliminadas",todas:""}[FILTER]||"";
+    const aviso="Sin misiones"+(stateName?(" "+stateName):"")+" en "+formatScopeDay(requestedDay)+(PROJECT_SCOPE?(" para "+PROJECT_SCOPE):"")+(quienSel.quien?(" de "+quienSel.quien):"")+". "+(requestedDay?"Elige otro día o pulsa Hoy para volver al registro actual.":"✓");
+    el.className="misiones-cols";
+    el.innerHTML=tablaLado("consejeros",consejeros,list.length?"Sin misiones de consejeros":aviso)+tablaLado("agentes",agentes,list.length?"Sin misiones de agentes":aviso);
+    bindHead(el);
+    if(list.length){
+      YkMisiones.bindRows(el);
+      marcarHalos(el, list, generation, scopeAtStart);
+      stampQuien(el, list, quienSel);
+    }
+    wireBulk(el, list);
+    pintarQuien(rawTickets);
+    notifyMissionsRendered(list);
+  }
+  if(!list.length){ pintaTablas(); return; }
   // Progreso por misión: UNA sola petición /tasks/all (no N+1); done/total REALES del
   // plan (no 24 fijo) para el contador y la barra de cada fila. (959)
   try{
@@ -729,14 +758,7 @@ async function loadBoard(){
     list.forEach(t=>{ (t._members||[t]).forEach(member=>{ const g=_g[member.id]||null; member._prog=YkMisiones.tercios(g||[],member.role==="standalone-task"); member._tasks=g; }); });
   }catch(e){if(!isCurrent())return;}
   if(!isCurrent())return;
-  el.innerHTML=headHtml()+list.map(t=>YkMisiones.rowHtml(t)).join("");
-  bindHead(el);
-  YkMisiones.bindRows(el);   // click=misión activa + refresco del árbol de tareas
-  marcarHalos(el, list, generation, scopeAtStart); // FLT-761: halo sólo para la generación vigente
-  wireBulk(el, list);        // checkboxes de selección + barra de cambio de estado en bloque
-  stampQuien(el, list, quienSel);
-  pintarQuien(rawTickets);
-  notifyMissionsRendered(list);
+  pintaTablas();
 }
 
 if(window.addEventListener)window.addEventListener("yk:project-change",event=>{
@@ -750,7 +772,7 @@ if(window.addEventListener)window.addEventListener("yk:project-change",event=>{
 // (día del tablero, buscador e intro los gestiona ya el cabezal compartido)
 // Botones de la barra de acción en bloque (una sola vez).
 $("bulkApply").onclick=aplicarBloque;
-$("bulkClear").onclick=()=>{ SEL.clear(); document.querySelectorAll(".selrow").forEach(c=>c.checked=false); const sa=document.querySelector(".selall"); if(sa){sa.checked=false;sa.indeterminate=false;} refreshBulk($("list")); };
+$("bulkClear").onclick=()=>{ SEL.clear(); document.querySelectorAll(".selrow").forEach(c=>c.checked=false); document.querySelectorAll(".selall").forEach(sa=>{sa.checked=false;sa.indeterminate=false;}); refreshBulk($("list")); };
 // selectores/ordenadores: cualquier cambio repinta
 ["selAgente","selEquipo","selOrden"].forEach(id=>$(id).onchange=()=>{ $(id).classList.toggle("on",!!$(id).value&&id!=="selOrden"); load(); });
 
@@ -1163,7 +1185,7 @@ async function reasignarMision(id,cambio){
   if("persona" in cambio) body.persona=cambio.persona;
   if("machine" in cambio) body.machine=cambio.machine;
   if(!("persona" in body)&&!("machine" in body)) return;
-  if(!num){ toast("✗ la misión no expone su # de encargo canónico",false,true); return; }
+  if(!num){ toast("✗ la misión no expone su número de misión canónico",false,true); return; }
   toast("reasignando…");
   try{
     const r=await fetch(TG+"/api/bot-inbox/"+num+"/reassign",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
@@ -1252,6 +1274,6 @@ $("taskTree").addEventListener("click", async ev=>{
 });
 </script>
 <script type="module" src="/avatar-widget.js?v=3"></script>
-<script src="/yk-frame.js?v=r36-escenas"></script>
+<script src="/yk-frame.js?v=20261022-misiones"></script>
 </body>
 </html>

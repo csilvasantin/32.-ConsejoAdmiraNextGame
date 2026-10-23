@@ -1617,7 +1617,7 @@
       group.appendChild(rows);FLEET.expertAppList.appendChild(group);
     });
     var selected=selectedDesktopApp();
-    if(FLEET.appDispatchInput)FLEET.appDispatchInput.placeholder=selected?(selected.active?("Encargo para "+selected.persona+" · "+desktopAppName(selected.runtime)+" en "+selected.machine):("Enciende "+desktopAppName(selected.runtime)+" para enviarle trabajo")):"Selecciona una Desktop App";
+    if(FLEET.appDispatchInput)FLEET.appDispatchInput.placeholder=selected?(selected.active?("Misión para "+selected.persona+" · "+desktopAppName(selected.runtime)+" en "+selected.machine):("Enciende "+desktopAppName(selected.runtime)+" para enviarle trabajo")):"Selecciona una Desktop App";
     refreshDesktopDispatch();
   }
 
@@ -1836,7 +1836,7 @@
     var appForm=el("form","yk-app-dispatch-form");
     FLEET.appDispatchKind=el("select","yk-app-dispatch-kind");FLEET.appDispatchKind.setAttribute("aria-label","Tipo de encargo");
     [["mission","Misión"],["task","Tarea"],["objective","Objetivo"]].forEach(function(config){var option=el("option");option.value=config[0];option.textContent=config[1];FLEET.appDispatchKind.appendChild(option);});appForm.appendChild(FLEET.appDispatchKind);
-    FLEET.appDispatchInput=el("textarea","yk-app-dispatch-input");FLEET.appDispatchInput.rows=2;FLEET.appDispatchInput.maxLength=1500;FLEET.appDispatchInput.disabled=true;FLEET.appDispatchInput.setAttribute("aria-label","Encargo para la Desktop App seleccionada");appForm.appendChild(FLEET.appDispatchInput);
+    FLEET.appDispatchInput=el("textarea","yk-app-dispatch-input");FLEET.appDispatchInput.rows=2;FLEET.appDispatchInput.maxLength=1500;FLEET.appDispatchInput.disabled=true;FLEET.appDispatchInput.setAttribute("aria-label","Misión para la Desktop App seleccionada");appForm.appendChild(FLEET.appDispatchInput);
     FLEET.appDispatchSend=fleetText("button","yk-app-dispatch-send","Enviar ⌘↵");FLEET.appDispatchSend.type="submit";FLEET.appDispatchSend.disabled=true;appForm.appendChild(FLEET.appDispatchSend);
     appForm.addEventListener("submit",function(event){event.preventDefault();desktopDispatch();});
     FLEET.appDispatchInput.addEventListener("input",refreshDesktopDispatch);

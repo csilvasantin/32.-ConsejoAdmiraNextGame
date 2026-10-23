@@ -575,7 +575,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const i = a.estado === "gris";
     out.push({ ...a, agente: consejero, via: agente,
       motivo: (i ? "parado vía " : "activo vía ") + agente + " (" + a.motivo + ")",
-      incluye: null, fuera: [], planC: false, gratis: false,
+      incluye: null, fuera: [], planC: false, gratis: false, notaPool: null, // r56: la nota del pool solo en Merovingio
       tokHora: null, tokHoy: null, tokUltimaHora: null, tokHoraMetodo: null, sinMedicion: false,
       retrato: RETRATOS[consejero] || null, consejero: true, grupo: "consejeros" });
   }
@@ -701,6 +701,29 @@ export function aplicarRojo(ts, ahoraS) {
   return ts.sort((a, b) => ORDEN_ESTADO[a.estado] - ORDEN_ESTADO[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }
 
+/**
+ * r56 (Carlos, 23-10-2026 08:06): VERDE solo con tokens reales del agente (última hora) o uso de app atribuible a él
+ * (app GrokBot de su cuenta titular, o app de escritorio suya en uso). El latido «trabajando» de un consejero (o
+ * cualquier latido) ya no da verde: solo cuenta como actividad de hoy (rojo). Pura; reordena.
+ */
+export function soloVerdeReal(ts, ahoraS) {
+  if (!Array.isArray(ts)) return ts;
+  for (const t of ts) {
+    if (!t || t.estado !== "verde") continue;
+    const tok = t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : NaN;
+    const tokens = Number(t.tokHora) > 0 || Number(t.tokUltimaHora) > 0 || (isFinite(tok) && ahoraS - tok <= UMBRAL_ROJO_S);
+    const app = t.fuente === "app_grokbot" || (t.agente !== "Merovingio" && (t.superficies || []).some((x) => x && x.tipo === "app" && x.enUso && x.fuente === "pulso" && x.app !== "GrokBot"));
+    if (tokens || app) continue;
+    t.estado = "gris";
+    t.motivo = "sin tokens ni app en uso (" + (t.motivo || "") + ")";
+    if (t.latidoConsejero && t.latidoConsejero.desde) {
+      const d = Number(t.latidoConsejero.desde);
+      if (d && (!t.actividad || d > t.actividad.ts)) t.actividad = { ts: d, fuente: "latido del consejero «trabajando»" };
+    }
+  }
+  return ts;
+}
+
 /** r55: actividad de los consejeros (consejero_latido: mensaje, encargo ack/done, handON…) → t.actividad. */
 export function aplicarActividadConsejero(ts, consejeros) {
   if (!Array.isArray(ts) || !consejeros || typeof consejeros !== "object") return ts;
@@ -730,9 +753,8 @@ export function porqueColor(t, ahoraS) {
     else if (t.via) p.push("activo vía " + t.via);
     else p.push("tokens en la última hora");
   } else if (t.estado === "amarillo") p.push("con Carlos" + (t.conCarlosEn ? " en " + t.conCarlosEn : ""));
-  if (t.estado !== "verde" || app) {
-    if (app) p.push("app abierta en uso");
-  }
+  // r56: «app abierta en uso» solo si se puede atribuir al agente (nunca en Merovingio, cuenta compartida) y no en gris.
+  if (app && t.estado !== "gris" && t.agente !== "Merovingio") p.push("app abierta en uso");
   const hoy = diaMadrid(ahoraS * 1000);
   if (t.actividad && t.actividad.ts && t.estado !== "verde" && diaMadrid(t.actividad.ts * 1000) === hoy) p.push(t.actividad.fuente + " a las " + hhmm(t.actividad.ts));
   if (t.estado === "gris") p.push("nada hoy");

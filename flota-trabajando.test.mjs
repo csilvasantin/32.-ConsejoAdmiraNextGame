@@ -66,8 +66,8 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
     : new Response("no", { status: 503 });
   const r = await construir({ env: {}, fetchImpl, cache: null });
   assert.equal(r.presencia, "ok");
-  assert.equal(r.tarjetas[0].agente, "Jobs");
-  assert.equal(r.tarjetas[0].estado, "verde");
+  // r56: un latido «trabajando» sin tokens ni app ya no da verde (solo contaría como actividad → rojo).
+  assert.notEqual(r.tarjetas.find((t) => t.agente === "Jobs").estado, "verde");
   assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 6); // r44/r45: + Musk y Huang vía Merovingio
   assert.ok(r.tarjetas.find((t) => t.agente === "Merovingio"));
 });

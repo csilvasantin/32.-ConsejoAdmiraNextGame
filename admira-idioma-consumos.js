@@ -104,6 +104,17 @@
   "¿A quién va la siguiente tarea?": "Who does the next task go to?",
   "Ámbar": "Amber",
   "Última lectura": "Last reading",
+  // r56 (23-10-2026 08:06): restos en español vistos con ?lang=en.
+  "Cuadrante de carga": "Load grid",
+  "excluido:": "excluded:",
+  "Codex sesión 5 h": "Codex 5 h session",
+  "Pulsa: hoy → ayer → semana (lunes–hoy) → mes (día 1–hoy), Madrid": "Press: today → yesterday → week (Monday–today) → month (1st–today), Madrid",
+  "líneas añadidas por commit en la rama principal (mismos ficheros que el HACKEO), atribuidas por autor/Co-authored-by": "lines added per commit on the main branch (same files as the HACKEO), attributed by author/Co-authored-by",
+  "sin export de Cursor hoy": "no Cursor export today",
+  "partes Yokup (última hora)": "Yokup reports (last hour)",
+  "partes Yokup (media de hoy)": "Yokup reports (today's average)",
+  "· partes Yokup (última hora)": "· Yokup reports (last hour)",
+  "· partes Yokup (media de hoy)": "· Yokup reports (today's average)",
   // Ventana 00:51 (23-10-2026): detalle desplegado de la tarjeta Accounts.
   "Sin hora de reset en la lectura": "No reset time in the reading",
   "Falta otra lectura para saber el ritmo": "Needs another reading to know the pace",
@@ -184,7 +195,7 @@
     }],
     [/^Más margen: ([\s\S]+?) — ([^,]+) usado, ([\s\S]+?)\. Que coja la siguiente carga\.([\s\S]*)$/, function (m) {
       var r = m[3].replace("sin ritmo todavía (falta una segunda lectura)", "no pace yet (needs a second reading)").replace(/^quema (.+) cada 12 h/, "burns $1 every 12 h").replace(/, llegaría al 100 % el (.+) \(Madrid\)/, ", would reach 100 % on $1 (Madrid)");
-      return "Most margin: " + m[1] + " — " + m[2] + " used, " + r + ". Let it take the next load." + m[4].replace(" Ojo: su última lectura tiene más de 36 h.", " Careful: its last reading is more than 36 h old.");
+      return "Most margin: " + m[1].replace(/ semanal\b/g, " weekly") + " — " + m[2] + " used, " + r + ". Let it take the next load." + m[4].replace(" Ojo: su última lectura tiene más de 36 h.", " Careful: its last reading is more than 36 h old.");
     }],
     // Ventana 00:51 (23-10-2026): subtítulo y detalle desplegado de la tarjeta Accounts.
     [/^(\d+) cuentas?((?: · \d+ en (?:rojo|ámbar))*) · % usado de cada plan$/, function (m) {
@@ -195,11 +206,37 @@
     [/^vencen (.+)$/, function (m) { return "expire " + m[1].split(", ").map(function (x) { return cuandoEn(x) || x; }).join(", "); }],
     [/^Créditos: ([\s\S]+)$/, function (m) {
       return "Credits: " + m[1].split(" · ").map(function (p, i) {
-        if (i === 0) return p.replace(/ de (\S+)$/, " of $1");
+        if (i === 0) return p.replace(/^créditos de espacio\b/, "space credits").replace(/ de (\S+)$/, " of $1");
         var v = p.match(/^vencen (.+)$/); return v ? "expire " + (cuandoEn(v[1]) || v[1]) : p;
       }).join(" · ");
     }],
     [/^lectura (web|manual)( \(.+\))?$/, function (m) { return m[1] + " reading" + (m[2] || ""); }],
+    // r56 (23-10-2026 08:06): restos en español con ?lang=en (Accounts, velocímetro, ranking, matriz).
+    [/^(\d+\/\d+ \d\d:\d\d): ((?:[\d.,]+ (?:k|M) )?|\d+ )tokens · export CSV de Cursor · (\d+) eventos · datos hasta (.+?) \(Madrid\)( · bloque aún incompleto \(retraso de Cursor\))?$/, function (m) {
+      return m[1] + ": " + m[2] + "tokens · Cursor CSV export · " + m[3] + " events · data until " + m[4] + " (Madrid)" + (m[5] ? " · block still incomplete (Cursor delay)" : "");
+    }],
+    [/^(.+?) sesión 5 h([\s\S]*)$/, function (m) {
+      return m[1] + " 5 h session" + m[2].replace(/ — quema (.+?) \/ 12 h/, " — burns $1 / 12 h").replace(/ sesión 5 h/g, " 5 h session");
+    }],
+    [/^(?:·\s*)?partes Yokup \((última hora|media de hoy)\)$/, function (m) { return "Yokup reports (" + (m[1] === "última hora" ? "last hour" : "today's average") + ")"; }],
+    [/^(today|hoy) (\S+) · partes Yokup \((última hora|media de hoy|sin caché|ninguno ese día)\)$/, function (m) {
+      return "today " + m[2] + " · Yokup reports (" + { "última hora": "last hour", "media de hoy": "today's average", "sin caché": "uncached", "ninguno ese día": "none that day" }[m[3]] + ")";
+    }],
+    [/^tokens (?:today|hoy) · sin export de Cursor hoy$/, "tokens today · no Cursor export today"],
+    [/^([\s\S]*) · excluido: ([\s\S]*)$/, "$1 · excluded: $2"],
+    [/^(.+?) es de pago y (.+?) no tiene suscripción de pago$/, "$1 is paid and $2 has no paid subscription"],
+    [/^(.+?) es de pago y (.+?) solo puede usar (.+)$/, "$1 is paid and $2 can only use $3"],
+    [/^(.+?) es de pago y (.+?) va por defecto en Nemotron Ultra gratis$/, "$1 is paid and $2 defaults to free Nemotron Ultra"],
+    [/^(.+?) \(([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no GrokBot\)$/, "$1 ($3's $2$4, not GrokBot)"],
+    [/^Carlos is working with this agent: no tasks are injected([\s\S]*)$/, function (m) {
+      return "Carlos is working with this agent: no tasks are injected" + m[1].replace(/reposo (\d+)\s?s/g, "idle $1 s")
+        .replace(/prompt tecleado por persona en app de (\S+) hace (\d+)\s?s/g, "prompt typed by a person in the $1 app $2 s ago").replace(/al frente/g, "frontmost");
+    }],
+    [/^Calculado (.+?) \(Madrid\) · ([\s\S]+)$/, function (m) {
+      return "Computed " + m[1] + " (Madrid) · " + m[2].replace("aptitud", "fitness").replace(" → libre (flota: latido <", " → free (fleet: heartbeat <")
+        .replace(" min y sin encargo ack/in_progress; consejeros GrokBot: se despiertan al recibir encargo, solo cuenta el encargo en curso)", " min and no ack/in_progress task; GrokBot councillors: woken when they get a task, only the task in progress counts)")
+        .replace(" → más margen de uso; sin lectura de margen penaliza; quien está con Carlos queda excluido («ocupado con Carlos») salvo que no haya nadie más apto", " → most usage margin; no margin reading penalises; whoever is with Carlos is excluded («busy with Carlos») unless nobody else is fit");
+    }],
     // r55 (23-10-2026): tooltip «por qué este color» de cada pastilla de /api/flota/trabajando (porqueColor).
     [/^(?:último token hace|app GrokBot en uso|latido del consejero|activo vía|tokens en la última hora|con Carlos|app abierta|declaró en qué trabaja|encargo |mensaje de consejero|handON|acción de consejero|sin tokens|nada hoy|uso de la app GrokBot)[\s\S]*$/, function (m) {
       var R = [[/^último token hace (.+)$/, "last token $1 ago"], [/^app GrokBot en uso hace (.+)$/, "GrokBot app in use $1 ago"],

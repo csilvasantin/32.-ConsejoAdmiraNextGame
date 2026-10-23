@@ -158,7 +158,7 @@ export function ultimoTokenS(agente, p, apps, ahoraS) {
 export function notaPoolCompartido(agente, apps) {
   if (agente !== "Merovingio" || !Array.isArray(apps)) return null;
   const u = apps.filter((a) => a && a.fuente === "app" && a.cuenta === CUENTA_APP_GROKBOT.Merovingio && a.usoS != null);
-  return u.length ? "uso de la app GrokBot de csilvasantin compartido (Merovingio, Musk, Huang): no atribuible" : null;
+  return u.length ? "uso de la app GrokBot de csilvasantin compartido (Merovingio, Musk, Huang): no atribuible" : "tokens de la cuenta Cursor compartida: no atribuibles";
 }
 /** r55: latido «trabajando» con foco/tarea publicados → { ts, fuente } | null. NO se usa para «activo hoy»: en vivo, los
  *  process_snapshot renuevan declared_updated en cada muestra y los bucles repostean el mismo foco cada minuto, así que
@@ -496,11 +496,14 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     // r54 (Carlos, 23-10-2026: «Merovingio en gris gastando tokens»): el color sale del ÚLTIMO TOKEN real del agente
     // (fuente más fresca: evento del pulso, aunque llegue con retraso, o uso de la cuenta en la app GrokBot del pool),
     // no de la última lectura guardada (tokUltimaHora del CSV de Cursor, con horas de retraso). Proceso / encargos: nunca.
-    const ultTok = ultimoTokenS(x.agente, p, velocidad && velocidad.grokbotApps, ahoraS);
+    // r57 (Carlos, 23-10-2026 08:21): la cuenta Cursor «Grok Bot (Consejo)» (pulso con retraso) es COMPARTIDA por Jobs,
+    // Wozniak, Musk, Huang y Merovingio y su CSV no dice de quién es cada evento: no da «último token» a nadie.
+    const pPropio = unirPulsos(x.pulsos.filter((a) => a && !a.conRetraso));
+    const ultTok = ultimoTokenS(x.agente, pPropio, velocidad && velocidad.grokbotApps, ahoraS);
     const tokReciente = ultTok != null && ahoraS - ultTok <= UMBRAL_ROJO_S;
     if (!esConsejero(x.agente) && tokReciente && st.estado === "gris") { st.estado = "verde"; st.motivo = "tokens hace " + Math.max(0, ahoraS - ultTok) + " s"; }
     if (st.estado === "verde" && !esConsejero(x.agente)) {
-      const gasta = Number(tokVivo) > 0 || !!(p && Number(p.tokUltimaHora) > 0) || tokReciente;
+      const gasta = Number(tokVivo) > 0 || !!(pPropio && Number(pPropio.tokUltimaHora) > 0) || tokReciente;
       const appUso = (supPulso || []).some((s) => s && s.tipo === "app" && s.enUso && s.agente && canonico(s.agente) === x.agente);
       if (!gasta && !appUso) { st.estado = "gris"; st.motivo = "sin tokens en la última hora (" + st.motivo + ")"; }
     }
@@ -711,8 +714,10 @@ export function soloVerdeReal(ts, ahoraS) {
   for (const t of ts) {
     if (!t || t.estado !== "verde") continue;
     const tok = t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : NaN;
-    const tokens = Number(t.tokHora) > 0 || Number(t.tokUltimaHora) > 0 || (isFinite(tok) && ahoraS - tok <= UMBRAL_ROJO_S);
-    const app = t.fuente === "app_grokbot" || (t.agente !== "Merovingio" && (t.superficies || []).some((x) => x && x.tipo === "app" && x.enUso && x.fuente === "pulso" && x.app !== "GrokBot"));
+    // r57: tokUltimaHora de la ficha puede ser de la cuenta Cursor compartida: solo cuentan tokHora en vivo y el último
+    // token propio. La app GrokBot (cuentas compartidas csilvasantin / csilva@admira.com) ya no da verde a nadie.
+    const tokens = Number(t.tokHora) > 0 || (isFinite(tok) && ahoraS - tok <= UMBRAL_ROJO_S);
+    const app = (t.agente !== "Merovingio" && (t.superficies || []).some((x) => x && x.tipo === "app" && x.enUso && x.fuente === "pulso" && x.app !== "GrokBot"));
     if (tokens || app) continue;
     t.estado = "gris";
     t.motivo = "sin tokens ni app en uso (" + (t.motivo || "") + ")";
@@ -720,6 +725,39 @@ export function soloVerdeReal(ts, ahoraS) {
       const d = Number(t.latidoConsejero.desde);
       if (d && (!t.actividad || d > t.actividad.ts)) t.actividad = { ts: d, fuente: "latido del consejero «trabajando»" };
     }
+  }
+  return ts;
+}
+
+/**
+ * r57 (Carlos, 23-10-2026 08:21): tokens AUTODECLARADOS (mcp consumo_reportar → api.yokup.com/fleet/consumo) de hoy
+ * por persona. Es la única fuente atribuible para los consejeros de GrokBot (el CSV de Cursor no dice quién gastó). Las
+ * ESTIMACIONES (reparto) no cuentan. → Map persona → { ts (s, last_at), total }
+ */
+export function autoreportesDeHoy(partes, ahoraS) {
+  const hoy = diaMadrid(ahoraS * 1000), m = new Map();
+  for (const p of partes || []) {
+    const d = p && p.datos;
+    if (!d || d.origen !== "mcp consumo_reportar" || !(Number(d.total) > 0) || /ESTIMACI[OÓ]N/i.test(d.causa || "")) continue;
+    const ts = Math.floor(Number(p.last_at) / 1000);
+    if (!ts || diaMadrid(ts * 1000) !== hoy) continue;
+    const k = canonico(d.persona || p.owner);
+    if (!k) continue;
+    const x = m.get(k);
+    if (!x || ts > x.ts) m.set(k, { ts, total: Number(d.total) });
+  }
+  return m;
+}
+/** r57: aplica el último token autodeclarado de cada consejero/agente; con tokens en la última hora → verde. */
+export function aplicarAutoreportes(ts, m, ahoraS) {
+  if (!Array.isArray(ts) || !m || !m.size) return ts;
+  for (const t of ts) {
+    const r = t && m.get(canonico(t.agente));
+    if (!r) continue;
+    const prev = t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : 0;
+    if (r.ts > prev) t.ultimoToken = new Date(r.ts * 1000).toISOString();
+    t.tokPropioHoy = r.total; t.tokFuente = "autodeclarado";
+    if (ahoraS - r.ts <= UMBRAL_ROJO_S && t.estado !== "amarillo") { t.estado = "verde"; t.motivo = "tokens autodeclarados hace " + Math.max(0, ahoraS - r.ts) + " s"; t.via = null; }
   }
   return ts;
 }

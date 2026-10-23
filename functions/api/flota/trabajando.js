@@ -6,7 +6,7 @@
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, soloVerdeReal } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, soloVerdeReal, autoreportesDeHoy, aplicarAutoreportes } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
@@ -37,6 +37,17 @@ export async function leerLatidosConsejero(fetchImpl) {
     if (!r.ok) return null;
     const d = await r.json();
     return d && d.consejeros && typeof d.consejeros === "object" ? d.consejeros : null;
+  } catch (e) { return null; }
+}
+
+/** r57: partes de consumo (consumo_reportar) de Yokup: tokens autodeclarados por persona. Público, sin secretos. */
+export const CONSUMO_YOKUP = "https://api.yokup.com/fleet/consumo?dias=1";
+export async function leerAutoreportes(fetchImpl) {
+  try {
+    const r = await fetchImpl(CONSUMO_YOKUP, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && Array.isArray(d.partes) ? d.partes : null;
   } catch (e) { return null; }
 }
 
@@ -117,7 +128,7 @@ export function conSuperficies(m, ts) {
 
 export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const ahoraMs = ahoraFijo || Date.now();
-  const [pr, v, lat] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null), leerLatidosConsejero(fetchImpl || fetch)]);
+  const [pr, v, lat, partes] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null), leerLatidosConsejero(fetchImpl || fetch), leerAutoreportes(fetchImpl || fetch)]);
   const p = pr.d;
   const ahoraS = Math.floor(ahoraMs / 1000);
   const pres = p ? p.presence : [];
@@ -127,6 +138,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   aplicarLatidosConsejero(ts, lat, ahoraS);
   aplicarActividadConsejero(ts, lat); // r55: mensajes / encargos / handON de los consejeros = actividad de hoy
   soloVerdeReal(ts, ahoraS); // r56: verde solo con tokens reales o app atribuible; latidos → solo rojo
+  aplicarAutoreportes(ts, autoreportesDeHoy(partes, ahoraS), ahoraS); // r57: tokens propios autodeclarados
   aplicarRojo(ts, ahoraS); // rojo = parado > 1 h pero activo hoy (Madrid); gris = nada hoy
   // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
   const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));

@@ -150,12 +150,42 @@ export function colocarPorAppGrokBot(out, apps) {
 export function ultimoTokenS(agente, p, apps, ahoraS) {
   const c = [];
   if (p && Number(p.tokHoy) > 0 && p.ultimoEvento) { const t = Math.floor(Date.parse(p.ultimoEvento) / 1000); if (isFinite(t) && t <= ahoraS + 60) c.push(Math.min(t, ahoraS)); }
-  if (agente === "Merovingio" && Array.isArray(apps)) {
-    for (const a of apps) if (a && a.fuente === "app" && a.cuenta === CUENTA_APP_GROKBOT.Merovingio && a.usoS != null && isFinite(a.usoS))
-      c.push(ahoraS - Math.round(Number(a.usoS) + (Number(a.haceS) || 0)));
-  }
+  // r55 (Carlos, 23-10-2026): el uso de la cuenta csilvasantin en la app GrokBot lo comparten Merovingio, Musk y Huang y
+  // la app no dice quién lo hizo: NO se atribuye a Merovingio (ver notaPoolCompartido).
   return c.length ? Math.max(...c) : null;
 }
+/** r55: la cuenta del pool tiene uso reciente en la app GrokBot, pero no se puede atribuir a Merovingio. */
+export function notaPoolCompartido(agente, apps) {
+  if (agente !== "Merovingio" || !Array.isArray(apps)) return null;
+  const u = apps.filter((a) => a && a.fuente === "app" && a.cuenta === CUENTA_APP_GROKBOT.Merovingio && a.usoS != null);
+  return u.length ? "uso de la app GrokBot de csilvasantin compartido (Merovingio, Musk, Huang): no atribuible" : null;
+}
+/** r55: latido «trabajando» con foco/tarea publicados → { ts, fuente } | null. NO se usa para «activo hoy»: en vivo, los
+ *  process_snapshot renuevan declared_updated en cada muestra y los bucles repostean el mismo foco cada minuto, así que
+ *  no se distingue una declaración real de un latido automático. Se deja como utilidad pura. */
+export function actividadDeLatidos(latidos) {
+  let r = null;
+  for (const e of latidos || []) {
+    if (!e) continue;
+    let ts = 0;
+    if (e.source === "process_snapshot") continue;
+    if (sinTilde(e.mode || e.status || "") === "trabajando" && (String(e.focus || "").trim() || String(e.task || "").trim())) ts = Number(e.updated) || 0;
+    if (ts && (!r || ts > r.ts)) r = { ts, fuente: "declaró en qué trabaja" };
+  }
+  return r;
+}
+/** r55: última acción del agente en sus encargos de la bandeja (aceptar = ack_at, cerrar = done_at con estado done). */
+export function ultimaAccionEncargos(items, p, norm = (x) => String(x || "").toLowerCase()) {
+  let r = null;
+  for (const x of items || []) {
+    if (!x || (p && norm(x.target_persona) !== norm(p))) continue;
+    const ack = Number(x.ack_at) || 0, done = /^(done|completed|hecho)$/.test(String(x.status || "")) ? Number(x.done_at) || 0 : 0;
+    if (ack && (!r || ack > r.ts)) r = { ts: ack, fuente: "encargo aceptado" };
+    if (done && (!r || done > r.ts)) r = { ts: done, fuente: "encargo cerrado" };
+  }
+  return r;
+}
+const masNueva = (a, b) => (!a ? b : !b ? a : b.ts > a.ts ? b : a);
 const masReciente = (iso, s) => { const t = iso ? Date.parse(iso) : NaN; return s != null && !(t >= s * 1000) ? new Date(s * 1000).toISOString() : iso; };
 
 /** r28-sup: consejeros principales de GrokBot: viven en el asistente de GrokBot (nube), despertados por rutinas/webhooks. */
@@ -452,7 +482,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     x.latidos.sort((a, b) => (latidoTrabajando(b, ahoraS) - latidoTrabajando(a, ahoraS)) || ((Number(b.declared_updated || b.updated) || 0) - (Number(a.declared_updated || a.updated) || 0)));
     const l = x.latidos[0] || null, p = unirPulsos(x.pulsos), pf = x.perfil || null;
     // Fuera: entradas del pulso sin tokens hoy, sin latido y sin perfil conocido (p. ej. «Anónimo»), salvo los consejeros.
-    if (!x.latidos.length && !SIEMPRE.includes(x.agente) && !(p && Number(p.tokHoy) > 0) && !pf && !x.cli) continue;
+    if (!x.latidos.length && !SIEMPRE.includes(x.agente) && !(p && Number(p.tokHoy) > 0) && !pf && !x.cli && !(carga && typeof carga.get === "function" && (carga.get(personaCenso(x.agente)) || {}).ultAccion)) continue; // r55: con acción real hoy, sale
     // r39: un pulso con retraso (Cursor) nunca pone en verde; los consejeros Grok, solo por su latido en vivo.
     const tokVivo = p && !p.conRetraso ? p.tokHora : null;
     const ccPres = p && p.conCarlos ? null : conCarlosPorPresencia(x.latidos, activas, ahoraS, enUso);
@@ -522,6 +552,10 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       tokHoraMetodo: p && p.tokHora != null && !p.conRetraso ? "15 min × 4" : null,
       sinMedicion: !p || (!Number(p.tokHoy) && !Number(p.tokHora) && !Number(p.tokUltimaHora)),
       ultimaActividad: masReciente((p && p.ultimaActividad) || null, ultTok),
+      // r55: fuentes de «activo hoy» (sin latidos automáticos): último token real y última acción real.
+      ultimoToken: ultTok != null ? new Date(ultTok * 1000).toISOString() : null,
+      actividad: (() => { const a = cg && cg.ultAccion ? cg.ultAccion : null; /* r55: los latidos de presencia no cuentan (se repostean solos) */ return a ? { ts: a.ts, fuente: a.fuente } : null; })(),
+      notaPool: notaPoolCompartido(x.agente, velocidad && velocidad.grokbotApps),
       sinActividad: sinActividad({ estado: st.estado, enCurso, p, ahoraS }),
       haceS: gris ? Math.max(0, ahoraS - fresca.ts) : ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: gris ? fresca.fuente : l ? l.source : (p ? "pulso" : null),
       maquinas: [...new Set(x.latidos.map((e) => e.machine).filter(Boolean))],
@@ -635,9 +669,21 @@ export const UMBRAL_ROJO_S = 3600;
 export function diaMadrid(ms) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
 }
+/** r55: último instante de actividad REAL de una ficha (s): token, acción (encargo/declaración/consejero) o
+ *  ultimaActividad del pulso de tokens. Nunca haceS (puede venir de un latido automático). → { ts, fuente } | null */
+export function ultimaReal(t) {
+  let r = null;
+  const tok = t && t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : NaN;
+  if (isFinite(tok)) r = { ts: tok, fuente: "token" };
+  const ua = t && t.ultimaActividad ? Math.floor(Date.parse(t.ultimaActividad) / 1000) : NaN;
+  if (isFinite(ua) && Number(t.tokHoy) > 0 && (!r || ua > r.ts)) r = { ts: ua, fuente: "token" };
+  if (t && t.actividad && Number(t.actividad.ts) && (!r || t.actividad.ts > r.ts)) r = { ts: Number(t.actividad.ts), fuente: t.actividad.fuente };
+  return r;
+}
 /**
- * Rojo (Carlos, 22-10-2026): parado cuya última actividad (latido / proceso / pulso de tokens / consejero_latido) fue
- * hace más de 1 h pero que SÍ hizo algo hoy (día de Madrid: actividad fechada hoy o tokens hoy). Gris = nada hoy.
+ * Rojo (Carlos, 22-10-2026 · r55 23-10-2026): CUALQUIERA que hizo algo hoy (día de Madrid: tokens, encargo aceptado o
+ * cerrado, declaró en qué trabaja, mensaje/acción de consejero, handON) sale como mínimo en ROJO; GRIS solo con cero
+ * actividad en todo el día. Los latidos automáticos de un proceso vivo NO cuentan (por eso no se usa haceS).
  * Solo toca fichas grises; verde y amarillo no cambian. Pura; reordena.
  */
 export function aplicarRojo(ts, ahoraS) {
@@ -645,17 +691,52 @@ export function aplicarRojo(ts, ahoraS) {
   const hoy = diaMadrid(ahoraS * 1000);
   for (const t of ts) {
     if (!t || t.estado !== "gris") continue;
-    const cand = [];
-    if (t.haceS != null && isFinite(t.haceS)) cand.push(ahoraS - Number(t.haceS));
-    const ua = t.ultimaActividad ? Date.parse(t.ultimaActividad) : NaN;
-    if (isFinite(ua)) cand.push(Math.floor(ua / 1000));
-    const ult = cand.length ? Math.max(...cand) : null;
-    const hoyAlgo = (ult != null && diaMadrid(ult * 1000) === hoy) || Number(t.tokHoy) > 0;
+    const u = ultimaReal(t);
+    const hoyAlgo = (u && diaMadrid(u.ts * 1000) === hoy) || Number(t.tokHoy) > 0;
     if (!hoyAlgo) continue;
-    if (ult != null && ahoraS - ult <= UMBRAL_ROJO_S) continue;
     t.estado = "rojo";
-    t.motivo = "sin actividad desde hace más de 1 h (activo hoy)";
-    if (ult != null) t.haceS = Math.max(0, ahoraS - ult);
+    t.motivo = "activo hoy, sin tokens en la última hora";
+    if (u) t.haceS = Math.max(0, ahoraS - u.ts);
   }
   return ts.sort((a, b) => ORDEN_ESTADO[a.estado] - ORDEN_ESTADO[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
+}
+
+/** r55: actividad de los consejeros (consejero_latido: mensaje, encargo ack/done, handON…) → t.actividad. */
+export function aplicarActividadConsejero(ts, consejeros) {
+  if (!Array.isArray(ts) || !consejeros || typeof consejeros !== "object") return ts;
+  const por = new Map(Object.entries(consejeros).map(([p, e]) => [canonico(p), e]));
+  const fuente = (o) => { o = String(o || ""); return /done/.test(o) ? "encargo cerrado" : /ack/.test(o) ? "encargo aceptado" : /mensaje/.test(o) ? "mensaje de consejero" : /handon/i.test(o) ? "handON" : /encargar/.test(o) ? "encargo enviado" : "acción de consejero"; };
+  for (const t of ts) {
+    const e = t && por.get(canonico(t.agente));
+    const at = e && Number(e.at);
+    if (!at) continue;
+    if (!t.actividad || at > t.actividad.ts) t.actividad = { ts: at, fuente: fuente(e.origen) };
+  }
+  return ts;
+}
+
+const hhmm = (s) => new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(s * 1000));
+const haceTxt = (s) => (s < 90 ? Math.round(s) + " s" : s < 5400 ? Math.round(s / 60) + " min" : Math.round(s / 3600) + " h");
+/** r55: por qué la pastilla tiene su color (ES; EN en admira-idioma-consumos.js). Pura. */
+export function porqueColor(t, ahoraS) {
+  if (!t) return "";
+  const p = [];
+  const tok = t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : null;
+  const app = (t.superficies || []).some((s) => s && s.tipo === "app" && s.enUso);
+  if (t.estado === "verde") {
+    if (tok != null && ahoraS - tok <= UMBRAL_ROJO_S) p.push("último token hace " + haceTxt(Math.max(0, ahoraS - tok)));
+    else if (/app GrokBot trabajando/.test(t.motivo || "")) p.push("app GrokBot en uso hace " + haceTxt(t.haceS || 0));
+    else if (/latido del consejero/.test(t.motivo || "")) p.push("latido del consejero «trabajando»");
+    else if (t.via) p.push("activo vía " + t.via);
+    else p.push("tokens en la última hora");
+  } else if (t.estado === "amarillo") p.push("con Carlos" + (t.conCarlosEn ? " en " + t.conCarlosEn : ""));
+  if (t.estado !== "verde" || app) {
+    if (app) p.push("app abierta en uso");
+  }
+  const hoy = diaMadrid(ahoraS * 1000);
+  if (t.actividad && t.actividad.ts && t.estado !== "verde" && diaMadrid(t.actividad.ts * 1000) === hoy) p.push(t.actividad.fuente + " a las " + hhmm(t.actividad.ts));
+  if (t.estado === "gris") p.push("nada hoy");
+  else if (t.estado !== "verde") p.push(tok != null && diaMadrid(tok * 1000) === hoy ? "sin tokens desde hace " + haceTxt(Math.max(0, ahoraS - tok)) : "sin tokens hoy");
+  if (t.notaPool) p.push(t.notaPool);
+  return p.join(" · ");
 }

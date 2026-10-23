@@ -200,6 +200,19 @@
       }).join(" · ");
     }],
     [/^lectura (web|manual)( \(.+\))?$/, function (m) { return m[1] + " reading" + (m[2] || ""); }],
+    // r55 (23-10-2026): tooltip «por qué este color» de cada pastilla de /api/flota/trabajando (porqueColor).
+    [/^(?:último token hace|app GrokBot en uso|latido del consejero|activo vía|tokens en la última hora|con Carlos|app abierta|declaró en qué trabaja|encargo |mensaje de consejero|handON|acción de consejero|sin tokens|nada hoy|uso de la app GrokBot)[\s\S]*$/, function (m) {
+      var R = [[/^último token hace (.+)$/, "last token $1 ago"], [/^app GrokBot en uso hace (.+)$/, "GrokBot app in use $1 ago"],
+        [/^latido del consejero «trabajando»$/, "councillor heartbeat «working»"], [/^activo vía (.+)$/, "active via $1"],
+        [/^tokens en la última hora$/, "tokens in the last hour"], [/^con Carlos en (.+)$/, "with Carlos on $1"], [/^con Carlos$/, "with Carlos"],
+        [/^app abierta en uso$/, "app open and in use"], [/^declaró en qué trabaja a las (.+)$/, "posted what it works on at $1"],
+        [/^encargo aceptado a las (.+)$/, "task acknowledged at $1"], [/^encargo cerrado a las (.+)$/, "task closed at $1"],
+        [/^encargo enviado a las (.+)$/, "task sent at $1"], [/^mensaje de consejero a las (.+)$/, "councillor message at $1"],
+        [/^handON a las (.+)$/, "handON at $1"], [/^acción de consejero a las (.+)$/, "councillor action at $1"],
+        [/^sin tokens desde hace (.+)$/, "no tokens for $1"], [/^sin tokens hoy$/, "no tokens today"], [/^nada hoy$/, "nothing today"],
+        [/^uso de la app GrokBot de csilvasantin compartido \(Merovingio, Musk, Huang\): no atribuible$/, "csilvasantin GrokBot app usage is shared (Merovingio, Musk, Huang): not attributable"]];
+      return m[0].split(" · ").map(function (p) { for (var i = 0; i < R.length; i++) if (R[i][0].test(p)) return p.replace(R[i][0], R[i][1]); return p; }).join(" · ");
+    }],
     [/^Sin lecturas: anota una por cuenta para poder repartir el trabajo\.$/, "No readings: log one per account to be able to split the work."]
   ];
   var I = G.AdmiraIdioma;

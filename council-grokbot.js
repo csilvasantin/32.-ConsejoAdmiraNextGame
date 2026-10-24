@@ -419,7 +419,7 @@
     function startShared(epoch){
       // Sin red al seleccionar: la home no carga el histórico.
       sh.epoch=epoch;sh.turnos=[];sh.locales=[];sh.enviados={};sh.desde=null;sh.primero=null;sh.firma='';sh.seen=new Set();
-      sharedChrome();render();say(introHilo(selected));
+      sharedChrome();render();say(''); // la intro ya va en el chat: no repetirla como estado
       return Promise.resolve(true);
     }
     function askSignin(message){

@@ -56,17 +56,17 @@
     const $=s=>details.querySelector(s)||toolbarEl?.querySelector(s)||null;
     /* Hilo compartido (Jobs): lo que se escribe aquí va al MISMO hilo que GrokBot y /chat/jobs/
        (POST /api/chat/enviar vía assets/chat-hilo-client.js). En la home («modo menú inicial») cada
-       visita empieza en blanco: no se carga el histórico (vive en /chat/jobs/, enlace «Ver histórico»);
+       visita empieza en blanco: no se carga el histórico (vive en /chat/jobs/, enlace «Histórico»);
        solo se ven los mensajes enviados en esta visita y las respuestas de Jobs posteriores al primero.
        Los demás consejeros siguen por el puente de GrokBot sin cambios. */
     const hilo=options.sharedThread===false?null:(options.hilo||root.ChatHiloClient||null);
     const sharedOf=name=>hilo&&name?hilo.personaDe(name):null;
     const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1};
-    // «Ver histórico» → /chat/jobs/ (solo en el hilo compartido).
-    const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Ver histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
+    // «Histórico» → /chat/jobs/ (solo en el hilo compartido).
+    const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
     $('.council-chat__toolbar')?.append(historico);
     // «Entre consejeros» (19-10-2026): mensajes privados consejero↔consejero en la página de detalle (privado, con Google).
-    const entre=doc.createElement('a');entre.className='council-chat__historico council-chat__entre';entre.textContent='Mensajes privados';entre.target='_blank';entre.rel='noopener';entre.hidden=true;
+    const entre=doc.createElement('a');entre.className='council-chat__historico council-chat__entre';entre.textContent='Privados';entre.target='_blank';entre.rel='noopener';entre.hidden=true;
     $('.council-chat__toolbar')?.append(entre);
     // Aviso de acceso: solo aparece al ENVIAR sin sesión de Google (escribir siempre se puede).
     let signin=null;
@@ -373,7 +373,7 @@
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
     const SCOPE_HILO=()=>'Esta visita empieza en blanco. Lo que escribes le llega a '+shortName(selected)+' y se guarda en la misma conversación que en GrokBot y en /chat/'+(sharedOf(selected)||'')+'/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
-    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Ver histórico».';
+    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Histórico».';
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
@@ -436,7 +436,7 @@
         sh.firma=v.firma;log.replaceChildren();sh.typingNode=null;
         if(!v.turnos.length){
           const p=doc.createElement('p');p.className='council-chat__intro';p.textContent=introHilo(selected);log.append(p);
-          const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='El histórico de vuestras conversaciones está en «Ver histórico».';log.append(p2);
+          const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='El histórico de vuestras conversaciones está en «Histórico».';log.append(p2);
         }
         for(const t of v.turnos){
           const carlos=t.rol==='carlos';
@@ -519,7 +519,7 @@
           if(current(epoch))say('Enviado a '+name+' · guardado en la misma conversación que en GrokBot.');
           return accepted;
         }catch(e){
-          local.entrega='sin_confirmar';if(current(epoch))say('Envío sin confirmar · revisa «Ver histórico» antes de repetir.');
+          local.entrega='sin_confirmar';if(current(epoch))say('Envío sin confirmar · revisa «Histórico» antes de repetir.');
           return accepted;
         }
       };

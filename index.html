@@ -1704,6 +1704,33 @@
             --mac-scr: matrix3d(0.599630549,0.142114857,0,-0.0000493552801, 0.0927981611,0.887870285,0,0.000254016029, 0,0,1,0, 320.636518,132.122202,0,1);
             --mac-k: 0.2275;
         }
+        /* EXAMINAR → PROYECTO (24-10-2026): el site del consejero, en vivo, en el tubo del
+           Mac 1984. Mismo plano 512×342 y misma matriz que el cristal; el iframe pinta un
+           escritorio de 1280×855 y se encoge ×0,4. Por encima del cristal, bajo el barrido. */
+        .mac-proyecto {
+            display: none; position: absolute; left: 0; top: 0; width: 512px; height: 342px;
+            transform-origin: 0 0; transform: scale(var(--mac-k)) var(--mac-scr);
+            clip-path: inset(2.5% 1.5% 3.5% 1.5% round 6%);
+            overflow: hidden; background: #030806; z-index: 2; pointer-events: none;
+            backface-visibility: hidden;
+        }
+        .mac-proyecto.on { display: block; }
+        .mac-proyecto__frame, .mac-proyecto__shot {
+            position: absolute; left: 0; top: 0; width: 1280px; height: 855px; border: 0;
+            transform: scale(.4); transform-origin: 0 0; background: #fff; display: none;
+            filter: contrast(1.05) saturate(.85) sepia(.08);
+        }
+        .mac-proyecto__shot { object-fit: cover; object-position: top center; }
+        .mac-proyecto__label {
+            position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 10px;
+            font: 14px/1.2 "Press Start 2P", monospace; color: #7effa8; background: rgba(0,0,0,.72);
+            text-shadow: 0 0 4px #2f8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .mac-proyecto[data-modo="cargando"] .mac-proyecto__label { top: 0; display: flex; align-items: center; justify-content: center; }
+        .mac-hoy-prop.on:has(.mac-proyecto.on) .mac-hoy-glass { visibility: hidden; }
+        /* El Mac del proyecto va al CENTRO de la mesa y algo mayor para que el site se lea. */
+        body.examinar-mac .mac-hoy-prop { left: 38%; top: 50%; width: 25%; z-index: 6; }
+        @media (max-width: 760px) { body.examinar-mac .mac-hoy-prop { left: 31%; top: 42%; width: 38%; } }
         .mac-hoy-prop.on { display: block; }
         .mac-hoy-prop > img {
             width: 100%;
@@ -4551,12 +4578,13 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/cli-ayuda.js?v=20261011-5707-selector"></script>
 <link rel="stylesheet" href="/assets/webcam.css?v=20261014-5863">
 <script defer src="/assets/webcam.js?v=20261014-5863"></script>
-<script defer src="app.flt-100529.js?v=20261022-ceo-defecto"></script>
+<script defer src="app.flt-100529.js?v=20261024-examinar"></script>
 <script defer src="council-preview.js?v=20260921-ultra1"></script>
 <script defer src="council-composer.js?v=20261009-r9-paste"></script>
 <script defer src="council-working.js?v=20260930-flt101302"></script>
 <script defer src="council-integration.js?v=20261024-r98-grande"></script>
 <script type="module" src="assets/mac-hoy.js?v=20261004-5114-vivo"></script>
+<script src="assets/mac-proyecto.js?v=20261024-examinar3"></script>
 <script defer src="assets/aviso-version.js?v=20261004-5113c"></script>
 <script defer src="assets/sello-novedades.js?v=20261006-r15-idioma"></script>
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>

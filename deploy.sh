@@ -135,7 +135,7 @@ else:
     print("  ⚠ no encontre referencias a la barra compartida — revisa el patron")
 PY2
 
-npx --yes wrangler pages deploy "$TMP" --project-name=admira-live --branch=main --commit-dirty=true
+npx --yes wrangler pages deploy "$TMP" --project-name=admira-live --branch="${ADMIRA_DEPLOY_BRANCH:-main}" --commit-dirty=true
 rm -rf "$TMP"
 # VERIFICACION POST-DESPLIEGUE (NeoMBP14, 01-09-2026). Publicar no es funcionar: se comprueba
 # por el camino del usuario (www, no pages.dev) que la barra recien sellada responde 200, y se

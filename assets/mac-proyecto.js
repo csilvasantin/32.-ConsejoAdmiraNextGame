@@ -87,7 +87,7 @@
         } else {
           shot.style.display = 'none'; shot.removeAttribute('src');
           frame.style.display = 'block';
-          if (frame.getAttribute('src') !== url) frame.src = url;
+          if (frame.getAttribute('src') !== url) { frame.onload = function () { setTimeout(devuelveFoco, 50); setTimeout(devuelveFoco, 1500); }; frame.src = url; }
           el.dataset.modo = 'vivo';
         }
         return { persona: a, proyecto: info.proyecto, url: url, fuente: info.fuente, modo: el.dataset.modo };
@@ -104,6 +104,12 @@
     if (mac && (encendidoPorMi || (opts && opts.apagar)) && mac.isVisible()) mac.setVisible(false);
     encendidoPorMi = false;
   }
+  // Algunos sites hacen autofocus y el iframe se queda el teclado: lo devolvemos a la escena.
+  function devuelveFoco() {
+    var d = root.document, f = layer && layer.querySelector('iframe');
+    if (isOn() && f && d.activeElement === f) { try { f.blur(); } catch (e) {} try { root.focus(); } catch (e) {} if (d.body) { d.body.tabIndex = -1; d.body.focus({ preventScroll: true }); } }
+  }
+  if (root.addEventListener) root.addEventListener('blur', function () { setTimeout(devuelveFoco, 0); });
   function isOn() { return !!(layer && layer.classList.contains('on')); }
   if (root.document) {
     root.document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOn()) hide(); }, true);

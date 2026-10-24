@@ -93,23 +93,61 @@
 
   // ── Credencial (ID token de Google, el mismo client_id del login de admira.live) ──
   function almacen() { try { return root.sessionStorage || null; } catch (e) { return null; } }
+  // r96 (24-10-2026): sesión larga. Tras el primer login de Google el servidor fija una cookie HttpOnly
+  // (__Host-admira_chat, 180 días) compartida por todas las pestañas y páginas de www.admira.live.
+  // Aquí solo queda un aviso NO secreto en localStorage ({email, exp}) para saber que existe; el valor
+  // de la cookie nunca es visible para JavaScript. credencial() devuelve entonces SESION.
+  var SESION = "sesion", CLAVE_SESION = "chat-hilo-sesion";
+  function local() { try { return root.localStorage || null; } catch (e) { return null; } }
+  function avisoSesion() {
+    var l = local(); if (!l) return null;
+    try { var d = JSON.parse(l.getItem(CLAVE_SESION) || "null"); if (d && d.exp > Date.now() + 60000) return d; } catch (e) {}
+    try { l.removeItem(CLAVE_SESION); } catch (e) {}
+    return null;
+  }
+  function marcarSesion(d) {
+    var l = local(); if (!l || !d || !d.ok) return false;
+    try { l.setItem(CLAVE_SESION, JSON.stringify({ email: String(d.email || ""), exp: Number(d.exp) || Date.now() + 30 * 864e5 })); } catch (e) { return false; }
+    try { root.dispatchEvent(new root.CustomEvent("chat-hilo-sesion", { detail: { email: d.email } })); } catch (e) {}
+    return true;
+  }
   function credencial() {
-    var s = almacen(); if (!s) return "";
-    try {
-      var d = JSON.parse(s.getItem(CLAVE) || "null");
-      if (d && d.jwt && d.exp * 1000 > Date.now() + 60000) return d.jwt;
-    } catch (e) {}
-    s.removeItem(CLAVE);
-    return "";
+    var s = almacen();
+    if (s) {
+      try {
+        var d = JSON.parse(s.getItem(CLAVE) || "null");
+        if (d && d.jwt && d.exp * 1000 > Date.now() + 60000) return d.jwt;
+      } catch (e) {}
+      s.removeItem(CLAVE);
+    }
+    return avisoSesion() ? SESION : "";
+  }
+  // Convierte el ID token (1 h) en la sesión larga del servidor. El servidor verifica el token en Google.
+  function abrirSesion(jwt) {
+    if (!root.fetch) return Promise.resolve(false);
+    return root.fetch("/api/chat/sesion", { method: "POST", credentials: "same-origin", cache: "no-store", headers: { Authorization: "Bearer " + jwt } })
+      .then(function (r) { return r.ok ? r.json() : null; }).then(marcarSesion).catch(function () { return false; });
+  }
+  // Pestaña/página nueva sin aviso: pregunta al servidor si la cookie sigue viva (no pide login).
+  function restaurarSesion() {
+    if (avisoSesion() || !root.fetch) return Promise.resolve(!!avisoSesion());
+    return root.fetch("/api/chat/sesion", { credentials: "same-origin", cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.ok) { d.exp = d.exp || Date.now() + 7 * 864e5; return marcarSesion(d); } return false; })
+      .catch(function () { return false; });
   }
   function guardar(jwt) {
-    var s = almacen(); if (!s) return;
+    var s = almacen();
     try {
       var p = JSON.parse(root.atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      s.setItem(CLAVE, JSON.stringify({ jwt: jwt, exp: p.exp }));
+      if (s) s.setItem(CLAVE, JSON.stringify({ jwt: jwt, exp: p.exp }));
     } catch (e) {}
+    return abrirSesion(jwt);
   }
-  function olvidar() { var s = almacen(); if (s) s.removeItem(CLAVE); }
+  function olvidar() {
+    var s = almacen(); if (s) s.removeItem(CLAVE);
+    var l = local(); if (l) try { l.removeItem(CLAVE_SESION); } catch (e) {}
+  }
 
   // ── Red ──────────────────────────────────────────────────────────────────
   function leerHilo(persona, opts) {
@@ -149,14 +187,18 @@
     s.onerror = function () { alFallar && alFallar("No se pudo cargar el login de Google."); };
     doc.head.appendChild(s);
   }
-  function salirGoogle() { olvidar(); try { root.google.accounts.id.disableAutoSelect(); } catch (e) {} }
+  function salirGoogle() {
+    olvidar();
+    try { root.fetch("/api/chat/sesion", { method: "DELETE", credentials: "same-origin", cache: "no-store" }).catch(function () {}); } catch (e) {}
+    try { root.google.accounts.id.disableAutoSelect(); } catch (e) {} }
 
   root.ChatHiloClient = {
     RAPIDO_MS: RAPIDO_MS, REPOSO_MS: REPOSO_MS, VENTANA_RAPIDA_MS: VENTANA_RAPIDA_MS, VENTANA_ESCRIBIENDO_MS: VENTANA_ESCRIBIENDO_MS,
     CLIENT_ID: CLIENT_ID, CLAVE: CLAVE, ORIGEN: ORIGEN, ESTADO: ESTADO, PERSONAS: PERSONAS,
     esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado, origenTurno: origenTurno, horaMadrid: horaMadrid, metaTurno: metaTurno,
     fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
-    credencial: credencial, guardar: guardar, olvidar: olvidar,
+    credencial: credencial, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion,
     leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
   };
+  if (root.document && root.fetch && root.location && /admira\.live$|pages\.dev$|localhost$/.test(root.location.hostname || "")) restaurarSesion();
 })(typeof window !== "undefined" ? window : globalThis);

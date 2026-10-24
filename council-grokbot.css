@@ -150,3 +150,9 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .previos-head-tools>:first-child{margin-left:auto}
 .scumm-module-head .previos-head-tools [data-preview-expand]{font:10px/1 monospace;padding:2px 5px}
 @media(max-width:600px){.scumm-module-head:has(.previos-head-tools) .scumm-module-grip{font-size:0;padding:5px 2px}.scumm-module-head:has(.previos-head-tools) .scumm-module-grip::before{content:'⠿';font-size:9px}.previos-head-tools{gap:3px;margin:0 2px}}
+
+/* Bocadillo grande (Carlos, 24-10-2026 14:48): toda la ventana del fondo, de Leyendas a Coetáneos. */
+.speech-bubble.grokbot-bubble:not(.grokbot-docked):not([data-aviso="bienvenida"]),.speech-bubble.grokbot-bubble:not(.grokbot-docked):not([data-aviso="bienvenida"])[data-side="right"],.speech-bubble.grokbot-bubble:not(.grokbot-docked):not([data-aviso="bienvenida"])[data-side="center"]{left:12%!important;top:9%!important;width:76%;max-height:22%;font-size:clamp(9px,.8vw,15px)}
+.speech-bubble.grokbot-bubble.grokbot-ascii:not(.grokbot-docked){max-height:56%;z-index:6}
+.speech-bubble.grokbot-bubble.grokbot-ascii .speech-text{font-family:"Courier New",ui-monospace,Menlo,monospace;white-space:pre;overflow-wrap:normal;overflow:auto;line-height:1.2;font-size:clamp(9px,.85vw,15px)}
+.speech-bubble.grokbot-bubble.grokbot-docked.grokbot-ascii{max-height:460px}

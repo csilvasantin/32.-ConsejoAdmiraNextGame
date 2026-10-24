@@ -156,3 +156,15 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .speech-bubble.grokbot-bubble.grokbot-ascii:not(.grokbot-docked){max-height:56%;z-index:6}
 .speech-bubble.grokbot-bubble.grokbot-ascii .speech-text{font-family:"Courier New",ui-monospace,Menlo,monospace;white-space:pre;overflow-wrap:normal;overflow:auto;line-height:1.2;font-size:clamp(9px,.85vw,15px)}
 .speech-bubble.grokbot-bubble.grokbot-docked.grokbot-ascii{max-height:460px}
+
+/* r99 · Conversación a todo el ancho y dibujos ASCII enteros (Carlos, 24-10-2026 14:48/14:54 · encargo #7144).
+   Mismo formato (burbujas, meta, compositor); solo se quitan los márgenes vacíos y el dibujo no se parte. */
+.scumm-module-content>.council-preview:not(.is-expanded)>.council-preview__chat{align-self:stretch;width:100%;min-width:0}
+.council-preview .council-chat--hilo{width:100%}
+.council-preview:not(.is-expanded) .council-chat__hilo{max-width:96%}
+.council-chat__ascii{margin:6px 0 2px;padding:0;font:13px/1.22 "Courier New",ui-monospace,Menlo,Consolas,monospace;white-space:pre;overflow-wrap:normal;word-break:normal;overflow-x:auto;overflow-y:hidden;max-width:100%;color:inherit;background:transparent;tab-size:4}
+.council-chat__hilo:has(.council-chat__ascii){max-width:100%}
+.council-chat__hilo:has(.council-chat__ascii) .council-chat__reply{max-width:100%;box-sizing:border-box;overflow-wrap:normal}
+@media(max-width:600px){.council-chat__ascii{font-size:11px}}
+/* Con un dibujo en pantalla la barra crece (mín. ~62% del alto de la ventana) para verlo entero sin scroll. */
+.scumm-bottom[data-layout-ready]:has(.council-preview .council-chat__ascii){height:max(var(--scumm-height,300px),min(600px,62vh))}

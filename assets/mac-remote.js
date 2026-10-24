@@ -39,6 +39,7 @@ const MESSAGES={
   remote_session_expired:'La conexión ha caducado. Pulsa Reconectar.',
   remote_view_only:'Solo vista: ventana demasiado grande. El ratón y el teclado no están disponibles.',
   remote_snapshot_too_large:'La ventana de GrokBot es demasiado grande para capturarla. Redúcela y pulsa Reconectar.',
+  remote_screen_locked:'El Mac Mini tiene la pantalla bloqueada o en reposo: desbloquéalo (Compartir pantalla) y pulsa Reconectar.',
   remote_input_unconfirmed:'No se pudo confirmar la entrada. Comprueba la pantalla antes de repetir.',
   session_expired:'Inicia sesión en admira.live para conectar.'
 };

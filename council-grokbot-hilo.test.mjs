@@ -66,7 +66,7 @@ test('home · Jobs: visita en blanco — no carga el histórico, envía por /api
   const toolbar = h.doc.details.querySelector('.council-chat__toolbar');
   const link = toolbar.children.find(n => n.className === 'council-chat__historico');
   assert.ok(link && !link.hidden, 'enlace «Ver histórico»');
-  assert.equal(link.href, '/chat/jobs/'); assert.equal(link.textContent, 'Ver histórico');
+  assert.equal(link.href, '/chat/jobs/'); assert.equal(link.textContent, 'Histórico');
   assert.equal(await h.api.send('Steve Jobs', '  ¿Qué opinas?  '), true);
   await flush();
   assert.deepEqual(h.hiloCalls[0], ['enviar', 'jobs', '¿Qué opinas?']);

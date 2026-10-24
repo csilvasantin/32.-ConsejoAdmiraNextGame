@@ -17,5 +17,5 @@ test('el aviso de bienvenida se marca y se ancla en el centro de la mesa, sin ta
 test('un bocadillo de consejero normal quita la marca del aviso; la copia servida es idéntica', () => {
   assert.match(integ, /delete bubble\.dataset\.aviso/);
   assert.equal(copia, app);
-  assert.match(html, /council-grokbot\.css\?v=20261024-previos-linea/);
+  assert.match(html, /council-grokbot\.css\?v=20261024-r95-barra/);
 });

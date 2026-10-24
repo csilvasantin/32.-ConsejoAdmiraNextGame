@@ -44,7 +44,12 @@
   @keyframes latido { 0%, 80%, 100% { opacity:.25; transform:translateY(0); } 40% { opacity:1; transform:translateY(-2px); } }
   @media (prefers-reduced-motion: reduce) { .puntos i { animation:none; opacity:.6; } }
   button.enlace { background:none; border:0; color:var(--suave); text-decoration:underline; cursor:pointer; font:inherit; }
+  /* r95: la barra superior del sitio nunca se pierde (Carlos 24-10-2026) */
+  html.admira-bar-on > body { padding-top:64px !important; }
+  html.admira-bar-on > body > header { top:64px; }
+  section[id] { scroll-margin-top:120px; }
 </style>
+<script src="/admira-bar.js?v=20260918-r38"></script>
 <script src="/admira-idioma.js"></script><!-- idioma ES/EN · ?lang=en · /idioma ENG (10-10-2026) -->
 </head>
 <body>
@@ -54,7 +59,7 @@
 </header>
 <main>
   <section id="entre-consejeros" data-silla="Musk" aria-label="Mensajes privados entre consejeros y agentes">
-    <h2 style="font-size:15px;margin:8px 0">Mensajes privados</h2>
+    <h2 style="font-size:15px;margin:8px 0">Privados</h2>
     <div id="entre-lista">Cargando la bandeja…</div>
   </section>
   <section id="acceso" hidden>

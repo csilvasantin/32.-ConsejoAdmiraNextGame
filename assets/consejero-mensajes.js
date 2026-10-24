@@ -77,4 +77,6 @@
   }
   cargar();
   setInterval(cargar, 15000);
+  window.addEventListener("chat-hilo-sesion", cargar); // r96: sesión larga restaurada en pestaña nueva
+
 })();

@@ -111,7 +111,13 @@ const cacheGoogle = new Map();
 /** ID token de Google (login de admira.live): Google valida la firma en tokeninfo. */
 export async function emailGoogle(request, env, fetchImpl = fetch, ahora = Date.now()) {
   const jwt = credencial(request);
-  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt) || jwt.length > 4096) return null;
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt) || jwt.length > 4096) return emailSesion(request, env, ahora);
+  return emailIdToken(jwt, env, fetchImpl, ahora);
+}
+
+/** Solo el ID token de Google (sin cookie): lo usa /api/chat/sesion para emitir la sesión larga. */
+export async function emailIdToken(jwt, env, fetchImpl = fetch, ahora = Date.now()) {
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt || "") || jwt.length > 4096) return null;
   const hit = cacheGoogle.get(jwt);
   if (hit && hit.exp > ahora) return hit.email;
   let d;
@@ -120,7 +126,7 @@ export async function emailGoogle(request, env, fetchImpl = fetch, ahora = Date.
     if (!r.ok) return null;
     d = await r.json();
   } catch (e) { return null; }
-  const permitidos = String((env && env.CHAT_HILO_EMAILS) || EMAILS_DEFECTO.join(",")).toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+  const permitidos = emailsPermitidos(env);
   const aud = String((env && env.GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID);
   const email = String(d && d.email || "").toLowerCase();
   const exp = Number(d && d.exp) * 1000;
@@ -128,6 +134,64 @@ export async function emailGoogle(request, env, fetchImpl = fetch, ahora = Date.
   if (!d || d.aud !== aud || !verificado || !permitidos.includes(email) || !(exp > ahora)) return null;
   if (cacheGoogle.size > 200) cacheGoogle.clear();
   cacheGoogle.set(jwt, { email, exp });
+  return email;
+}
+
+// ── Sesión larga del chat (r96, 24-10-2026) ──────────────────────────────
+// Carlos: «si el usuario es csilva@admira.com o csilvasantin@gmail.com no volver a pedir el login».
+// Antes el chat guardaba el ID token de Google (1 h) en sessionStorage: se perdía en cada pestaña nueva
+// y caducaba a la hora. Ahora, tras verificar UNA vez el ID token en Google (servidor), se emite una
+// cookie HttpOnly firmada (HMAC-SHA256) de 180 días, host-only (__Host-), Secure, SameSite=Lax.
+// En cada petición se revalida firma, caducidad y que el email siga en la allowlist.
+export const COOKIE_SESION = "__Host-admira_chat";
+export const SESION_TTL_MS = 180 * 24 * 3600 * 1000;
+export function emailsPermitidos(env) {
+  return String((env && env.CHAT_HILO_EMAILS) || EMAILS_DEFECTO.join(",")).toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+}
+function secretoSesion(env) {
+  const c = [env && env.CHAT_SESION_SECRET, env && env.CHAT_HILO_TOKEN, env && env.CONSUMOS_LECTURAS_TOKEN, env && env.COUNCIL_MACHINE_TOKEN]
+    .map((x) => String(x || "").trim()).find((x) => x.length >= 16);
+  return c || null;
+}
+const b64u = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const desdeB64u = (t) => { const b = atob(t.replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, (c) => c.charCodeAt(0)); };
+async function firma(env, datos) {
+  const sec = secretoSesion(env); if (!sec) return null;
+  const enc = new TextEncoder();
+  // Separación de dominio: la llave de la cookie no es el secreto de máquina en claro.
+  const k = await crypto.subtle.importKey("raw", enc.encode("admira-chat-sesion-v1\u0000" + sec), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64u(await crypto.subtle.sign("HMAC", k, enc.encode(datos)));
+}
+export async function emitirSesion(env, email, ahora = Date.now()) {
+  const datos = b64u(new TextEncoder().encode(JSON.stringify({ v: 1, e: String(email).toLowerCase(), x: ahora + SESION_TTL_MS })));
+  const f = await firma(env, datos);
+  return f ? { valor: datos + "." + f, exp: ahora + SESION_TTL_MS } : null;
+}
+export function cookieSesion(valor, maxAgeS) {
+  return `${COOKIE_SESION}=${valor}; Path=/; Max-Age=${maxAgeS}; HttpOnly; Secure; SameSite=Lax`;
+}
+function leerCookie(request, nombre) {
+  for (const parte of String(request.headers.get("Cookie") || "").split(";")) {
+    const i = parte.indexOf("="); if (i > 0 && parte.slice(0, i).trim() === nombre) return parte.slice(i + 1).trim();
+  }
+  return "";
+}
+/** Email de la cookie de sesión si es válida (firma, caducidad, allowlist) y, si no es GET/HEAD, mismo origen. */
+export async function emailSesion(request, env, ahora = Date.now()) {
+  const v = leerCookie(request, COOKIE_SESION);
+  if (!v || v.length > 1024 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(v)) return null;
+  const metodo = String(request.method || "GET").toUpperCase();
+  if (metodo !== "GET" && metodo !== "HEAD") {
+    // Anti-CSRF además de SameSite=Lax: las escrituras con cookie exigen Origin del mismo sitio.
+    let propio = ""; try { propio = new URL(request.url).origin; } catch (e) {}
+    if (!propio || request.headers.get("Origin") !== propio) return null;
+  }
+  const [datos, f] = v.split(".");
+  const esperada = await firma(env, datos);
+  if (!esperada || !iguales(f, esperada)) return null;
+  let c; try { c = JSON.parse(new TextDecoder().decode(desdeB64u(datos))); } catch (e) { return null; }
+  const email = String(c && c.e || "").toLowerCase();
+  if (!c || c.v !== 1 || !(Number(c.x) > ahora) || Number(c.x) > ahora + SESION_TTL_MS + 60000 || !emailsPermitidos(env).includes(email)) return null;
   return email;
 }
 

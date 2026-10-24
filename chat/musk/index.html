@@ -76,8 +76,8 @@
     <button type="submit" id="boton">Enviar</button>
   </div>
 </form>
-<script src="/assets/consejero-mensajes.js?v=20261019-agentes"></script>
-<script src="/assets/chat-hilo-client.js?v=20261024-origen-hora"></script>
+<script src="/assets/consejero-mensajes.js?v=20261024-r96-sesion"></script>
+<script src="/assets/chat-hilo-client.js?v=20261024-r96-sesion"></script>
 <script>
 (function () {
   "use strict";
@@ -186,7 +186,7 @@
     enCurso = true;
     return fetch("/api/chat/hilo?persona=" + PERSONA + "&limite=200", { cache: "no-store", headers: { Authorization: "Bearer " + jwt } })
       .then(function (r) {
-        if (r.status === 401) { sessionStorage.removeItem(CLAVE); pedirAcceso("Tu sesión no está autorizada o ha caducado. Vuelve a entrar."); return null; }
+        if (r.status === 401) { C.olvidar(); pedirAcceso("Tu sesión no está autorizada o ha caducado. Vuelve a entrar."); return null; }
         return r.json();
       })
       .then(function (d) { if (d && d.ok) pintarHilo(d.turnos || []); })
@@ -237,8 +237,9 @@
     if (document.hidden) { clearTimeout(temporizador); temporizador = null; return; }
     if (activo) refrescar();
   });
+  // r96: sesión larga (cookie HttpOnly de 180 días). Pestaña nueva o recarga: si la cookie vive, no se pide login.
   if (credencial()) arrancar();
-  else { refrescar(); }
+  else C.restaurarSesion().then(function (ok) { if (ok && credencial()) arrancar(); else refrescar(); });
 })();
 </script>
 </body>

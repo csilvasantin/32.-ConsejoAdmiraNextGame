@@ -53,6 +53,7 @@
     layer.className = 'mac-proyecto';
     layer.id = 'mac-proyecto';
     layer.setAttribute('aria-hidden', 'true');
+    layer.setAttribute('inert', '');   // el iframe nunca roba el foco (Esc tiene que llegar a la escena)
     layer.innerHTML = '<iframe class="mac-proyecto__frame" title="Proyecto del consejero" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" tabindex="-1"></iframe><img class="mac-proyecto__shot" alt=""><span class="mac-proyecto__label"></span>';
     var shade = doc.getElementById('mac-hoy-shade');
     prop.insertBefore(layer, shade || null);

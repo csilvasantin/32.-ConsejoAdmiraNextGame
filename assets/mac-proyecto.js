@@ -106,7 +106,7 @@
   }
   function isOn() { return !!(layer && layer.classList.contains('on')); }
   if (root.document) {
-    root.document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOn()) hide(); });
+    root.document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOn()) hide(); }, true);
     // Clic fuera: ni en el Mac, ni en un consejero, ni en un verbo/barra → se guarda el Mac.
     root.document.addEventListener('click', function (e) {
       if (!isOn()) return;

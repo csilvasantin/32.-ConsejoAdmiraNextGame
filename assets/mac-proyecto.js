@@ -145,18 +145,26 @@
     // «remote» mac-hoy.js abría MacRemote (escritorio de la máquina) en lugar del frente.
     root.document.addEventListener('click', function (e) {
       if (!isOn()) return;
-      var g = e.target && e.target.closest && e.target.closest('#mac-hoy-glass');
+      var g = e.target && e.target.closest && e.target.closest('#mac-hoy-glass, .mac-scumm-glass');
       if (!g) return;
       e.preventDefault(); e.stopImmediatePropagation();
       var mac = root.MacHoy;
       ensureLayers(root.document);
       if (mac && mac.openFront) { mac.openFront(); mac.fitScreen && mac.fitScreen(); }
     }, true);
+    // Con un proyecto puesto, el proyecto SIGUE al consejero elegido (también con Preguntar).
+    root.document.addEventListener('click', function (e) {
+      if (!isOn() || !(e.target && e.target.closest && e.target.closest('.np, .body-hotspot'))) return;
+      setTimeout(function () {
+        var p = seleccionado();
+        if (p && isOn() && layer && layer.dataset.persona !== alias(p)) show(p);
+      }, 0);
+    }, true);
     // Clic fuera: ni en el Mac, ni en un consejero, ni en un verbo/barra → se guarda el Mac.
     root.document.addEventListener('click', function (e) {
       if (!isOn()) return;
       var t = e.target;
-      if (t && t.closest && t.closest('#mac-hoy-prop, #mac-hoy-front, .verb-btn, .rail-btn, .np, .body-hotspot, [data-persona], .mac-hoy-btn')) return;
+      if (t && t.closest && t.closest('#mac-hoy-prop, #mac-hoy-front, .mac-scumm, .council-preview, .mac-ultra, #btn-mostrar, .verb-btn, .rail-btn, .np, .body-hotspot, [data-persona], .mac-hoy-btn')) return;
       hide();
     }, true);
   }

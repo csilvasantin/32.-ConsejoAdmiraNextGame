@@ -170,3 +170,27 @@ export function turnoDeEncargo(persona, item, ahora = Date.now()) {
   if (!Number.isFinite(ts)) { const n = Number(item.done_at || item.updated_at); ts = Number.isFinite(n) && n > 0 ? (n < 1e11 ? n * 1000 : n) : ahora; }
   return { id: idRespuesta(item.id), persona, rol: persona, origen: "rutina", texto, ts: new Date(Math.min(ts, ahora)).toISOString(), recibido: new Date(ahora).toISOString(), encargo: Number(item.id), via: "bot-inbox" };
 }
+
+// ── Origen visible de cada mensaje (24-10-2026): «admira.live» o «Grok Bot» + hora HH:MM de Madrid ──
+export const ETIQUETA_ORIGEN = { live: "admira.live", app: "Grok Bot", rutina: "Grok Bot" };
+/** Origen visible de un turno. Si falta «origen», se deriva del canal (via/encargo) o del autor. */
+export function origenDe(t) {
+  if (!t) return "Grok Bot";
+  if (ETIQUETA_ORIGEN[t.origen]) return ETIQUETA_ORIGEN[t.origen];
+  if (t.via === "bot-inbox" || /^enc-\d+-resp$/.test(String(t.id || ""))) return "Grok Bot";
+  if (t.autor || t.entrega || /^live-/.test(String(t.id || ""))) return "admira.live";
+  return t.rol === "carlos" ? "admira.live" : "Grok Bot";
+}
+const HORA_MADRID = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hour12: false });
+export function horaMadrid(ts) { const n = Date.parse(ts); return Number.isFinite(n) ? HORA_MADRID.format(new Date(n)) : ""; }
+/** Turno con su origen visible y la hora de Madrid (no toca el KV: se añade al leer). */
+export function conOrigen(t) { return { ...t, origen_etiqueta: origenDe(t), hora: horaMadrid(t && t.ts) }; }
+
+/** Mensaje limpio para Grok Bot: autor, origen y hora por separado del texto (sin cabeceras pegadas). */
+export function mensajeLimpio(persona, turno, autorEmail) {
+  return {
+    autor: "Carlos Silva", autor_email: autorEmail && autorEmail !== "caja" ? autorEmail : null, rol: "carlos",
+    origen: "admira.live", canal: "chat/" + persona, para: NOMBRES[persona] || persona,
+    ts: turno.ts, hora: horaMadrid(turno.ts), zona: "Europe/Madrid", texto: turno.texto, msg_id: turno.id,
+  };
+}

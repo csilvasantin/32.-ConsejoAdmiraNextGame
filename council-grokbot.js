@@ -20,6 +20,10 @@
   const visitAt = Date.now();
   const inThisVisit = row => Math.max(timestamp(row?.createdAt), timestamp(row?.updatedAt)) >= visitAt - 5000;
   // encargo: Elon responde por su deepagent (encargo MCP de admira.live), no por el escritorio AX.
+  // «admira.live · 09:13» / «Grok Bot · 09:14»: origen y hora de Madrid, el mismo formato en todos (24-10-2026).
+  const HORA_MADRID = new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false});
+  function metaOrigen(origen,ts){const n=timestamp(ts);return n>0?origen+' · '+HORA_MADRID.format(new Date(n)):origen;}
+  function origenNodo(doc,origen,ts){const m=doc.createElement('span');m.className='council-chat__meta council-chat__origen';if(m.dataset)m.dataset.origen=origen==='admira.live'?'live':'grokbot';m.textContent=metaOrigen(origen,ts);return m;}
   const native = row => row.native === true && (row.source === 'desktop' || row.source === 'encargo' || row.source === 'inbox');
   const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native,row.attachments||[],row.fallbackAvailable,row.notice,row.replyProvider]);
   function reconcile(previous, incoming) {
@@ -130,12 +134,12 @@
           const item=doc.createElement('article');item.className='council-chat__turn';
           if(row.prompt){
             const user=doc.createElement('p');user.className='council-chat__user';
-            const userName=doc.createElement('strong');userName.textContent='Tú';user.append(userName,doc.createTextNode(row.prompt));item.append(user);
+            const userName=doc.createElement('strong');userName.textContent='Tú';user.append(userName,doc.createTextNode(row.prompt));item.append(user);item.append(origenNodo(doc,'admira.live',row.createdAt));
           }
           if(row.notice){const notice=doc.createElement('p');notice.className='council-chat__meta';notice.textContent=row.notice;item.append(notice);}
           if(row.text){
             const reply=doc.createElement('p');reply.className='council-chat__reply';
-            const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName);appendText(reply,row.text);item.append(reply);
+            const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName);appendText(reply,row.text);item.append(reply);item.append(origenNodo(doc,'Grok Bot',row.updatedAt||row.createdAt));
           }else if((encargo()||inbox())&&native(row)&&typing(row.status)){
             // Indicador «escribiendo…» mientras su deepagent contesta (como en GrokBot).
             const reply=doc.createElement('p');reply.className='council-chat__reply council-chat__typing';reply.title=FULL[row.persona]+' está escribiendo';
@@ -438,7 +442,7 @@
           const body=doc.createElement('p');body.className=carlos?'council-chat__user':'council-chat__reply';
           const who=doc.createElement('strong');who.textContent=carlos?'Tú':selected;body.append(who);appendText(body,String(t.texto||''));item.append(body);
           const meta=doc.createElement('span');meta.className='council-chat__meta';
-          const ts=Date.parse(t.ts);meta.textContent=Number.isFinite(ts)?horaHilo.format(new Date(ts)):'';
+          const org=doc.createElement('span');org.className='council-chat__origen';if(org.dataset)org.dataset.origen=hilo.origenTurno(t)==='admira.live'?'live':'grokbot';org.textContent=metaOrigen(hilo.origenTurno(t),t.ts);meta.append(org);
           const est=hilo.textoEstado(t,shortName(selected));if(est){const e=doc.createElement('span');e.className='council-chat__estado';e.textContent=' · '+est;meta.append(e);}
           item.append(meta);log.append(item);
         }

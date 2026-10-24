@@ -113,6 +113,10 @@ test("enviar: guarda turno live, crea UN encargo [chat-coetaneos] y es idempoten
   assert.match(cuerpo.text, /msg_id live-abc123/);
   assert.equal(cuerpo.target_persona, "Jobs");
   assert.equal(cuerpo.target_machine, "grokbot");
+  // Mensaje limpio para Grok Bot (24-10-2026): autor, origen y hora aparte del texto.
+  assert.equal(cuerpo.mensaje.autor, "Carlos Silva"); assert.equal(cuerpo.mensaje.origen, "admira.live");
+  assert.equal(cuerpo.mensaje.texto, "Prueba"); assert.equal(cuerpo.mensaje.msg_id, "live-abc123");
+  assert.equal(cuerpo.mensaje.zona, "Europe/Madrid"); assert.match(cuerpo.mensaje.hora, /^\d{2}:\d{2}$/);
   assert.equal(llamadas[0].init.headers.authorization, "Bearer panel-key");
   const r2 = await enviarApi.onRequestPost({ request: req({ texto: "Prueba", msg_id: "live-abc123" }), env: e, fetchImpl });
   assert.equal((await r2.json()).duplicado, true);
@@ -124,6 +128,7 @@ test("enviar: guarda turno live, crea UN encargo [chat-coetaneos] y es idempoten
   assert.equal(t.encargo_estado, "done");
   const resp = g.turnos.find((x) => x.id === "enc-9001-resp");
   assert.equal(resp.rol, "jobs"); assert.equal(resp.origen, "rutina"); assert.equal(resp.texto, "Respuesta de Jobs");
+  assert.equal(t.origen_etiqueta, "admira.live"); assert.equal(resp.origen_etiqueta, "Grok Bot"); assert.match(resp.hora, /^\d{2}:\d{2}$/);
 });
 
 test("enviar: fallo del bot-inbox queda en error, sin token de panel 503", async () => {

@@ -191,14 +191,16 @@
 
         /* The artwork banners and CLI share one generation action. */
         .council-generation { position:absolute; inset:0; z-index:4; pointer-events:none; }
-        .council-generation button { position:absolute; top:2%; min-height:32px; padding:8px 12px; border:2px solid #d7a640; color:#ffe18a; background:#6e1821; font:clamp(8px,1vw,13px) 'Press Start 2P',monospace; cursor:pointer; pointer-events:auto; }
-        .council-generation [data-council-generation="leyendas"] { left:2.5%; }
-        .council-generation [data-council-generation="coetaneos"] { right:2.5%; background:#103759; }
-        .council-generation button:hover, .council-generation button:focus-visible { outline:3px solid #ffe465; outline-offset:2px; background-color:#9a632b55; }
-        .council-generation button[aria-pressed="true"] { border-color:#fff0a0; }
-        [data-generation="coetaneos"] .council-generation button { top:4%; width:34%; height:21%; padding:0; border:0; background:transparent; }
-        [data-generation="coetaneos"] .council-generation button span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
-        [data-generation="coetaneos"] .council-generation button:hover { background:#ffdd4418; }
+        /* r100 (Carlos, 24-10-2026): sin carteles; los cuadros de la pared son el enlace que alterna Leyendas <-> Coetáneos. */
+        .council-generation button { position:absolute; padding:0; border:0; background:transparent; cursor:pointer; pointer-events:auto; }
+        .council-generation button span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+        [data-generation="leyendas"] .council-generation button { top:7.5%; width:4.6%; height:25.5%; }
+        [data-generation="leyendas"] .council-generation [data-council-generation="leyendas"] { left:0; }
+        [data-generation="leyendas"] .council-generation [data-council-generation="coetaneos"] { right:0; }
+        [data-generation="coetaneos"] .council-generation button { top:4%; width:34%; height:21%; }
+        [data-generation="coetaneos"] .council-generation [data-council-generation="leyendas"] { left:2.5%; }
+        [data-generation="coetaneos"] .council-generation [data-council-generation="coetaneos"] { right:2.5%; }
+        .council-generation button:hover, .council-generation button:focus-visible { background:#ffdd4422; outline:2px solid #ffe46588; outline-offset:-2px; }
 
         /* Nameplate overlays */
         .nameplates {
@@ -3730,8 +3732,8 @@ body.rail-open{overflow:hidden}
         <div class="council-image" data-generation="leyendas">
             <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext" onload="this.closest('.council-image')&&this.closest('.council-image').classList.add('loaded')">
             <nav class="council-generation" aria-label="Generación del Consejo">
-                <button type="button" data-council-generation="leyendas" aria-label="Mostrar Leyendas" aria-pressed="true" title="Mostrar Leyendas · /leyendas" data-en-aria-label="Show Legends" data-en-title="Show Legends · /leyendas"><span data-en="★ Legends">★ Leyendas</span></button>
-                <button type="button" data-council-generation="coetaneos" aria-label="Mostrar Coetáneos" aria-pressed="false" title="Mostrar Coetáneos · /coetaneos" data-en-aria-label="Show Contemporaries" data-en-title="Show Contemporaries · /coetaneos"><span data-en="🚀 Contemporaries">🚀 Coetáneos</span></button>
+                <button type="button" data-council-generation="leyendas" aria-label="Cuadro: cambiar de consejo (Leyendas ↔ Coetáneos)" aria-pressed="true" title="Cambiar de consejo · Leyendas ↔ Coetáneos" data-en-aria-label="Frame: switch council (Legends ↔ Contemporaries)" data-en-title="Switch council · Legends ↔ Contemporaries"><span data-en="★ Legends">★ Leyendas</span></button>
+                <button type="button" data-council-generation="coetaneos" aria-label="Cuadro: cambiar de consejo (Leyendas ↔ Coetáneos)" aria-pressed="false" title="Cambiar de consejo · Leyendas ↔ Coetáneos" data-en-aria-label="Frame: switch council (Legends ↔ Contemporaries)" data-en-title="Switch council · Legends ↔ Contemporaries"><span data-en="🚀 Contemporaries">🚀 Coetáneos</span></button>
             </nav>
             <!-- Conversation overlays on background windows -->
             <div class="window-overlay racional" id="win-racional">

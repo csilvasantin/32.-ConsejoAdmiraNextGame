@@ -3,6 +3,25 @@
  */
 (function (root) {
   'use strict';
+  function lineaDibujo(l){
+    const t=l.replace(/\s+$/,'');if(t.trim().length<3)return false;
+    const sim=(t.match(/[|+\-_\/\\#=*<>^~.:'"`()\[\]{}@%&$]/g)||[]).length;
+    const txt=t.replace(/\s/g,'').length;
+    return sim/txt>=0.45||(/\S {3,}\S/.test(t)&&sim/txt>=0.25);
+  }
+  function trozosAscii(text){
+    const out=[];const push=(ascii,t)=>{if(!t)return;const last=out[out.length-1];if(last&&last.ascii===ascii&&!ascii)last.text+=t;else out.push({ascii,text:t});};
+    const partes=String(text||'').split(/```[^\n]*\n?/);
+    partes.forEach((parte,i)=>{
+      if(i%2===1){push(true,parte.replace(/\n+$/,''));return;}
+      const lineas=parte.split('\n');let buf=[],dib=[];
+      const volcar=()=>{if(dib.length>=3){if(buf.length)push(false,buf.join('\n')+'\n');buf=[];push(true,dib.join('\n'));}else buf.push(...dib);dib=[];};
+      for(const l of lineas){if(lineaDibujo(l)||(dib.length>=2&&/\S {3,}\S/.test(l)))dib.push(l);else{volcar();buf.push(l);}}
+      volcar();if(buf.length)push(false,(out.length&&out[out.length-1].ascii?'\n':'')+buf.join('\n'));
+    });
+    return out.length?out:[{ascii:false,text:String(text||'')}];
+  }
+  root.CouncilAscii={trozosAscii,lineaDibujo};
   const PEOPLE = Object.freeze({
     'Steve Jobs': 'Jobs', 'Steve Wozniak': 'Wozniak',
     'Walt Disney': 'Disney', 'George Lucas': 'Lucas',
@@ -116,6 +135,16 @@
         offset=match.index+url.length;
       }
       node.append(doc.createTextNode(text.slice(offset)));
+    }
+    // r99 (Carlos, 24-10-2026 14:48 · encargo #7144): dibujos ASCII enteros en la Conversación.
+    // Bloques ```…``` o ≥3 líneas seguidas «de dibujo» (casi todo símbolos/espacios) van en <pre>
+    // monoespaciado, sin juntar ni partir líneas; si no caben a lo ancho, scroll horizontal en la burbuja.
+    function appendRich(node,text){
+      const segs=trozosAscii(text);
+      segs.forEach((seg,i)=>{
+        if(!seg.ascii){let t=seg.text;if(segs[i-1]?.ascii)t=t.replace(/^\n+/,'');if(segs[i+1]?.ascii)t=t.replace(/\n+$/,'');if(t)appendText(node,t);return;}
+        if(seg.ascii){const pre=doc.createElement('pre');pre.className='council-chat__ascii';pre.textContent=seg.text;node.append(pre);}
+      });
     }
     function render(){
       if(destroyed)return;
@@ -442,7 +471,7 @@
           const carlos=t.rol==='carlos';
           const item=doc.createElement('article');item.className='council-chat__turn council-chat__hilo '+(carlos?'council-chat__hilo--carlos':'council-chat__hilo--persona');
           const body=doc.createElement('p');body.className=carlos?'council-chat__user':'council-chat__reply';
-          const who=doc.createElement('strong');who.textContent=carlos?'Tú':selected;body.append(who);appendText(body,String(t.texto||''));item.append(body);
+          const who=doc.createElement('strong');who.textContent=carlos?'Tú':selected;body.append(who);appendRich(body,String(t.texto||''));item.append(body);
           const meta=doc.createElement('span');meta.className='council-chat__meta';
           const org=doc.createElement('span');org.className='council-chat__origen';if(org.dataset)org.dataset.origen=hilo.origenTurno(t)==='admira.live'?'live':'grokbot';org.textContent=metaOrigen(hilo.origenTurno(t),t.ts);meta.append(org);
           const est=hilo.textoEstado(t,shortName(selected));if(est){const e=doc.createElement('span');e.className='council-chat__estado';e.textContent=' · '+est;meta.append(e);}

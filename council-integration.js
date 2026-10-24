@@ -12,7 +12,9 @@
     'Steve Jobs':'left','Steve Wozniak':'left','Tim Cook':'left','Warren Buffett':'center',
     'Walt Disney':'center','Dieter Rams':'right','Howard Schultz':'right','George Lucas':'right'
   };
-  const tails={'Steve Jobs':'8%','Steve Wozniak':'40%','Tim Cook':'82%','Warren Buffett':'28%','Walt Disney':'81%','Dieter Rams':'26%','Howard Schultz':'71%','George Lucas':'88%'};
+  // Bocadillo grande (Carlos, 24-10-2026 14:48): ocupa toda la ventana del fondo (12%–88% de la escena),
+  // así que la cola apunta al consejero dentro de ese ancho.
+  const tails={'Steve Jobs':'5%','Steve Wozniak':'14%','Tim Cook':'26%','Warren Buffett':'43%','Walt Disney':'60%','Dieter Rams':'76%','Howard Schultz':'90%','George Lucas':'95%'};
   function layoutBubble(){
     const compact=image.getBoundingClientRect().width<1250||generation!=='leyendas';
     bubble.classList.toggle('grokbot-docked',compact);
@@ -40,7 +42,18 @@
   }
   // Una sola conversación (Carlos, 24-10-2026): la respuesta completa vive en la caja «Conversación»;
   // el cartel de la mesa es solo un bocadillo con la última frase (~80 caracteres, con elipsis).
-  function bocadillo(text,max=80){
+  // Dibujos ASCII (24-10-2026 14:48): si la respuesta trae un bloque ```…```, el bocadillo enseña el
+  // bloque entero tal cual (monoespaciado, sin juntar líneas), p. ej. la bandera de Canadá de Woz.
+  function bloqueAscii(text){
+    const m=String(text||'').match(/```[^\n]*\n([\s\S]*?)(?:```|$)/);
+    if(!m)return '';
+    const bloque=m[1].replace(/\s+$/,'');
+    return bloque.split('\n').length>=2?bloque:'';
+  }
+  function bocadillo(text,max=160){
+    const ascii=bloqueAscii(text);
+    bubble.classList.toggle('grokbot-ascii',!!ascii);
+    if(ascii)return ascii;
     const plano=String(text||'').replace(/\s+/g,' ').trim();
     if(!plano)return '';
     const frases=plano.match(/[^.!?…]+[.!?…]+["»”)]*|[^.!?…]+$/g)||[plano];

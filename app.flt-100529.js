@@ -1425,6 +1425,8 @@
         if (currentVerb === 'examinar') {
             enterPreguntarMode();
             setActionLine("👁 Examinar — haz clic en un consejero: su pantalla viva en el Mac 1984");
+        } else if (currentVerb === 'preguntar' && window.MacProyecto && window.MacProyecto.isOn()) {
+            // Preguntar no guarda el Mac: el proyecto sigue al consejero elegido (Carlos, 24-10 17:43).
         } else if (window.MacProyecto && window.MacProyecto.isOn()) {
             window.MacProyecto.hide();   // otro verbo guarda el Mac del proyecto
         } else if (window.MacHoy && window.MacHoy.clearRemote) {

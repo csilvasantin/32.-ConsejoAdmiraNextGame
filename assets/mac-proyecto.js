@@ -160,6 +160,15 @@
         if (p && isOn() && layer && layer.dataset.persona !== alias(p)) show(p);
       }, 0);
     }, true);
+    // Cualquier entrada que ponga en el Mac la pantalla de un consejero (Examinar, pestaña
+    // «Escritorio» de Previos, MAC 1984…) trae también su PROYECTO: así ninguna vista ampliada cae
+    // al mosaico de los 6 con un consejero elegido.
+    root.document.addEventListener('mac-screen-mode', function (e) {
+      var d = e.detail || {};
+      if (d.mode !== 'remote' || !d.persona) return;
+      if (isOn() && layer && layer.dataset.persona === alias(d.persona)) return;
+      show(d.persona);
+    });
     // Clic fuera: ni en el Mac, ni en un consejero, ni en un verbo/barra → se guarda el Mac.
     root.document.addEventListener('click', function (e) {
       if (!isOn()) return;

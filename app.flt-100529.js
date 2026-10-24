@@ -5170,7 +5170,7 @@
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll("[data-council-generation]").forEach(button => {
-            button.addEventListener("click", () => handleCliCommandBase("/" + button.dataset.councilGeneration)); // un botón no cambia el idioma
+            button.addEventListener("click", () => handleCliCommandBase(currentGen === "leyendas" ? "/coetaneos" : "/leyendas")); // r100: cualquier cuadro alterna Leyendas <-> Coetáneos
         });
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
         // La barra de verbos arranca EXPANDIDA por defecto (Carlos, 19-09-2026): solo queda

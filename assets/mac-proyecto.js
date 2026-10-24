@@ -45,58 +45,86 @@
       })
       .catch(function () { return def; });
   }
-  function ensureLayer(doc) {
-    if (layer && layer.isConnected) return layer;
-    var prop = doc.getElementById('mac-hoy-prop');
-    if (!prop) return null;
-    layer = doc.createElement('div');
-    layer.className = 'mac-proyecto';
-    layer.id = 'mac-proyecto';
-    layer.setAttribute('aria-hidden', 'true');
-    layer.setAttribute('inert', '');   // el iframe nunca roba el foco (Esc tiene que llegar a la escena)
-    layer.innerHTML = '<iframe class="mac-proyecto__frame" title="Proyecto del consejero" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" tabindex="-1"></iframe><img class="mac-proyecto__shot" alt=""><span class="mac-proyecto__label"></span>';
-    var shade = doc.getElementById('mac-hoy-shade');
-    prop.insertBefore(layer, shade || null);
-    return layer;
+  // Una capa por superficie: el Mac de la mesa (#mac-hoy-prop) y CADA vista frontal ampliada
+  // (.mac-hoy-front-stage: la grande con CERRAR y la pequeña de Previos). Antes solo existía la
+  // de la mesa y la ampliada seguía enseñando el mosaico de los 6 (Carlos, 24-10 16:49).
+  var layers = [];
+  function makeLayer(doc, host, front) {
+    var el = doc.createElement('div');
+    el.className = 'mac-proyecto' + (front ? ' mac-proyecto--front' : '');
+    el.setAttribute('aria-hidden', 'true');
+    el.setAttribute('inert', '');   // el iframe nunca roba el foco (Esc tiene que llegar a la escena)
+    el.innerHTML = '<iframe class="mac-proyecto__frame" title="Proyecto del consejero" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" tabindex="-1"></iframe><img class="mac-proyecto__shot" alt=""><span class="mac-proyecto__label"></span>';
+    var before = front ? host.querySelector('.mac-hoy-front-shade') : doc.getElementById('mac-hoy-shade');
+    host.insertBefore(el, before || null);
+    return el;
   }
+  function ensureLayers(doc) {
+    layers = layers.filter(function (l) { return l.isConnected; });
+    var prop = doc.getElementById('mac-hoy-prop');
+    if (prop && !prop.querySelector(':scope > .mac-proyecto')) layers.push(makeLayer(doc, prop, false));
+    doc.querySelectorAll('.mac-hoy-front-stage').forEach(function (st) {
+      if (!st.querySelector(':scope > .mac-proyecto')) layers.push(makeLayer(doc, st, true));
+    });
+    layer = layers[0] || null;
+    return layers;
+  }
+  function each(fn) { layers.forEach(function (el) { fn(el, el.querySelector('iframe'), el.querySelector('img'), el.querySelector('span')); }); }
   function show(persona, opts) {
     opts = opts || {};
     var doc = root.document, a = alias(persona), my = ++gen;
     var mac = root.MacHoy;
     if (mac && !mac.isVisible()) { mac.setVisible(true); encendidoPorMi = true; }
-    var el = ensureLayer(doc);
-    if (!el) return Promise.resolve(null);
-    var frame = el.querySelector('iframe'), shot = el.querySelector('img'), label = el.querySelector('span');
-    el.classList.add('on'); el.dataset.persona = a; el.dataset.modo = 'cargando';
-    label.textContent = a + ' · buscando proyecto…';
+    if (!ensureLayers(doc).length) return Promise.resolve(null);
+    each(function (el, frame, shot, label) {
+      el.classList.add('on'); el.dataset.persona = a; el.dataset.modo = 'cargando';
+      label.textContent = a + ' · buscando proyecto…';
+    });
     doc.body.classList.add('examinar-mac');
     if (mac && mac.fitScreen) { mac.fitScreen(); setTimeout(function () { mac.fitScreen(); }, 60); }
     return proyectoDe(a, opts.fetch).then(function (info) {
       if (my !== gen) return null;
       var url = urlDe(info.proyecto);
-      label.textContent = a + ' · ' + info.proyecto;
-      el.dataset.proyecto = info.proyecto; el.dataset.fuente = info.fuente;
       var check = (opts.fetch || root.fetch)('/api/council/frameable?url=' + encodeURIComponent(url))
         .then(function (r) { return r.json(); }).catch(function () { return { frameable: true }; });
       return check.then(function (c) {
         if (my !== gen) return null;
-        if (c && c.frameable === false) {
-          frame.removeAttribute('src'); frame.style.display = 'none';
-          shot.src = 'https://image.thum.io/get/width/1280/crop/855/' + url;
-          shot.style.display = 'block'; el.dataset.modo = 'captura';
-        } else {
-          shot.style.display = 'none'; shot.removeAttribute('src');
-          frame.style.display = 'block';
-          if (frame.getAttribute('src') !== url) { frame.onload = function () { setTimeout(devuelveFoco, 50); setTimeout(devuelveFoco, 1500); }; frame.src = url; }
-          el.dataset.modo = 'vivo';
-        }
-        return { persona: a, proyecto: info.proyecto, url: url, fuente: info.fuente, modo: el.dataset.modo };
+        var captura = c && c.frameable === false;
+        each(function (el, frame, shot, label) {
+          label.textContent = a + ' · ' + info.proyecto;
+          el.dataset.proyecto = info.proyecto; el.dataset.fuente = info.fuente;
+          if (captura) {
+            frame.removeAttribute('src'); frame.style.display = 'none';
+            shot.src = 'https://image.thum.io/get/width/1280/crop/855/' + url;
+            shot.style.display = 'block'; el.dataset.modo = 'captura';
+          } else {
+            shot.style.display = 'none'; shot.removeAttribute('src');
+            frame.style.display = 'block';
+            if (frame.getAttribute('src') !== url) { frame.onload = function () { setTimeout(devuelveFoco, 50); setTimeout(devuelveFoco, 1500); }; frame.src = url; }
+            el.dataset.modo = 'vivo';
+          }
+        });
+        return { persona: a, proyecto: info.proyecto, url: url, fuente: info.fuente, modo: captura ? 'captura' : 'vivo' };
       });
     });
   }
+  // Consejero seleccionado en la escena (placa o cuerpo marcados), o null.
+  function seleccionado() {
+    var d = root.document;
+    var el = d && d.querySelector('.np.selected[data-persona], .body-hotspot.selected[data-persona]');
+    return el ? el.getAttribute('data-persona') : null;
+  }
+  // Verbo MAC 1984: con consejero elegido, su proyecto en el Mac (y la vista ampliada); sin nadie, lo de siempre.
+  function verboMac() {
+    var p = seleccionado(), mac = root.MacHoy;
+    if (!p) { if (isOn()) hide(); if (mac) mac.toggle(); return; }
+    if (isOn() && layer && layer.dataset.persona === alias(p)) { hide({ apagar: true }); return; }
+    if (mac && mac.showRemote) mac.showRemote(p);
+    show(p);
+  }
   function hide(opts) {
     gen++;
-    if (layer) { layer.classList.remove('on'); var f = layer.querySelector('iframe'); if (f) f.removeAttribute('src'); }
+    each(function (el, f) { el.classList.remove('on'); if (f) f.removeAttribute('src'); });
     if (root.document) root.document.body.classList.remove('examinar-mac');
     var mac = root.MacHoy;
     if (mac && mac.fitScreen) mac.fitScreen();
@@ -106,8 +134,8 @@
   }
   // Algunos sites hacen autofocus y el iframe se queda el teclado: lo devolvemos a la escena.
   function devuelveFoco() {
-    var d = root.document, f = layer && layer.querySelector('iframe');
-    if (isOn() && f && d.activeElement === f) { try { f.blur(); } catch (e) {} try { root.focus(); } catch (e) {} if (d.body) { d.body.tabIndex = -1; d.body.focus({ preventScroll: true }); } }
+    var d = root.document, f = d && d.activeElement;
+    if (isOn() && f && f.classList && f.classList.contains('mac-proyecto__frame')) { try { f.blur(); } catch (e) {} try { root.focus(); } catch (e) {} if (d.body) { d.body.tabIndex = -1; d.body.focus({ preventScroll: true }); } }
   }
   if (root.addEventListener) root.addEventListener('blur', function () { setTimeout(devuelveFoco, 0); });
   function isOn() { return !!(layer && layer.classList.contains('on')); }
@@ -121,5 +149,5 @@
       hide();
     }, true);
   }
-  root.MacProyecto = { show: show, hide: hide, isOn: isOn, urlDe: urlDe, proyectoDe: proyectoDe, PROYECTO_URL: PROYECTO_URL, DEFECTO_SILLA: DEFECTO_SILLA, W: W, H: H };
+  root.MacProyecto = { show: show, hide: hide, verboMac: verboMac, seleccionado: seleccionado, isOn: isOn, urlDe: urlDe, proyectoDe: proyectoDe, PROYECTO_URL: PROYECTO_URL, DEFECTO_SILLA: DEFECTO_SILLA, W: W, H: H };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -38,7 +38,14 @@ const { createServiceBridge } = require('./service-bridge');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
-const grokBotDesktop = createGrokBotDesktop();
+// snapshot_too_large -> view-only frame via the local 'screenshot' action (as /api/live/frame).
+const grokBotDesktop = createGrokBotDesktop({screenshot: async () => {
+  const m = machineById('macmini'), fn = m && resolveAction('screenshot', m);
+  if (!fn) return null;
+  const r = await run(m, fn(0, m), 20000);
+  const b64 = String(r.stdout || '').trim();
+  return r.rc === 0 && b64.length >= 200 && !/ERR_/.test(b64) ? b64 : null;
+}});
 const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
   ? grokBotDesktop : grokBotLegacy;
 // Elon (CEO) y Jensen (CTO) no viven en el Grok Bot del Mac Mini: su chat se enruta como

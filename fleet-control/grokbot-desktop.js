@@ -152,12 +152,12 @@ function parseSnapshot(value, now) {
 
 function createGrokBotDesktop({environment = process.env, runNative, now = Date.now, store,
   pollIntervalMs = 2500, nativeTimeoutMs = 15000,
-  setTimer = setTimeout, clearTimer = clearTimeout} = {}) {
+  setTimer = setTimeout, clearTimer = clearTimeout, screenshot = null} = {}) {
   const owners = new Set(String(environment.GROKBOT_DESKTOP_OWNER_EMAILS || '').split(/[\s,;]+/).map(email => email.trim().toLowerCase()).filter(email => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)));
   const binary = String(environment.GROKBOT_AX_BINARY || '');
   const configured = owners.size > 0 && path.isAbsolute(binary) && !binary.includes('\0');
   const native = runNative || createNativeRunner({environment, timeoutMs:nativeTimeoutMs});
-  const remoteDesktop = createRemoteDesktop({runNative:native,now});
+  const remoteDesktop = createRemoteDesktop({runNative:native,now,screenshot});
   const state = store || createDesktopStore(environment.GROKBOT_DESKTOP_STATE_FILE || path.join(os.homedir(), '.fleet', 'grokbot-desktop-state.json'));
   const uploads=createAttachments(path.join(path.dirname(environment.GROKBOT_DESKTOP_STATE_FILE||path.join(os.homedir(),'.fleet','grokbot-desktop-state.json')),'grokbot-uploads'));
   let queue = Promise.resolve(), last = null, reason = configured ? 'desktop_not_observed' : 'desktop_not_configured';

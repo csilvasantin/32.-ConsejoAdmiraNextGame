@@ -7,7 +7,7 @@ const { createGrokBotRouter } = require('./grokbot-encargo');
 
 test('server.js deja remote con el chat en webhook y no arranca el escritorio', () => {
   const server = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
-  assert.match(server, /const grokBotDesktop = createGrokBotDesktop\(\);/);
+  assert.match(server, /const grokBotDesktop = createGrokBotDesktop\(/);
   assert.match(server, /GROKBOT_CHAT_PROVIDER === 'desktop'\s*\?\s*grokBotDesktop : grokBotLegacy/);
   assert.match(server, /if \(!grokBotBridge\.remote\) grokBotBridge\.remote = \(\.\.\.a\) => grokBotDesktop\.remote\(\.\.\.a\);/);
   assert.doesNotMatch(server, /grokBotDesktop\.start\(/);

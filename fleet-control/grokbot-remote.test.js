@@ -43,3 +43,13 @@ test('serialized interaction tolerates capture latency without relaxing target v
  await bridge.handle(owner,{action:'input',token:opened.token,frameId:opened.frame.id,event:{type:'key',key:'Backspace'}});
  assert.deepEqual(last.remoteTarget,target);
 });
+test('snapshot_too_large falls back to a view-only screenshot frame',async()=>{
+ const jpg=Buffer.from([0xff,0xd8,0xff,0xc0,0,17,8,0,50,0,80,3,1,0x22,0,2,0x11,1,3,0x11,1,0xff,0xd9]).toString('base64');
+ const s={email:'carlos@example.test',jti:'j'};
+ let bridge=createRemoteDesktop({runNative:async()=>({ok:false,error:'snapshot_too_large'}),screenshot:async()=>jpg});
+ const o=await bridge.handle(s,{action:'open',persona:'Jobs'});
+ assert.equal(o.viewOnly,true);assert.equal(o.frame.width,80);assert.equal(o.frame.height,50);assert.equal(o.message,'solo vista: ventana demasiado grande');
+ await assert.rejects(bridge.handle(s,{action:'input',token:o.token,frameId:o.frame.id,event:{type:'key',key:'a'}}),e=>e.code==='remote_view_only');
+ bridge=createRemoteDesktop({runNative:async()=>({ok:false,error:'snapshot_too_large'}),screenshot:async()=>null});
+ await assert.rejects(bridge.handle(s,{action:'open',persona:'Jobs'}),e=>e.code==='remote_snapshot_too_large');
+});

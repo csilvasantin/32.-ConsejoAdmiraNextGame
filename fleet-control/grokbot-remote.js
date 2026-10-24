@@ -21,11 +21,26 @@ function validateInput(event){
 }
 const NATIVE={application_not_running:'remote_app_not_running',application_ambiguous:'remote_app_ambiguous',accessibility_required:'remote_accessibility_required',conversation_window_unavailable:'remote_conversation_unavailable',unsupported_or_ambiguous_conversation:'remote_conversation_unavailable',persona_not_selected:'remote_selection_changed',bridge_busy:'remote_bridge_busy',bridge_lock_unavailable:'remote_bridge_busy'};
 const remoteCode=e=>/^remote_[a-z_]+$/.test(e)?e:(NATIVE[e]||'remote_capture_unavailable');
-function createRemoteDesktop({runNative,now=Date.now}){
+// JPEG SOF -> {width,height} (screenshot fallback has no AX geometry).
+function jpegSize(b){for(let i=2;i+9<b.length;){if(b[i]!==0xff){i++;continue;}const m=b[i+1],len=b.readUInt16BE(i+2);if(m>=0xc0&&m<=0xcf&&![0xc4,0xc8,0xcc].includes(m))return {width:b.readUInt16BE(i+7),height:b.readUInt16BE(i+5)};i+=2+len;}return null;}
+const VIEW_ONLY_MESSAGE='solo vista: ventana demasiado grande';
+function createRemoteDesktop({runNative,now=Date.now,screenshot=null}){
  const sessions=new Map();
  const owner=s=>s?.email&&s?.jti?String(s.email).toLowerCase()+'\0'+s.jti:fail('authenticated_session_required',401);
  async function capture(row,action="remote_frame"){
   const result=await runNative({action,persona:PERSONAS[row.persona]});
+  // Window too large for the AX frame: fall back to the plain macOS screenshot
+  // (same path as /api/live/frame). View only: no target stored, so input is rejected.
+  if(!result?.ok&&result?.error==='snapshot_too_large'){
+   let jpeg=null;try{jpeg=screenshot?String(await screenshot()||'').trim():null;}catch(_){jpeg=null;}
+   const size=jpeg&&jpeg.startsWith('/9j/')&&jpeg.length<=8*1024*1024?jpegSize(Buffer.from(jpeg,'base64')):null;
+   if(!size)fail('remote_snapshot_too_large',503);
+   const id=crypto.randomBytes(12).toString('hex');
+   row.frames.set(id,{target:null,viewOnly:true,at:now()});
+   for(const [key,v] of row.frames)if(now()-v.at>FRAME_MAX_AGE_MS||row.frames.size>8)row.frames.delete(key);
+   row.expires=now()+300000;
+   return {frame:{id,jpeg,width:size.width,height:size.height,viewOnly:true},viewOnly:true,message:VIEW_ONLY_MESSAGE,persona:row.persona};
+  }
   if(!result?.ok)fail(remoteCode(result?.error),503);
   const t=result.target,f=result.frame;
   if(!t||t.persona!==PERSONAS[row.persona]||![t.pid,t.windowID,t.x,t.y,t.width,t.height].every(Number.isFinite)||t.pid<=0||t.windowID<=0||t.width<100||t.height<100||typeof f?.jpeg!=='string'||!f.jpeg.startsWith('/9j/')||f.jpeg.length>8*1024*1024||!Number.isFinite(f.width)||!Number.isFinite(f.height))fail('remote_invalid_frame',503);
@@ -54,6 +69,7 @@ function createRemoteDesktop({runNative,now=Date.now}){
   if(body.action==='input'){
    const event=validateInput(body.event),frame=row.frames.get(body.frameId);
    if(!frame||now()-frame.at>FRAME_MAX_AGE_MS)fail('remote_frame_expired');
+   if(frame.viewOnly||!frame.target)fail('remote_view_only',409);
    const result=await runNative({action:'remote_input',persona:PERSONAS[row.persona],remoteTarget:frame.target,remoteEvent:event});
    if(!result?.ok)fail(/^remote_[a-z_]+$/.test(result?.error)?result.error:'remote_input_unconfirmed');
    row.expires=now()+300000;return {accepted:true};
@@ -62,4 +78,4 @@ function createRemoteDesktop({runNative,now=Date.now}){
  }
  return {handle};
 }
-module.exports={createRemoteDesktop,validateInput,RemoteError};
+module.exports={createRemoteDesktop,validateInput,RemoteError,VIEW_ONLY_MESSAGE};

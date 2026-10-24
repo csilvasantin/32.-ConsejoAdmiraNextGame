@@ -37,6 +37,8 @@ const MESSAGES={
   remote_window_unavailable:'La ventana de GrokBot no está disponible.',
   remote_frame_expired:'La imagen ya no está actualizada. Pulsa Reconectar antes de continuar.',
   remote_session_expired:'La conexión ha caducado. Pulsa Reconectar.',
+  remote_view_only:'Solo vista: ventana demasiado grande. El ratón y el teclado no están disponibles.',
+  remote_snapshot_too_large:'La ventana de GrokBot es demasiado grande para capturarla. Redúcela y pulsa Reconectar.',
   remote_input_unconfirmed:'No se pudo confirmar la entrada. Comprueba la pantalla antes de repetir.',
   session_expired:'Inicia sesión en admira.live para conectar.'
 };
@@ -68,7 +70,7 @@ export function openRemote(personaHint){
     if(closed||version!==generation)return;
     const next=new Image();next.src='data:image/jpeg;base64,'+data.frame.jpeg;
     await next.decode();if(closed||version!==generation)return;
-    img.src=next.src;img.hidden=false;frame=data.frame;ready=true;recovering=false;frameFailures=0;hint.hidden=true;say('Conectado · ratón y teclado activos');
+    img.src=next.src;img.hidden=false;frame=data.frame;ready=true;recovering=false;frameFailures=0;hint.hidden=true;say(data.viewOnly?'Solo vista: ventana demasiado grande':'Conectado · ratón y teclado activos');
     // #5114: el mosaico del Mac 1984 reutiliza este mismo fotograma (sin abrir otra sesión).
     try{document.dispatchEvent(new CustomEvent('mac-remote-frame',{detail:{persona:data.persona||persona,src:next.src,at:Date.now()}}));}catch(_){}
   }
@@ -90,6 +92,7 @@ export function openRemote(personaHint){
   }
   function send(event){
     if(closed||!ready||!frame)return;
+    if(frame.viewOnly){say('Solo vista: ventana demasiado grande');return;}
     const version=generation,body={action:'input',token,frameId:frame.id,event};queued++;
     queue=queue.then(async()=>{
       if(closed||!ready||version!==generation)return;

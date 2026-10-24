@@ -132,3 +132,21 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .council-chat__origen{font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .council-chat__origen[data-origen="live"]{color:#ffd24a}
 .council-chat__origen[data-origen="grokbot"]{color:#8fd3ff}
+
+/* PREVIOS en una línea (24-10-2026): pestañas + Actualizar/Ver histórico/Mensajes privados en la tira de
+   PREVIOS, pequeño y en 16 bits (Press Start 2P, 7px como la tira). Las dos filas de antes desaparecen. */
+.scumm-module-head:has(.previos-head-tools) .scumm-module-grip{flex:0 0 auto}
+.previos-head-tools{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;margin:0 4px}
+.previos-head-tools::-webkit-scrollbar{display:none}
+.previos-head-tools .council-preview__controls,.previos-head-tools .council-chat__toolbar,.previos-head-tools .council-preview__views{display:flex;align-items:center;gap:3px;flex:none;padding:0;margin:0;border:0;min-height:0;max-height:none;background:none;overflow:visible;flex-wrap:nowrap;white-space:nowrap}
+.previos-head-tools .council-chat__toolbar{border-left:1px solid #5a3c1c;padding-left:6px}
+.scumm-module-head .previos-head-tools button,.previos-head-tools a{font:7px/1 'Press Start 2P',monospace;color:#e6c788;background:#2a1a08;border:1px solid #5a3c1c;padding:3px 5px;min-height:0;min-width:0;border-radius:0;text-decoration:none;box-shadow:none;cursor:pointer;letter-spacing:0}
+.scumm-module-head .previos-head-tools button:hover,.previos-head-tools a:hover{color:#fff0b0;background:#79532d}
+.scumm-module-head .previos-head-tools button[aria-pressed="true"]{color:#1a1004;background:#e6c788;border-color:#ffe08a}
+.previos-head-tools .council-chat__person{font:7px/1 'Press Start 2P',monospace;color:#ffee88;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.previos-head-tools .council-chat__connection{display:none}
+.previos-head-tools [hidden],.previos-head-tools [data-chat-screen]{display:none!important}
+@media(max-width:900px){.previos-head-tools .council-chat__person{display:none}}
+.previos-head-tools>:first-child{margin-left:auto}
+.scumm-module-head .previos-head-tools [data-preview-expand]{font:10px/1 monospace;padding:2px 5px}
+@media(max-width:600px){.scumm-module-head:has(.previos-head-tools) .scumm-module-grip{font-size:0;padding:5px 2px}.scumm-module-head:has(.previos-head-tools) .scumm-module-grip::before{content:'⠿';font-size:9px}.previos-head-tools{gap:3px;margin:0 2px}}

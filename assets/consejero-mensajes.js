@@ -75,7 +75,8 @@
       .then(function (d) { if (d) pintar((d && d.mensajes) || [], Number(d && d.pendientes) || 0); })
       .catch(function () { lista.textContent = "No se ha podido leer la bandeja."; });
   }
-  cargar();
+  // r96: este script se carga antes que chat-hilo-client.js; la primera lectura espera a que exista.
+  setTimeout(cargar, 0);
   setInterval(cargar, 15000);
   window.addEventListener("chat-hilo-sesion", cargar); // r96: sesión larga restaurada en pestaña nueva
 

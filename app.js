@@ -1425,6 +1425,8 @@
         if (currentVerb === 'examinar') {
             enterPreguntarMode();
             setActionLine("👁 Examinar — haz clic en un consejero: su pantalla viva en el Mac 1984");
+        } else if (window.MacProyecto && window.MacProyecto.isOn()) {
+            window.MacProyecto.hide();   // otro verbo guarda el Mac del proyecto
         } else if (window.MacHoy && window.MacHoy.clearRemote) {
             window.MacHoy.clearRemote();
         }
@@ -1582,6 +1584,10 @@
         if (examinarMode) {
             setActionLine("👁 " + agent.persona + " · pantalla de " + (window.MacHoy && window.MacHoy.chairAlias ? (window.MacHoy.chairAlias(agent.persona) || agent.name) : agent.name));
             if (window.MacHoy && window.MacHoy.showRemote) window.MacHoy.showRemote(agent.persona);
+            // 24-10-2026 (Carlos): el monitor enseña el PROYECTO en el que está el consejero.
+            if (window.MacProyecto) window.MacProyecto.show(agent.persona).then(function (r) {
+                if (r && examinarMode) setActionLine("👁 " + agent.persona + " · en el Mac 1984: " + r.proyecto + (r.modo === 'captura' ? " (captura)" : " (en vivo)") + " — Esc o clic fuera para guardarlo");
+            });
             playSfx("talk");
             return;
         }

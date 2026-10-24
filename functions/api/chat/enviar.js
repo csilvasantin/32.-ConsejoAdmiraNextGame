@@ -5,7 +5,7 @@
  * [chat-coetaneos] al bot-inbox (bot.yokup.com), que despierta la rutina del consejero por su webhook.
  * Idempotente por msg_id: un msg_id ya entregado no se reenvía nunca.
  */
-import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, textoEncargo, BOT_INBOX, PERSONA_INBOX } from "../../../chat-hilo-lib.mjs";
+import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, textoEncargo, BOT_INBOX, PERSONA_INBOX, mensajeLimpio } from "../../../chat-hilo-lib.mjs";
 import { cabeceras, json, kv, cargarHilo } from "../../../chat-hilo-http.mjs";
 
 export function onRequestOptions({ request }) {
@@ -59,7 +59,7 @@ export async function onRequestPost({ request, env, fetchImpl }) {
     const r = await doFetch(BOT_INBOX, {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(15000),
       headers: { "content-type": "application/json", accept: "application/json", authorization: "Bearer " + llave },
-      body: JSON.stringify({ text: textoEncargo(persona, doc.turnos, turno), target_persona: PERSONA_INBOX[persona], target_machine: "grokbot", from: "Admira.live · chat/" + persona, materialize_mission: false }),
+      body: JSON.stringify({ text: textoEncargo(persona, doc.turnos, turno), target_persona: PERSONA_INBOX[persona], target_machine: "grokbot", from: "Admira.live · chat/" + persona, materialize_mission: false, mensaje: mensajeLimpio(persona, turno, quien) }),
     });
     const d = await r.json().catch(() => null);
     if (r.ok && d && d.ok && Number(d.id) > 0) { encargo = Number(d.id); entrega = "entregado"; }

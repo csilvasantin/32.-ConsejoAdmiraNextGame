@@ -8,7 +8,7 @@
  *      ID token de Google de una cuenta de Carlos (el mismo client_id del login de admira.live).
  * KV: CHAT_KV si existe; si no, RECORTE_KV del proyecto (clave chat:hilo:v1:<persona>).
  */
-import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, PERSONAS, porSincronizar, turnoDeEncargo, BOT_INBOX } from "../../../chat-hilo-lib.mjs";
+import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, PERSONAS, porSincronizar, turnoDeEncargo, BOT_INBOX, conOrigen } from "../../../chat-hilo-lib.mjs";
 import { cabeceras, json, kv, cargarHilo } from "../../../chat-hilo-http.mjs";
 
 export function onRequestOptions({ request }) {
@@ -27,7 +27,7 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   if (!kv(env)) return json({ ok: true, persona, turnos: [], almacen: "ninguno" }, 200, origin);
   let doc = await cargarHilo(env, persona);
   doc = await sincronizar(env, persona, doc, fetchImpl || fetch);
-  return json({ ok: true, persona, total: doc.turnos.length, turnos: doc.turnos.slice(-limite), actualizado: doc.actualizado, lector: quien === "maquina" ? "maquina" : "google" }, 200, origin);
+  return json({ ok: true, persona, total: doc.turnos.length, turnos: doc.turnos.slice(-limite).map(conOrigen), actualizado: doc.actualizado, lector: quien === "maquina" ? "maquina" : "google" }, 200, origin);
 }
 
 export async function onRequestPost({ request, env }) {

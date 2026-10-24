@@ -40,6 +40,25 @@
     return (corto || "Jobs") + " está escribiendo… · " + (s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s");
   }
   // Texto de estado de un turno de Carlos enviado desde admira.live («entregado · encargo #12 · respondido»).
+  // Origen visible (24-10-2026): el servidor lo manda en «origen_etiqueta»; si falta, se deriva aquí igual.
+  var ETIQ = { live: "admira.live", app: "Grok Bot", rutina: "Grok Bot" };
+  function origenTurno(t) {
+    if (!t) return "Grok Bot";
+    if (t.origen_etiqueta === "admira.live" || t.origen_etiqueta === "Grok Bot") return t.origen_etiqueta;
+    if (ETIQ[t.origen]) return ETIQ[t.origen];
+    var id = String(t.id || "");
+    if (t.via === "bot-inbox" || /^enc-\d+-resp$/.test(id)) return "Grok Bot";
+    if (t.autor || t.entrega || /^live-/.test(id)) return "admira.live";
+    return t.rol === "carlos" ? "admira.live" : "Grok Bot";
+  }
+  var HORA = null;
+  function horaMadrid(ts) {
+    var n = typeof ts === "number" ? ts : Date.parse(ts);
+    if (!isFinite(n)) return "";
+    try { HORA = HORA || new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hour12: false }); return HORA.format(new Date(n)); } catch (e) { return ""; }
+  }
+  /** «admira.live · 09:13» — el mismo formato en todos los mensajes. */
+  function metaTurno(origen, ts) { var h = horaMadrid(ts); return h ? origen + " · " + h : origen; }
   function textoEstado(t, corto) {
     if (!t || t.rol !== "carlos" || t.origen !== "live" || !t.entrega) return "";
     var txt = ESTADO[t.entrega] || t.entrega;
@@ -135,7 +154,7 @@
   root.ChatHiloClient = {
     RAPIDO_MS: RAPIDO_MS, REPOSO_MS: REPOSO_MS, VENTANA_RAPIDA_MS: VENTANA_RAPIDA_MS, VENTANA_ESCRIBIENDO_MS: VENTANA_ESCRIBIENDO_MS,
     CLIENT_ID: CLIENT_ID, CLAVE: CLAVE, ORIGEN: ORIGEN, ESTADO: ESTADO, PERSONAS: PERSONAS,
-    esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado,
+    esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado, origenTurno: origenTurno, horaMadrid: horaMadrid, metaTurno: metaTurno,
     fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
     credencial: credencial, guardar: guardar, olvidar: olvidar,
     leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle

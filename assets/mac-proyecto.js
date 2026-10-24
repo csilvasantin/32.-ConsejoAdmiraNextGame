@@ -141,6 +141,17 @@
   function isOn() { return !!(layer && layer.classList.contains('on')); }
   if (root.document) {
     root.document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOn()) hide(); }, true);
+    // Clic en el Mac de la mesa con un proyecto puesto → vista AMPLIADA con el proyecto. En modo
+    // «remote» mac-hoy.js abría MacRemote (escritorio de la máquina) en lugar del frente.
+    root.document.addEventListener('click', function (e) {
+      if (!isOn()) return;
+      var g = e.target && e.target.closest && e.target.closest('#mac-hoy-glass');
+      if (!g) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var mac = root.MacHoy;
+      ensureLayers(root.document);
+      if (mac && mac.openFront) { mac.openFront(); mac.fitScreen && mac.fitScreen(); }
+    }, true);
     // Clic fuera: ni en el Mac, ni en un consejero, ni en un verbo/barra → se guarda el Mac.
     root.document.addEventListener('click', function (e) {
       if (!isOn()) return;

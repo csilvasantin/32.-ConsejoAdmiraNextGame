@@ -1733,7 +1733,12 @@
         .mac-hoy-front-stage .mac-proyecto--front {
             transform: scale(var(--mac-front-k)) var(--mac-front-scr); z-index: 6;
         }
-        .mac-hoy-prop.on:has(.mac-proyecto.on) .mac-hoy-glass { visibility: hidden; }
+        /* El cristal NO se oculta (visibility:hidden lo dejaba sin clic y el toque caía en
+           #body-hotspots → «clic fuera» → se guardaba el proyecto y nunca abría la vista ampliada,
+           24-10 17:05). Queda encima, transparente, solo como botón para ampliar. */
+        .mac-hoy-prop.on:has(.mac-proyecto.on) .mac-hoy-glass { z-index: 4; mix-blend-mode: normal; background: transparent; }
+        .mac-hoy-prop.on:has(.mac-proyecto.on) .mac-hoy-glass > *,
+        .mac-hoy-prop.on:has(.mac-proyecto.on) .mac-hoy-glass::before { visibility: hidden; animation: none; }
         /* El Mac del proyecto va al CENTRO de la mesa y algo mayor para que el site se lea. */
         body.examinar-mac .mac-hoy-prop { left: 38%; top: 50%; width: 25%; z-index: 6; }
         @media (max-width: 760px) { body.examinar-mac .mac-hoy-prop { left: 31%; top: 42%; width: 38%; } }
@@ -4590,7 +4595,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-working.js?v=20260930-flt101302"></script>
 <script defer src="council-integration.js?v=20261024-r98-grande"></script>
 <script type="module" src="assets/mac-hoy.js?v=20261004-5114-vivo"></script>
-<script src="assets/mac-proyecto.js?v=20261024-front1"></script>
+<script src="assets/mac-proyecto.js?v=20261024-click2"></script>
 <script defer src="assets/aviso-version.js?v=20261004-5113c"></script>
 <script defer src="assets/sello-novedades.js?v=20261006-r15-idioma"></script>
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>

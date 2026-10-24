@@ -225,12 +225,12 @@
             // Racional (left/red) — posiciones sobre la cabeza de cada personaje
             { role: "CEO", persona: "Steve Jobs",      x: 10, y: 38, machineId: "admira-macbookair16",      body: { left: 7,  top: 44, width: 7,  height: 17 } },
             { role: "CTO", persona: "Steve Wozniak",   x: 20, y: 32, machineId: "admira-macbookpronegro14", body: { left: 18, top: 36, width: 8,  height: 21 } },
-            // Sala de 6 (Carlos, 24-10-2026): Tim Cook y Howard Schultz ya no se sientan en Leyendas;
-            // Buffett ocupa la silla de Cook y Disney la de Schultz. El fondo de la mesa queda vacío.
-            { role: "CFO", persona: "Warren Buffett",  x: 32, y: 25, machineId: "admira-macmini",           body: { left: 28, top: 28, width: 9,  height: 26 } },
+            { role: "COO", persona: "Tim Cook",        x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
+            { role: "CFO", persona: "Warren Buffett",  x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
             // Creativo (right/blue)
+            { role: "CCO", persona: "Walt Disney",     x: 58, y: 23, machineId: "admira-macbookairluna",  body: { left: 55, top: 27, width: 8,  height: 26 } },
             { role: "CDO", persona: "Dieter Rams",     x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
-            { role: "CCO", persona: "Walt Disney",     x: 79, y: 29, machineId: "admira-macbookairluna",  body: { left: 74, top: 32, width: 11, height: 28 } },
+            { role: "CXO", persona: "Howard Schultz",  x: 82, y: 32, machineId: "admira-pctwin",            body: { left: 77, top: 34, width: 8,  height: 21 } },
             { role: "CSO", persona: "George Lucas",    x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
         ],
         coetaneos: [
@@ -261,7 +261,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20261024-sala6";
+    const COUNCIL_IMAGE_VERSION = "20260613-r2";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",
@@ -658,10 +658,7 @@
         if (sil && sil.paths) {
             const paths = plates.map(p => {
                 // /recorte: el contorno manual guardado manda sobre el automático.
-                // Sala de 6 (24-10-2026): Buffett y Disney cambiaron de silla; su contorno manual de /recorte
-                // era de la silla antigua, así que manda la silueta automática ya trasladada.
-                const movido = currentGen === "leyendas" && (p.persona === "Walt Disney" || p.persona === "Warren Buffett");
-                const d = (!movido && window.CouncilRecorte && window.CouncilRecorte.pathFor(currentGen, p.persona, sil.width, sil.height)) || sil.paths[p.persona];
+                const d = (window.CouncilRecorte && window.CouncilRecorte.pathFor(currentGen, p.persona, sil.width, sil.height)) || sil.paths[p.persona];
                 if (!d) return '';
                 const title = `Ver ficha de ${p.persona} (${p.role})`;
                 return `<path class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" d="${d}"><title>${title}</title></path>`;

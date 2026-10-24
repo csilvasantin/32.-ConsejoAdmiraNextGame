@@ -23,8 +23,8 @@
             'Steve Jobs':     Object.freeze({ x: 168,  y: 402, width: 27, height: 11, opening: 1.7 }),
             'Steve Wozniak':  Object.freeze({ x: 310,  y: 335, width: 32, height: 14, opening: 1.9 }),
             'Tim Cook':       Object.freeze({ x: 444,  y: 283, width: 23, height: 9,  opening: 1.4 }),
-            'Warren Buffett': Object.freeze({ x: 443,  y: 295, width: 30, height: 12, opening: 1.6 }),
-            'Walt Disney':    Object.freeze({ x: 1068, y: 339, width: 32, height: 14, opening: 1.7 }),
+            'Warren Buffett': Object.freeze({ x: 609,  y: 280, width: 27, height: 11, opening: 1.6 }),
+            'Walt Disney':    Object.freeze({ x: 780,  y: 264, width: 25, height: 13, opening: 1.7 }),
             'Dieter Rams':    Object.freeze({ x: 946,  y: 290, width: 22, height: 9,  opening: 1.3 }),
             'Howard Schultz': Object.freeze({ x: 1094, y: 329, width: 28, height: 12, opening: 1.7 }),
             'George Lucas':   Object.freeze({ x: 1223, y: 416, width: 25, height: 11, opening: 1.5 })

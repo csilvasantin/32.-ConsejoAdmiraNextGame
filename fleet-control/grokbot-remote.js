@@ -19,12 +19,14 @@ function validateInput(event){
  if(event.type==='text'&&typeof event.text==='string'&&event.text.length>0&&event.text.length<=2000&&!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(event.text)&&mods.length===0)return {type:'text',text:event.text};
  fail('remote_invalid_input',400);
 }
+const NATIVE={application_not_running:'remote_app_not_running',application_ambiguous:'remote_app_ambiguous',accessibility_required:'remote_accessibility_required',conversation_window_unavailable:'remote_conversation_unavailable',unsupported_or_ambiguous_conversation:'remote_conversation_unavailable',persona_not_selected:'remote_selection_changed',bridge_busy:'remote_bridge_busy',bridge_lock_unavailable:'remote_bridge_busy'};
+const remoteCode=e=>/^remote_[a-z_]+$/.test(e)?e:(NATIVE[e]||'remote_capture_unavailable');
 function createRemoteDesktop({runNative,now=Date.now}){
  const sessions=new Map();
  const owner=s=>s?.email&&s?.jti?String(s.email).toLowerCase()+'\0'+s.jti:fail('authenticated_session_required',401);
  async function capture(row,action="remote_frame"){
   const result=await runNative({action,persona:PERSONAS[row.persona]});
-  if(!result?.ok)fail(/^remote_[a-z_]+$/.test(result?.error)?result.error:'remote_capture_unavailable',503);
+  if(!result?.ok)fail(remoteCode(result?.error),503);
   const t=result.target,f=result.frame;
   if(!t||t.persona!==PERSONAS[row.persona]||![t.pid,t.windowID,t.x,t.y,t.width,t.height].every(Number.isFinite)||t.pid<=0||t.windowID<=0||t.width<100||t.height<100||typeof f?.jpeg!=='string'||!f.jpeg.startsWith('/9j/')||f.jpeg.length>8*1024*1024||!Number.isFinite(f.width)||!Number.isFinite(f.height))fail('remote_invalid_frame',503);
   const id=crypto.randomBytes(12).toString('hex');

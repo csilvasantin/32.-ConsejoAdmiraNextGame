@@ -19,10 +19,16 @@ const MESSAGES={
   desktop_timeout:'GrokBot tarda en responder. Pulsa Reconectar.',
   remote_selection_changed:'Ha cambiado el consejero en GrokBot. Vuelve al Mac y abre su escritorio.',
   remote_view_changed:'La ventana ha cambiado. Pulsa Reconectar para actualizar la vista.',
-  remote_capture_unavailable:'No se puede capturar la ventana de GrokBot. Comprueba el permiso de grabación de pantalla del puente.',
+  remote_capture_unavailable:'El puente del Mac Mini no puede leer la ventana de GrokBot. Comprueba que GrokBot está abierto (una sola ventana) en el Mac Mini y pulsa Reconectar.',
+  remote_app_not_running:'GrokBot no está abierto en el Mac Mini del puente. Ábrelo allí y pulsa Reconectar.',
+  remote_app_ambiguous:'Hay más de una instancia de GrokBot abierta en el Mac Mini. Deja solo una y pulsa Reconectar.',
+  remote_accessibility_required:'El puente del Mac Mini necesita permiso de Accesibilidad para leer GrokBot.',
+  remote_conversation_unavailable:'No se encuentra la conversación del consejero en GrokBot (Mac Mini). Ábrela y pulsa Reconectar.',
+  remote_bridge_busy:'El puente está ocupado. Pulsa Reconectar en unos segundos.',
+  desktop_unavailable:'El puente del Mac Mini no responde. Pulsa Reconectar.',
   remote_computer_unavailable:'Abre la computadora del consejero en GrokBot y pulsa Reconectar.',
   remote_keyboard_unavailable:'El teclado de la computadora no está disponible. Pulsa Reconectar.',
-  remote_capture_permission:'El puente necesita su permiso de grabación de pantalla para mostrar la computadora.',
+  remote_capture_permission:'El puente del Mac Mini necesita permiso de Grabación de pantalla (grokbot-ax) para mostrar la computadora.',
   remote_capture_failed:'No se pudo obtener la imagen de la computadora. Pulsa Reconectar.',
   remote_capture_invalid:'La imagen de la computadora no es válida. Pulsa Reconectar.',
   remote_crop_unavailable:'No se pudo encajar la pantalla de la computadora. Pulsa Reconectar.',
@@ -43,14 +49,14 @@ export function openRemote(personaHint){
   if(active)return;
   const previousFocus=document.activeElement,overflow=document.body.style.overflow,rootOverflow=document.documentElement.style.overflow;
   const overlay=document.createElement('section');overlay.className='mac-ultra';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Ultradetalle · escritorio de '+persona);
-  overlay.innerHTML='<header class="mac-ultra__bar"><strong></strong><span role="status">Conectando…</span><button type="button" data-reconnect>Reconectar</button><button type="button" data-text>Escribir texto</button><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><form class="mac-ultra__text" hidden><textarea aria-label="Texto para escribir en el escritorio remoto" placeholder="Texto para el campo seleccionado en GrokBot"></textarea><button type="submit">Escribir en remoto</button></form><div class="mac-ultra__stage" tabindex="0" role="application" aria-label="Escritorio remoto interactivo"><img draggable="false" alt="Escritorio remoto"><p class="mac-ultra__hint">Conectando con GrokBot…</p></div>';
+  overlay.innerHTML='<header class="mac-ultra__bar"><strong></strong><span role="status">Conectando…</span><button type="button" data-reconnect>Reconectar</button><button type="button" data-text>Escribir texto</button><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><form class="mac-ultra__text" hidden><textarea aria-label="Texto para escribir en el escritorio remoto" placeholder="Texto para el campo seleccionado en GrokBot"></textarea><button type="submit">Escribir en remoto</button></form><div class="mac-ultra__stage" tabindex="0" role="application" aria-label="Escritorio remoto interactivo"><img draggable="false" alt="" hidden><p class="mac-ultra__hint">Conectando con GrokBot…</p></div>';
   overlay.querySelector('strong').textContent='Ultradetalle · '+persona;
   document.body.append(overlay);document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
   const stage=overlay.querySelector('.mac-ultra__stage'),img=stage.querySelector('img'),hint=stage.querySelector('p'),status=overlay.querySelector('[role="status"]'),form=overlay.querySelector('form');
   let token=null,frame=null,closed=false,ready=false,timer=null,generation=0,queue=Promise.resolve(),queued=0,enteredFullscreen=false,frameFailures=0,recovering=false,drag=null,suppressClick=false,textBuffer='',textTimer=null;
   const controllers=new Set();
   const say=text=>{status.textContent=text;};
-  function fail(error){ready=false;recovering=false;clearTimeout(timer);const message=MESSAGES[error.code]||'No se pudo conectar con el escritorio. Pulsa Reconectar.';say(message);hint.textContent=message;hint.hidden=false;}
+  function fail(error){if(!frame)img.hidden=true;ready=false;recovering=false;clearTimeout(timer);const message=MESSAGES[error.code]||'No se pudo conectar con el escritorio. Pulsa Reconectar.';say(message);hint.textContent=message;hint.hidden=false;}
   async function request(body){
     const ctl=new AbortController();controllers.add(ctl);const timeout=setTimeout(()=>ctl.abort(),20000);
     try{
@@ -62,7 +68,7 @@ export function openRemote(personaHint){
     if(closed||version!==generation)return;
     const next=new Image();next.src='data:image/jpeg;base64,'+data.frame.jpeg;
     await next.decode();if(closed||version!==generation)return;
-    img.src=next.src;frame=data.frame;ready=true;recovering=false;frameFailures=0;hint.hidden=true;say('Conectado · ratón y teclado activos');
+    img.src=next.src;img.hidden=false;frame=data.frame;ready=true;recovering=false;frameFailures=0;hint.hidden=true;say('Conectado · ratón y teclado activos');
     // #5114: el mosaico del Mac 1984 reutiliza este mismo fotograma (sin abrir otra sesión).
     try{document.dispatchEvent(new CustomEvent('mac-remote-frame',{detail:{persona:data.persona||persona,src:next.src,at:Date.now()}}));}catch(_){}
   }
@@ -73,7 +79,7 @@ export function openRemote(personaHint){
     const version=generation;
     try{await paint(await request({action:'frame',token}),version);schedule();}catch(error){
       if(closed||version!==generation)return;
-      const transient=['remote_view_changed','remote_window_geometry_unavailable','remote_capture_window_unavailable','remote_window_unavailable','remote_capture_failed','remote_computer_unavailable','remote_capture_unavailable'].includes(error.code);
+      const transient=['remote_view_changed','remote_window_geometry_unavailable','remote_capture_window_unavailable','remote_window_unavailable','remote_capture_failed','remote_computer_unavailable','remote_capture_unavailable','remote_bridge_busy'].includes(error.code);
       if(transient&&++frameFailures<=2){ready=false;recovering=true;say('Recuperando imagen… controles en pausa');schedule();}
       else fail(error);
     }

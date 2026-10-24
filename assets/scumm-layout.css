@@ -143,13 +143,21 @@
    columna — verbos arriba (4 columnas), atajos en UNA fila compacta debajo — y
    así ocupa menos ancho: Previos (conversación con los consejeros) gana espacio. */
 @media(min-width:601px) {
-  .scumm-module[data-module="verbos"] .scumm-module-content { flex-direction:column; justify-content:center; gap:4px; overflow:auto; }
-  .scumm-module[data-module="verbos"] .verb-grid { flex:0 0 auto; width:100%; max-width:none; box-sizing:border-box; padding:4px 8px 0; grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .scumm-module[data-module="verbos"] .scumm-module-content { flex-direction:column; justify-content:center; gap:4px; overflow-x:hidden; overflow-y:auto; }
+  .scumm-module[data-module="verbos"] .verb-grid { flex:0 0 auto; width:100%; max-width:none; box-sizing:border-box; padding:4px 8px 0; grid-template-columns:repeat(3,minmax(0,1fr)); }
   .scumm-module[data-module="verbos"] .verb-btn { font-size:7px; padding-inline:6px; overflow-wrap:normal; white-space:nowrap; }
   .scumm-module[data-module="verbos"] .verb-pager { align-self:center; }
   .scumm-module[data-module="verbos"] .inventory { flex:0 0 auto; width:100%; border-left:0; border-top:1px solid #3a2410; padding:4px 8px; overflow:visible; }
-  .scumm-module[data-module="verbos"] .inv-objetos { grid-template-columns:repeat(9,minmax(0,40px)); gap:4px; }
+  .scumm-module[data-module="verbos"] .inv-objetos { grid-template-columns:repeat(3,minmax(0,40px)); justify-content:center; gap:4px; }
   .scumm-module[data-module="verbos"] .obj { padding:1px; min-width:0; }
+}
+
+/* v10 (Carlos 2026-10-24): MÁS ALTO PARA HABLAR CON LOS CONSEJEROS. En escritorio (modo texto)
+   desaparece el carril de AGENTES (Neo, Trinity… con su cuota; sigue en /consumos y la flota) y su
+   altura pasa al menú: DEFAULT_HEIGHT 220 → 300 en scumm-layout.js. Verbos y atajos a 3 columnas
+   (los atajos bajan en filas de 3): sin scroll horizontal en el bloque Verbos. */
+@media(min-width:601px) {
+  #agentes-rail { display:none!important; }
 }
 
 @media(max-width:600px) {

@@ -13,8 +13,9 @@ const en = (node, { text, label, title } = {}) => {
   if (title != null) node.setAttribute('data-en-title', title);
   return node;
 };
-const KEY = 'admira.scumm.layout.v9';
+const KEY = 'admira.scumm.layout.v10';
 const PREVIOUS_KEYS = [
+  'admira.scumm.layout.v9',
   'admira.scumm.layout.v8',
   'admira.scumm.layout.v7',
   'admira.scumm.layout.v6',
@@ -29,7 +30,8 @@ const INTEGRATED_ORDER = ['verbos', 'accesos', 'previos'];
 // (conversación con consejeros) más ancho: 34 / 66 (antes 44 / 56).
 const DEFAULT_WEIGHTS = { verbos: 34, accesos: 1, previos: 66 };
 const DEFAULT_HIDDEN = ['accesos']; // Previos VISIBLE again
-const DEFAULT_HEIGHT = 220;
+// v10 (2026-10-24): sin el carril de AGENTES en escritorio, su altura (~70-80 px) pasa al menú.
+const DEFAULT_HEIGHT = 300;
 export function normalizeLayout(raw = {}) {
   const order = Array.isArray(raw?.order) ? [...new Set(raw.order.filter(id => IDS.includes(id)))] : [];
   const hiddenSrc = Array.isArray(raw?.hidden) ? raw.hidden : DEFAULT_HIDDEN;

@@ -238,13 +238,21 @@ test('resizing moves the existing bubble without replacing its text or speech tu
 });
 
 
-test('preview preserves multiline drafts across counsellors and mirrors CLI edits',()=>{
+test('preview preserves multiline drafts across counsellors without echoing them in the top bar',()=>{
  const h=harness({withComposer:true});h.api.select('Steve Jobs');
- h.composer.onInput('línea uno\nlínea dos');assert.equal(h.input.value,'línea uno\nlínea dos');
+ h.composer.onInput('línea uno\nlínea dos');assert.equal(h.input.value,'');
  h.api.select('Walt Disney');h.composer.onInput('Disney');h.api.select('Steve Jobs');
+ assert.equal(h.composerState.value,'línea uno\nlínea dos');assert.equal(h.input.value,'');
+ h.input.value='Pregunta desde la barra';h.input.listeners.get('input')();
  assert.equal(h.composerState.value,'línea uno\nlínea dos');
- h.input.value='Cambio desde CLI';h.input.listeners.get('input')();
- assert.equal(h.composerState.value,'Cambio desde CLI');
+});
+test('table bubble shows only the last sentence, about 80 chars with ellipsis',()=>{
+ const h=harness({withComposer:true});const b=h.api.bocadillo;
+ assert.equal(b('Foco absoluto. Quita lo que sobra. La simplicidad gana.'),'La simplicidad gana.');
+ assert.equal(b('Una sola frase sin punto'),'Una sola frase sin punto');
+ const largo=b('Hola. '+'palabra '.repeat(30)+'fin.');
+ assert.ok(largo.length<=80,largo);assert.ok(largo.endsWith('…'));
+ assert.equal(b(''),'');
 });
 test('failed preview send restores only its recipient and preserves text typed meanwhile',async()=>{
  let resolve;const sends=[];

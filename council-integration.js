@@ -151,6 +151,32 @@
     });
     syncComposer();
   }
+  // PREVIOS en una línea (Carlos, 24-10-2026): pestañas (Conversación/Escritorio/Pong/↗) y la fila
+  // «consejero · Actualizar · Ver histórico · Mensajes privados» suben a la tira de PREVIOS, en pequeño.
+  // Se mueven los nodos (conservan sus eventos); con Previos ampliado vuelven dentro del panel.
+  const macEl=document.getElementById('mac-scumm');
+  if(preview&&macEl&&macEl.querySelector&&typeof MutationObserver==='function')try{
+    const tools=document.createElement('div');tools.className='previos-head-tools';
+    function placeTools(){
+      const chatBox=preview.chatHost.querySelector('.council-chat');
+      const controls=macEl.querySelector('.council-preview__controls');
+      const bar=(chatBox||macEl).querySelector('.council-chat__toolbar')||tools.querySelector('.council-chat__toolbar');
+      const head=macEl.closest('.scumm-module')?.querySelector('.scumm-module-head');
+      const inHead=!!head&&!macEl.classList.contains('is-expanded');
+      document.documentElement.classList.toggle('previos-una-linea',inHead);
+      if(inHead){
+        if(tools.parentElement!==head)head.insertBefore(tools,head.querySelector('.scumm-module-close'));
+        if(controls&&controls.parentElement!==tools)tools.prepend(controls);
+        if(bar&&bar.parentElement!==tools)tools.append(bar);
+      }else{
+        const c=tools.querySelector('.council-preview__controls');if(c)macEl.prepend(c);
+        const t=tools.querySelector('.council-chat__toolbar');if(t&&chatBox)chatBox.prepend(t);
+      }
+    }
+    placeTools();
+    new MutationObserver(placeTools).observe(macEl,{attributes:true,attributeFilter:['class']});
+    new MutationObserver(()=>{const head=macEl.closest('.scumm-module')?.querySelector('.scumm-module-head');if(head&&!macEl.classList.contains('is-expanded')&&tools.parentElement!==head)placeTools();}).observe(document.body,{childList:true,subtree:true});
+  }catch(_){}
   const working=window.CouncilWorking?CouncilWorking.create({speech,generation}):null;
   window.CouncilInterface={
     select(persona){return bridge.select(persona);},

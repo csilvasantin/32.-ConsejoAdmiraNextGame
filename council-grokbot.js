@@ -51,7 +51,9 @@
     details.hidden=true;
     if(options.mountInside){options.container.append(details);details.open=true;}
     else options.container.insertAdjacentElement('afterend',details);
-    const $=s=>details.querySelector(s);
+    // La barra de herramientas puede vivir en la cabecera de PREVIOS (24-10-2026): se busca también allí.
+    const toolbarEl=details.querySelector('.council-chat__toolbar');
+    const $=s=>details.querySelector(s)||toolbarEl?.querySelector(s)||null;
     /* Hilo compartido (Jobs): lo que se escribe aquí va al MISMO hilo que GrokBot y /chat/jobs/
        (POST /api/chat/enviar vía assets/chat-hilo-client.js). En la home («modo menú inicial») cada
        visita empieza en blanco: no se carga el histórico (vive en /chat/jobs/, enlace «Ver histórico»);

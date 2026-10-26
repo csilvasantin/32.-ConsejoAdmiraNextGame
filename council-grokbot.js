@@ -158,7 +158,7 @@
       const rows=rowsFor(selected).filter(inThisVisit);
       for(const group of [rows.filter(native),rows.filter(row=>!native(row))]){
         if(group.length && !native(group[0])){
-          const label=doc.createElement('h4');label.textContent='Encargos anteriores';log.append(label);
+          const label=doc.createElement('h4');label.textContent='Misiones anteriores';log.append(label);
           const note=doc.createElement('p');note.textContent='Historial del conector anterior; estos encargos no son el chat nativo de GrokBot.';log.append(note);
         }
         for(const row of group){

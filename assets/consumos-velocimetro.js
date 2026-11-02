@@ -43,20 +43,39 @@
     var a = pt(f0, r), b = pt(f1, r);
     return 'M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' A' + r + ' ' + r + ' 0 0 1 ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1);
   }
+  /* Cuadro de mandos de superdeportiva (Carlos, 02-11-2026): tacómetro con marco de aluminio y fondo de carbono,
+   * zona roja del 80 % al 100 %, aguja fina con contrapeso y testigos LED (verde = en vivo, ámbar = sin datos,
+   * rojo = en zona roja). Misma geometría (centro 150,150 · R 120 · aguja −90°…+90°): la lógica no cambia. */
   function svg(max, pfx, etiqueta) {
-    var ticks = '', i;
-    for (i = 0; i <= 20; i++) {
-      var f = i / 20, a = pt(f, R + 8), b = pt(f, R + (i % 5 ? 14 : 20));
-      ticks += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '" class="vel-tick' + (i % 5 ? '' : ' mayor') + '"/>';
-      if (i % 5 === 0) { var l = pt(f, R - 22); ticks += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 4).toFixed(1) + '" class="vel-num">' + fmt(max * f).replace(/\s/g, '') + '</text>'; }
+    var ticks = '', i, RO = R + 30, RI = R + 23;
+    for (i = 0; i <= 40; i++) {
+      var f = i / 40, may = i % 10 === 0, med = i % 5 === 0, a = pt(f, R + 12), b2 = pt(f, R + (may ? -4 : med ? 2 : 6));
+      ticks += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b2[0].toFixed(1) + '" y2="' + b2[1].toFixed(1) + '" class="vel-tick' + (may ? ' mayor' : med ? ' medio' : '') + (f > 0.8 ? ' rojo' : '') + '"/>';
+      if (may) { var l = pt(f, R - 20); ticks += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 4).toFixed(1) + '" class="vel-num' + (f > 0.8 ? ' rojo' : '') + '">' + fmt(max * f).replace(/\s/g, '') + '</text>'; }
     }
-    return '<svg viewBox="0 0 300 175" class="vel-svg" role="img" aria-label="' + esc(etiqueta) + '">' +
-      '<defs><linearGradient id="' + pfx + '-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#88ffaa"/><stop offset=".55" stop-color="#78f3ff"/><stop offset=".8" stop-color="#ffd866"/><stop offset="1" stop-color="#ff5a5a"/></linearGradient></defs>' +
-      '<path d="' + arco(0, 1, R) + '" class="vel-pista"/>' +
-      '<path d="' + arco(0, 1, R) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
+    var o0 = pt(0, RO), o1 = pt(1, RO), i0 = pt(0, RI), i1 = pt(1, RI), base = CY + 24;
+    var marco = 'M' + o0[0] + ' ' + base + ' L' + o0[0] + ' ' + CY + ' A' + RO + ' ' + RO + ' 0 0 1 ' + o1[0] + ' ' + CY + ' L' + o1[0] + ' ' + base + ' Z';
+    var cara = 'M' + i0[0] + ' ' + (base - 5) + ' L' + i0[0] + ' ' + CY + ' A' + RI + ' ' + RI + ' 0 0 1 ' + i1[0] + ' ' + CY + ' L' + i1[0] + ' ' + (base - 5) + ' Z';
+    return '<svg viewBox="-8 -8 316 190" class="vel-svg" role="img" aria-label="' + esc(etiqueta) + '">' +
+      '<defs>' +
+      '<pattern id="' + pfx + '-carbono" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#0b0d0e"/><rect width="3" height="3" fill="#16191b"/><rect x="3" y="3" width="3" height="3" fill="#121517"/></pattern>' +
+      '<linearGradient id="' + pfx + '-alu" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9dee0"/><stop offset=".35" stop-color="#7d868a"/><stop offset=".55" stop-color="#c5cbce"/><stop offset="1" stop-color="#4a5256"/></linearGradient>' +
+      '<radialGradient id="' + pfx + '-luz" cx=".5" cy=".95" r=".9"><stop offset="0" stop-color="#1d3a2a" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="' + pfx + '-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#3dff8c"/><stop offset=".6" stop-color="#b6ff5c"/><stop offset=".8" stop-color="#ffb627"/><stop offset="1" stop-color="#ff3b30"/></linearGradient>' +
+      '</defs>' +
+      '<path d="' + marco + '" class="vel-marco" fill="url(#' + pfx + '-alu)"/>' +
+      '<path d="' + cara + '" fill="url(#' + pfx + '-carbono)"/>' +
+      '<path d="' + cara + '" fill="url(#' + pfx + '-luz)"/>' +
+      '<path d="' + arco(0.8, 1, R + 9) + '" class="vel-roja"/>' +
+      '<path d="' + arco(0, 1, R + 1) + '" class="vel-pista"/>' +
+      '<path d="' + arco(0, 1, R + 1) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
       ticks +
-      '<g class="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 18) + ' ' + (CX - 5) + ',' + CY + ' ' + (CX + 5) + ',' + CY + '"/></g>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="10" class="vel-eje"/>' +
+      '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">TOK/H</text>' +
+      '<circle cx="' + (CX - 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-vivo"><title>' + esc(T('en vivo', 'live')) + '</title></circle>' +
+      '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin datos', 'no data')) + '</title></circle>' +
+      '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>' +
+      '<g class="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 8) + ' ' + (CX - 2.6) + ',' + CY + ' ' + CX + ',' + (CY + 22) + ' ' + (CX + 2.6) + ',' + CY + '"/></g>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="11" class="vel-eje"/><circle cx="' + CX + '" cy="' + CY + '" r="4" class="vel-eje-c"/>' +
       '</svg>';
   }
 
@@ -241,6 +260,7 @@
     var f = Math.max(-0.02, Math.min(1.03, this.frac));
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
+    b.classList.toggle('en-roja', !this.sin && f >= 0.8);
     if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
     var vibra = !quieto && amplitud(this.destino, this.sin) > 0;

@@ -70,12 +70,19 @@
       '<path d="' + arco(0, 1, R + 1) + '" class="vel-pista"/>' +
       '<path d="' + arco(0, 1, R + 1) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
       ticks +
-      '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">TOK/H</text>' +
+      '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">TOKENS/HORA</text>' +
       '<circle cx="' + (CX - 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-vivo"><title>' + esc(T('en vivo', 'live')) + '</title></circle>' +
       '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin datos', 'no data')) + '</title></circle>' +
       '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>' +
+      /* r112 (Carlos): escudo Ducati simplificado, dibujado a mano en SVG (no es el fichero de marca), en el eje. */
+      '<g class="vel-escudo" transform="translate(' + CX + ' ' + CY + ')" aria-hidden="true">' +
+        '<path d="M-15 -14 H15 V-2 C15 7 7 11 0 14 C-7 11 -15 7 -15 -2 Z" class="vel-escudo-borde"/>' +
+        '<path d="M-12.5 -11.5 H12.5 V-2 C12.5 5.5 6 9 0 11.4 C-6 9 -12.5 5.5 -12.5 -2 Z" class="vel-escudo-rojo"/>' +
+        '<path d="M-12.5 -4.5 C-4 -8 4 -8 12.5 -4.5 V-1 C4 -4.5 -4 -4.5 -12.5 -1 Z" class="vel-escudo-banda"/>' +
+        '<text x="0" y="-5.6" class="vel-escudo-txt">DUCATI</text>' +
+      '</g>' +
       '<g class="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 8) + ' ' + (CX - 2.6) + ',' + CY + ' ' + CX + ',' + (CY + 22) + ' ' + (CX + 2.6) + ',' + CY + '"/></g>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="11" class="vel-eje"/><circle cx="' + CX + '" cy="' + CY + '" r="4" class="vel-eje-c"/>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="3.4" class="vel-eje-c"/>' +
       '</svg>';
   }
 

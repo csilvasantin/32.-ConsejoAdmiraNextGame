@@ -285,6 +285,33 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .odo-periodo{cursor:pointer;user-select:none}.odo-periodo:hover{border-color:#78f3ff}.odo-periodo:focus-visible{outline:2px solid #78f3ff;outline-offset:3px}
 .odo-rotulo{text-align:center;color:var(--dim);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
 @media (prefers-reduced-motion: reduce){.odo-tira{transition:none}}
+/* ===== Cuadro de mandos de superdeportiva (02-11-2026): sustituye velocímetro y rodillos retro. Solo aspecto. ===== */
+.vel-marco{filter:drop-shadow(0 6px 14px rgba(0,0,0,.8))}
+.vel-pista{stroke:#0f1a14;stroke-width:7;stroke-linecap:butt}
+.vel-valor{stroke-width:7;stroke-linecap:butt;filter:drop-shadow(0 0 5px rgba(61,255,140,.45))}
+.vel-roja{fill:none;stroke:#c8221a;stroke-width:7;opacity:.9}
+.vel-tick{stroke:#8f9a95;stroke-width:1.2}.vel-tick.medio{stroke:#d7ddd9;stroke-width:2}.vel-tick.mayor{stroke:#f4f7f5;stroke-width:3}.vel-tick.rojo{stroke:#ff5a4e}
+.vel-num{fill:#e9efeb;font:italic 700 12px/1 var(--sans);letter-spacing:-.02em}.vel-num.rojo{fill:#ff6b5f}
+.vel-escala{fill:#6f8f7c;font:600 8px/1 ui-monospace,Menlo,monospace;letter-spacing:.3em;text-anchor:middle}
+.vel-aguja polygon{fill:#ff4a1c;filter:drop-shadow(0 0 4px rgba(255,74,28,.65))}
+.vel-eje{fill:#1a1d1f;stroke:#9aa3a7;stroke-width:2.5}.vel-eje-c{fill:#ff4a1c}
+.vel-led{fill:#1c2420;stroke:#000;stroke-width:1}
+.led-vivo{fill:#3dff8c;filter:drop-shadow(0 0 4px #3dff8c)}
+.vel-g.sin-datos .led-vivo{fill:#1c2420;filter:none}.vel-g.sin-datos .led-sin{fill:#ffb627;filter:drop-shadow(0 0 4px #ffb627)}
+.en-roja .led-roja{fill:#ff3b30;filter:drop-shadow(0 0 5px #ff3b30);animation:vel-late .7s steps(2) infinite}
+.vel-g{background:radial-gradient(closest-side,rgba(0,0,0,.6),rgba(0,0,0,0))}
+/* LCD gris-verdoso con cifras de segmento: la cinta de rodillos sigue (misma lógica), sin aspecto de rodillo */
+.odo{gap:1px;margin:6px auto 0;padding:5px 10px 4px;border-radius:5px;background:linear-gradient(180deg,#a9b89c,#93a487 55%,#8a9b7f);border:3px solid #23292b;box-shadow:0 0 0 1px #6c7579,inset 0 2px 6px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.6)}
+.odo-rueda,.odo-rueda:last-child{position:relative;width:.72em;background:none;color:#16201a;border-radius:0;font:italic 700 clamp(18px,4vw,24px)/1.45em ui-monospace,"SF Mono",Menlo,Consolas,monospace;text-shadow:1px 1px 0 rgba(0,0,0,.12)}
+.odo-rueda::before{content:"8";position:absolute;inset:0;color:rgba(22,32,26,.08);pointer-events:none}
+.odo-rueda.odo-cero{color:rgba(22,32,26,.22)}
+.odo-sep{width:4px}
+.odo.odo-sin .odo-rueda{color:rgba(22,32,26,.3);opacity:1}
+.odo-periodo:hover{border-color:#3a6b4e}.odo-periodo:focus-visible{outline:2px solid #3dff8c}
+.odo-rotulo{color:#8fbf9f;letter-spacing:.18em}
+.vel-cifra{color:#e8fff0;text-shadow:0 0 22px rgba(61,255,140,.28)}.vel-unidad{color:#3dff8c}
+@media (prefers-reduced-motion: reduce){.en-roja .led-roja{animation:none}}
+
 .vel.sin-datos .vel-cifra{color:#75aab9;text-shadow:none}
 @media (prefers-reduced-motion: reduce){.vel-aguja,.vel-valor{transition:none}.vel-aguja polygon,.vel-punto{animation:none}}
 @media (min-width:720px){
@@ -302,6 +329,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .tok-cursor{margin-top:8px;color:var(--mut);font-size:14px}.tok-cursor b{color:var(--ink)}
 .con-carlos{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:#ffcf5a;color:#1a1200;font-size:11px;font-style:normal;font-weight:700;vertical-align:middle}
 .vel-hist{font-size:.8em;text-transform:none;letter-spacing:0;color:#7cc4ff;text-decoration:underline;white-space:nowrap}
+  .ducati-ref{margin:-.4em 0 1em;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;opacity:.65}
 </style>
 </head>
 <body>
@@ -314,6 +342,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <a href="/orquestar/">Orquestador</a>
   </nav>
   <h1>Consumo Agentes AdmiraNeXT</h1>
+  <p class="ducati-ref" data-en="Dashboard · inspired by the Ducati from The Matrix">Cuadro de mandos · inspirado en la Ducati de Matrix</p>
   <section class="trab plg" id="trabajando" data-plegable="trabajando">
     <h2 class="plg-h"><button type="button" class="plg-boton" aria-expanded="false" aria-controls="trabajando-cuerpo">
       <span class="plg-fila"><span class="plg-tit" data-en="Working now">Trabajando ahora</span><span class="plg-sum" id="trabajando-resumen" aria-live="polite"></span><span class="plg-chev" aria-hidden="true"></span></span>

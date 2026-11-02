@@ -57,6 +57,10 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
 - Herramientas Yokup (FLT-1580, carnés WozniakGrokBot · JobsGrokBot · DisneyGrokBot · LucasGrokBot · MuskGrokBot · HuangGrokBot,
   equipo GrokBot, runtime Grok): yokup_quien_soy · yokup_presencia · yokup_alta · yokup_paso ·
   yokup_evidencia · yokup_informe · yokup_ventana · yokup_mis_misiones
+- Velocidad de los agentes (Carlos, 2-nov-2026): consumos_velocidad {detalle?} — SOLO LECTURA y SOLO AGREGADOS:
+  tokens/hora ahora (tokHoraAhora), media de hoy, tokHoy, pico 24 h, porAgente y porProyecto (todos los proyectos).
+  Sin emails, cuentas, planes ni claves. Esquema admira.consumos.velocidad/v1. También en JSON público, sin clave y
+  con CORS abierto (caché 10 s): GET https://www.admira.live/api/consumos/velocidad-publica (no sondear < 10 s).
 - Ritual Yokup (norma 14): yokup_alta (encargo con pasos a) b) c)) → yokup_paso (in_progress / done) →
   yokup_evidencia (transcripción de sesión → PNG en el Mac Mini → /fleet/progress con
   evidence_kind=process, capture_surface=agent, capture_context=session_transcript) → yokup_informe

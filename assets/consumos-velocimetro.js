@@ -251,7 +251,7 @@
    * «aprieta el embrague»: la aguja cae ~25 % (22–28 %) de lo que marca y vuelve a subir en ~1 s (ease-out), mientras
    * el cuentakilómetros vibra y parpadea el testigo verde. SOLO visual: datos, cifra y odómetro no cambian.
    * Sin efecto con prefers-reduced-motion; en pausa con la pestaña oculta. */
-  var DIALES = [], MARCHA_BAJA = 140, MARCHA_SUBE = 1000, tMarcha = null;
+  var RALENTI = 0.09, DIALES = [], MARCHA_BAJA = 140, MARCHA_SUBE = 1000, tMarcha = null;
   function factorMarcha(m, t) {
     if (!m) return 1;
     var e = t - m.t0;
@@ -263,10 +263,11 @@
   }
   function cambiaMarcha() {
     if (menosMovimiento() || (document.hidden)) return;
-    var caida = 0.22 + Math.random() * 0.06, t0 = (root.performance && performance.now()) || 0;
+    // r114 (Carlos): el reloj del PROYECTO (vg2, «revoluciones») cae ~25 % (22–28 %); el de AGENTES (vg1, «velocidad») ~10 % (8–12 %).
+    var caida = 0.22 + Math.random() * 0.06, caidaVel = 0.08 + Math.random() * 0.04, t0 = (root.performance && performance.now()) || 0;
     DIALES.forEach(function (d) {
       if (d.sin || !(d.destino > 0.002)) return;
-      d.marcha = { t0: t0, caida: caida };
+      d.marcha = { t0: t0, caida: d.pfx === 'vg1' ? caidaVel : caida };
       var odo = d.box.querySelector('.odo'), led = d.box.querySelector('.led-vivo');
       [[odo, 'odo-vibra'], [led, 'led-marcha']].forEach(function (x) {
         if (!x[0]) return; x[0].classList.remove(x[1]); void x[0].getBoundingClientRect(); x[0].classList.add(x[1]);
@@ -274,7 +275,7 @@
       });
       d.arranca();
     });
-    if (root.__marchas) root.__marchas.push({ t: Date.now(), caida: caida });
+    if (root.__marchas) root.__marchas.push({ t: Date.now(), caida: caida, caidaVel: caidaVel });
   }
   function programaMarcha() {
     clearTimeout(tMarcha);
@@ -306,13 +307,19 @@
     var f = Math.max(-0.02, Math.min(1.03, this.frac));
     var fm = quieto ? null : factorMarcha(this.marcha, t);
     if (fm == null) { this.marcha = null; fm = 1; }
-    f *= fm; this.fVisual = f;
+    f *= fm;
+    // r114 (Carlos): RALENTÍ visual — una moto en marcha nunca marca 0: la aguja no baja de ~9 % del recorrido (temblor
+    // ±1 %), tampoco con dato 0 ni durante el cambio de marcha. Solo la aguja/arco: cifra, odómetro y datos son reales.
+    if (quieto) this.ralenti = RALENTI;
+    else { if (t - (this.tRal || 0) > 90) { this.tRal = t; this.ralObj = RALENTI + (Math.random() * 2 - 1) * 0.01; } this.ralenti = (this.ralenti || RALENTI) + ((this.ralObj || RALENTI) - (this.ralenti || RALENTI)) * Math.min(1, dt * 10); }
+    if (f < this.ralenti) f = this.ralenti;
+    this.fVisual = f;
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
     b.classList.toggle('en-roja', !this.sin && f >= 0.8);
     if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
-    var vibra = !quieto && amplitud(this.destino, this.sin) > 0;
+    var vibra = !quieto; // r114: siempre al ralentí → siempre tiembla un poco
     if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };

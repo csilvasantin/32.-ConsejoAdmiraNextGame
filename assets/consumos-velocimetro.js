@@ -244,6 +244,45 @@
     this.box = box; this.pfx = pfx; this.etiqueta = etiqueta;
     this.max = 0; this.frac = 0; this.vel = 0; this.destino = 0; this.valor = 0; this.v = 0; this.sin = true;
     this.ruido = 0; this.ruidoObj = 0; this.tRuido = 0; this.tPrev = 0; this.corriendo = false;
+    this.marcha = null; // {t0, caida}: cambio de marcha en curso (solo visual)
+    DIALES.push(this);
+  }
+  /* r113 (Carlos, 02-11-2026): CAMBIO DE MARCHAS. Unas 3 veces por minuto, a intervalos irregulares (12–28 s), se
+   * «aprieta el embrague»: la aguja cae ~25 % (22–28 %) de lo que marca y vuelve a subir en ~1 s (ease-out), mientras
+   * el cuentakilómetros vibra y parpadea el testigo verde. SOLO visual: datos, cifra y odómetro no cambian.
+   * Sin efecto con prefers-reduced-motion; en pausa con la pestaña oculta. */
+  var DIALES = [], MARCHA_BAJA = 140, MARCHA_SUBE = 1000, tMarcha = null;
+  function factorMarcha(m, t) {
+    if (!m) return 1;
+    var e = t - m.t0;
+    if (e < 0) return 1;
+    if (e < MARCHA_BAJA) { var a = e / MARCHA_BAJA; return 1 - m.caida * (1 - Math.pow(1 - a, 2)); }
+    e -= MARCHA_BAJA;
+    if (e < MARCHA_SUBE) { var b = e / MARCHA_SUBE; return 1 - m.caida * Math.pow(1 - b, 3); }
+    return null;
+  }
+  function cambiaMarcha() {
+    if (menosMovimiento() || (document.hidden)) return;
+    var caida = 0.22 + Math.random() * 0.06, t0 = (root.performance && performance.now()) || 0;
+    DIALES.forEach(function (d) {
+      if (d.sin || !(d.destino > 0.002)) return;
+      d.marcha = { t0: t0, caida: caida };
+      var odo = d.box.querySelector('.odo'), led = d.box.querySelector('.led-vivo');
+      [[odo, 'odo-vibra'], [led, 'led-marcha']].forEach(function (x) {
+        if (!x[0]) return; x[0].classList.remove(x[1]); void x[0].getBoundingClientRect(); x[0].classList.add(x[1]);
+        setTimeout(function () { x[0].classList.remove(x[1]); }, MARCHA_BAJA + MARCHA_SUBE);
+      });
+      d.arranca();
+    });
+    if (root.__marchas) root.__marchas.push({ t: Date.now(), caida: caida });
+  }
+  function programaMarcha() {
+    clearTimeout(tMarcha);
+    tMarcha = setTimeout(function () { cambiaMarcha(); programaMarcha(); }, 12000 + Math.random() * 16000);
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    programaMarcha();
+    document.addEventListener('visibilitychange', function () { if (document.hidden) clearTimeout(tMarcha); else programaMarcha(); });
   }
   /** Amplitud de la vibración (grados) para una fracción de escala: 0 si parada; 0,5° → 1,5° a fondo. */
   function amplitud(frac, sin) { return sin || !(frac > 0.002) ? 0 : 0.5 + Math.min(1, frac * 1.6); }
@@ -265,13 +304,16 @@
     }
     var b = this.box, ag = b.querySelector('.vel-aguja'), val = b.querySelector('.vel-valor'), cifra = b.querySelector('.vel-cifra');
     var f = Math.max(-0.02, Math.min(1.03, this.frac));
+    var fm = quieto ? null : factorMarcha(this.marcha, t);
+    if (fm == null) { this.marcha = null; fm = 1; }
+    f *= fm; this.fVisual = f;
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
     b.classList.toggle('en-roja', !this.sin && f >= 0.8);
     if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
     var vibra = !quieto && amplitud(this.destino, this.sin) > 0;
-    if (!asentado || vibra || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
+    if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };
   Dial.prototype.arranca = function () {

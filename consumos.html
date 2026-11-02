@@ -297,6 +297,12 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .vel-eje{fill:#1a1d1f;stroke:#9aa3a7;stroke-width:2.5}.vel-eje-c{fill:#1a1d1f;stroke:#e8ecee;stroke-width:1.2}
 .vel-escudo-borde{fill:#eef1f2;stroke:#5b6468;stroke-width:.8}.vel-escudo-rojo{fill:#c8102e}.vel-escudo-banda{fill:#fff;opacity:.92}.vel-escudo-txt{fill:#fff;font:800 5.2px/1 Arial,Helvetica,sans-serif;letter-spacing:.06em;text-anchor:middle;paint-order:stroke;stroke:#7a0a1c;stroke-width:.5}
 .vel-led{fill:#1c2420;stroke:#000;stroke-width:1}
+/* r113: cambio de marchas — sacudida del cuentakilómetros y destello del testigo (solo visual) */
+@keyframes odo-vibra{0%,100%{transform:translate(0,0)}12%{transform:translate(-1.5px,1px) rotate(-.4deg)}24%{transform:translate(1.5px,-1px) rotate(.4deg)}36%{transform:translate(-1px,.5px)}50%{transform:translate(1px,0)}68%{transform:translate(-.5px,0)}}
+.odo.odo-vibra{animation:odo-vibra .45s ease-out 2}
+@keyframes led-marcha{0%,100%{opacity:1}30%{opacity:.25}60%{opacity:1;filter:drop-shadow(0 0 9px #3dff8c)}}
+.led-vivo.led-marcha{animation:led-marcha .5s ease-out 2}
+@media (prefers-reduced-motion: reduce){.odo.odo-vibra,.led-vivo.led-marcha{animation:none}}
 .led-vivo{fill:#3dff8c;filter:drop-shadow(0 0 4px #3dff8c)}
 .vel-g.sin-datos .led-vivo{fill:#1c2420;filter:none}.vel-g.sin-datos .led-sin{fill:#ffb627;filter:drop-shadow(0 0 4px #ffb627)}
 .en-roja .led-roja{fill:#ff3b30;filter:drop-shadow(0 0 5px #ff3b30);animation:vel-late .7s steps(2) infinite}

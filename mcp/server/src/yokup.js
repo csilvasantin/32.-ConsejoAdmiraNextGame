@@ -433,9 +433,12 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     throw new Error('falta paso para enlazar la captura: indica paso (a, b, c…) o momento inicio|cierre');
   }
 
-  async function paso({ mision, paso: code, estado, informe = '', imagen = '', tokens }) {
+  async function paso({ mision, paso: code, estado, informe = '', imagen = '', tokens, session_id }) {
     const id = exigir();
     const body = { mission: mision, code, status: estado, owner: id.agent };
+    if (estado === 'in_progress' && session_id) {
+      body.work_session = { runtime: id.runtime, host: 'app', session_id };
+    }
     if (informe) body.report = informe;
     const img = String(imagen || '').trim();
     if (img) {

@@ -34,6 +34,7 @@ import { crearBandeja, agenteDestino } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
 import { crearEquipos } from './equipos.js';
 import { personaCanonica as personaFlota } from './flota.js';
+import { leerVelocidad } from './velocidad.js';
 import { latir, leerLatidos, vigentes, latidoPorEncargo, latidoPorActividad, MIN_DEFECTO, MIN_MAX } from './latido.js';
 const NOMBRE = 'admira-live-mcp';
 
@@ -138,6 +139,17 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     ]);
     if (estado.e && presencia.e) throw new Error(`ni machine-status (${estado.e}) ni presencia (${presencia.e}) responden`);
     return texto(flotaCombinada({ estado: estado.r || null, errorEstado: estado.e || null, presencia: presencia.r || [], ahoraMs: (deps.now || Date.now)() }));
+  }));
+
+  server.registerTool('consumos_velocidad', {
+    title: 'Velocidad de los agentes (tokens/hora)',
+    description: 'Solo lectura y solo agregados: tokens/hora de la flota AdmiraNeXT ahora (ventana 15 min), media del día, tokens de hoy, desglose por agente y por proyecto, marca de tiempo y frescura. Misma fuente que yokup.com/consumos. Sin emails ni cuentas. Para páginas web: GET https://www.admira.live/api/consumos/velocidad-publica (mismo JSON).',
+    inputSchema: { detalle: z.boolean().default(true).describe('false = solo totales, sin desglose por agente ni proyecto.') },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  }, seguro(async (a) => {
+    const r = await leerVelocidad(env, deps);
+    if (a.detalle === false) { delete r.porAgente; delete r.porProyecto; }
+    return texto(r);
   }));
 
   server.registerTool('consejo_tareas', {

@@ -111,7 +111,7 @@ const cacheGoogle = new Map();
 /** ID token de Google (login de admira.live): Google valida la firma en tokeninfo. */
 export async function emailGoogle(request, env, fetchImpl = fetch, ahora = Date.now()) {
   const jwt = credencial(request);
-  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt) || jwt.length > 4096) return emailSesion(request, env, ahora);
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt) || jwt.length > 4096) return emailSesion(request, env, ahora, fetchImpl);
   return emailIdToken(jwt, env, fetchImpl, ahora);
 }
 
@@ -126,12 +126,12 @@ export async function emailIdToken(jwt, env, fetchImpl = fetch, ahora = Date.now
     if (!r.ok) return null;
     d = await r.json();
   } catch (e) { return null; }
-  const permitidos = emailsPermitidos(env);
   const aud = String((env && env.GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID);
   const email = String(d && d.email || "").toLowerCase();
   const exp = Number(d && d.exp) * 1000;
   const verificado = d && (d.email_verified === true || d.email_verified === "true");
-  if (!d || d.aud !== aud || !verificado || !permitidos.includes(email) || !(exp > ahora)) return null;
+  if (!d || d.aud !== aud || !verificado || !(exp > ahora)) return null;
+  if (!(await autorizado(email, env, fetchImpl, ahora))) return null;
   if (cacheGoogle.size > 200) cacheGoogle.clear();
   cacheGoogle.set(jwt, { email, exp });
   return email;
@@ -145,6 +145,43 @@ export async function emailIdToken(jwt, env, fetchImpl = fetch, ahora = Date.now
 // En cada petición se revalida firma, caducidad y que el email siga en la allowlist.
 export const COOKIE_SESION = "__Host-admira_chat";
 export const SESION_TTL_MS = 180 * 24 * 3600 * 1000;
+// ── Directorio NeXT (#7402, 03-11-2026) ─────────────────────────────────
+// Las consultas externas sólo responden a quien esté dado de alta (activo) en el Directorio
+// NeXT: la tabla admiranext_users (AUTH_DB) de admiranext.com, que se gestiona en
+// https://www.admiranext.com/usuarios. Se pregunta servidor a servidor a
+// POST https://www.admiranext.com/api/directorio/miembro con X-Directorio-Token
+// (secreto DIRECTORIO_NEXT_TOKEN en ambos proyectos Pages). Sólo devuelve un booleano.
+// - Con DIRECTORIO_NEXT_TOKEN configurado, el directorio es la ÚNICA fuente: quien no está, fuera.
+// - Si el directorio no responde (red/5xx), sólo entran los dueños (CHAT_HILO_EMAILS /
+//   EMAILS_DEFECTO) como respaldo de emergencia; nadie más.
+// - Sin el secreto configurado se mantiene el comportamiento anterior (sólo dueños).
+export const DIRECTORIO_NEXT_URL = "https://www.admiranext.com/api/directorio/miembro";
+const cacheDirectorio = new Map();
+const DIRECTORIO_TTL_MS = 60 * 1000;
+export async function enDirectorioNext(email, env, fetchImpl = fetch, ahora = Date.now()) {
+  const tok = env && env.DIRECTORIO_NEXT_TOKEN;
+  if (!tok) return null;
+  const hit = cacheDirectorio.get(email);
+  if (hit && hit.exp > ahora) return hit.miembro;
+  let d;
+  try {
+    const r = await fetchImpl(String((env && env.DIRECTORIO_NEXT_URL) || DIRECTORIO_NEXT_URL), { method: "POST", redirect: "manual", signal: AbortSignal.timeout(5000), headers: { "content-type": "application/json", accept: "application/json", "X-Directorio-Token": tok }, body: JSON.stringify({ email }) });
+    if (!r.ok) return null;
+    d = await r.json();
+  } catch (e) { return null; }
+  if (!d || d.ok !== true || typeof d.miembro !== "boolean") return null;
+  if (cacheDirectorio.size > 500) cacheDirectorio.clear();
+  cacheDirectorio.set(email, { miembro: d.miembro, exp: ahora + DIRECTORIO_TTL_MS });
+  return d.miembro;
+}
+export function _vaciarCacheDirectorio() { cacheDirectorio.clear(); }
+export async function autorizado(email, env, fetchImpl = fetch, ahora = Date.now()) {
+  if (!email) return false;
+  const m = await enDirectorioNext(email, env, fetchImpl, ahora);
+  if (m === true) return true;
+  if (m === false) return false;
+  return emailsPermitidos(env).includes(email);
+}
 export function emailsPermitidos(env) {
   return String((env && env.CHAT_HILO_EMAILS) || EMAILS_DEFECTO.join(",")).toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
 }
@@ -177,7 +214,7 @@ function leerCookie(request, nombre) {
   return "";
 }
 /** Email de la cookie de sesión si es válida (firma, caducidad, allowlist) y, si no es GET/HEAD, mismo origen. */
-export async function emailSesion(request, env, ahora = Date.now()) {
+export async function emailSesion(request, env, ahora = Date.now(), fetchImpl = fetch) {
   const v = leerCookie(request, COOKIE_SESION);
   if (!v || v.length > 1024 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(v)) return null;
   const metodo = String(request.method || "GET").toUpperCase();
@@ -191,7 +228,8 @@ export async function emailSesion(request, env, ahora = Date.now()) {
   if (!esperada || !iguales(f, esperada)) return null;
   let c; try { c = JSON.parse(new TextDecoder().decode(desdeB64u(datos))); } catch (e) { return null; }
   const email = String(c && c.e || "").toLowerCase();
-  if (!c || c.v !== 1 || !(Number(c.x) > ahora) || Number(c.x) > ahora + SESION_TTL_MS + 60000 || !emailsPermitidos(env).includes(email)) return null;
+  if (!c || c.v !== 1 || !(Number(c.x) > ahora) || Number(c.x) > ahora + SESION_TTL_MS + 60000) return null;
+  if (!(await autorizado(email, env, fetchImpl, ahora))) return null;
   return email;
 }
 

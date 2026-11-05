@@ -43,20 +43,46 @@
     var a = pt(f0, r), b = pt(f1, r);
     return 'M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' A' + r + ' ' + r + ' 0 0 1 ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1);
   }
+  /* Cuadro de mandos de superdeportiva (Carlos, 02-11-2026): tacómetro con marco de aluminio y fondo de carbono,
+   * zona roja del 80 % al 100 %, aguja fina con contrapeso y testigos LED (verde = en vivo, ámbar = sin datos,
+   * rojo = en zona roja). Misma geometría (centro 150,150 · R 120 · aguja −90°…+90°): la lógica no cambia. */
   function svg(max, pfx, etiqueta) {
-    var ticks = '', i;
-    for (i = 0; i <= 20; i++) {
-      var f = i / 20, a = pt(f, R + 8), b = pt(f, R + (i % 5 ? 14 : 20));
-      ticks += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '" class="vel-tick' + (i % 5 ? '' : ' mayor') + '"/>';
-      if (i % 5 === 0) { var l = pt(f, R - 22); ticks += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 4).toFixed(1) + '" class="vel-num">' + fmt(max * f).replace(/\s/g, '') + '</text>'; }
+    var ticks = '', i, RO = R + 30, RI = R + 23;
+    for (i = 0; i <= 40; i++) {
+      var f = i / 40, may = i % 10 === 0, med = i % 5 === 0, a = pt(f, R + 12), b2 = pt(f, R + (may ? -4 : med ? 2 : 6));
+      ticks += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b2[0].toFixed(1) + '" y2="' + b2[1].toFixed(1) + '" class="vel-tick' + (may ? ' mayor' : med ? ' medio' : '') + (f > 0.8 ? ' rojo' : '') + '"/>';
+      if (may) { var l = pt(f, R - 20); ticks += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 4).toFixed(1) + '" class="vel-num' + (f > 0.8 ? ' rojo' : '') + '">' + fmt(max * f).replace(/\s/g, '') + '</text>'; }
     }
-    return '<svg viewBox="0 0 300 175" class="vel-svg" role="img" aria-label="' + esc(etiqueta) + '">' +
-      '<defs><linearGradient id="' + pfx + '-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#88ffaa"/><stop offset=".55" stop-color="#78f3ff"/><stop offset=".8" stop-color="#ffd866"/><stop offset="1" stop-color="#ff5a5a"/></linearGradient></defs>' +
-      '<path d="' + arco(0, 1, R) + '" class="vel-pista"/>' +
-      '<path d="' + arco(0, 1, R) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
+    var o0 = pt(0, RO), o1 = pt(1, RO), i0 = pt(0, RI), i1 = pt(1, RI), base = CY + 24;
+    var marco = 'M' + o0[0] + ' ' + base + ' L' + o0[0] + ' ' + CY + ' A' + RO + ' ' + RO + ' 0 0 1 ' + o1[0] + ' ' + CY + ' L' + o1[0] + ' ' + base + ' Z';
+    var cara = 'M' + i0[0] + ' ' + (base - 5) + ' L' + i0[0] + ' ' + CY + ' A' + RI + ' ' + RI + ' 0 0 1 ' + i1[0] + ' ' + CY + ' L' + i1[0] + ' ' + (base - 5) + ' Z';
+    return '<svg viewBox="-8 -8 316 190" class="vel-svg" role="img" aria-label="' + esc(etiqueta) + '">' +
+      '<defs>' +
+      '<pattern id="' + pfx + '-carbono" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#0b0d0e"/><rect width="3" height="3" fill="#16191b"/><rect x="3" y="3" width="3" height="3" fill="#121517"/></pattern>' +
+      '<linearGradient id="' + pfx + '-alu" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9dee0"/><stop offset=".35" stop-color="#7d868a"/><stop offset=".55" stop-color="#c5cbce"/><stop offset="1" stop-color="#4a5256"/></linearGradient>' +
+      '<radialGradient id="' + pfx + '-luz" cx=".5" cy=".95" r=".9"><stop offset="0" stop-color="#1d3a2a" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="' + pfx + '-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#3dff8c"/><stop offset=".6" stop-color="#b6ff5c"/><stop offset=".8" stop-color="#ffb627"/><stop offset="1" stop-color="#ff3b30"/></linearGradient>' +
+      '</defs>' +
+      '<path d="' + marco + '" class="vel-marco" fill="url(#' + pfx + '-alu)"/>' +
+      '<path d="' + cara + '" fill="url(#' + pfx + '-carbono)"/>' +
+      '<path d="' + cara + '" fill="url(#' + pfx + '-luz)"/>' +
+      '<path d="' + arco(0.8, 1, R + 9) + '" class="vel-roja"/>' +
+      '<path d="' + arco(0, 1, R + 1) + '" class="vel-pista"/>' +
+      '<path d="' + arco(0, 1, R + 1) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
       ticks +
-      '<g class="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 18) + ' ' + (CX - 5) + ',' + CY + ' ' + (CX + 5) + ',' + CY + '"/></g>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="10" class="vel-eje"/>' +
+      '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">TOKENS/HORA</text>' +
+      '<circle cx="' + (CX - 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-vivo"><title>' + esc(T('en vivo', 'live')) + '</title></circle>' +
+      '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin datos', 'no data')) + '</title></circle>' +
+      '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>' +
+      /* r112 (Carlos): escudo Ducati simplificado, dibujado a mano en SVG (no es el fichero de marca), en el eje. */
+      '<g class="vel-escudo" transform="translate(' + CX + ' ' + CY + ')" aria-hidden="true">' +
+        '<path d="M-15 -14 H15 V-2 C15 7 7 11 0 14 C-7 11 -15 7 -15 -2 Z" class="vel-escudo-borde"/>' +
+        '<path d="M-12.5 -11.5 H12.5 V-2 C12.5 5.5 6 9 0 11.4 C-6 9 -12.5 5.5 -12.5 -2 Z" class="vel-escudo-rojo"/>' +
+        '<path d="M-12.5 -4.5 C-4 -8 4 -8 12.5 -4.5 V-1 C4 -4.5 -4 -4.5 -12.5 -1 Z" class="vel-escudo-banda"/>' +
+        '<text x="0" y="-5.6" class="vel-escudo-txt">DUCATI</text>' +
+      '</g>' +
+      '<g class="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 8) + ' ' + (CX - 2.6) + ',' + CY + ' ' + CX + ',' + (CY + 22) + ' ' + (CX + 2.6) + ',' + CY + '"/></g>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="3.4" class="vel-eje-c"/>' +
       '</svg>';
   }
 
@@ -218,6 +244,46 @@
     this.box = box; this.pfx = pfx; this.etiqueta = etiqueta;
     this.max = 0; this.frac = 0; this.vel = 0; this.destino = 0; this.valor = 0; this.v = 0; this.sin = true;
     this.ruido = 0; this.ruidoObj = 0; this.tRuido = 0; this.tPrev = 0; this.corriendo = false;
+    this.marcha = null; // {t0, caida}: cambio de marcha en curso (solo visual)
+    DIALES.push(this);
+  }
+  /* r113 (Carlos, 02-11-2026): CAMBIO DE MARCHAS. Unas 3 veces por minuto, a intervalos irregulares (12–28 s), se
+   * «aprieta el embrague»: la aguja cae ~25 % (22–28 %) de lo que marca y vuelve a subir en ~1 s (ease-out), mientras
+   * el cuentakilómetros vibra y parpadea el testigo verde. SOLO visual: datos, cifra y odómetro no cambian.
+   * Sin efecto con prefers-reduced-motion; en pausa con la pestaña oculta. */
+  var RALENTI = 0.09, DIALES = [], MARCHA_BAJA = 140, MARCHA_SUBE = 1000, tMarcha = null;
+  function factorMarcha(m, t) {
+    if (!m) return 1;
+    var e = t - m.t0;
+    if (e < 0) return 1;
+    if (e < MARCHA_BAJA) { var a = e / MARCHA_BAJA; return 1 - m.caida * (1 - Math.pow(1 - a, 2)); }
+    e -= MARCHA_BAJA;
+    if (e < MARCHA_SUBE) { var b = e / MARCHA_SUBE; return 1 - m.caida * Math.pow(1 - b, 3); }
+    return null;
+  }
+  function cambiaMarcha() {
+    if (menosMovimiento() || (document.hidden)) return;
+    // r114 (Carlos): el reloj del PROYECTO (vg2, «revoluciones») cae ~25 % (22–28 %); el de AGENTES (vg1, «velocidad») ~10 % (8–12 %).
+    var caida = 0.22 + Math.random() * 0.06, caidaVel = 0.08 + Math.random() * 0.04, t0 = (root.performance && performance.now()) || 0;
+    DIALES.forEach(function (d) {
+      if (d.sin || !(d.destino > 0.002)) return;
+      d.marcha = { t0: t0, caida: d.pfx === 'vg1' ? caidaVel : caida };
+      var odo = d.box.querySelector('.odo'), led = d.box.querySelector('.led-vivo');
+      [[odo, 'odo-vibra'], [led, 'led-marcha']].forEach(function (x) {
+        if (!x[0]) return; x[0].classList.remove(x[1]); void x[0].getBoundingClientRect(); x[0].classList.add(x[1]);
+        setTimeout(function () { x[0].classList.remove(x[1]); }, MARCHA_BAJA + MARCHA_SUBE);
+      });
+      d.arranca();
+    });
+    if (root.__marchas) root.__marchas.push({ t: Date.now(), caida: caida, caidaVel: caidaVel });
+  }
+  function programaMarcha() {
+    clearTimeout(tMarcha);
+    tMarcha = setTimeout(function () { cambiaMarcha(); programaMarcha(); }, 12000 + Math.random() * 16000);
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    programaMarcha();
+    document.addEventListener('visibilitychange', function () { if (document.hidden) clearTimeout(tMarcha); else programaMarcha(); });
   }
   /** Amplitud de la vibración (grados) para una fracción de escala: 0 si parada; 0,5° → 1,5° a fondo. */
   function amplitud(frac, sin) { return sin || !(frac > 0.002) ? 0 : 0.5 + Math.min(1, frac * 1.6); }
@@ -239,12 +305,22 @@
     }
     var b = this.box, ag = b.querySelector('.vel-aguja'), val = b.querySelector('.vel-valor'), cifra = b.querySelector('.vel-cifra');
     var f = Math.max(-0.02, Math.min(1.03, this.frac));
+    var fm = quieto ? null : factorMarcha(this.marcha, t);
+    if (fm == null) { this.marcha = null; fm = 1; }
+    f *= fm;
+    // r114 (Carlos): RALENTÍ visual — una moto en marcha nunca marca 0: la aguja no baja de ~9 % del recorrido (temblor
+    // ±1 %), tampoco con dato 0 ni durante el cambio de marcha. Solo la aguja/arco: cifra, odómetro y datos son reales.
+    if (quieto) this.ralenti = RALENTI;
+    else { if (t - (this.tRal || 0) > 90) { this.tRal = t; this.ralObj = RALENTI + (Math.random() * 2 - 1) * 0.01; } this.ralenti = (this.ralenti || RALENTI) + ((this.ralObj || RALENTI) - (this.ralenti || RALENTI)) * Math.min(1, dt * 10); }
+    if (f < this.ralenti) f = this.ralenti;
+    this.fVisual = f;
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
+    b.classList.toggle('en-roja', !this.sin && f >= 0.8);
     if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
-    var vibra = !quieto && amplitud(this.destino, this.sin) > 0;
-    if (!asentado || vibra || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
+    var vibra = !quieto; // r114: siempre al ralentí → siempre tiembla un poco
+    if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };
   Dial.prototype.arranca = function () {

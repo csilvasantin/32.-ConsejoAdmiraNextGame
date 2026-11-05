@@ -34,6 +34,7 @@ import { crearBandeja, agenteDestino } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
 import { crearEquipos } from './equipos.js';
 import { personaCanonica as personaFlota } from './flota.js';
+import { leerVelocidad } from './velocidad.js';
 import { latir, leerLatidos, vigentes, latidoPorEncargo, latidoPorActividad, MIN_DEFECTO, MIN_MAX } from './latido.js';
 const NOMBRE = 'admira-live-mcp';
 
@@ -138,6 +139,17 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     ]);
     if (estado.e && presencia.e) throw new Error(`ni machine-status (${estado.e}) ni presencia (${presencia.e}) responden`);
     return texto(flotaCombinada({ estado: estado.r || null, errorEstado: estado.e || null, presencia: presencia.r || [], ahoraMs: (deps.now || Date.now)() }));
+  }));
+
+  server.registerTool('consumos_velocidad', {
+    title: 'Velocidad de los agentes (tokens/hora)',
+    description: 'Solo lectura y solo agregados: tokens/hora de la flota AdmiraNeXT ahora (ventana 15 min), media del día, tokens de hoy, desglose por agente y por proyecto, marca de tiempo y frescura. Misma fuente que yokup.com/consumos. Sin emails ni cuentas. Para páginas web: GET https://www.admira.live/api/consumos/velocidad-publica (mismo JSON).',
+    inputSchema: { detalle: z.boolean().default(true).describe('false = solo totales, sin desglose por agente ni proyecto.') },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  }, seguro(async (a) => {
+    const r = await leerVelocidad(env, deps);
+    if (a.detalle === false) { delete r.porAgente; delete r.porProyecto; }
+    return texto(r);
   }));
 
   server.registerTool('consejo_tareas', {
@@ -422,7 +434,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   server.registerTool('yokup_paso', {
     title: 'Marcar un paso de la misión',
     description: 'Avanza un paso (a, b, c…) de tu misión: in_progress al empezar, done al acabar con un informe corto. no_aplica exige motivo. imagen admite una URL http(s) o data:image/(png|webp|jpeg);base64 (se sube y se usa la URL resultante). Norma de Carlos: la evidencia de inicio y de cierre de cada misión debe incluir una captura real de www.admira.live/highscore (yokup_evidencia con momento inicio al empezar, e imagen en yokup_informe al cerrar).',
-    inputSchema: { como: COMO, mision: z.string().regex(/^FLT-\d+$/).describe('Id de la misión, p. ej. FLT-1580.'), paso: z.string().min(1).max(4).describe('a, b, c o a1…'), estado: z.enum(['pending', 'in_progress', 'done', 'no_aplica']), informe: z.string().max(600).optional().describe('Qué se hizo en este paso.'), imagen: z.string().min(8).max(16_000_000).optional().describe('URL http(s) de la evidencia, o data:image/(png|webp|jpeg);base64,… (se sube). La URL la devuelve yokup_evidencia.'), tokens: z.number().int().min(0).optional().describe('Tokens gastados en el paso, si los sabes.') },
+    inputSchema: { como: COMO, mision: z.string().regex(/^FLT-\d+$/).describe('Id de la misión, p. ej. FLT-1580.'), paso: z.string().min(1).max(4).describe('a, b, c o a1…'), session_id: z.string().trim().min(1).max(160).regex(/^[^\x00-\x1f]+$/).optional().describe('Identificador exacto de la sesión APP que ejecuta el paso, p. ej. desktop:codex. Omitir si no se conoce.'), estado: z.enum(['pending', 'in_progress', 'done', 'no_aplica']), informe: z.string().max(600).optional().describe('Qué se hizo en este paso.'), imagen: z.string().min(8).max(16_000_000).optional().describe('URL http(s) de la evidencia, o data:image/(png|webp|jpeg);base64,… (se sube). La URL la devuelve yokup_evidencia.'), tokens: z.number().int().min(0).optional().describe('Tokens gastados en el paso, si los sabes.') },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, seguro(async (a) => texto(await Y(a).paso(a))));
 

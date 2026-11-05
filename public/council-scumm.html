@@ -1073,7 +1073,7 @@
         .hack-overlay.visible { display: block; }
         .hack-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             grid-template-rows: repeat(2, 1fr);
             gap: 0.5rem;
             height: 100%;
@@ -1158,7 +1158,7 @@
         @media (max-width: 768px) {
             .status-grid { grid-template-columns: 1fr; }
             .gen-btn { padding: 0.5rem 1.2rem; font-size: 0.85rem; }
-            .hack-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); }
+            .hack-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(5, 1fr); }
         }
 
         /* SCUMM BAR */
@@ -3326,6 +3326,8 @@
         { id: "admira-macbookairazul",    role: "CDO", persona: "Dieter Rams",     ip: "100.84.81.45",    host: "MacBookAirAzul", user: "csilvasantin" },
         { id: "admira-pctwin",            role: "CXO", persona: "Howard Schultz",  ip: "100.121.18.12",   host: "AdmiraTwin",     user: "34665" },
         { id: "admira-macbookaircrema",   role: "CSO", persona: "George Lucas",    ip: "100.110.80.2",    host: "MacBookAirCrema",user: "csilvasantin" },
+        { id: "admira-pccocina", role: "Cocina · Morfeo (Windows)", persona: "PC Cocina", ip: "pc-cocina", host: "PC-COCINA", user: "carla", platform: "win" },
+        { id: "admira-metaverso", role: "Metaverso · Windows", persona: "PC Metaverso", ip: "metaverso", host: "METAVERSO", user: "metaverso", platform: "win" },
     ];
 
     function fillHackLine(line, machine) {
@@ -3345,9 +3347,9 @@
             btn.querySelector(".hack-dot").style.background = "#000";
             overlay.classList.add("visible");
 
-            // Build 8 terminal panels — each with a unique visual style
+            // One terminal per machine; styles cycle every 8.
             overlay.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m, i) =>
-                `<div class="hack-terminal hack-style-${i}" id="hack-term-${m.id}">
+                `<div class="hack-terminal hack-style-${i % 8}" id="hack-term-${m.id}">
                     <div class="hack-terminal-header">
                         <span>${m.persona} — ${m.host}</span>
                         <span class="hack-role">${m.role}</span>
@@ -3364,10 +3366,10 @@
             // Start local terminal animation — each with unique speed & content offset
             HACK_MACHINES.forEach((m, idx) => {
                 const body = document.getElementById(`hack-body-${m.id}`);
-                let lineIdx = HACK_OFFSETS[idx];
+                let lineIdx = HACK_OFFSETS[idx % HACK_OFFSETS.length];
                 let charIdx = 0;
                 let currentText = "";
-                const speed = HACK_SPEEDS[idx] + Math.random() * 10;
+                const speed = HACK_SPEEDS[idx % HACK_SPEEDS.length] + Math.random() * 10;
 
                 const typeInterval = setInterval(() => {
                     if (!hackMode) return;

@@ -8,6 +8,7 @@
 .council-chat button:focus-visible,.council-chat a:focus-visible{outline:2px solid #ffff00}
 .council-chat__scope,.council-chat__limits,.council-chat__status{margin:4px 14px 10px;font:14px/1.5 system-ui,sans-serif;color:#c9ba9c}
 .council-chat__status{color:#ffdd66}
+.council-chat__status:empty{display:none}
 .council-chat__messages{max-height:380px;overflow:auto;padding:0 14px 14px;overscroll-behavior:contain;font:16px/1.5 system-ui,sans-serif}
 .council-chat__turn{margin-bottom:18px}.council-chat__turn p{margin:8px 0;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #574729;background:#1c1b1c}.council-chat__turn strong{display:block;margin-bottom:8px;color:#e6cb75;font:10px/1.5 'Press Start 2P',monospace}.council-chat__turn .council-chat__user{margin-left:15%;background:#292217}.council-chat__meta{font:12px system-ui,sans-serif;color:#bcae92}
 /* The windows above the faces are the only bubble area in the retro artwork. */

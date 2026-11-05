@@ -1028,6 +1028,7 @@ const server = http.createServer(async (req, res) => {
         user: m.user || 'csilvasantin',
         platform: platOf(m),
         net: m.net || null,
+        perifericos: Array.isArray(m.perifericos) ? m.perifericos : [],
         info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120),
         signals: {
           controlProbe: {

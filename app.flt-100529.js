@@ -1031,6 +1031,8 @@
         { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
         { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
         { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
+        { id: "admira-pccocina",           role: "Cocina · Morfeo (Windows)", persona: "PC Cocina",    ip: "pc-cocina",            host: "PC-COCINA",           user: "carla", platform: "win" },
+        { id: "admira-metaverso",          role: "Metaverso · Windows",  persona: "PC Metaverso",       ip: "metaverso",            host: "METAVERSO",           user: "metaverso", platform: "win" },
     ];
 
     function fillHackLine(line, machine) {

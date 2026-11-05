@@ -1904,6 +1904,7 @@ function renderCards(ms){
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
         <div class="cardmeta"><div class="nm">${m.name}</div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div>
+        ${(m.perifericos||[]).length?('<div class="perifericos" title="Periféricos conectados a este equipo (inventario fleet.json)">'+m.perifericos.map(p=>(p.url?'<a href="'+dsEsc(p.url)+'" target="_blank" rel="noopener">':'')+dsEsc((p.emoji||'🔌')+' '+(p.name||p.id))+(p.url?'</a>':'')).join(' · ')+'</div>'):''}
         ${agentNowHtml(m)}
         ${m.reaparecido?'<div class="reaparecido" title="Lo eliminaste cuando estaba callado y ha vuelto a latir después: se enseña otra vez. Puedes volver a eliminarlo.">↩ ha vuelto a latir tras eliminarlo</div>':''}
         ${m.aliasDe&&m.aliasDe.length?('<div class="alias-de" title="Fichas antiguas de este mismo equipo fusionadas aquí">≡ incluye «'+m.aliasDe.map(dsEsc).join('», «')+'»</div>'):''}

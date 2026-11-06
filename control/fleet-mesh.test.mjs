@@ -149,6 +149,43 @@ test("un relay que no contesta se rechaza diciendo el tiempo de espera y el rela
   assert.doesNotMatch(err.message, /aborted without reason/);
 });
 
+test("un 400 de censo no se reintenta en otro relay", async () => {
+  const calls = [];
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    fetch: async (url) => {
+      calls.push(url);
+      if (url.endsWith("/auth/session")) return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      return json({ error: "máquina desconocida", retry: false, relay: false }, { status: 400 });
+    },
+  });
+
+  const response = await mesh.request("/live/frame?machine=admira-macbookairplata");
+  assert.equal(response.status, 400);
+  assert.ok(calls.every((url) => url.startsWith("https://primary.test")));
+  assert.equal(calls.filter((url) => url.includes("/live/frame")).length, 1);
+});
+
+test("un 502 de fotograma sí conmuta al relay de respaldo", async () => {
+  const calls = [];
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    fetch: async (url) => {
+      calls.push(url);
+      if (url.endsWith("/auth/session")) return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      if (url.startsWith("https://primary.test")) return json({ error: "relay no disponible" }, { status: 502 });
+      return json({ ok: true });
+    },
+  });
+
+  const out = await mesh.json("/live/frame?machine=macbookairplata");
+  assert.equal(out.response.status, 200);
+  assert.equal(out.data._mesh.relay.id, "backup");
+  assert.equal(out.data._mesh.failover, true);
+});
+
 test("aunque el motor ignore el motivo del abort, el fallo sigue explicándose", async () => {
   const mesh = create({
     relays: [RELAYS[0]],

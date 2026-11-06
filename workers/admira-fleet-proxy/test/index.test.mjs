@@ -450,3 +450,25 @@ test('does not replay an ambiguous mutation after response or transport failure'
     assert.doesNotMatch(await response.text(), /gateway timeout|connection reset|first\.invalid/, fail);
   }
 });
+
+test('a census 400 is the hub answer and does not fail over', async () => {
+  const calls = [];
+  const proxy = createFleetProxy({
+    relays: [
+      { id: 'first', base: 'https://first.invalid/fleet' },
+      { id: 'second', base: 'https://second.invalid/fleet' },
+    ],
+    fetchImpl: async (url) => {
+      calls.push(url);
+      return Response.json({ error: 'máquina desconocida', retry: false, relay: false }, { status: 400 });
+    },
+  });
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/live/frame?machine=admira-macbookairplata', {
+    headers: { Origin: 'https://www.admira.live' },
+  }));
+  assert.equal(response.status, 400);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0], 'https://first.invalid/fleet/api/live/frame?machine=admira-macbookairplata');
+  assert.equal(response.headers.get('X-Fleet-Relay'), 'first');
+  assert.deepEqual(await response.json(), { error: 'máquina desconocida', retry: false, relay: false });
+});

@@ -35,6 +35,7 @@ const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
 const { createGrokBotEncargo, createGrokBotRouter, LEYENDAS_INBOX } = require('./grokbot-encargo');
 const { createServiceBridge } = require('./service-bridge');
+const { resolveMachine, unknownMachineBody } = require('./machine-id');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
@@ -207,7 +208,17 @@ function consumeChallenge(req,state,flow='popup') {
 }
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
-function machineById(id) { return FLEET.machines.find(m => m.id === id); }
+function machineById(id) {
+  return resolveMachine(FLEET.machines, id).machine || null;
+}
+// El gate ya ha autorizado. Un alias único (admira-macbookairplata → macbookairplata)
+// se acepta; un id desconocido o ambiguo no se redirige a otra máquina.
+function rejectUnknownMachine(res, id) {
+  const found = resolveMachine(FLEET.machines, id);
+  if (found.machine) return found.machine;
+  json(res, 400, unknownMachineBody(id, found));
+  return null;
+}
 function machineKey(v) { return String(v || '').toLowerCase().split('.')[0].replace(/[^a-z0-9]/g, ''); }
 function isRelayLocal(machine) {
   const here = new Set([machineKey(RELAY_ID), machineKey(RELAY_LABEL), machineKey(os.hostname())]);
@@ -1056,8 +1067,12 @@ const server = http.createServer(async (req, res) => {
     if (!(await gate(req, res, ip))) return;
     const q = new URL(req.url, 'http://x').searchParams;
     const only = String(q.get('machine') || '');
-    const targets = only ? FLEET.machines.filter(m => m.id === only) : FLEET.machines.slice();
-    if (only && !targets.length) return json(res, 404, { error: 'máquina desconocida' });
+    let targets = FLEET.machines.slice();
+    if (only) {
+      const found = resolveMachine(FLEET.machines, only);
+      if (!found.machine) return json(res, 404, unknownMachineBody(only, found));
+      targets = [found.machine];
+    }
 
     let liveByScreen = new Map();
     try {
@@ -1116,8 +1131,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/run' && req.method === 'POST') {
     if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);
-    const m = machineById(body.machine);
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, body.machine);
+    if (!m) return;
     if (!body.cmd || !String(body.cmd).trim()) return json(res, 400, { error: 'comando vacío' });
     const commandId = commandIdFromReq(req);
     const command = idempotentCommand(m, String(body.cmd), commandId);
@@ -1130,8 +1145,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/term/open' && req.method === 'POST') {
     if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);
-    const m = machineById(body.machine);
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, body.machine);
+    if (!m) return;
     if (!m.host) return json(res, 400, { error: 'máquina sin host ssh' });
     termGC();
     let live = 0; for (const t of TERMS.values()) if (t.alive) live++;
@@ -1187,8 +1202,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/action' && req.method === 'POST') {
     if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);
-    const m = machineById(body.machine);
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, body.machine);
+    if (!m) return;
     const fn = resolveAction(body.action, m);
     if (!fn) return json(res, 400, { error: 'acción desconocida', acciones: Object.keys(ACTIONS) });
     let cmd;
@@ -1209,8 +1224,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/live/frame') {
     if (!(await gate(req, res, ip))) return;
     const q = new URL(req.url, 'http://x').searchParams;
-    const m = machineById(q.get('machine'));
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, q.get('machine'));
+    if (!m) return;
     const fn = resolveAction('screenshot', m);
     if (!fn) return json(res, 500, { error: 'sin acción screenshot' });
     // ?display=N → esa pantalla (FLT-1021). Sin parámetro, la de siempre.
@@ -1244,8 +1259,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/input' && req.method === 'POST') {
     if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);
-    const m = machineById(body.machine);
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, body.machine);
+    if (!m) return;
     const plataforma = platOf(m);
     if (!['macos', 'linux', 'windows'].includes(plataforma)) return json(res, 501, { error: 'input_no_soportado_en_' + plataforma });
     const accion = {
@@ -1284,8 +1299,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/wake' && req.method === 'POST') {
     if (!(await gate(req, res, ip, true))) return;
     const body = await readBody(req);
-    const m = machineById(body.machine);
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, body.machine);
+    if (!m) return;
     const pasos = [];
     const plat = platOf(m);
     // 1) ¿responde ya? → sólo despertar la pantalla.
@@ -1347,8 +1362,8 @@ const server = http.createServer(async (req, res) => {
     if (!(await gate(req, res, ip, true))) return;
     const body = await readBody(req);
     if (body && body.machine) {
-      const m = machineById(body.machine);
-      if (!m) return json(res, 400, { error: 'máquina desconocida' });
+      const m = rejectUnknownMachine(res, body.machine);
+      if (!m) return;
       const r = await VIGIA.vigilar(m, { forzar: true });
       audit({ ip, ev: 'vigia_manual', machine: m.id, ready: r && r.ready });
       return json(res, 200, { ok: true, maquina: m.id, resultado: r });
@@ -1363,8 +1378,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/displays') {
     if (!(await gate(req, res, ip))) return;
     const q = new URL(req.url, 'http://x').searchParams;
-    const m = machineById(q.get('machine'));
-    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const m = rejectUnknownMachine(res, q.get('machine'));
+    if (!m) return;
     const plataforma = platOf(m);
     const cmdDisplays = plataforma === 'linux' ? LGUI + 'python3 "$HOME/.fleet/fleet-input-linux.py" --displays'
       : plataforma === 'windows' ? '& "$env:USERPROFILE\\.fleet\\fleet-input.ps1" -Displays'

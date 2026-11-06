@@ -131,19 +131,21 @@
        abort() se sustituye el rechazo en `explain`. */
     function withTimeout(init, etiqueta) {
       init = Object.assign({}, init || {});
+      var limit = Math.max(500, +(init.timeoutMs || timeoutMs));
+      delete init.timeoutMs;
       var tal_cual = function (err) { return err; };
       if (init.signal || typeof AbortController === 'undefined') {
         return { init: init, cancel: function () {}, explain: tal_cual };
       }
       var ctl = new AbortController();
-      var motivo = new Error('sin respuesta en ' + timeoutMs + ' ms' + (etiqueta ? ' · ' + etiqueta : ''));
+      var motivo = new Error('sin respuesta en ' + limit + ' ms' + (etiqueta ? ' · ' + etiqueta : ''));
       motivo.name = 'FleetMeshTimeout';
       motivo.fleetMeshTimeout = true;
       var vencido = false;
       var timer = setTimeout(function () {
         vencido = true;
         try { ctl.abort(motivo); } catch (e) { ctl.abort(); }
-      }, timeoutMs);
+      }, limit);
       init.signal = ctl.signal;
       return {
         init: init,

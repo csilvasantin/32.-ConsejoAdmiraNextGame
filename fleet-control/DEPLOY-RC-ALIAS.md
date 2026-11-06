@@ -93,13 +93,27 @@ node --check server.js
 
 La web nueva tolera un hub viejo: volverá el 400, pero el texto dirá que el id no está en el censo, no que el relay está caído.
 
-## Página (GitHub Pages)
+## Página (Cloudflare Pages, no GitHub Pages)
 
-Al mergear a `main`, Pages publica `control/index.html` y `/fleet-control/machine-id.js`. La query `?v=20261106-r1` evita las 4 h de caché de ese script.
+`www.admira.live` lo publica `./deploy.sh` en el proyecto Cloudflare Pages `admira-live`. El workflow de GitHub Pages puede quedar en verde y no cambia ese origen: `https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/control/` redirige a www, y www sigue en el último `deploy.sh`.
 
-Hasta que Pages esté en el commit, `www.admira.live/control` sigue con el overlay viejo. Comprueba con `?_v=<commit>` y mira que el HTML pida `machine-id.js?v=20261106-r1`.
+El `version.json` vivo a las 08:40 UTC del 6-nov-2026 era `v.06.11.2026.r122.09:40`, git `ec97de2`, limpio. Ese git es el padre de este arreglo. La r122 es el sello que `deploy.sh` estampa al publicar; no es otra base de código. Publicar `main` añade este arreglo encima de esa misma base.
 
-Rollback de la página: revertir el commit en `main`. No hace falta tocar el Mini para deshacer solo el texto del banner.
+Hace falta, fuera de este repo:
+
+- sesión de Wrangler con permiso sobre el proyecto `admira-live` (`npx wrangler login` o `CLOUDFLARE_API_TOKEN`);
+- `ADMIRA_RELEASE_AGENT` y `ADMIRA_RELEASE_MACHINE`.
+
+Desde un checkout limpio de `main`, con el `<meta>` en formato `AdmiraNeXT v.DD.MM.AAAA.rN.HH:MM`:
+
+```bash
+export ADMIRA_RELEASE_AGENT=... ADMIRA_RELEASE_MACHINE=...
+./deploy.sh
+```
+
+`deploy.sh` genera el sello siguiente (la r123 si lo publicado sigue siendo la r122), sube el archivo de git y comprueba que `https://www.admira.live/fleet-control/machine-id.js` sea JavaScript y contenga `controlIdFor`. Un 200 con el HTML de la home es el fallo: el fichero no está en ese proyecto.
+
+Rollback de la página: volver a publicar el commit `ec97de2e1956aca1ba35066a990cd7eb808e21ba` (rama `rollback/pre-pr309-rc-control-20261106`) con el mismo `./deploy.sh`. No toca el `server.js` del Mini.
 
 ## Qué no queda verificado con este PR
 

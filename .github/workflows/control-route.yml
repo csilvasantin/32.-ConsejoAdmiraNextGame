@@ -1,0 +1,17 @@
+name: Control route
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Route, session and machine id
+        run: node --test fleet-control/machine-id.test.js control/rc-machine.test.mjs control/fleet-mesh.test.mjs control/overlay-veraz.test.mjs workers/admira-fleet-proxy/test/index.test.mjs

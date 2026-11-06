@@ -119,8 +119,9 @@ test('un 400 de máquina desconocida no se cuenta como relay y un timeout sí', 
   const timeout = frameFailure(Object.assign(new Error('sin respuesta en 12000 ms · Puerta pública'), { fleetMeshTimeout: true }), 'sin respuesta en 12000 ms · Puerta pública');
   assert.equal(timeout.relayFault, true);
   assert.equal(timeout.retryMs, 1200);
-  assert.match(timeout.hint, /otro relay/);
-  assert.doesNotMatch(timeout.hint, /Grabación/);
+  assert.match(timeout.hint, /ese mismo relay/);
+  assert.match(timeout.hint, /No es un permiso de captura/);
+  assert.doesNotMatch(timeout.hint, /Grabación de pantalla/);
 
   assert.equal(frameFailure({ status: 424 }, 'HTTP 424 {"error":"capture_failed_or_no_permission"}').title, 'La máquina no devuelve imagen');
   assert.match(fallbackBanner('no-relay').text, /Sin relay de control disponible/);

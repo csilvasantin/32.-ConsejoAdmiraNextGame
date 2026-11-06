@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="Admira v.26.11.06.r1" />
+<meta name="admiranext-version" content="Admira v.26.11.06.r2" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -23,9 +23,19 @@
      el .js con cache-control de 4 h, así que una cadena vieja deja al navegador
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
-<script src="/control/fleet-mesh.js?v=20261106-r1"></script>
+<script src="/control/fleet-mesh.js?v=20261106-r2"></script>
 <script src="/control/equipos.js?v=20261019-r1"></script>
-<script src="/fleet-control/machine-id.js?v=20261106-r1-d423cc6c3a2c"></script>
+<script src="/fleet-control/machine-id.js?v=20261106-r2-371ab360dab8"></script>
+<script>
+(function(){
+  try{
+    var api=window.AdmiraRcMachine;
+    if(!api||typeof api.canonicalControlUrl!=='function') return;
+    var next=api.canonicalControlUrl(location.href);
+    if(next&&next!==location.href) location.replace(next);
+  }catch(e){}
+})();
+</script>
 <link rel="stylesheet" href="/assets/interruptores.css?v=20261014-5872">
 <script src="/assets/interruptores.js?v=20261014-5872"></script>
 <title>Control · AdmiraNext Fleet</title>
@@ -886,14 +896,22 @@ const $=s=>document.querySelector(s);
 let MACHINES=[];
 let HUB_CENSUS=[];
 let ACTIVE_ROUTE=null;
-function rcMachineId(id){
+function rcMachineId(id, requested){
   try{
-    if(window.AdmiraRcMachine&&typeof window.AdmiraRcMachine.selectControlId==='function'){
-      const chosen=window.AdmiraRcMachine.selectControlId(id, HUB_CENSUS);
-      if(chosen) return chosen;
+    const api=window.AdmiraRcMachine;
+    let chosen=id==null?'':String(id&&id.id?id.id:id);
+    if(api&&typeof api.controlIdFor==='function') chosen=api.controlIdFor(id, requested);
+    if(api&&typeof api.selectControlId==='function'&&HUB_CENSUS.length){
+      const fromHub=api.selectControlId(chosen, HUB_CENSUS);
+      if(fromHub) return fromHub;
     }
+    if(chosen) return chosen;
   }catch(e){}
   return id==null?'':String(id);
+}
+function falloPermisoCaptura(payload){
+  try{ if(window.AdmiraRcMachine&&AdmiraRcMachine.esFalloPermisoCaptura) return AdmiraRcMachine.esFalloPermisoCaptura(payload); }catch(e){}
+  return /ERR_NO_CAPTURE|capture_failed_or_no_permission/.test(typeof payload==='string'?payload:JSON.stringify(payload||''));
 }
 /* ── EQUIPOS DUPLICADOS Y ELIMINADOS (19-10-2026) ──────────────────────────
    El censo (hub o admira-fleet) pasa SIEMPRE por depurarEquipos() antes de pintarse:
@@ -1506,6 +1524,7 @@ async function degradedRefresh(kind){
   }
   showControlRouteBanner(kind, null);
   renderCards(MACHINES); fillSelect(); updateCapHealth();
+  deepLinkRc();
 }
 // Claves de una máquina del hub para casar con los nombres de presencia (p.ej. hub fqdn
 // 'macbookair16' ~ presencia 'MacBookAir16plata'; id 'admira-asuszenbook' ~ 'AsusZenbook').
@@ -1569,6 +1588,7 @@ $('#tokenPill').onclick=logout;
 async function api(path, opts){
   opts=opts||{};
   const h={'Content-Type':'application/json',...(opts.headers||{})};
+  if(!opts.timeoutMs && /^\/(status|preflight)(\?|$)/.test(path)) opts.timeoutMs=18000;
   const out=await FLEET_MESH.json(path,{...opts,headers:h});
   const r=out.response, d=out.data;
   if(r.status===401){ throw {code:401,msg:'sesión inválida en los relays disponibles',mesh:d&&d._mesh}; }
@@ -1677,7 +1697,7 @@ function moveCard(dragId, targetId){
 function _stateMap(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}'); }catch(e){ return {}; } }
 function _setState(k,id,v){ const m=_stateMap(k); if(v) m[id]=1; else delete m[id]; localStorage.setItem(k, JSON.stringify(m)); }
 function screenIsOff(id){ return !!_stateMap('fleet_screen_off_by_machine')[id]; }   // pantalla dormida
-let DS_PREFLIGHT={}, DS_PREFLIGHT_AT=0, DS_PREFLIGHT_BUSY=false;
+let DS_PREFLIGHT={}, DS_PREFLIGHT_AT=0, DS_PREFLIGHT_BUSY=false, DS_PREFLIGHT_ROUTE='';
 function dsPf(id){ return DS_PREFLIGHT[id]||null; }
 function signageIsOn(id){ const p=dsPf(id), l=p&&p.live; return !!(l&&l.online&&l.age_seconds!=null&&l.age_seconds<=60); }
 function signageEligible(id){ const p=dsPf(id); return !!(p&&p.eligible); }
@@ -1775,7 +1795,7 @@ function updateDsSummary(){
   const all=Object.values(DS_PREFLIGHT), ok=all.filter(x=>x.eligible).length, blocked=all.filter(x=>!x.eligible).length;
   const states=all.reduce((a,x)=>{const s=x.deployment&&x.deployment.state||'unknown';a[s]=(a[s]||0)+1;return a;},{});
   const s=$('#dsPfSummary');
-  if(s) s.textContent=DS_PREFLIGHT_BUSY?'comprobando…':(all.length?((states.live||0)+' live · '+ok+' elegibles · '+blocked+' bloqueados · '+((states.stale||0)+(states.offline||0))+' stale/offline'):'preflight pendiente');
+  if(s) s.textContent=DS_PREFLIGHT_BUSY?'comprobando…':(all.length?((states.live||0)+' live · '+ok+' elegibles · '+blocked+' bloqueados · '+((states.stale||0)+(states.offline||0))+' stale/offline'):(DS_PREFLIGHT_ROUTE||'preflight pendiente'));
   paintDsAll();   // pinta AMBOS botones (Arrancar DS / Apagar DS) con su alcance real
 }
 async function refreshDsPreflight(machine){
@@ -1786,8 +1806,10 @@ async function refreshDsPreflight(machine){
     const d=await api('/preflight'+q);
     (d.machines||[]).forEach(p=>{ DS_PREFLIGHT[p.id]=p; });
     DS_PREFLIGHT_AT=Date.now();
+    DS_PREFLIGHT_ROUTE='';
   }catch(e){
     if(machine) DS_PREFLIGHT[machine]={id:machine,eligible:false,blockers:['No se pudo obtener el preflight del hub.'],warnings:[],live:{online:false},screen:{id:machine},player:{},permissions:{}};
+    else DS_PREFLIGHT_ROUTE='preflight sin respuesta del relay';
   }
   DS_PREFLIGHT_BUSY=false; updateDsSummary(); renderCards(MACHINES);
 }
@@ -1839,14 +1861,19 @@ function deepLinkRc(){
   if(_rcDeepDone) return;
   const q=new URLSearchParams(location.search);
   const raw=(q.get('rc')||'').trim(); if(!raw) return;
-  if(!MACHINES.length) return;                       // aún sin flota: se reintenta al siguiente refresh
-  _rcDeepDone=true;
+  if(typeof window.openRemoteControl!=='function') return;
+  if(!MACHINES.length){
+    if(!SESSION || !/^[a-z0-9-]{3,80}$/i.test(raw)) return;
+    _rcDeepDone=true;
+    window.openRemoteControl(rcMachineId(raw, raw), q.get('name')||raw);
+    return;
+  }
   const nq=_norm(String(raw).split('.')[0].replace(/^admira-?/,''));
-  const m=nq && MACHINES.find(x=>_machKeys(x).some(k=>k===nq||k.indexOf(nq)===0||nq.indexOf(k)===0));
-  if(!m){ toast('warn','🖥️ '+raw,'no está en la flota — no se puede operar'); return; }
+  const m=nq && MACHINES.find(x=>_machKeys(x).some(k=>k===nq));
+  if(!m){ _rcDeepDone=true; toast('warn','🖥️ '+raw,'no está en la flota — no se puede operar'); return; }
+  _rcDeepDone=true;
   if(!m.online){ toast('warn','🖥️ '+(m.name||m.id),'está offline — el control remoto necesita la máquina despierta'); return; }
-  if(typeof window.openRemoteControl!=='function'){ toast('warn','🖥️ '+(m.name||m.id),'el control remoto no cargó'); return; }
-  window.openRemoteControl(rcMachineId(m.id), m.name||q.get('name')||m.id);
+  window.openRemoteControl(rcMachineId(m, raw), m.name||q.get('name')||m.id);
 }
 
 function deepLinkEquipo(){
@@ -2138,7 +2165,11 @@ $('#cards').addEventListener('click', async e=>{
         const sl=ranuraCaptura(machine);
         const img=sl?await capturaPorWatcher(machine,sl):null;
         if(img){ showShot(machine,'data:image/jpeg;base64,'+img); setCapFail(machine,false); markCaptured(machine); }
-        else { setCapFail(machine,true); pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||(sl?'ni por SSH ni por el watcher':'sin permiso por SSH y este equipo no tiene watcher')}); }
+        else {
+          const permiso=falloPermisoCaptura(d);
+          if(permiso) setCapFail(machine,true);
+          pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||(permiso?(sl?'ni por SSH ni por el watcher':'sin permiso de captura en esa máquina'):'la captura no llegó por la ruta de control')});
+        }
       }
     }catch(err){ pushResult(machine,'🧹 escritorio',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     icon.classList.remove('em-busy');
@@ -2289,7 +2320,11 @@ $('#cards').addEventListener('click', async e=>{
         const img=sl?await capturaPorWatcher(machine,sl):null;
         if(img){ showShot(machine,'data:image/jpeg;base64,'+img); setCapFail(machine,false); markCaptured(machine);
           pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba · vía watcher)',ms:d.ms}); }
-        else { setCapFail(machine,true); pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||(sl?'ni por SSH ni por el watcher':'sin permiso por SSH y este equipo no tiene watcher')}); }
+        else {
+          const permiso=falloPermisoCaptura(d);
+          if(permiso) setCapFail(machine,true);
+          pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||(permiso?(sl?'ni por SSH ni por el watcher':'sin permiso de captura en esa máquina'):'la captura no llegó por la ruta de control')});
+        }
       }
     } else pushResult(machine, '⚡ '+action+(arg?(' '+arg):''), d);
   }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
@@ -2937,8 +2972,8 @@ function captureMachine(id){
     }
   };
   return api('/action',{method:'POST',body:JSON.stringify({machine:id,action:'screenshot'})})
-    .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); } else { setCapFail(id,true); } })
-    .catch(()=>{ setCapFail(id,true); })   // en auto: deja la miniatura anterior, pero marca el aviso
+    .then(d=>{ if(d&&d.rc===0 && d.stdout && !falloPermisoCaptura(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); } else if(falloPermisoCaptura(d)) setCapFail(id,true); })
+    .catch(()=>{})   // un fallo de ruta no es un permiso de captura
     .finally(cerrar);
 }
 async function autoCapTick(){
@@ -3202,6 +3237,7 @@ function collapseAllToggle(){
   bootSkeleton();
   fase('🔑 abriendo sesión…', 'warn');
   await ensureSession();
+  deepLinkRc();
   if(SESSION){
     const g=(window.admiraGateUser&&window.admiraGateUser())||{};
     const tp=$('#tokenPill');

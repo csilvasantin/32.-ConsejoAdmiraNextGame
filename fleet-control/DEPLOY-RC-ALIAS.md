@@ -2,6 +2,15 @@
 
 Esto está en el repositorio. **No está desplegado** en el Mac Mini ni verificado como control interactivo en vivo. No copies `server.js` del repo encima del runtime.
 
+## Dos causas distintas
+
+1. **Id.** El hub en marcha compara el id exacto. La tarjeta degradada manda `admira-macbookairplata` y el hub responde 400. El alias del hub (`machine-id.js` dentro de `server.js`) lo acepta cuando esté desplegado. Mientras no lo esté, la página envía la forma corta (`macbookairplata`) porque es la misma ficha, no otra máquina. `?rc=macbookairplata` abre el control con ese id, aunque el censo de admira-fleet use el id largo.
+2. **Ruta.** `/health` de los dos relays responde bien y no es lo mismo que el censo. `/api/status` hace SSH a toda la flota y puede pasar de 12 s. Ese tiempo marcaba la puerta pública como caída y el siguiente fotograma salía hacia `*.ts.net`, que no lleva la cookie `__Host-` de `fleet.admira.live` y, dentro del tailnet, Chrome corta. Un censo lento ya no aparta ese relay. El fotograma y el input se reintentan en el relay que tiene la sesión.
+
+`https://admira.live/control` ya redirige a `https://www.admira.live/control/`. La página repite ese salto si el redirect no ocurrió, conservando `?rc=`.
+
+Ninguna de las dos está desplegada. El control en vivo desde PC-COCINA no se ha verificado aquí.
+
 ## Qué divergió
 
 | Copia | Ruta | Papel |

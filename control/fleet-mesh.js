@@ -123,6 +123,22 @@
       s.downUntil = Date.now() + cooldownMs;
       s.lastError = String(err && (err.message || err) || 'sin respuesta');
     }
+    function pathOnly(path) {
+      return String(path || '').split('?')[0];
+    }
+    // El censo SSH (/status, /preflight) puede tardar más que /health sin que
+    // la puerta pública esté caída. Enfriarla manda el control al nombre
+    // *.ts.net, que dentro del tailnet Chrome corta y que además no tiene la
+    // cookie __Host- de fleet.admira.live.
+    function heavyCensus(path) {
+      return /^\/(status|preflight)$/.test(pathOnly(path));
+    }
+    function stickyControl(path) {
+      return /^\/(live\/frame|input|displays)$/.test(pathOnly(path));
+    }
+    function noteSlow(relay, err) {
+      state[relay.id].lastError = String(err && (err.message || err) || 'censo lento');
+    }
     /* UN ABORTO DICE POR QUÉ ABORTA (2026-08-10). `ctl.abort()` sin argumento hace
        que fetch rechace con «signal is aborted without reason»: ni dice que fue un
        tiempo de espera, ni de cuánto era, ni contra qué relay. Ese texto subía tal
@@ -223,8 +239,25 @@
           var response = await fetchRelay(relay, path, opts, commandId);
           attempts.push({ relay: relay.id, status: response.status });
           if (response.status >= 500) {
-            markFail(relay, 'HTTP ' + response.status);
             lastError = new Error('HTTP ' + response.status);
+            lastError.status = response.status;
+            if (heavyCensus(path) && sessions[relay.id]) {
+              noteSlow(relay, lastError);
+              break;
+            }
+            if (stickyControl(path) && sessions[relay.id]) {
+              noteSlow(relay, lastError);
+              response.__admiraMesh = {
+                version: VERSION,
+                relay: relay,
+                failover: !!(relays[0] && relay.id !== relays[0].id),
+                attempts: attempts,
+                commandId: commandId || null,
+                sticky: true
+              };
+              return response;
+            }
+            markFail(relay, lastError);
             continue;
           }
           markOk(relay);
@@ -238,8 +271,13 @@
           return response;
         } catch (err) {
           attempts.push({ relay: relay.id, error: String(err && (err.message || err) || err) });
-          markFail(relay, err);
           lastError = err;
+          var timedOut = !!(err && err.fleetMeshTimeout);
+          if (timedOut && sessions[relay.id] && (heavyCensus(path) || stickyControl(path))) {
+            noteSlow(relay, err);
+            break;
+          }
+          markFail(relay, err);
         }
       }
       var error = lastError instanceof Error ? lastError : new Error('ningún relay de control disponible');

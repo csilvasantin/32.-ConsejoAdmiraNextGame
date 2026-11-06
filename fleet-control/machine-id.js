@@ -118,6 +118,39 @@
 
   /* Id que el botón debe enviar. Sin censo conocido se deja el id de la tarjeta:
      el hub resuelve el alias. Nunca se sustituye por otra máquina. */
+  /* Id que el hub desplegado acepta. Quitar un solo prefijo admira- no
+     cambia de máquina: la clave es la misma. El ?rc= pedido gana si nombra
+     esta misma ficha. Nunca se elige el id de otra. */
+  function controlIdFor(machineOrId, requested) {
+    var card = machineOrId && typeof machineOrId === 'object' ? machineOrId.id : machineOrId;
+    var cardRaw = card == null ? '' : String(card);
+    var ask = requested == null ? '' : String(requested).trim();
+    if (ask && censusKey(ask) && censusKey(ask) === censusKey(cardRaw)) return ask;
+    var stripped = cardRaw.replace(/^admira-/, '');
+    if (stripped && stripped !== cardRaw && censusKey(stripped) === censusKey(cardRaw)) return stripped;
+    return cardRaw;
+  }
+
+  function canonicalControlUrl(href) {
+    var raw = String(href || '');
+    var parsed;
+    try { parsed = new URL(raw); } catch (e) { return null; }
+    if (parsed.protocol !== 'https:') return null;
+    var host = parsed.hostname.toLowerCase();
+    if (host !== 'admira.live' && host !== 'www.admira.live') return null;
+    var nextHost = host === 'admira.live' ? 'www.admira.live' : host;
+    var nextPath = parsed.pathname === '/control' ? '/control/' : parsed.pathname;
+    if (nextHost === host && nextPath === parsed.pathname) return null;
+    parsed.hostname = nextHost;
+    parsed.pathname = nextPath;
+    return parsed.toString();
+  }
+
+  function esFalloPermisoCaptura(payload) {
+    var text = typeof payload === 'string' ? payload : JSON.stringify(payload || '');
+    return /ERR_NO_CAPTURE|capture_failed_or_no_permission/.test(text);
+  }
+
   function selectControlId(machineOrId, census) {
     var requested = machineOrId && typeof machineOrId === 'object' ? machineOrId.id : machineOrId;
     var raw = requested == null ? '' : String(requested);
@@ -178,9 +211,9 @@
       title = 'El relé de control ha fallado';
       hint = 'Este relé ha respondido con error. Fleet Mesh probará otro relay.';
       unknown = false;
-    } else if (timeout) {
+    }     else if (timeout) {
       title = 'El relé no contesta a tiempo';
-      hint = 'El relay no contestó a tiempo — no es un permiso del agente. Fleet Mesh probará otro relay; si se repite, la máquina está saturada o sin ruta.';
+      hint = 'El relay que tiene la sesión no contestó a tiempo. No es un permiso de captura. Se reintenta ese mismo relay; un nombre *.ts.net no hereda la cookie.';
       unknown = false;
     } else if (unknown) {
       title = body.error === 'máquina ambigua' ? 'Identificador ambiguo' : 'Máquina desconocida para el relay';
@@ -243,6 +276,9 @@
     unknownMachineBody: unknownMachineBody,
     commandTarget: commandTarget,
     gateThenTarget: gateThenTarget,
+    controlIdFor: controlIdFor,
+    canonicalControlUrl: canonicalControlUrl,
+    esFalloPermisoCaptura: esFalloPermisoCaptura,
     selectControlId: selectControlId,
     frameRequest: frameRequest,
     inputRequest: inputRequest,

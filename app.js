@@ -608,6 +608,7 @@
                     <div class="member-info">
                         <div class="member-name">${member.name} — ${member.persona}</div>
                         <div class="member-role">${member.role}</div>
+                        ${window.CouncilPresencia ? window.CouncilPresencia.casilla(currentGen, member.persona) : ''}
                     </div>
                     <div class="machine-tag ${isOnline ? 'online' : ''}">
                         ${machineName}${machineStatusText ? '<br>' + machineStatusText : ''}
@@ -674,6 +675,8 @@
         }
         // El clic sobre el cuerpo abre la ficha del consejero (salvo en modo preguntar, que selecciona para preguntar).
         bhEl.classList.add("ficha-active");
+        // /consejero · casillas «Presente»: placa de sillas vacías + recortes (assets/council-presencia.js).
+        if (window.CouncilPresencia) window.CouncilPresencia.sync(currentGen);
 
         // Bocas v2 (FLT-100228): soft-oval blend sheets on Leyendas only.
         _mouthMachineAlive = new Set(
@@ -1866,6 +1869,8 @@
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
             li('<strong>/interface terminal 4 | 2 [dispositivo] · /interface 6 · /interface 2 claude|codex|grok · /interface 2 Neo Trinity · /interfaz</strong>', 'terminales en vivo de los deepagents (4 = Neo·Morfeo·Trinity·Oráculo · 2 = Smith·Merovingio · 6 = los seis en 3x2 · 2 claude|codex|grok = los 2 vivos de ese modelo · 2 Neo Trinity = esos dos): sin dispositivo aquí; Fold, Iphone, Air, MBP16, MBP14 allí · /interface off [dispositivo] · /interface help', 'live deepagent terminals (4 = Neo·Morph·Trinity·Oracle · 2 = Smith·Merovingio · 6 = all six in 3x2 · 2 claude|codex|grok = the 2 live on that model · 2 Neo Trinity = those two): no device = here; Fold, Iphone, Air, MBP16, MBP14 there · /interface off [device] · /interface help') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
+            li('<strong>/consejero</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table') +
+            li('<strong>/ceo</strong>', 'aparece o desaparece Carlos (tú) en la silla central', 'shows or hides Carlos (you) in the centre chair') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
             li('<strong>/importar &lt;url&gt;</strong>', 'descarga vídeo y lo sube a Drive', 'downloads a video and uploads it to Drive') +
             li('<strong>/nombres on|off|toggle</strong>', 'enseña u oculta los consejeros', 'shows or hides the councillors') +
@@ -2208,7 +2213,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/consejero', '/ceo', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca',
         // Pieles de cine (FLT-101666 c): /81 … /89 = /marca 81 … /marca 89
         '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89',
@@ -2381,6 +2386,16 @@
                 setActionLine("\u26a0\ufe0f El editor de recorte no ha cargado; recarga la p\u00e1gina");
             }
             return true;
+        }
+        // ── /consejero [todos|ninguno|<nombre>] y /ceo (Carlos, 06-11-2026): presencia en la mesa ──
+        if (/^\/(consejeros?|advisors?|councill?ors?|ceo|yo)(\s|$)/i.test(text) && window.CouncilPresencia) {
+            const r = window.CouncilPresencia.comando(text, currentGen);
+            if (r) {
+                addUserEntry(text);
+                if (r.ok && r.gen && r.gen !== currentGen) setGen(r.gen); else if (r.ok) window.CouncilPresencia.sync(currentGen);
+                setActionLine((r.ok ? "\ud83e\ude91 " : "") + r.msg);
+                return true;
+            }
         }
         // ── Generación del Consejo: /leyendas y /coetaneos ──
         const genMatch = text.match(/^\/(leyendas|coet[a\u00e1]neos)$/i);

@@ -45,6 +45,6 @@ test('la página publica el resolvedor, el censo del hub y un diagnóstico que n
   assert.match(html, /FLEET_MESH\.request\('\/health'/);
   assert.match(html, /el relay ya contestó; se reintenta despacio/);
   assert.doesNotMatch(html, /fetch\(API\+'\/health'/);
-  assert.match(html, /content="Admira v\.26\.11\.06\.r2"/);
+  assert.match(html, /content="AdmiraNeXT v\.06\.11\.2026\.r122\.09:40"/);
   assert.match(html, /canonicalControlUrl\(location\.href\)/);
 });

@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: "22"
       - name: Route, session and machine id
-        run: node --test fleet-control/machine-id.test.js control/rc-machine.test.mjs control/fleet-mesh.test.mjs control/overlay-veraz.test.mjs workers/admira-fleet-proxy/test/index.test.mjs
+        run: node --test fleet-control/machine-id.test.js control/rc-machine.test.mjs control/fleet-mesh.test.mjs control/overlay-veraz.test.mjs workers/admira-fleet-proxy/test/index.test.mjs sello-siguiente.test.mjs

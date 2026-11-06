@@ -157,4 +157,25 @@ else
   echo "  ✗ la barra sellada NO responde en www (codigo: ${VER_CODE:-sin respuesta}) — revisa el deploy" >&2
 fi
 
+# El control remoto pide /fleet-control/machine-id.js. Si ese fichero no está en
+# este proyecto de Pages, Cloudflare devuelve el HTML de la home (200, ~250 KB)
+# y el navegador no ejecuta controlIdFor. GitHub Pages no es este origen.
+MID_BODY="$(mktemp)"
+MID_META="$(curl -sS -A "Mozilla/5.0" --max-time 20 -D - -o "$MID_BODY" "https://www.admira.live/fleet-control/machine-id.js" || true)"
+MID_CODE="$(printf '%s' "$MID_META" | sed -n 's|^HTTP/[0-9.]* \([0-9]*\).*|\1|p' | head -1)"
+MID_TYPE="$(printf '%s' "$MID_META" | sed -n 's/^[Cc]ontent-[Tt]ype: //p' | head -1 | tr -d '\r')"
+MID_HEAD="$(head -c 80 "$MID_BODY" 2>/dev/null || true)"
+rm -f "$MID_BODY"
+if [ "$MID_CODE" = "200" ] && printf '%s' "$MID_TYPE" | grep -qi javascript && ! printf '%s' "$MID_HEAD" | grep -q '<!DOCTYPE'; then
+  if curl -fsS -A "Mozilla/5.0" --max-time 20 "https://www.admira.live/fleet-control/machine-id.js" | grep -q 'controlIdFor'; then
+    echo "  ✓ machine-id.js es JavaScript y define controlIdFor"
+  else
+    echo "  ✗ machine-id.js respondió como JS pero no contiene controlIdFor" >&2
+    exit 1
+  fi
+else
+  echo "  ✗ machine-id.js no se sirve como JavaScript (codigo: ${MID_CODE:-sin respuesta} · tipo: ${MID_TYPE:-?} · inicio: ${MID_HEAD:-vacío})" >&2
+  exit 1
+fi
+
 echo "✓ desplegado en https://admira-live.pages.dev (y www.admira.live si el dominio ya apunta aquí)"

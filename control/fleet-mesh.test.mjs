@@ -149,6 +149,118 @@ test("un relay que no contesta se rechaza diciendo el tiempo de espera y el rela
   assert.doesNotMatch(err.message, /aborted without reason/);
 });
 
+test("un 400 de censo no se reintenta en otro relay", async () => {
+  const calls = [];
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    fetch: async (url) => {
+      calls.push(url);
+      if (url.endsWith("/auth/session")) return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      return json({ error: "máquina desconocida", retry: false, relay: false }, { status: 400 });
+    },
+  });
+
+  const response = await mesh.request("/live/frame?machine=admira-macbookairplata");
+  assert.equal(response.status, 400);
+  assert.ok(calls.every((url) => url.startsWith("https://primary.test")));
+  assert.equal(calls.filter((url) => url.includes("/live/frame")).length, 1);
+});
+
+test("un 502 de fotograma se queda en el relay que tiene la sesión", async () => {
+  const calls = [];
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    fetch: async (url) => {
+      calls.push(url);
+      if (url.endsWith("/auth/session")) return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      if (url.startsWith("https://primary.test")) return json({ error: "relay no disponible" }, { status: 502 });
+      return json({ ok: true });
+    },
+  });
+
+  const out = await mesh.json("/live/frame?machine=macbookairplata");
+  assert.equal(out.response.status, 502);
+  assert.equal(out.data._mesh.relay.id, "primary");
+  assert.equal(out.data._mesh.sticky, true);
+  assert.ok(calls.filter((url) => url.includes("/live/frame")).every((url) => url.startsWith("https://primary.test")));
+});
+
+test("un censo lento no aparta el relay que ya tiene la sesión", async () => {
+  const seen = [];
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    timeoutMs: 400,
+    cooldownMs: 60000,
+    fetch: async (url, init = {}) => {
+      if (url.endsWith("/auth/session")) {
+        if (url.startsWith("https://backup.test")) return json({ ok: false }, { status: 401 });
+        return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      }
+      if (url.includes("/status")) {
+        seen.push(new URL(url).host);
+        await new Promise((resolve, reject) => {
+          const signal = init.signal;
+          if (signal) signal.addEventListener("abort", () => reject(signal.reason || new Error("aborted")));
+        });
+      }
+      seen.push("frame:" + new URL(url).host);
+      return json({ ok: true });
+    },
+  });
+
+  await mesh.json("/status").then(() => { throw new Error("el censo no debía resolverse"); }, () => {});
+  const frame = await mesh.request("/live/frame?machine=macbookairplata");
+  assert.deepEqual(seen.filter((item) => item === "primary.test"), ["primary.test"]);
+  assert.equal(seen.includes("backup.test"), false);
+  assert.equal(frame.__admiraMesh.relay.id, "primary");
+  assert.equal(frame.__admiraMesh.failover, false);
+});
+
+test("el fotograma no salta a un relay sin la cookie cuando el de la sesión no contesta", async () => {
+  const frames = [];
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    timeoutMs: 400,
+    fetch: async (url, init = {}) => {
+      if (url.endsWith("/auth/session")) return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      if (url.includes("/live/frame")) {
+        frames.push(new URL(url).host);
+        if (url.startsWith("https://primary.test")) {
+          await new Promise((resolve, reject) => {
+            const signal = init.signal;
+            if (signal) signal.addEventListener("abort", () => reject(signal.reason || new Error("aborted")));
+          });
+        }
+      }
+      return json({ ok: true });
+    },
+  });
+
+  const err = await mesh.request("/live/frame?machine=macbookairplata").then(() => null, (e) => e);
+  assert.equal(err.fleetMeshTimeout, true);
+  assert.deepEqual(frames, ["primary.test"]);
+});
+
+test("una caída de red del fotograma sí prueba el otro relay", async () => {
+  const mesh = create({
+    relays: RELAYS,
+    store: store(),
+    fetch: async (url) => {
+      if (url.endsWith("/auth/session")) return json({ ok: true, email: "owner@example.com", csrf: "csrf-value" });
+      if (url.startsWith("https://primary.test") && url.includes("/live/frame")) throw new Error("network down");
+      return json({ ok: true });
+    },
+  });
+
+  const frame = await mesh.request("/live/frame?machine=macmini");
+  assert.equal(frame.__admiraMesh.relay.id, "backup");
+  assert.equal(frame.__admiraMesh.failover, true);
+});
+
 test("aunque el motor ignore el motivo del abort, el fallo sigue explicándose", async () => {
   const mesh = create({
     relays: [RELAYS[0]],

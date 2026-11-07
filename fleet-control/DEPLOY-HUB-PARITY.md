@@ -51,8 +51,10 @@ node --test agent-session.test.js machine-removal.test.js capture-client.test.js
 El agente de captura, con la sesión gráfica abierta (no por un SSH sin `gui/<uid>`):
 
 ```bash
-bash deploy-capture-agent.sh local
+bash ~/fleet-control/deploy-capture-agent.sh local
 ```
+
+Ese comando, con el usuario de la sesión gráfica, es el de la captura. Valida el plist con Python antes de `bootout`. Si `bootstrap` falla, repone el plist y el script anteriores y no escribe `fleet-capture.version`. Si `~/.fleet/fleet-capture.sh` está `uchg`, lo dice y no le quita el flag. No uses `FLEET_CAPTURE_FORCE=1` salvo para reinstalar esta misma versión a propósito.
 
 Eso no toca `fleet.json`. Reiniciar el relay después:
 

@@ -4,8 +4,25 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const C = require('./capture-client');
+
+function assertPlist(file, home) {
+  const py = `
+import plistlib, sys
+p = plistlib.load(open(sys.argv[1], "rb"))
+args = p["ProgramArguments"]
+expect = ["/usr/bin/python3", sys.argv[2] + "/.fleet/fleet-capture.py"]
+assert isinstance(args, list) and args == expect, args
+assert p["Label"] == "com.admiranext.fleet-capture"
+assert p["RunAtLoad"] is True and p["KeepAlive"] is True
+raw = open(sys.argv[1], "rb").read()
+assert b"</array>" in raw and b"<array>" in raw
+assert b"</key>\\n  <key>RunAtLoad" not in raw
+`;
+  const r = spawnSync('python3', ['-c', py, file, home], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr || r.stdout);
+}
 
 test('cada captura tiene su nonce y un índice inválido no cae en la principal', () => {
   const cmd = C.macosCaptureCommand(2);
@@ -71,6 +88,8 @@ test('el instalador es idempotente, no pisa una versión más nueva y no arranca
   const run = (extra) => execFileSync('bash', [script, 'local'], { env: Object.assign({}, env, extra || {}), encoding: 'utf8' });
   const first = run();
   assert.match(first, /instalado \(v3\)/);
+  assertPlist(path.join(home, 'Library/LaunchAgents/com.admiranext.fleet-capture.plist'), home);
+  assert.equal(fs.readFileSync(path.join(home, '.fleet/fleet-capture.version'), 'utf8'), '3\n');
   const log1 = fs.readFileSync(path.join(home, 'launchctl.log'), 'utf8');
   assert.equal(log1.split('\n').filter((l) => l.startsWith('bootstrap ')).length, 1);
   const second = run();
@@ -98,4 +117,126 @@ test('el instalador es idempotente, no pisa una versión más nueva y no arranca
   } catch (e) { code = e.status; }
   assert.equal(code, 2);
   assert.equal(fs.existsSync(path.join(bare, '.fleet', 'fleet-capture.py')), false);
+});
+
+function writeFakeLs(bin) {
+  fs.writeFileSync(path.join(bin, 'ls'), [
+    '#!/bin/bash',
+    'if [ "$1" = "-lO" ]; then',
+    '  target="${@: -1}"',
+    '  if [ -f "$HOME/uchg.list" ] && grep -Fxq "$target" "$HOME/uchg.list"; then echo "uchg $target"; exit 0; fi',
+    '  echo "plain $target"; exit 0',
+    'fi',
+    'exec /bin/ls "$@"',
+    ''
+  ].join('\n'), { mode: 0o755 });
+  fs.writeFileSync(path.join(bin, 'chflags'), [
+    '#!/bin/bash',
+    'echo "$*" >> "$HOME/chflags.log"',
+    'exit 0',
+    ''
+  ].join('\n'), { mode: 0o755 });
+}
+
+test('un plist roto no se da por instalado y el generado anida array', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cap-'));
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-bin-'));
+  fs.writeFileSync(path.join(bin, 'launchctl'), [
+    '#!/bin/bash',
+    'if [ "$1" = "print" ]; then [ "${FAKE_GUI:-}" = "1" ]; exit $?; fi',
+    'printf "%s\\n" "$*" >> "$HOME/launchctl.log"',
+    'exit 0',
+    ''
+  ].join('\n'), { mode: 0o755 });
+  const env = Object.assign({}, process.env, { HOME: home, PATH: bin + path.delimiter + process.env.PATH, FAKE_GUI: '1' });
+  delete env.FLEET_CAPTURE_FORCE;
+  fs.mkdirSync(path.join(home, '.fleet'), { recursive: true });
+  fs.mkdirSync(path.join(home, 'Library/LaunchAgents'), { recursive: true });
+  fs.copyFileSync(path.join(__dirname, 'fleet-capture.py'), path.join(home, '.fleet/fleet-capture.py'));
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.version'), '3\n');
+  const plist = path.join(home, 'Library/LaunchAgents/com.admiranext.fleet-capture.plist');
+  fs.writeFileSync(plist, '<plist><dict><key>ProgramArguments</key><array><string>/usr/bin/python3</string></key></dict></plist>\n');
+  const out = execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
+  assert.match(out, /instalado \(v3\)/);
+  assert.doesNotMatch(out, /ya instalado/);
+  assertPlist(plist, home);
+});
+
+test('si bootstrap falla se restaura el plist anterior y no se fija la versión', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cap-'));
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-bin-'));
+  fs.writeFileSync(path.join(bin, 'launchctl'), [
+    '#!/bin/bash',
+    'if [ "$1" = "print" ]; then [ "${FAKE_GUI:-}" = "1" ]; exit $?; fi',
+    'printf "%s\\n" "$*" >> "$HOME/launchctl.log"',
+    'if [ "$1" = bootstrap ] && [ "${FAKE_BOOT_FAIL:-}" = 1 ]; then',
+    '  c=$(grep -c "^bootstrap " "$HOME/launchctl.log" || true)',
+    '  if [ "$c" = 1 ]; then exit 1; fi',
+    'fi',
+    'exit 0',
+    ''
+  ].join('\n'), { mode: 0o755 });
+  const env = Object.assign({}, process.env, {
+    HOME: home, PATH: bin + path.delimiter + process.env.PATH, FAKE_GUI: '1', FAKE_BOOT_FAIL: '1'
+  });
+  fs.mkdirSync(path.join(home, '.fleet'), { recursive: true });
+  fs.mkdirSync(path.join(home, 'Library/LaunchAgents'), { recursive: true });
+  const plist = path.join(home, 'Library/LaunchAgents/com.admiranext.fleet-capture.plist');
+  fs.writeFileSync(plist, 'OLD-PLIST\n');
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.py'), 'OLD-PY\n');
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.version'), '1\n');
+  let code = 0;
+  let err = '';
+  try {
+    execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
+  } catch (e) { code = e.status; err = e.stderr || ''; }
+  assert.equal(code, 1);
+  assert.match(err, /se restaura/);
+  assert.equal(fs.readFileSync(plist, 'utf8'), 'OLD-PLIST\n');
+  assert.equal(fs.readFileSync(path.join(home, '.fleet/fleet-capture.py'), 'utf8'), 'OLD-PY\n');
+  assert.equal(fs.readFileSync(path.join(home, '.fleet/fleet-capture.version'), 'utf8'), '1\n');
+  const log = fs.readFileSync(path.join(home, 'launchctl.log'), 'utf8');
+  const boots = log.split('\n').filter((l) => l.startsWith('bootstrap '));
+  assert.equal(boots.length, 2, log);
+  assert.match(boots[0], /com\.admiranext\.fleet-capture\.plist$/);
+  assert.match(boots[1], /com\.admiranext\.fleet-capture\.plist$/);
+});
+
+test('preflight ve uchg y no llama a chflags', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cap-'));
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-bin-'));
+  fs.writeFileSync(path.join(bin, 'launchctl'), [
+    '#!/bin/bash',
+    'if [ "$1" = "print" ]; then [ "${FAKE_GUI:-}" = "1" ]; exit $?; fi',
+    'printf "%s\\n" "$*" >> "$HOME/launchctl.log"',
+    'exit 0',
+    ''
+  ].join('\n'), { mode: 0o755 });
+  writeFakeLs(bin);
+  const env = Object.assign({}, process.env, { HOME: home, PATH: bin + path.delimiter + process.env.PATH, FAKE_GUI: '1' });
+  fs.mkdirSync(path.join(home, '.fleet'), { recursive: true });
+  const sh = path.join(home, '.fleet/fleet-capture.sh');
+  fs.writeFileSync(sh, 'OLD-BASH\n');
+  fs.writeFileSync(path.join(home, 'uchg.list'), sh + '\n');
+  const out = execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
+  const err = execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
+  assert.match(out, /instalado \(v3\)/);
+  assert.match(err, /ya instalado/);
+  assert.equal(fs.readFileSync(sh, 'utf8'), 'OLD-BASH\n');
+  assert.equal(fs.existsSync(path.join(home, 'chflags.log')), false);
+  const plist = path.join(home, 'Library/LaunchAgents/com.admiranext.fleet-capture.plist');
+  fs.writeFileSync(path.join(home, 'uchg.list'), plist + '\n');
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.py'), 'OLD\n');
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.version'), '1\n');
+  let code = 0;
+  let stderr = '';
+  try {
+    execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
+  } catch (e) { code = e.status; stderr = e.stderr || ''; }
+  assert.equal(code, 3, stderr);
+  assert.match(stderr, /uchg/);
+  assert.equal(fs.readFileSync(path.join(home, '.fleet/fleet-capture.version'), 'utf8'), '1\n');
+  const log = fs.readFileSync(path.join(home, 'launchctl.log'), 'utf8');
+  assert.equal(log.split('\n').filter((l) => l.startsWith('bootstrap ')).length, 1);
+  assert.equal(fs.existsSync(path.join(home, 'chflags.log')), false);
 });

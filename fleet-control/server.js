@@ -31,10 +31,12 @@ const { sessionMutationError } = require('./session-csrf');
 const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolicy, sessionEndpointPolicy } = require('./session-registry');
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
 const { createYokupTickets } = require('./yokup-ticket');
+const { AGENT_COOKIE, AGENT_EMAIL, AGENT_TTL_MS, AGENT_VERSION, TOKEN_MIN, TOKEN_MAX, agentDenied, agentName, createAgentCodec, readAgentToken, sameSecret: sameAgentSecret } = require('./agent-session');
 const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require('./grokbot-bridge');
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
 const { createGrokBotEncargo, createGrokBotRouter, LEYENDAS_INBOX } = require('./grokbot-encargo');
 const { createServiceBridge } = require('./service-bridge');
+const { createMachineRemoval, mintTicket } = require('./machine-removal');
 const { resolveMachine, unknownMachineBody } = require('./machine-id');
 const CaptureClient = require('./capture-client');
 // The desktop adapter shares the native conversation. Never fall back to a
@@ -44,9 +46,13 @@ const grokBotLegacy = createGrokBotBridge();
 const grokBotDesktop = createGrokBotDesktop({screenshot: async () => {
   const m = machineById('macmini'), fn = m && resolveAction('screenshot', m);
   if (!fn) return null;
+  // Misma sonda que el Mini en producción: una captura con la sesión bloqueada
+  // saldría negra. Se dice LOCKED y el remoto no la presenta como imagen.
+  const lk = await run(m, 'ioreg -n Root -d1 -a | grep -A1 CGSSessionScreenIsLocked | grep -q true && echo LOCKED || true', 5000);
+  if (String(lk.stdout || '').trim() === 'LOCKED') return 'LOCKED';
   const r = await run(m, fn(0, m), 20000);
-  const b64 = String(r.stdout || '').trim();
-  return r.rc === 0 && b64.length >= 200 && !/ERR_/.test(b64) ? b64 : null;
+  const parsed = CaptureClient.parseCaptureStdout(r.stdout, Date.now() / 1000);
+  return parsed.ok && CaptureClient.jpegFromB64(parsed.b64) ? parsed.b64 : null;
 }});
 const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
   ? grokBotDesktop : grokBotLegacy;
@@ -77,6 +83,10 @@ const AUDIT_FILE = path.join(DIR, 'audit.log');
 
 function loadJSON(f, fallback) { try { return JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')); } catch (e) { return fallback; } }
 const FLEET = loadJSON('fleet.json', { machines: [] });
+if (!Array.isArray(FLEET.machines)) FLEET.machines = [];
+// Baja/restauración (DELETE /api/machines/:id). No reescribe el fleet.json vivo
+// hasta que alguien llame a la ruta: el censo de cada host se queda donde está.
+const MACHINE_REMOVAL = createMachineRemoval({ dir: DIR, fleet: FLEET });
 
 // Token con rotación en caliente: env manda; si no, se relee .fleet-token
 // (cache 5s) para poder rotar sin reiniciar el servicio.
@@ -209,6 +219,28 @@ function consumeChallenge(req,state,flow='popup') {
 }
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
+// Cookie de agente, aparte de la de Google. La firma sale del token de la bóveda:
+// rotar ese fichero deja de aceptar las cookies ya emitidas en el siguiente cache (5s).
+let _agentCodecCache = { at: 0, token: '', codec: null };
+function currentAgentCodec() {
+  const now = Date.now();
+  if (now - _agentCodecCache.at < 5000) return _agentCodecCache.codec;
+  const token = readAgentToken();
+  let codec = null;
+  if (token.length >= TOKEN_MIN && token.length <= TOKEN_MAX) {
+    try { codec = createAgentCodec({ token }); } catch (e) { codec = null; }
+  }
+  _agentCodecCache = { at: now, token, codec };
+  return codec;
+}
+function agentFromReq(req) {
+  const codec = currentAgentCodec();
+  if (!codec) return null;
+  return codec.verify(parseCookies(req)[AGENT_COOKIE] || '');
+}
+function setAgentCookie(res, token, maxAge = Math.floor(AGENT_TTL_MS / 1000)) {
+  appendSetCookie(res, `${AGENT_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`);
+}
 function machineById(id) {
   return resolveMachine(FLEET.machines, id).machine || null;
 }
@@ -616,7 +648,7 @@ function cors(req, res) {
   if (o && ALLOW_ORIGINS.includes(o)) res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, X-Fleet-CSRF, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, X-Fleet-CSRF, Authorization, X-Agente');
   res.setHeader('Access-Control-Max-Age', '600');
   // Chrome exige PNA cuando el panel público llama a un relay del tailnet. Se
   // concede sólo a los mismos orígenes exactos ya autorizados por CORS.
@@ -665,6 +697,19 @@ async function gate(req, res, ip, allowToken) {
     const mutationError=sessionMutationError(req,auth.session,ALLOW_ORIGINS);
     if(mutationError){json(res,403,{error:mutationError});return false;}
     req.fleetSession = auth.session;
+    return true;
+  }
+  // Sesión de agente (solo lectura). No sustituye a una sesión Google activa.
+  const fleetAgent = agentFromReq(req);
+  if (fleetAgent) {
+    req.fleetAgent = fleetAgent;
+    const route = req.url || '';
+    audit({ ip, ev: 'agent_request', agent: fleetAgent.name, method: req.method, url: route });
+    if (agentDenied(req.method, route)) {
+      audit({ ip, ev: 'agent_denied', agent: fleetAgent.name, method: req.method, url: route });
+      json(res, 403, { error: 'agente de solo lectura' });
+      return false;
+    }
     return true;
   }
   if(auth.state===UNAVAILABLE){json(res,503,{error:'registro de sesión no disponible'});return false;}
@@ -828,6 +873,7 @@ const server = http.createServer(async (req, res) => {
         commands: true,
         capture: true,
         terminal: true,
+        machineRemoval: true,
         targetIdempotency: ['macos', 'linux']
       }
     },
@@ -849,8 +895,46 @@ const server = http.createServer(async (req, res) => {
     const policy=sessionEndpointPolicy(auth.state);
     if(policy.clearCookie)clearSessionCookie(res);
     if(policy.status===503)return json(res,503,{ok:false,error:'registro de sesión no disponible'});
-    if(policy.status===401)return json(res,401,{ok:false});
+    if(policy.status===401){
+      const fleetAgent = agentFromReq(req);
+      if (fleetAgent) {
+        audit({ ip, ev: 'agent_request', agent: fleetAgent.name, method: 'GET', url: '/api/auth/session' });
+        return json(res,200,{ok:true,agent:true,readOnly:true,name:fleetAgent.name,email:fleetAgent.email});
+      }
+      return json(res,401,{ok:false});
+    }
     return json(res,200,{ok:true,email:auth.session.email,csrf:auth.session.csrf});
+  }
+  // Entrada de agentes sin Google. El token vive fuera del repo. La cookie no
+  // abre /api/run ni /api/action: gate la corta con 403.
+  if (url === '/api/auth/agente' && req.method === 'POST') {
+    const origin = String(req.headers.origin || '');
+    if (origin && origin !== 'null' && !ALLOW_ORIGINS.includes(origin) && origin !== 'https://fleet.admira.live') {
+      return json(res, 403, { error: 'origin no permitido' });
+    }
+    const codec = currentAgentCodec();
+    const expected = _agentCodecCache.token;
+    if (!codec || expected.length < TOKEN_MIN) {
+      audit({ ip, ev: 'agent_login_unconfigured' });
+      return json(res, 404, { error: 'no disponible' });
+    }
+    const bearer = String(req.headers.authorization || '').match(/^Bearer\s+(\S+)$/i);
+    const given = bearer ? bearer[1] : '';
+    const who = agentName(req.headers['x-agente']);
+    if (!given || given.length > TOKEN_MAX || !sameAgentSecret(given, expected)) {
+      _recentFails.push(Date.now());
+      const wait = tarpitMs();
+      audit({ ip, ev: 'agent_login_fail', agent: who });
+      if (wait) await new Promise(r => setTimeout(r, wait));
+      return json(res, 401, { error: 'token no válido' });
+    }
+    setAgentCookie(res, codec.mint(who));
+    audit({ ip, ev: 'agent_login_ok', agent: who });
+    return json(res, 200, { ok: true, agent: true, name: who, email: AGENT_EMAIL, readOnly: true, version: AGENT_VERSION });
+  }
+  if (url === '/api/auth/agente') {
+    res.setHeader('Allow', 'POST');
+    return json(res, 405, { error: 'method' });
   }
   if (url === '/api/auth/yokup-ticket' && req.method === 'POST') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
@@ -1463,6 +1547,44 @@ const server = http.createServer(async (req, res) => {
     catch (e) { return json(res, 500, { error: 'no se pudo persistir fleet.json: ' + (e.message || e) }); }
     audit({ ip, ev: 'register', machine: id, host, created });
     return json(res, created ? 201 : 200, { ok: true, created, machine, total: FLEET.machines.length });
+  }
+
+  // Baja de equipos. El fleet.json vivo no se toca hasta esta ruta.
+  // DELETE /api/machines/:id[?dryRun=1] · POST .../restore · POST .../ticket
+  const machineRoute = url.match(/^\/api\/machines\/([^/]+)(?:\/(restore|ticket))?$/);
+  if (machineRoute) {
+    let mid = '';
+    try { mid = decodeURIComponent(machineRoute[1]); } catch (e) { return json(res, 400, { ok: false, error: 'id inválido' }); }
+    const sub = machineRoute[2] || '';
+    const dryRun = requestUrl.searchParams.get('dryRun') === '1';
+    if (sub === 'ticket' && req.method === 'POST') {
+      if (!(await gate(req, res, ip))) return;
+      const body = await readBody(req);
+      const accion = body.accion === 'restaurar' ? 'restaurar' : 'eliminar';
+      const email = (req.fleetSession && req.fleetSession.email) || '';
+      let ticket;
+      try { ticket = mintTicket(currentToken(), { id: mid, accion, email }); }
+      catch (e) { return json(res, 400, { ok: false, error: String(e.message || e) }); }
+      audit({ ip, ev: 'machine_ticket', machine: mid, accion, by: email });
+      return json(res, 200, { ok: true, ticket, id: mid, accion });
+    }
+    if (!sub && req.method === 'DELETE') {
+      if (!(await gate(req, res, ip, true))) return;
+      const by = String((req.fleetSession && req.fleetSession.email) || req.headers['x-admira-por'] || 'token').slice(0, 120);
+      const out = MACHINE_REMOVAL.remove(mid, { dryRun, by });
+      if (out.status === 200 && !dryRun) { try { if (VIGIA.estado) delete VIGIA.estado[out.body.machine.id]; } catch (e) {} }
+      audit({ ip, ev: dryRun ? 'machine_remove_dry' : 'machine_remove', machine: mid, by, status: out.status, removed: !!out.body.removed, backup: out.body.backup });
+      return json(res, out.status, out.body);
+    }
+    if (sub === 'restore' && req.method === 'POST') {
+      if (!(await gate(req, res, ip, true))) return;
+      const body = await readBody(req);
+      const by = String((req.fleetSession && req.fleetSession.email) || req.headers['x-admira-por'] || 'token').slice(0, 120);
+      const out = MACHINE_REMOVAL.restore(mid, { dryRun, fallback: body && body.machine });
+      audit({ ip, ev: dryRun ? 'machine_restore_dry' : 'machine_restore', machine: mid, by, status: out.status, restored: !!out.body.restored, backup: out.body.backup });
+      return json(res, out.status, out.body);
+    }
+    return json(res, 405, { ok: false, error: 'método no permitido' });
   }
 
   json(res, 404, { error: 'no encontrado' });

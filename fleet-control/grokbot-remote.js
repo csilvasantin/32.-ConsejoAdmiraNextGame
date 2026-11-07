@@ -33,6 +33,8 @@ function createRemoteDesktop({runNative,now=Date.now,screenshot=null}){
   // (same path as /api/live/frame). View only: no target stored, so input is rejected.
   if(!result?.ok&&result?.error==='snapshot_too_large'){
    let jpeg=null;try{jpeg=screenshot?String(await screenshot()||'').trim():null;}catch(_){jpeg=null;}
+   // Mac Mini en producción: la captura con la sesión bloqueada no es una imagen.
+   if(jpeg==='LOCKED')fail('remote_screen_locked',503);
    const size=jpeg&&jpeg.startsWith('/9j/')&&jpeg.length<=8*1024*1024?jpegSize(Buffer.from(jpeg,'base64')):null;
    if(!size)fail('remote_snapshot_too_large',503);
    const id=crypto.randomBytes(12).toString('hex');

@@ -37,9 +37,9 @@ test('el meta de /control que hay en main lo acepta deploy.sh y la siguiente pub
   const match = html.match(/admiranext-version" content="AdmiraNeXT (v\.[^"]+)"/);
   assert.ok(match, 'deploy.sh exige AdmiraNeXT v.DD.MM.AAAA.rN.HH:MM');
   const repo = match[1];
-  assert.equal(repo, 'v.07.11.2026.r123.16:15');
-  assert.equal(sello(repo, repo, '2026-11-07T16:20').code, 0);
-  assert.equal(sello(repo, repo, '2026-11-07T16:20').out, 'v.07.11.2026.r124.16:20 -');
+  assert.equal(repo, 'v.07.11.2026.r124.18:40');
+  assert.equal(sello(repo, repo, '2026-11-07T18:50').code, 0);
+  assert.equal(sello(repo, repo, '2026-11-07T18:50').out, 'v.07.11.2026.r125.18:50 -');
 });
 
 test('deploy.sh usa el sello generado (no el <meta> a pelo) y no repite las novedades de un sello viejo', () => {

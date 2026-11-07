@@ -52,4 +52,6 @@ test('snapshot_too_large falls back to a view-only screenshot frame',async()=>{
  await assert.rejects(bridge.handle(s,{action:'input',token:o.token,frameId:o.frame.id,event:{type:'key',key:'a'}}),e=>e.code==='remote_view_only');
  bridge=createRemoteDesktop({runNative:async()=>({ok:false,error:'snapshot_too_large'}),screenshot:async()=>null});
  await assert.rejects(bridge.handle(s,{action:'open',persona:'Jobs'}),e=>e.code==='remote_snapshot_too_large');
+ bridge=createRemoteDesktop({runNative:async()=>({ok:false,error:'snapshot_too_large'}),screenshot:async()=>'LOCKED'});
+ await assert.rejects(bridge.handle(s,{action:'open',persona:'Jobs'}),e=>e.code==='remote_screen_locked');
 });

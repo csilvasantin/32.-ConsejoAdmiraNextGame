@@ -69,16 +69,29 @@ def displays():
     return out
 
 def punto(a, ds):
-    idx = int(a.get("display") or 0)
-    p = ds[idx] if 0 <= idx < len(ds) else ds[0]
-    nx = min(1.0, max(0.0, float(a.get("x") or 0))); ny = min(1.0, max(0.0, float(a.get("y") or 0)))
-    return int(p["x"] + nx * p["w"]), int(p["y"] + ny * p["h"])
+    # Un índice que no existe no cae en la pantalla 0: el clic iría a otro monitor.
+    try:
+        raw = a.get("display")
+        idx = 0 if raw is None or raw == "" else int(raw)
+    except (TypeError, ValueError):
+        return None
+    if idx < 0 or idx >= len(ds):
+        return None
+    try:
+        nx = min(1.0, max(0.0, float(a.get("x") or 0))); ny = min(1.0, max(0.0, float(a.get("y") or 0)))
+    except (TypeError, ValueError):
+        return None
+    p = ds[idx]
+    return int(p["x"] + nx * max(0, p["w"] - 1)), int(p["y"] + ny * max(0, p["h"] - 1))
 
 def ejecutar(a):
     ds = displays(); t = str(a.get("type") or ""); wl = wayland()
     tool = "ydotool" if wl else "xdotool"
     if not shutil.which(tool):
         return {"ok": False, "error": "ERR_NO_INPUT_TOOL", "detalle": "instala %s (%s)" % (tool, "Wayland" if wl else "X11")}
+    if t in ("move", "down", "up", "scroll"):
+        if punto(a, ds) is None:
+            return {"ok": False, "error": "ERR_NO_SUCH_DISPLAY", "detalle": "pantalla fuera de la lista"}
     if t == "move":
         x, y = punto(a, ds)
         run([tool, "mousemove", str(x), str(y)] if not wl else ["ydotool", "mousemove", "--absolute", "-x", str(x), "-y", str(y)])

@@ -1746,10 +1746,11 @@ async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
 # Reutiliza el mini-agente AgoraCapture (handshake por ficheros ~/.fleet),
 # el mismo de FleetControl. Requiere que la máquina tenga ese agente.
 _CAPTURE_SH = (
-    'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; '
-    'N="cap-$(date +%s)-$$-$RANDOM"; printf "%s" "$N" > "$D/capture.req"; '
-    'for i in $(seq 1 40); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; '
-    'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi'
+    'D="$HOME/.fleet"; Q="$D/capture-queue"; mkdir -p "$Q"; '
+    'N="cap-$(date +%s)-$$-$RANDOM"; printf "display=0\\n" > "$Q/$N.req"; '
+    'for i in $(seq 1 40); do [ -s "$Q/$N.out" ] && break; sleep 0.3; done; '
+    'if [ "$(head -1 "$Q/$N.out" 2>/dev/null)" = OK ]; then sed -n 2p "$Q/$N.out"; rm -f "$Q/$N.req" "$Q/$N.out"; '
+    'else echo ERR_NO_CAPTURE; rm -f "$Q/$N.req" "$Q/$N.out"; fi'
 )
 
 

@@ -32,13 +32,14 @@ test('sin sello publicado legible numera desde el repo y lo avisa; un sello de r
   assert.equal(sello('v.14.10.2026.r48.08:15', 'v14-10').code, 1);
 });
 
-test('el meta de /control que hay en main lo acepta deploy.sh y la siguiente publicación es la r123', () => {
+test('el meta de /control que hay en main lo acepta deploy.sh y la siguiente publicación incrementa', () => {
   const html = fs.readFileSync(new URL('./control/index.html', import.meta.url), 'utf8');
   const match = html.match(/admiranext-version" content="AdmiraNeXT (v\.[^"]+)"/);
   assert.ok(match, 'deploy.sh exige AdmiraNeXT v.DD.MM.AAAA.rN.HH:MM');
   const repo = match[1];
-  assert.equal(sello('v.06.11.2026.r122.09:40', repo, '2026-11-06T12:21').code, 0);
-  assert.equal(sello('v.06.11.2026.r122.09:40', repo, '2026-11-06T12:21').out, 'v.06.11.2026.r123.12:21 -');
+  assert.equal(repo, 'v.07.11.2026.r123.16:15');
+  assert.equal(sello(repo, repo, '2026-11-07T16:20').code, 0);
+  assert.equal(sello(repo, repo, '2026-11-07T16:20').out, 'v.07.11.2026.r124.16:20 -');
 });
 
 test('deploy.sh usa el sello generado (no el <meta> a pelo) y no repite las novedades de un sello viejo', () => {

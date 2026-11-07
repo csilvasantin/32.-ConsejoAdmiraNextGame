@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.06.11.2026.r122.09:40" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.11.2026.r123.16:15" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -24,8 +24,8 @@
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
 <script src="/control/fleet-mesh.js?v=20261106-r2"></script>
-<script src="/control/equipos.js?v=20261019-r1"></script>
-<script src="/fleet-control/machine-id.js?v=20261106-r2-371ab360dab8"></script>
+<script src="/control/equipos.js?v=20261107-r2"></script>
+<script src="/fleet-control/machine-id.js?v=20261107-r3-35cb3707b6e6"></script>
 <script>
 (function(){
   try{
@@ -911,7 +911,21 @@ function rcMachineId(id, requested){
 }
 function falloPermisoCaptura(payload){
   try{ if(window.AdmiraRcMachine&&AdmiraRcMachine.esFalloPermisoCaptura) return AdmiraRcMachine.esFalloPermisoCaptura(payload); }catch(e){}
-  return /ERR_NO_CAPTURE|capture_failed_or_no_permission/.test(typeof payload==='string'?payload:JSON.stringify(payload||''));
+  const text=typeof payload==='string'?payload:JSON.stringify(payload||'');
+  if(/ERR_CAPTURE_PAUSED|ERR_CAPTURE_TRANSIENT|ERR_STALE_FRAME|ERR_NO_SUCH_DISPLAY|SCREEN_CAPTURE_FAILED|capture_transient|capture_stale|no_such_display/.test(text)) return false;
+  return /ERR_NO_CAPTURE|capture_failed_or_no_permission/.test(text);
+}
+// Un rc 0 con texto de error no es una imagen. El JPEG en base64 empieza por /9j/.
+function capturaEsImagen(d){
+  const s=String(d&&d.stdout||'').trim();
+  if(!(d&&d.rc===0)||!s) return false;
+  if(/^(OK|ERR_)/.test(s)||/SCREEN_CAPTURE_FAILED|capture_failed|capture_transient|capture_stale|no_such_display/.test(s)) return false;
+  const b64=(s.split(/\n/).find(l=>l.indexOf('/9j/')===0)||'');
+  return b64.length>32;
+}
+function capturaB64(d){
+  const lines=String(d&&d.stdout||'').trim().split(/\n/);
+  return lines.find(l=>l.indexOf('/9j/')===0)||lines[lines.length-1]||'';
 }
 /* ── EQUIPOS DUPLICADOS Y ELIMINADOS (19-10-2026) ──────────────────────────
    El censo (hub o admira-fleet) pasa SIEMPRE por depurarEquipos() antes de pintarse:
@@ -1056,8 +1070,10 @@ function paintAge(id){
   // Sin captura real (wallpaper) → el badge honesto lo pone .shot.isWall::after; aquí nada.
   if(!ts || box.classList.contains('isWall')){ lab.style.display='none'; box.classList.remove('stale','live','oldcap'); return; }
   const age=Date.now()-ts;
-  const fresh=age<120000; // captura real y reciente (<2 min) = EN VIVO
-  lab.textContent=fresh?('🔴 EN VIVO · '+fmtAge(age)):('captura antigua · '+fmtAge(age));
+  // EN VIVO solo mientras llegan fotogramas. Una captura quieta no se vende como directo.
+  const ventana=(typeof AUTOCAP!=='undefined'&&AUTOCAP.on)?Math.max(12000,(AUTOCAP.sec||15)*1000+4000):12000;
+  const fresh=age<ventana;
+  lab.textContent=fresh?('🔴 EN VIVO · '+fmtAge(age)):('captura · '+fmtAge(age));
   lab.style.display='block';
   box.classList.toggle('live', fresh);
   box.classList.toggle('oldcap', !fresh);
@@ -1148,9 +1164,9 @@ function toast(kind, title, sub){
 // y reporta si falta AgoraCapture.app. El permiso lo concede el humano en ese Mac.
 const CAP_FIX_CMD=[
   'open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" >/dev/null 2>&1',
-  'osascript -e \'display notification "Activa AgoraCapture en Grabacion de pantalla y vuelve a capturar" with title "Admira - permiso de captura"\' >/dev/null 2>&1',
+  'osascript -e \'display notification "Concede Grabacion de pantalla a python3 (agente fleet-capture) y vuelve a capturar" with title "Admira - permiso de captura"\' >/dev/null 2>&1',
   'launchctl kickstart -k "gui/$(id -u)/com.admiranext.fleet-capture" 2>/dev/null',
-  'test -d "$HOME/Applications/AgoraCapture.app" && echo "AgoraCapture.app: OK - concede Grabacion de pantalla en el panel que se ha abierto" || echo "AgoraCapture.app NO instalada en ~/Applications (falta copiar la app a ese Mac)"'
+  'echo "el panel de Grabacion de pantalla queda abierto; el permiso lo concede la persona. Este arreglo no modifica TCC."'
 ].join('; ');
 // Fleet Mesh mantiene una sesión Google INDEPENDIENTE por relay. Así una sesión
 // firmada por Mac Mini no bloquea el failover hacia MacBook Pro (cada backend
@@ -2160,7 +2176,7 @@ $('#cards').addEventListener('click', async e=>{
       pushResult(machine,'🧹 escritorio limpio',{rc:0,stdout:'apps ocultadas — fondo visible',ms:0});
       await new Promise(r=>setTimeout(r,700));   // deja que se oculten antes de capturar
       const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'screenshot'})});
-      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); markCaptured(machine); }
+      if(capturaEsImagen(d)){ showShot(machine,'data:image/jpeg;base64,'+capturaB64(d)); setCapFail(machine,false); markCaptured(machine); }
       else {
         const sl=ranuraCaptura(machine);
         const img=sl?await capturaPorWatcher(machine,sl):null;
@@ -2313,7 +2329,7 @@ $('#cards').addEventListener('click', async e=>{
   try{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});
     if(action==='screenshot'){
-      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); markCaptured(machine); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
+      if(capturaEsImagen(d)){ showShot(machine,'data:image/jpeg;base64,'+capturaB64(d)); setCapFail(machine,false); markCaptured(machine); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
       else {
         // Antes de acusar a nadie de no tener permiso, se prueba la ruta que SÍ lo tiene.
         const sl=ranuraCaptura(machine);
@@ -2323,7 +2339,8 @@ $('#cards').addEventListener('click', async e=>{
         else {
           const permiso=falloPermisoCaptura(d);
           if(permiso) setCapFail(machine,true);
-          pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||(permiso?(sl?'ni por SSH ni por el watcher':'sin permiso de captura en esa máquina'):'la captura no llegó por la ruta de control')});
+          const detalle=String(d.stderr||d.stdout||'').slice(0,300);
+          pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:detalle||(permiso?(sl?'ni por SSH ni por el watcher':'sin permiso de captura en esa máquina'):'la captura no llegó')});
         }
       }
     } else pushResult(machine, '⚡ '+action+(arg?(' '+arg):''), d);
@@ -2972,7 +2989,7 @@ function captureMachine(id){
     }
   };
   return api('/action',{method:'POST',body:JSON.stringify({machine:id,action:'screenshot'})})
-    .then(d=>{ if(d&&d.rc===0 && d.stdout && !falloPermisoCaptura(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); } else if(falloPermisoCaptura(d)) setCapFail(id,true); })
+    .then(d=>{ if(capturaEsImagen(d)){ showShot(id,'data:image/jpeg;base64,'+capturaB64(d)); setCapFail(id,false); markCaptured(id); } else if(falloPermisoCaptura(d)) setCapFail(id,true); })
     .catch(()=>{})   // un fallo de ruta no es un permiso de captura
     .finally(cerrar);
 }
@@ -4039,7 +4056,7 @@ function collapseAllToggle(){
     try{ while(cur && cur.iq && cur.iq.length){ const p=cur.iq.shift(); await postInput(p); } }
     finally{ if(cur) cur.sending=false; } }
   function normCoords(e){ const img=cur.img;const r=img.getBoundingClientRect();const nr=(img.naturalWidth||16)/(img.naturalHeight||9);let dw=r.width,dh=r.width/nr;if(dh>r.height){dh=r.height;dw=r.height*nr;}const ox=r.left+(r.width-dw)/2,oy=r.top+(r.height-dh)/2;const nx=(e.clientX-ox)/dw,ny=(e.clientY-oy)/dh;return{x:Math.min(1,Math.max(0,nx)),y:Math.min(1,Math.max(0,ny))};}
-  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const path='/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&display='+(cur.display||0)+'&_='+t0; meshFetch(path,{cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{const e=new Error('HTTP '+r.status+' '+t.slice(0,480));e.status=r.status;e.relay=r.__admiraMesh&&r.__admiraMesh.relay&&r.__admiraMesh.relay.label||'';e.failover=!!(r.__admiraMesh&&r.__admiraMesh.failover);throw e;});const meta=r.__admiraMesh;return r.blob().then(blob=>({blob,meta}));}).then(({blob,meta})=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB · '+(meta&&meta.relay&&meta.relay.label||'relay');const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; const txt=String(err&&(err.message||err)||''); const fallo=frameFallo(err,txt); cur.fallosFeed=(cur.fallosFeed||0)+1; cur.msg.style.display='block'; cur.msg.innerHTML=dsEsc(fallo.title)+'<br><b>'+dsEsc(fallo.cause)+'</b><br><br>'+dsEsc(fallo.hint)+'<br><small>reintento '+cur.fallosFeed+' · '+(fallo.definitive?'el relay ya contestó; se reintenta despacio':'reconexión automática cada 1,2 s')+'</small>'; cur.timer=setTimeout(frameLoop,fallo.retryMs||1200); }); }
+  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const path='/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&display='+(cur.display||0)+'&_='+t0; meshFetch(path,{cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{const e=new Error('HTTP '+r.status+' '+t.slice(0,480));e.status=r.status;e.relay=r.__admiraMesh&&r.__admiraMesh.relay&&r.__admiraMesh.relay.label||'';e.failover=!!(r.__admiraMesh&&r.__admiraMesh.failover);throw e;});const meta=r.__admiraMesh;return r.blob().then(blob=>({blob,meta}));}).then(({blob,meta})=>{ if(!cur||cur.closed)return; if(!blob||blob.size<200||(blob.type&&blob.type.indexOf('image/')!==0)){ const e=new Error('HTTP 424 fotograma no es una imagen'); e.status=424; throw e; } const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;const now=performance.now();if(cur.lastFrameAt){cur.fpsArr.push(now-cur.lastFrameAt);if(cur.fpsArr.length>10)cur.fpsArr.shift();}cur.lastFrameAt=now;const avg=cur.fpsArr.length?cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length:0;const fps=avg?Math.max(1,Math.round(1000/avg)):0;if(cur.stat)cur.stat.style.color='';cur.stat.textContent=(fps?fps+' fps en vivo':'primer fotograma')+' · '+Math.round(dt)+' ms · '+Math.round(blob.size/1024)+' KB · '+(meta&&meta.relay&&meta.relay.label||'relay');const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; const txt=String(err&&(err.message||err)||''); const fallo=frameFallo(err,txt); cur.fallosFeed=(cur.fallosFeed||0)+1; if(cur.stat){ cur.stat.textContent=(cur.img&&cur.img.getAttribute('src'))?'imagen congelada · sin fotograma nuevo':'sin fotograma'; cur.stat.style.color='#ffb454'; } cur.msg.style.display='block'; cur.msg.innerHTML=dsEsc(fallo.title)+'<br><b>'+dsEsc(fallo.cause)+'</b><br><br>'+dsEsc(fallo.hint)+'<br><small>reintento '+cur.fallosFeed+' · '+(fallo.definitive?'el relay ya contestó; se reintenta despacio':'reconexión automática cada 1,2 s')+'</small>'; cur.timer=setTimeout(frameLoop,fallo.retryMs||1200); }); }
   /* CADA FALLO CON SU CAUSA (2026-08-10). Antes se colgaba SIEMPRE la misma pista
      —«falta conceder Grabación de pantalla»— debajo de cualquier error, así que un
      tiempo de espera del relay mandaba a Carlos a revisar un permiso que ya estaba
@@ -4069,7 +4086,7 @@ function collapseAllToggle(){
         const sel=ov.querySelector('#rc-disp'); if(!sel||!cur||cur.closed||!ds.length) return;
         // SIEMPRE visible (mejora 3): con una pantalla enseña su nombre; con varias, elige.
         sel.innerHTML=ds.map(p=>'<option value="'+p.indice+'">🖵 '+dsEsc(p.nombre)+'</option>').join('');
-        sel.addEventListener('change',()=>{ if(cur) cur.display=parseInt(sel.value,10)||0; });
+        sel.addEventListener('change',()=>{ if(!cur)return; const n=parseInt(sel.value,10); if(!Number.isInteger(n)||n<0)return; cur.display=n; cur.fpsArr=[]; cur.lastFrameAt=0; });
       }catch(e){/* sin selector: se sigue viendo la pantalla 0, como siempre */}
     })();
 
@@ -4221,10 +4238,11 @@ function collapseAllToggle(){
     if(ctl||busy||!current) return; busy=true;   // en Control Total manda el feed en vivo, no el polling
     try{
       const d=await api('/action',{method:'POST',body:JSON.stringify({machine:current,action:'screenshot'})});
-      if(d && d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){
-        img.src='data:image/jpeg;base64,'+d.stdout; img.style.display='block';
+      if(capturaEsImagen(d)){
+        img.src='data:image/jpeg;base64,'+capturaB64(d); img.style.display='block';
         noise.classList.add('hide'); setStatus('● EN VIVO','#8fe6a0');
-      } else { noise.classList.remove('hide'); setStatus('— SIN SEÑAL','#e6a06f'); }
+      } else if(img.getAttribute('src')){ setStatus('● IMAGEN CONGELADA','#e6a06f'); }
+      else { noise.classList.remove('hide'); setStatus('— SIN SEÑAL','#e6a06f'); }
     }catch(e){ noise.classList.remove('hide'); setStatus('— SIN CONEXIÓN','#ff6b6b'); }
     busy=false;
   }

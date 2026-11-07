@@ -10,8 +10,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 T="${1:?user@host}"; P="${2:?macos|linux|windows}"
 case "$P" in
   macos)
-    scp -o BatchMode=yes -o ConnectTimeout=10 "$HERE/../.fleet/fleet-input.py" "$T:~/.fleet/fleet-input.py" 2>/dev/null || scp -o BatchMode=yes "$HOME/.fleet/fleet-input.py" "$T:~/.fleet/fleet-input.py"
-    ssh -o BatchMode=yes "$T" '/usr/bin/python3 ~/.fleet/fleet-input.py --displays' ;;
+    ssh -o BatchMode=yes "$T" 'mkdir -p ~/.fleet'
+    scp -o BatchMode=yes -o ConnectTimeout=10 "$HERE/fleet-input.py" "$HERE/display_geometry.py" "$HERE/fleet-capture.py" "$T:~/.fleet/"
+    ssh -o BatchMode=yes "$T" 'chmod 755 ~/.fleet/fleet-input.py ~/.fleet/fleet-capture.py; /usr/bin/python3 ~/.fleet/fleet-input.py --displays' ;;
   linux)
     ssh -o BatchMode=yes "$T" 'mkdir -p ~/.fleet'
     scp -o BatchMode=yes "$HERE/fleet-input-linux.py" "$T:~/.fleet/fleet-input-linux.py"

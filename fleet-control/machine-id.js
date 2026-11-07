@@ -148,6 +148,8 @@
 
   function esFalloPermisoCaptura(payload) {
     var text = typeof payload === 'string' ? payload : JSON.stringify(payload || '');
+    // Un screencapture rc=1 o un agente en pausa no es «falta Grabación de pantalla».
+    if (/ERR_CAPTURE_PAUSED|ERR_CAPTURE_TRANSIENT|ERR_STALE_FRAME|ERR_NO_SUCH_DISPLAY|SCREEN_CAPTURE_FAILED|capture_transient|capture_stale|no_such_display/.test(text)) return false;
     return /ERR_NO_CAPTURE|capture_failed_or_no_permission/.test(text);
   }
 
@@ -192,12 +194,28 @@
     var retryMs = 1200;
     var definitive = false;
 
-    if (status === 424 || /capture_failed_or_no_permission|ERR_NO_CAPTURE|agente de captura desactualizado/.test(String(source))) {
+    if (/ERR_NO_SUCH_DISPLAY|no_such_display/.test(String(source)) || body.error === 'no_such_display') {
+      title = 'Esa pantalla no existe';
+      hint = 'El índice no está en la lista de la máquina. No se ha mostrado otra pantalla en su lugar.';
+      retryMs = 5000;
+      definitive = true;
+      unknown = false;
+    } else if (/ERR_STALE_FRAME|capture_stale/.test(String(source)) || body.error === 'capture_stale') {
+      title = 'La imagen no es de ahora';
+      hint = 'El fotograma es viejo y no se cuenta como en vivo. Se pide otro.';
+      unknown = false;
+    } else if (/ERR_CAPTURE_PAUSED|ERR_CAPTURE_TRANSIENT|SCREEN_CAPTURE_FAILED|capture_transient/.test(String(source)) || body.error === 'capture_transient') {
+      title = 'La captura se interrumpió';
+      hint = 'screencapture no pudo crear la imagen (fallo transitorio). El agente sigue en marcha y el siguiente fotograma se pide de nuevo. No es un permiso de Grabación de pantalla.';
+      unknown = false;
+    } else if (status === 424 || /capture_failed_or_no_permission|ERR_NO_CAPTURE|agente de captura desactualizado/.test(String(source))) {
       title = 'La máquina no devuelve imagen';
-      if (/agente de captura desactualizado|ERR_NO_CAPTURE/.test(String(source))) {
-        hint = 'El agente de captura de esa máquina no responde: el vigía lo redesplegará; pulsa «🔎 probar» en su tarjeta para forzarlo.';
+      if (/agente de captura desactualizado/.test(String(source))) {
+        hint = 'El agente de captura de esa máquina es más viejo que el del repo: el vigía lo actualiza si la versión instalada no es más nueva. Pulsa «🔎 probar» en su tarjeta para forzarlo.';
+      } else if (/ERR_NO_CAPTURE|capture_failed_or_no_permission/.test(String(source))) {
+        hint = 'No hay fotograma. Si el agente ya está al día, falta Grabación de pantalla para /usr/bin/python3 en esa sesión. El arreglo abre el panel; el permiso lo concede la persona. No se toca TCC desde aquí.';
       } else {
-        hint = 'La máquina no ha devuelto captura: agente de captura caído o sin Grabación de pantalla. Pulsa «🔎 probar» en su tarjeta: el vigía diagnostica y repara.';
+        hint = 'La máquina no ha devuelto captura. Pulsa «🔎 probar» en su tarjeta.';
       }
       unknown = false;
     } else if (status === 401) {

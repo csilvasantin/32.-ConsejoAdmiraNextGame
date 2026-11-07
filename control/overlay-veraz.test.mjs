@@ -10,6 +10,11 @@ test("cada fallo del feed lleva título y causa reales, y un 401 de respaldo no 
   assert.match(html, /e\.failover=!!\(r\.__admiraMesh&&r\.__admiraMesh\.failover\)/, "el error del feed sabe si venía de un relé de respaldo");
   assert.match(html, /reconexión automática cada 1,2 s/);
   assert.equal(frameFailure({ status: 424 }, "HTTP 424 capture_failed_or_no_permission").title, "La máquina no devuelve imagen");
+  const pausa = frameFailure({ status: 424 }, 'HTTP 424 {"error":"capture_transient","detail":"SCREEN_CAPTURE_FAILED rc=1 could not create image from display"}');
+  assert.equal(pausa.title, "La captura se interrumpió");
+  assert.match(pausa.hint, /No es un permiso/);
+  assert.equal(frameFailure({ status: 404 }, 'HTTP 404 {"error":"no_such_display"}').title, "Esa pantalla no existe");
+  assert.equal(frameFailure({ status: 424 }, 'HTTP 424 {"error":"capture_stale"}').title, "La imagen no es de ahora");
   assert.equal(frameFailure({ status: 401, failover: true, relay: "MacBook Pro 16" }, "HTTP 401").title, "Relé de respaldo sin tu sesión");
   assert.equal(frameFailure({ status: 401 }, "HTTP 401").title, "Sesión caducada en el hub");
 });

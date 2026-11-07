@@ -2,44 +2,34 @@
 /* control-vigia.js — VIGÍA DE CONTROL (decisión yokup 0148 ★, Carlos 4-sep-2026).
  *
  * Cada 10 minutos el hub prueba DE VERDAD que puede VER y TOCAR cada equipo:
- * apretón de captura real (nonce del hub → capture.out con JPEG), inyector de
- * entrada respondiendo (--displays), permiso de Accesibilidad y pantalla sin
+ * apretón de captura real (nonce propio en capture-queue, JPEG fresco), inyector
+ * de entrada respondiendo (--displays), permiso de Accesibilidad y pantalla sin
  * bloquear. No mira si «existen ficheros»: el fallo del nonce del 3-sep llevaba
  * semanas invisible porque el semáforo sólo miraba eso.
  *
- * Además: compara la versión del agente de captura con la canónica del repo y,
- * si no cuadra o la captura falla, REDESPLIEGA el agente (macOS) y vuelve a probar;
- * avisa (Telegram vía agora + audit) en cada transición controlable ↔ no controlable.
+ * Además: compara la VERSIÓN del agente con la del repo. Solo reinstala si es
+ * más vieja o no está. Una captura que falla con el agente al día no se
+ * reinstala: eso pisaba arreglos más nuevos. Avisa en cada transición.
  *
  * Funciones puras (testables) + `crear()` que recibe las dependencias del hub.
  */
-const crypto = require('crypto');
+const Capture = require('./capture-client');
 
 const INTERVALO_MS = 10 * 60 * 1000;
 const REPARACION_MIN_MS = 60 * 60 * 1000;   // una reparación por máquina y hora
 const FUERA_AVISO_MS = 60 * 60 * 1000;      // aviso cuando lleva más de 1 h sin SSH (mejora 2)
 const LGUI = 'export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; export DISPLAY="${DISPLAY:-:0}"; ';
 
-/** md5 del agente canónico embebido en deploy-capture-agent.sh (entre <<'EOS' y EOS). */
-function md5AgenteCanonico(textoInstalador) {
-  const lineas = String(textoInstalador || '').split('\n');
-  const ini = lineas.findIndex((l) => /CAPTURE_SH <<'EOS'/.test(l));
-  const fin = lineas.findIndex((l, i) => i > ini && l === 'EOS');
-  if (ini < 0 || fin < 0) return null;
-  return crypto.createHash('md5').update(lineas.slice(ini + 1, fin).join('\n') + '\n').digest('hex');
+/** Entero CAPTURE_VERSION del agente Python. Un script bash sin versión no es canónico:
+ *  el vigía no debe reinstalar ese bash encima de un arreglo más nuevo. */
+function versionAgenteCanonico(texto) {
+  const m = String(texto || '').match(/^CAPTURE_VERSION\s*=\s*(\d+)\s*$/m);
+  return m ? Number(m[1]) : null;
 }
 
 /** Comando de sonda por plataforma. Devuelve marcadores __V_*__ por stdout. */
 function comandoSonda(plataforma) {
-  if (plataforma === 'macos') {
-    return 'D="$HOME/.fleet"; N="fv-$(date +%s)-$$-$RANDOM"; printf "%s|0" "$N" > "$D/capture.req"; ' +
-      'for i in $(seq 1 30); do [ "$(head -1 "$D/capture.out" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
-      'if [ "$(head -1 "$D/capture.out" 2>/dev/null)" = "$N" ] && [ "$(sed -n 2p "$D/capture.out" | head -c 4)" = "/9j/" ]; then echo __V_CAP__=1; else echo __V_CAP__=0; fi; ' +
-      'echo __V_AGENT__=$(md5 -q "$D/fleet-capture.sh" 2>/dev/null || echo none); ' +
-      'echo __V_INPUT__=$(/usr/bin/python3 "$D/fleet-input.py" --displays 2>/dev/null | grep -c \'"ok": true\'); ' +
-      'echo __V_AX__=$(/usr/bin/python3 -c \'import ctypes;print(int(bool(ctypes.cdll.LoadLibrary("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices").AXIsProcessTrusted())))\' 2>/dev/null || echo ?); ' +
-      'echo __V_LOCK__=$(/usr/bin/python3 -c \'import Quartz;d=Quartz.CGSessionCopyCurrentDictionary() or {};print(int(bool(d.get("CGSSessionScreenIsLocked",False))))\' 2>/dev/null || echo ?)';
-  }
+  if (plataforma === 'macos') return Capture.macosProbeCommand();
   if (plataforma === 'linux') {
     return LGUI + 'rm -f /tmp/fv.png; if command -v grim >/dev/null 2>&1; then grim /tmp/fv.png 2>/dev/null; elif command -v scrot >/dev/null 2>&1; then scrot -o /tmp/fv.png 2>/dev/null; elif command -v gnome-screenshot >/dev/null 2>&1; then gnome-screenshot -f /tmp/fv.png 2>/dev/null; fi; ' +
       '[ -s /tmp/fv.png ] && echo __V_CAP__=1 || echo __V_CAP__=0; echo __V_AGENT__=linux; ' +
@@ -59,7 +49,7 @@ function marcador(stdout, k) {
 }
 
 /** Interpreta la sonda. `online` = el SSH respondió (rc 0). */
-function evaluar({ stdout, rc, online, plataforma, md5Canonico }) {
+function evaluar({ stdout, rc, online, plataforma, versionCanonico }) {
   if (!online) return { online: false, ver: false, tocar: false, ready: false, agenteOk: null, why: 'sin ssh desde el hub' };
   const cap = marcador(stdout, 'CAP'), agent = marcador(stdout, 'AGENT'), input = marcador(stdout, 'INPUT');
   const ax = marcador(stdout, 'AX'), lock = marcador(stdout, 'LOCK');
@@ -68,8 +58,14 @@ function evaluar({ stdout, rc, online, plataforma, md5Canonico }) {
   const axOk = ax === '1' || ax === '?' || ax === null;   // sin binding no se afirma que falte
   const locked = lock === '1';
   const tocar = inputOk && axOk && !locked;
-  const agenteOk = plataforma === 'macos' && md5Canonico ? (agent === md5Canonico) : null;
-  const why = !ver ? (plataforma === 'macos' && agenteOk === false ? 'agente de captura desactualizado' : (agent === 'none' ? 'sin agente de captura' : 'la captura no responde'))
+  const agenteNum = agent != null && /^\d+$/.test(agent) ? Number(agent) : null;
+  const agenteOk = plataforma === 'macos' && versionCanonico != null
+    ? (agenteNum != null && agenteNum >= Number(versionCanonico))
+    : null;
+  const why = !ver
+    ? (plataforma === 'macos' && agenteOk === false
+        ? (agent === 'none' || agent == null ? 'sin agente de captura' : 'agente de captura desactualizado')
+        : 'la captura no responde')
     : !inputOk ? 'sin inyector de entrada'
     : ax === '0' ? 'sin permiso de Accesibilidad'
     : locked ? 'pantalla bloqueada'
@@ -77,10 +73,12 @@ function evaluar({ stdout, rc, online, plataforma, md5Canonico }) {
   return { online: true, ver, tocar, ready: ver && tocar, agenteOk, agente: agent, locked: lock === '?' ? null : locked, why };
 }
 
-/** ¿Merece reparación automática? Sólo macOS, sólo si la captura falla o el agente no es el canónico. */
+/** ¿Merece reparación automática? Sólo macOS, y sólo si el agente es más viejo o no está.
+ *  Una captura que falla con el agente ya al día NO reinstala: eso es lo que pisó
+ *  el arreglo de las tres pantallas (17:09 Madrid, 7-nov-2026). */
 function necesitaReparacion(ev, plataforma) {
   if (plataforma !== 'macos' || !ev.online) return null;
-  if (!ev.ver || ev.agenteOk === false) return 'agente';
+  if (ev.agenteOk === false) return 'agente';
   if (ev.why === 'sin inyector de entrada') return 'inyector';
   return null;
 }
@@ -120,7 +118,7 @@ function comandoWol(mac, ip) {
 }
 
 function crear(deps) {
-  // deps: { maquinas(), platOf(m), run(m,cmd,ms), reparar(m,tipo)→Promise<bool>, avisar(txt), audit(ev), persistir(estado), estadoInicial, md5Canonico, ahora() }
+  // deps: { maquinas(), platOf(m), run(m,cmd,ms), reparar(m,tipo)→Promise<bool>, avisar(txt), audit(ev), persistir(estado), estadoInicial, versionCanonico, ahora() }
   const estado = Object.assign({}, deps.estadoInicial || {});
   const ahora = deps.ahora || (() => Date.now());
   const ultimaReparacion = {};
@@ -130,7 +128,7 @@ function crear(deps) {
     const plat = deps.platOf(m); const cmd = comandoSonda(plat);
     if (!cmd) return null;
     const r = await deps.run(m, cmd, plat === 'windows' ? 20000 : 15000);
-    return evaluar({ stdout: r.stdout, rc: r.rc, online: r.rc === 0, plataforma: plat, md5Canonico: deps.md5Canonico });
+    return evaluar({ stdout: r.stdout, rc: r.rc, online: r.rc === 0, plataforma: plat, versionCanonico: deps.versionCanonico });
   }
 
   async function vigilar(m, { forzar } = {}) {
@@ -181,4 +179,4 @@ function crear(deps) {
   return { estado, probar, vigilar, ronda, INTERVALO_MS };
 }
 
-module.exports = { INTERVALO_MS, REPARACION_MIN_MS, FUERA_AVISO_MS, md5AgenteCanonico, comandoSonda, comandoWol, marcador, evaluar, necesitaReparacion, transicion, crear };
+module.exports = { INTERVALO_MS, REPARACION_MIN_MS, FUERA_AVISO_MS, versionAgenteCanonico, comandoSonda, comandoWol, marcador, evaluar, necesitaReparacion, transicion, crear };

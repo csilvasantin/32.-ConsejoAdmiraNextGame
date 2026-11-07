@@ -3,30 +3,33 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const V = require('./control-vigia');
 
-test('md5 del agente canónico sale del bloque EOS del instalador', () => {
-  const inst = "x\nread -r -d '' CAPTURE_SH <<'EOS'\n#!/bin/bash\necho hola\nEOS\ninstall_local(){ :; }\n";
-  const md5 = require('crypto').createHash('md5').update('#!/bin/bash\necho hola\n').digest('hex');
-  assert.equal(V.md5AgenteCanonico(inst), md5);
-  assert.equal(V.md5AgenteCanonico('nada'), null);
+test('la versión canónica es el entero del agente Python, no el bash embebido', () => {
+  assert.equal(V.versionAgenteCanonico('x\nCAPTURE_VERSION = 3\n'), 3);
+  assert.equal(V.versionAgenteCanonico("read -r -d '' CAPTURE_SH <<'EOS'\n#!/bin/bash\nEOS\n"), null);
 });
 
 test('evaluar: ver+tocar sólo con captura real, inyector, Accesibilidad y pantalla libre', () => {
-  const ok = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=abc\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', md5Canonico: 'abc' });
+  const ok = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=3\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
   assert.deepEqual([ok.ver, ok.tocar, ok.ready, ok.agenteOk, ok.why], [true, true, true, true, 'ver + tocar']);
-  const viejo = V.evaluar({ stdout: '__V_CAP__=0\n__V_AGENT__=zzz\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', md5Canonico: 'abc' });
+  const viejo = V.evaluar({ stdout: '__V_CAP__=0\n__V_AGENT__=1\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
   assert.equal(viejo.why, 'agente de captura desactualizado'); assert.equal(viejo.ready, false);
-  const sinInput = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=abc\n__V_INPUT__=0\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', md5Canonico: 'abc' });
+  const alDiaSinImagen = V.evaluar({ stdout: '__V_CAP__=0\n__V_AGENT__=3\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
+  assert.equal(alDiaSinImagen.why, 'la captura no responde'); assert.equal(alDiaSinImagen.agenteOk, true);
+  const masNuevo = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=4\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
+  assert.equal(masNuevo.agenteOk, true);
+  const sinInput = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=3\n__V_INPUT__=0\n__V_AX__=1\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
   assert.equal(sinInput.why, 'sin inyector de entrada');
-  const bloq = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=abc\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=1\n', rc: 0, online: true, plataforma: 'macos', md5Canonico: 'abc' });
+  const bloq = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=3\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=1\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
   assert.equal(bloq.why, 'pantalla bloqueada'); assert.equal(bloq.ver, true);
-  const sinAx = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=abc\n__V_INPUT__=1\n__V_AX__=0\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', md5Canonico: 'abc' });
+  const sinAx = V.evaluar({ stdout: '__V_CAP__=1\n__V_AGENT__=3\n__V_INPUT__=1\n__V_AX__=0\n__V_LOCK__=0\n', rc: 0, online: true, plataforma: 'macos', versionCanonico: 3 });
   assert.equal(sinAx.why, 'sin permiso de Accesibilidad');
-  const off = V.evaluar({ stdout: '', rc: 255, online: false, plataforma: 'macos', md5Canonico: 'abc' });
+  const off = V.evaluar({ stdout: '', rc: 255, online: false, plataforma: 'macos', versionCanonico: 3 });
   assert.equal(off.why, 'sin ssh desde el hub');
 });
 
-test('reparación automática: sólo macOS, sólo agente o inyector', () => {
+test('reparación automática: no reinstala si el agente ya está al día', () => {
   assert.equal(V.necesitaReparacion({ online: true, ver: false, agenteOk: false, why: 'x' }, 'macos'), 'agente');
+  assert.equal(V.necesitaReparacion({ online: true, ver: false, agenteOk: true, why: 'la captura no responde' }, 'macos'), null);
   assert.equal(V.necesitaReparacion({ online: true, ver: true, agenteOk: true, why: 'sin inyector de entrada' }, 'macos'), 'inyector');
   assert.equal(V.necesitaReparacion({ online: true, ver: true, agenteOk: true, why: 'ver + tocar' }, 'macos'), null);
   assert.equal(V.necesitaReparacion({ online: true, ver: false }, 'linux'), null);
@@ -44,12 +47,12 @@ test('ronda: prueba, repara una vez por hora y persiste', async () => {
   const v = V.crear({
     maquinas: () => [{ id: 'rosa', name: 'Rosa' }],
     platOf: () => 'macos',
-    run: async () => { llamadas++; return llamadas === 1 ? { rc: 0, stdout: '__V_CAP__=0\n__V_AGENT__=viejo\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n' } : { rc: 0, stdout: '__V_CAP__=1\n__V_AGENT__=abc\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n' }; },
+    run: async () => { llamadas++; return llamadas === 1 ? { rc: 0, stdout: '__V_CAP__=0\n__V_AGENT__=1\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n' } : { rc: 0, stdout: '__V_CAP__=1\n__V_AGENT__=3\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n' }; },
     reparar: async () => { reparaciones++; return true; },
     avisar: async (t) => { avisos.push(t); },
     audit: () => {},
     persistir: (e) => { persistido = e; },
-    md5Canonico: 'abc',
+    versionCanonico: 3,
     ahora: () => 1000,
   });
   const e = await v.ronda();
@@ -68,6 +71,8 @@ test('la sonda de cada plataforma emite los cinco marcadores', () => {
     for (const k of ['CAP', 'AGENT', 'INPUT', 'AX', 'LOCK']) assert.match(c, new RegExp('__V_' + k + '__'), p + ' ' + k);
   }
   assert.equal(V.comandoSonda('ios'), null);
+  assert.doesNotMatch(V.comandoSonda('macos'), /capture\.req/, 'la sonda macOS no usa el buzón compartido');
+  assert.match(V.comandoSonda('macos'), /capture-queue/);
 });
 
 test('fuera de la red: avisa UNA vez al superar 1 h sin SSH y se limpia al volver', async () => {
@@ -76,7 +81,7 @@ test('fuera de la red: avisa UNA vez al superar 1 h sin SSH y se limpia al volve
     maquinas: () => [{ id: 'dgx', name: 'DGX' }], platOf: () => 'linux',
     run: async () => online ? { rc: 0, stdout: '__V_CAP__=1\n__V_AGENT__=linux\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n' } : { rc: 255, stdout: '' },
     reparar: async () => false, avisar: async (x) => { avisos.push(x); }, audit: () => {}, persistir: () => {},
-    md5Canonico: 'abc', ahora: () => t,
+    versionCanonico: 3, ahora: () => t,
   });
   t = 0; await v.ronda(); assert.equal(avisos.length, 0);
   t = 30 * 60000; await v.ronda(); assert.equal(avisos.length, 0, 'a la media hora aún no');

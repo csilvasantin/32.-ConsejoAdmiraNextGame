@@ -32,12 +32,16 @@ test('el botón y el deep link eligen el id canónico sin cambiar el resto de ta
   assert.equal(canonicalControlUrl('https://example.test/control/'), null);
   assert.equal(esFalloPermisoCaptura('ERR_NO_CAPTURE'), true);
   assert.equal(esFalloPermisoCaptura({ error: 'capture_failed_or_no_permission' }), true);
+  assert.equal(esFalloPermisoCaptura('ERR_CAPTURE_PAUSED RuntimeError'), false);
+  assert.equal(esFalloPermisoCaptura('SCREEN_CAPTURE_FAILED rc=1 could not create image from display'), false);
+  assert.equal(esFalloPermisoCaptura('ERR_CAPTURE_TRANSIENT'), false);
+  assert.equal(esFalloPermisoCaptura('ERR_STALE_FRAME'), false);
   assert.equal(esFalloPermisoCaptura('sin respuesta en 12000 ms'), false);
   assert.equal(esFalloPermisoCaptura({ error: 'máquina desconocida' }), false);
 });
 
 test('la página publica el resolvedor, el censo del hub y un diagnóstico que no miente', () => {
-  assert.match(html, new RegExp('/fleet-control/machine-id\\.js\\?v=20261106-r2-' + seal));
+  assert.match(html, new RegExp('/fleet-control/machine-id\\.js\\?v=20261107-r3-' + seal));
   assert.match(html, /data-rc="\$\{rcMachineId\(m\.id\)\}"/);
   assert.match(html, /machineId=rcMachineId\(machineId\)/);
   assert.match(html, /HUB_CENSUS=CENSO\.map/);
@@ -45,6 +49,6 @@ test('la página publica el resolvedor, el censo del hub y un diagnóstico que n
   assert.match(html, /FLEET_MESH\.request\('\/health'/);
   assert.match(html, /el relay ya contestó; se reintenta despacio/);
   assert.doesNotMatch(html, /fetch\(API\+'\/health'/);
-  assert.match(html, /content="AdmiraNeXT v\.06\.11\.2026\.r122\.09:40"/);
+  assert.match(html, /content="AdmiraNeXT v\.07\.11\.2026\.r123\.16:15"/);
   assert.match(html, /canonicalControlUrl\(location\.href\)/);
 });

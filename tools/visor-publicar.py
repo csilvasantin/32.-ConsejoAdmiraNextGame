@@ -14,6 +14,11 @@ compartido en ~/.cache/admiranext/estado-agentes/, misma histéresis de 80 s). S
 está en vivo; en Idle / Login pendiente / Sin sesión va la ficha (nombre, línea de info, palabra y última misión), nunca el
 enlace OAuth del login. Para actualizar: sustituir ESTE fichero y `launchctl kickstart -k gui/$UID/com.admiranext.visor-publicar`
 (no reescribir el plist: cada reescritura saca el aviso de actividad en segundo plano de macOS).
+
+#5845 (Lucas vía Woz, visto bueno de Carlos 13-10-2026): el log ~/.fleet/logs/visor-publicar.log lo abre launchd
+(StandardOutPath/StandardErrorPath) y nadie lo rotaba; con el servidor caído suma una línea cada 5-10 s sin tope. Lo rota
+el propio publicador, sin tocar el plist: pasado VISOR_LOG_MAX (1 MB) pasa a .1 (y .1→.2→.3) y se reabre en el mismo sitio
+sobre los descriptores que escribían en él. Lanzado a mano desde una terminal no toca nada.
 """
 import hashlib, importlib.util, json, os, re, subprocess, sys, time, urllib.request, urllib.error
 
@@ -27,6 +32,9 @@ URL = os.environ.get("VISOR_URL", "https://www.admira.live/api/visor/pane")
 CADA = float(os.environ.get("VISOR_CADA", "3"))
 LATIDO = 60
 LINEAS = 60
+LOG = os.environ.get("VISOR_LOG", os.path.join(HOME, ".fleet", "logs", "visor-publicar.log"))
+LOG_MAX = int(os.environ.get("VISOR_LOG_MAX", str(1024 * 1024)))
+LOG_COPIAS = 3
 EST = None
 TMUX = next((p for p in ("/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/usr/bin/tmux") if os.path.exists(p)), "tmux")
 DEFECTO = ["Neo · Claude|macbook-pro-16|neo|Homebrew", "Morfeo · Claude|macbook-pro-16|morfeo|Red Sands",
@@ -145,6 +153,38 @@ def capturar(ses):
     return {"lineas": [tapar(l) for l in lineas[-LINEAS:]], "ancho": int(p[0] or 120), "alto": int(p[1] or 30), "cmd": p[2]}
 
 
+def rotar_log(ruta=LOG, tope=LOG_MAX, copias=LOG_COPIAS, fds=(1, 2)):
+    """#5845: si `ruta` pasa de `tope` bytes, la rota (.1 … .copias) y reabre `ruta` sobre los `fds` que escribían en ella.
+    Solo actúa sobre los descriptores que apuntan a ESE fichero (mismo dispositivo e inodo): en una terminal no hace nada.
+    Nunca lanza: un fallo al rotar no puede tumbar al publicador. Devuelve True si ha rotado."""
+    try:
+        st = os.stat(ruta)
+        if st.st_size <= tope:
+            return False
+        mios = []
+        for fd in fds:
+            try:
+                f = os.fstat(fd)
+            except OSError:
+                continue
+            if (f.st_dev, f.st_ino) == (st.st_dev, st.st_ino):
+                mios.append(fd)
+        if not mios:
+            return False
+        sys.stdout.flush(); sys.stderr.flush()
+        for i in range(copias - 1, 0, -1):
+            if os.path.exists("%s.%d" % (ruta, i)):
+                os.replace("%s.%d" % (ruta, i), "%s.%d" % (ruta, i + 1))
+        os.replace(ruta, ruta + ".1")
+        nuevo = os.open(ruta, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        for fd in mios:
+            os.dup2(nuevo, fd)
+        os.close(nuevo)
+        return True
+    except OSError:
+        return False
+
+
 def enviar(cuerpo, tok, dry):
     datos = json.dumps(cuerpo).encode()
     if dry:
@@ -157,6 +197,7 @@ def enviar(cuerpo, tok, dry):
 
 def main():
     dry, una = "--dry-run" in sys.argv, "--una" in sys.argv
+    rotar_log()  # también aquí: sin token o sin estado-agente.py, launchd lo relanza cada minuto y cada arranque escribe una línea
     tok = token()
     if not tok and not dry:
         print("visor-publicar: sin token de máquina; no publico", file=sys.stderr)
@@ -173,6 +214,8 @@ def main():
     huellas, ultimo_envio, rotulos, forzar = {}, 0.0, {}, True
     while True:
         t0 = time.time()
+        if rotar_log():
+            print("visor-publicar: log rotado al pasar de %d bytes (%s)" % (LOG_MAX, time.strftime("%H:%M:%S")), file=sys.stderr, flush=True)
         try:
             conf = leer_conf()
             grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)

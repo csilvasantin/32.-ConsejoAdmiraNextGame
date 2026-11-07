@@ -36,6 +36,7 @@ const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop'
 const { createGrokBotEncargo, createGrokBotRouter, LEYENDAS_INBOX } = require('./grokbot-encargo');
 const { createServiceBridge } = require('./service-bridge');
 const { resolveMachine, unknownMachineBody } = require('./machine-id');
+const CaptureClient = require('./capture-client');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
@@ -299,13 +300,13 @@ function winPS(script) {
 // ── READINESS DE CONTROL (Neo·MBP14, 3-sep-2026, DEC-mtl6hbywm54t) ──────────
 // Carlos: «no podemos irnos sin controlar desde aquí todos los equipos». Hasta hoy
 // /status solo decía online/offline; que el hub llegue por SSH no significa que
-// pueda VER (fleet-capture.sh) ni TOCAR (fleet-input.py + pantalla desbloqueada).
+// pueda VER (fleet-capture.py) ni TOCAR (fleet-input.py + pantalla desbloqueada).
 // El inventario del 3-sep lo demostró: Pro16 online pero bloqueada → 0 pantallas,
 // Azul online pero sin fleet-input.py. Tres marcadores más en la MISMA sonda SSH,
 // sin ronda extra. `locked` sale de Quartz (CGSSessionScreenIsLocked); si python
 // no responde en la caja, queda a «?» y no se inventa.
 const CONTROL_PROBE_MACOS =
-  '[ -f "$HOME/.fleet/fleet-capture.sh" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
+  '[ -f "$HOME/.fleet/fleet-capture.py" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
   '[ -f "$HOME/.fleet/fleet-input.py" ] && echo __FLEET_INPUT__=1 || echo __FLEET_INPUT__=0; ' +
   // FLT-1827 (5-sep-2026): `echo ?` sin comillas era un GLOB: en el MBP14 casaba con un fichero
   // «~» de su home y la sonda decía «__FLEET_LOCKED__=~», que el parser no reconocía y el panel
@@ -367,20 +368,8 @@ const LGUI = 'export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; e
 
 const ACTIONS = {
   sysinfo: {
-    macos: () =>
-      'echo "🖥️ $(scutil --get ComputerName 2>/dev/null || hostname)"; ' +
-      'echo "⏱️ $(uptime | sed "s/.*up //;s/, [0-9]* user.*//")"; ' +
-      'echo "🔋 $(pmset -g batt 2>/dev/null | grep -o "[0-9]*%" | head -1 || echo n/a)"; ' +
-      'echo "💾 $(df -h / | awk "NR==2{print \\$4\\" libre de \\"\\$2}")"; ' +
-      'echo "🔊 $(osascript -e "output volume of (get volume settings)" 2>/dev/null)%"; ' +
-      'echo "📊 $(ps -A -o %cpu | awk "{s+=\\$1} END{printf \\"%.0f%% CPU\\", s}")"',
-    linux: () =>
-      'echo "🖥️ $(hostname)"; ' +
-      'echo "⏱️ $(uptime -p 2>/dev/null | sed "s/^up //" || echo n/a)"; ' +
-      'echo "🔋 $( (cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1 | sed "s/$/%/") || echo n/a)"; ' +
-      'echo "💾 $(df -h / | awk "NR==2{print \\$4\\" libre de \\"\\$2}")"; ' +
-      'echo "🧠 $(free -h 2>/dev/null | awk "/Mem:/{print \\$3\\"/\\"\\$2}")"; ' +
-      'echo "📊 $(top -bn1 2>/dev/null | awk "/Cpu\\(s\\)/{printf \\"%.0f%% CPU\\",100-\\$8}")"'
+    macos: () => CaptureClient.sysinfoCommand('macos'),
+    linux: () => CaptureClient.sysinfoCommand('linux')
   },
   volume: {
     macos: (arg) => 'osascript -e "set volume output volume ' + (parseInt(arg, 10) || 0) + '"; echo "volumen → ' + (parseInt(arg, 10) || 0) + '%"',
@@ -579,19 +568,15 @@ const ACTIONS = {
     linux: () => LGUI + '(dbus-send --session --dest=org.gnome.ScreenSaver --type=method_call /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false 2>/dev/null || xdg-screensaver reset 2>/dev/null || xset s reset 2>/dev/null); echo "🖼️ salvapantallas quitado"'
   },
   // Captura de pantalla.
-  //   macOS: vía el mini-agente AgoraCapture (LaunchAgent con TCC). Handshake por
-  //     ficheros: tocamos capture.req → el agente deja base64 en capture.out.
+  //   macOS: agente Python en la sesión gráfica. Cada petición es un fichero
+  //     en capture-queue/<nonce>.req; la respuesta lleva captured_at.
   //   Linux: captura directa por SSH (grim en Wayland, scrot/import/gnome en X11)
   //     a JPEG y devuelve base64 (mismo formato que el UI espera).
   screenshot: {
-    // `arg` = índice de pantalla (FLT-1021). Viaja pegado al nonce como «N|2» para
-    // no cambiar el handshake: el demonio parte por «|» y los agentes viejos que
-    // manden sólo el nonce siguen funcionando igual (pantalla 0).
-    macos: (arg) =>
-      'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; N="fc-$(date +%s)-$$-$RANDOM"; ' +
-      'printf "%s" "$N|' + String(parseInt(arg, 10) || 0) + '" > "$D/capture.req"; ' +
-      'for i in $(seq 1 30); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
-      'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi',
+    // `arg` = índice de pantalla (FLT-1021), 0 = principal = screencapture -D 1.
+    // Cada petición tiene su fichero en capture-queue. Un «foo» no se convierte
+    // en la principal: parseDisplayIndex lanza y /api/action responde 400.
+    macos: (arg) => CaptureClient.macosCaptureCommand(arg),
     // Windows: el demonio FleetCapture.exe (sesión interactiva) captura; el hub
     // dispara el handshake ejecutando FleetTrigger.exe, que imprime el base64 por
     // stdout (mismo formato que macOS/linux). DefaultShell del Zenbook = PowerShell.
@@ -702,7 +687,7 @@ function readRawBody(req, limit=20000) {
 // Prueba real «ver + tocar» cada 10 min, aviso en cada transición y auto-reparación.
 const Vigia = require('./control-vigia');
 const VIGIA_FILE = path.join(DIR, 'control-vigia.json');
-const VIGIA_MD5 = (() => { try { return Vigia.md5AgenteCanonico(fs.readFileSync(path.join(DIR, 'deploy-capture-agent.sh'), 'utf8')); } catch (e) { return null; } })();
+const VIGIA_VERSION = (() => { try { return Vigia.versionAgenteCanonico(fs.readFileSync(path.join(DIR, 'fleet-capture.py'), 'utf8')); } catch (e) { return null; } })();
 function vigiaSpawn(bin, args, stdinText, timeoutMs) {
   return new Promise((resolve) => {
     const ch = spawn(bin, args, { env: process.env });
@@ -717,15 +702,36 @@ function vigiaSpawn(bin, args, stdinText, timeoutMs) {
 async function vigiaReparar(m, tipo) {
   const target = (m.user || 'csilvasantin') + '@' + m.host;
   if (tipo === 'agente') {
-    const inst = fs.readFileSync(path.join(DIR, 'deploy-capture-agent.sh'), 'utf8');
-    const r = isRelayLocal(m) ? await vigiaSpawn('bash', ['-s', '--', 'local'], inst, 60000)
-      : await vigiaSpawn('ssh', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', target, 'bash -s -- local'], inst, 60000);
+    // El instalador y el .py viajan juntos. `bash -s` solo llevaba el shell y
+    // volvía a escribir el bash viejo encima del arreglo de la máquina.
+    const files = CaptureClient.repairFiles(DIR);
+    if (files.some((f) => !fs.existsSync(f))) return false;
+    if (isRelayLocal(m)) {
+      const r = await vigiaSpawn('bash', [files[0], 'local'], null, 60000);
+      return r.rc === 0 && /instalado/.test(r.stdout);
+    }
+    const remote = '~/.fleet/capture-install';
+    const mk = await vigiaSpawn('ssh', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', target, 'mkdir -p ' + remote], null, 20000);
+    if (mk.rc !== 0) return false;
+    const copy = await vigiaSpawn('scp', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes'].concat(files, [target + ':' + remote + '/']), null, 30000);
+    if (copy.rc !== 0) return false;
+    const r = await vigiaSpawn('ssh', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', target, 'bash ' + remote + '/deploy-capture-agent.sh local'], null, 60000);
     return r.rc === 0 && /instalado/.test(r.stdout);
   }
   if (tipo === 'inyector') {
-    const src = path.join(os.homedir(), '.fleet', 'fleet-input.py');
-    if (!fs.existsSync(src)) return false;
-    const r = isRelayLocal(m) ? { rc: 0 } : await vigiaSpawn('scp', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', src, target + ':~/.fleet/fleet-input.py'], null, 30000);
+    const src = path.join(DIR, 'fleet-input.py');
+    const geo = path.join(DIR, 'display_geometry.py');
+    const cap = path.join(DIR, 'fleet-capture.py');
+    if (!fs.existsSync(src) || !fs.existsSync(geo)) return false;
+    if (isRelayLocal(m)) {
+      const dest = path.join(os.homedir(), '.fleet');
+      fs.mkdirSync(dest, { recursive: true });
+      fs.copyFileSync(src, path.join(dest, 'fleet-input.py'));
+      fs.copyFileSync(geo, path.join(dest, 'display_geometry.py'));
+      if (fs.existsSync(cap)) fs.copyFileSync(cap, path.join(dest, 'fleet-capture.py'));
+      return true;
+    }
+    const r = await vigiaSpawn('scp', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', src, geo, cap, target + ':~/.fleet/'], null, 30000);
     return r.rc === 0;
   }
   return false;
@@ -740,7 +746,7 @@ const VIGIA = Vigia.crear({
   platOf, run, reparar: vigiaReparar, avisar: vigiaAvisar, audit,
   persistir: (e) => { try { fs.writeFileSync(VIGIA_FILE, JSON.stringify(e, null, 1)); } catch (err) {} },
   estadoInicial: (() => { try { return JSON.parse(fs.readFileSync(VIGIA_FILE, 'utf8')); } catch (e) { return {}; } })(),
-  md5Canonico: VIGIA_MD5,
+  versionCanonico: VIGIA_VERSION,
 });
 setTimeout(() => { VIGIA.ronda().catch(() => {}); }, 60 * 1000).unref?.();
 const _vigiaTimer = setInterval(() => { VIGIA.ronda().catch(() => {}); }, Vigia.INTERVALO_MS); if (_vigiaTimer.unref) _vigiaTimer.unref();
@@ -1228,22 +1234,31 @@ const server = http.createServer(async (req, res) => {
     if (!m) return;
     const fn = resolveAction('screenshot', m);
     if (!fn) return json(res, 500, { error: 'sin acción screenshot' });
-    // ?display=N → esa pantalla (FLT-1021). Sin parámetro, la de siempre.
-    const dsp = parseInt(q.get('display'), 10) || 0;
-    const r = await run(m, fn(dsp, m), 20000);
-    const b64 = String(r.stdout || '').trim();
-    if (/ERR_NO_SUCH_DISPLAY/.test(b64)) {
-      return json(res, 404, { error: 'no_such_display', detail: 'la máquina no ha capturado la pantalla ' + dsp });
-    }
-    if (r.rc !== 0 || !b64 || /ERR_NO_CAPTURE/.test(b64) || b64.length < 200) {
-      audit({ ip, ev: 'live_frame_fail', machine: m.id, rc: r.rc });
+    // ?display=N → esa pantalla (FLT-1021). Sin parámetro, la principal (0).
+    let dsp;
+    try { dsp = CaptureClient.parseDisplayIndex(q.get('display')); }
+    catch (e) { return json(res, 400, { error: 'pantalla no válida', detail: String(e && e.message || e) }); }
+    let cmd;
+    try { cmd = fn(dsp, m); }
+    catch (e) { return json(res, 400, { error: 'pantalla no válida', detail: String(e && e.message || e) }); }
+    const r = await run(m, cmd, 22000);
+    const parsed = CaptureClient.parseCaptureStdout(r.stdout, Date.now() / 1000);
+    const jpeg = parsed.ok ? CaptureClient.jpegFromB64(parsed.b64) : null;
+    if (!parsed.ok || !jpeg) {
+      audit({ ip, ev: 'live_frame_fail', machine: m.id, rc: r.rc, error: parsed.error });
       // 424 (Failed Dependency), no 502: es un fallo de la MÁQUINA, no del relé. Con 5xx la malla
       // saltaba a otro relé sin cookie y el overlay enseñaba «auth 401» (Carlos, 3-sep-2026).
-      return json(res, 424, { error: 'capture_failed_or_no_permission', detail: String(r.stderr || b64 || '').slice(0, 140) });
+      // Un rc=1 de screencapture no es un permiso: capture_transient lo dice aparte.
+      const fail = CaptureClient.liveFrameStatus(parsed.ok ? { error: 'ERR_NO_CAPTURE', detail: 'jpeg no válido' } : parsed);
+      return json(res, fail.status, fail.body);
     }
-    let buf; try { buf = Buffer.from(b64, 'base64'); } catch (e) { return json(res, 424, { error: 'bad-capture' }); }
-    res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' });
-    return res.end(buf);
+    res.writeHead(200, {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'no-store',
+      'X-Capture-At': String(parsed.capturedAt || ''),
+      'X-Capture-Display': String(dsp)
+    });
+    return res.end(jpeg);
   }
 
 
@@ -1263,12 +1278,15 @@ const server = http.createServer(async (req, res) => {
     if (!m) return;
     const plataforma = platOf(m);
     if (!['macos', 'linux', 'windows'].includes(plataforma)) return json(res, 501, { error: 'input_no_soportado_en_' + plataforma });
+    let dsp;
+    try { dsp = CaptureClient.parseDisplayIndex(body.display); }
+    catch (e) { return json(res, 400, { error: 'pantalla no válida', detail: String(e && e.message || e) }); }
     const accion = {
       type: String(body.type || ''),
       x: body.x, y: body.y, dx: body.dx, dy: body.dy,
       button: body.button, clicks: body.clicks,
       text: body.text, code: body.code, mods: body.mods,
-      display: body.display
+      display: dsp
     };
     // El JSON viaja en base64: así no hay que pelearse con el escapado de comillas,
     // acentos ni emojis a través de ssh + shell (escribir « ñ » se rompía si no).
@@ -1356,7 +1374,7 @@ const server = http.createServer(async (req, res) => {
   // Sesión Google O X-Fleet-Token: el vigía también lo consultan y disparan agentes headless.
   if (url === '/api/vigia' && req.method === 'GET') {
     if (!(await gate(req, res, ip, true))) return;
-    return json(res, 200, { ok: true, intervaloMs: Vigia.INTERVALO_MS, agenteCanonico: VIGIA_MD5, maquinas: VIGIA.estado });
+    return json(res, 200, { ok: true, intervaloMs: Vigia.INTERVALO_MS, agenteCanonico: VIGIA_VERSION, maquinas: VIGIA.estado });
   }
   if (url === '/api/vigia/run' && req.method === 'POST') {
     if (!(await gate(req, res, ip, true))) return;

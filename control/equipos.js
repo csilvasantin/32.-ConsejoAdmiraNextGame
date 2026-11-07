@@ -36,7 +36,9 @@
 
   // id normalizado (sin «admira-», sin signos) → id normalizado del equipo canónico.
   // Confirmado por Carlos (19-10-2026): «Mac Studio de Carlos» es el Mac Studio (MacStudio.local).
-  var ALIAS_FIJOS = { macstudiodecarlos: 'macstudio' };
+  // «Mac Mini (Carlos)» es el Mac Mini (macmini.tail48b61c.ts.net), igual que
+  // «Mac Studio de Carlos» es el Mac Studio. Dos fichas del mismo host se funden.
+  var ALIAS_FIJOS = { macstudiodecarlos: 'macstudio', macminicarlos: 'macmini' };
 
   function norm(s) { return String(s || '').toLowerCase().replace(/^admira-?/, '').replace(/[^a-z0-9]/g, ''); }
   function clave(m) { return norm(m && (m.id || m.name)); }
@@ -90,6 +92,37 @@
       ['fqdn', 'host', 'endpoint'].forEach(function (f) { if (!buena[f] && vieja[f]) buena[f] = vieja[f]; });
       fusionados.push({ id: vieja.id, nombre: vieja.name || vieja.id, en: buena.id });
       delete porClave[k]; orden.splice(orden.indexOf(k), 1);
+    });
+    // 1b) mismo host (MagicDNS): la ficha con id = hostname, o la local, se queda.
+    //     Un host vacío no fusiona: muchos registros viejos no traen fqdn.
+    function hostKey(m) {
+      var h = String((m && (m.host || m.fqdn)) || '').toLowerCase();
+      if (!h) return '';
+      return h.split('.')[0].replace(/[^a-z0-9]/g, '');
+    }
+    function prefer(a, b) {
+      if (!!a.local !== !!b.local) return a.local ? a : b;
+      var h = hostKey(a) || hostKey(b);
+      if ((clave(a) === h) !== (clave(b) === h)) return clave(a) === h ? a : b;
+      return a;
+    }
+    var byHost = {};
+    orden.slice().forEach(function (k) {
+      var m = porClave[k]; if (!m) return;
+      var h = hostKey(m); if (!h) return;
+      if (!byHost[h]) { byHost[h] = k; return; }
+      var keepK = byHost[h], keep = porClave[keepK];
+      var winner = prefer(keep, m);
+      var winK = winner === keep ? keepK : k;
+      var loseK = winner === keep ? k : keepK;
+      var loser = porClave[loseK];
+      winner.aliasDe = (winner.aliasDe || []).concat(loser.aliasDe || []).concat([loser.name || loser.id]);
+      if (loser.online && !winner.online) { winner.online = true; winner.viaAlias = true; }
+      ['fqdn', 'host', 'endpoint'].forEach(function (f) { if (!winner[f] && loser[f]) winner[f] = loser[f]; });
+      fusionados.push({ id: loser.id, nombre: loser.name || loser.id, en: winner.id });
+      delete porClave[loseK];
+      orden.splice(orden.indexOf(loseK), 1);
+      byHost[h] = winK;
     });
     // 2) eliminados (borrado lógico)
     var visibles = [], ocultos = [];

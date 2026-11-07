@@ -26,6 +26,28 @@ test("«Mac Studio de Carlos» se funde en «Mac Studio»: una sola ficha", () =
   assert.equal(CENSO[1].aliasDe, undefined);
 });
 
+test("Mac Mini (Carlos) con el mismo host que Mac Mini es una sola ficha, y se queda la local", () => {
+  const r = E.depurar([
+    { id: "mac-mini-carlos", name: "Mac Mini (Carlos)", host: "macmini.tail48b61c.ts.net" },
+    { id: "macmini", name: "Mac Mini", host: "macmini.tail48b61c.ts.net", local: true },
+  ], E.estadoVacio(), () => 0, AHORA * 1000);
+  assert.deepEqual(r.visibles.map((m) => m.id), ["macmini"]);
+  assert.ok(r.fusionados.some((f) => f.en === "macmini"));
+});
+
+test("dos fichas con el mismo host se funden aunque el nombre no esté en los alias", () => {
+  const r = E.depurar([
+    { id: "macstudio", name: "Mac Studio", host: "macstudio.tail48b61c.ts.net" },
+    { id: "studio-extra", name: "Studio extra", host: "macstudio.tail48b61c.ts.net" },
+  ], E.estadoVacio(), () => 0, AHORA * 1000);
+  assert.deepEqual(r.visibles.map((m) => m.id), ["macstudio"]);
+});
+
+test("un alias sin su canónico en el censo no desaparece", () => {
+  const r = E.depurar([{ id: "mac-mini-carlos", name: "Mac Mini (Carlos)", host: "" }], E.estadoVacio(), () => 0, AHORA * 1000);
+  assert.equal(r.visibles.length, 1);
+});
+
 test("si el canónico no está en el censo, el alias NO desaparece (no se pierde un equipo)", () => {
   const r = E.depurar([CENSO[2]], E.estadoVacio(), () => 0, AHORA * 1000);
   assert.equal(r.visibles.length, 1);

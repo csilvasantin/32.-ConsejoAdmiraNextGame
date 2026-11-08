@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   var KEY = 'admira:consejo-presencia';
-  var ASSET_V = '20261106-presencia1';
+  var ASSET_V = '20261108-coetaneos-siete';
   var GENS = {
     leyendas: [
       ['Steve Jobs', 'CEO', 'racional', ['jobs', 'steve jobs', 'steve-jobs']],
@@ -139,6 +139,9 @@
     cargarMeta().then(function (m) {
       if (genVista !== gen || !m || !m[gen]) return;
       var g = m[gen], W = g.width, H = g.height;
+      // El arte nuevo de Coetáneos no tiene placa de sillas vacías a su medida.
+      // Pintar los recortes viejos devolvería a Ruth, a Ratti y los asientos anteriores.
+      if (g.sinPlaca) { el.style.display = 'none'; el.innerHTML = ''; return; }
       var html = '<img alt="" src="' + base() + gen + '.jpg?v=' + ASSET_V + '" style="position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:pixelated">';
       Object.keys(g.cutouts).forEach(function (p) {
         var vis = p === 'Carlos' ? estado.carlosVisible() : estado.visible(gen, p);

@@ -234,16 +234,14 @@
             { role: "CSO", persona: "George Lucas",    x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
         ],
         coetaneos: [
-            // Racional (left/red) — same physical seats, different personas
-            { role: "CEO", persona: "Elon Musk",       x: 11, y: 44, machineId: "admira-macbookair16",      body: { left: 3,  top: 46, width: 18, height: 42 } },
-            { role: "CTO", persona: "Jensen Huang",    x: 22, y: 44, machineId: "admira-macbookpronegro14", body: { left: 16, top: 46, width: 17, height: 40 } },
-            { role: "COO", persona: "Gwynne Shotwell", x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
-            { role: "CFO", persona: "Ruth Porat",      x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
-            // Creativo (right/blue)
-            { role: "CCO", persona: "John Lasseter",   x: 58, y: 23, machineId: "admira-macbookairluna",  body: { left: 55, top: 27, width: 8,  height: 26 } },
-            { role: "CDO", persona: "Jony Ive",        x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
-            { role: "CXO", persona: "Carlos Ratti",    x: 82, y: 32, machineId: "admira-pctwin",            body: { left: 77, top: 34, width: 8,  height: 21 } },
-            { role: "CSO", persona: "Ryan Reynolds",   x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
+            // Arte 20261108: siete personas (Carlos al fondo, sin placa). Ruth Porat y
+            // Carlos Ratti siguen en COUNCIL, fichas y bots; no están sentados en esta mesa.
+            { role: "CEO", persona: "Elon Musk",       x: 12.1, y: 48.1, machineId: "admira-macbookair16",      body: { left: 1.5, top: 48, width: 16, height: 50 } },
+            { role: "CTO", persona: "Jensen Huang",    x: 21.7, y: 43.3, machineId: "admira-macbookpronegro14", body: { left: 16, top: 43, width: 13, height: 32 } },
+            { role: "COO", persona: "Gwynne Shotwell", x: 30.1, y: 41.7, machineId: "admira-macbookairplata",   body: { left: 25.5, top: 41.5, width: 11, height: 26 } },
+            { role: "CDO", persona: "Jony Ive",        x: 65.8, y: 41.4, machineId: "admira-macbookairazul",    body: { left: 59, top: 41, width: 13, height: 29 } },
+            { role: "CCO", persona: "John Lasseter",   x: 78.8, y: 43.3, machineId: "admira-macbookairluna",    body: { left: 70.5, top: 43, width: 16, height: 36 } },
+            { role: "CSO", persona: "Ryan Reynolds",   x: 90.6, y: 48.1, machineId: "admira-macbookaircrema",   body: { left: 84, top: 48, width: 15.5, height: 43 } },
         ],
     };
 
@@ -252,7 +250,7 @@
     // cada una lleva sus coordenadas medidas sobre la cara real de cada consejero.
     const MOUTH_POS = {
         leyendas:  { CEO:[11,53], CTO:[22,43], COO:[33,38], CFO:[44,38], CCO:[57,37], CDO:[70,38], CXO:[80,42], CSO:[90,58] },
-        coetaneos: { CEO:[13,62], CTO:[26,56], COO:[37,47], CFO:[46,47], CCO:[58,49], CDO:[67,51], CXO:[79,52], CSO:[90,58] },
+        coetaneos: { CEO:[12.3,59.7], CTO:[21.9,55.8], COO:[30.1,53.1], CDO:[65.6,50.7], CCO:[78.9,54.2], CSO:[90.2,59.7] },
     };
 
     let machineStatus = {};
@@ -261,7 +259,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20260613-r2";
+    const COUNCIL_IMAGE_VERSION = "20261108-coetaneos-siete";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",
@@ -352,6 +350,8 @@
         if (window.CouncilTodo && window.CouncilTodo.isOpen()) {
             window.CouncilTodo.setGeneration(gen, (NAMEPLATE_POS[gen] || []).map(p => ({ persona: p.persona, role: p.role, x: p.x, y: p.y })));
         }
+        // Esta ilustración no trae placas pintadas: al entrar en Coetáneos se muestran las de la interfaz.
+        setNameplatesVisible(gen === "coetaneos");
     }
 
     function renderLegendStrip() {
@@ -664,7 +664,10 @@
                 const title = `Ver ficha de ${p.persona} (${p.role})`;
                 return `<path class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" d="${d}"><title>${title}</title></path>`;
             }).join("");
-            bhEl.innerHTML = `<svg class="silhouette-svg" viewBox="0 0 ${sil.width} ${sil.height}" preserveAspectRatio="none" aria-hidden="false">${paths}</svg>`;
+            const carlos = currentGen === "coetaneos" && sil.paths.Carlos
+                ? `<path class="body-hotspot" data-persona="Carlos" data-role="" d="${sil.paths.Carlos}"><title>Carlos</title></path>`
+                : "";
+            bhEl.innerHTML = `<svg class="silhouette-svg" viewBox="0 0 ${sil.width} ${sil.height}" preserveAspectRatio="none" aria-hidden="false">${paths}${carlos}</svg>`;
         } else {
             bhEl.innerHTML = plates.map(p => {
                 if (!p.body) return '';
@@ -1535,6 +1538,7 @@
         const bh = e.target.closest('.body-hotspot');
         if (!bh) return;
         const persona = bh.getAttribute('data-persona');
+        if (persona === "Carlos") return;
         if (preguntarMode) { selectAgentByPersona(persona); return; }
         if (currentVerb && currentVerb !== 'preguntar') return; // otros verbos manejan sus propios clics
         openFichaConsejero(persona);   // sin verbo interactivo: clic en el consejo abre su ficha

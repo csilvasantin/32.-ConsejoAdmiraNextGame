@@ -55,6 +55,10 @@
       position:absolute;left:0;bottom:0;right:0;font-size:.42rem;color:var(--amber);
       background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);padding:14px 8px 7px;
     }
+    .portrait-inicial{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-family:'Press Start 2P',monospace;font-size:28px;color:#e8c25a;text-shadow:3px 3px 0 #000;
+    }
     .hmeta{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
     .role-chip{
       display:inline-flex;align-items:center;gap:8px;align-self:flex-start;
@@ -215,7 +219,7 @@
       // coetaneos
       { role:"CEO", roleFull:"Chief Executive Officer", persona:"Elon Musk", side:"racional", gen:"coetaneos", icon:"🏛️",
         machine:"MacBook Air 16", member:"Carlos", pair:"CSO", pairPersona:"Ryan Reynolds", alias:"Neo",
-        territory:"Innovación radical y visión de futuro", crop:{l:7,t:44,w:7,h:17},
+        territory:"Innovación radical y visión de futuro", crop:{l:7,t:47.2,w:9.4,h:15.3},
         quote:"Cuando algo es lo bastante importante, lo haces aunque las probabilidades no estén a tu favor.",
         bio:[
           "Es la versión contemporánea de la silla CEO: ambición radical y razonamiento desde primeros principios. En el Consejo representa la voluntad de atacar problemas enormes sin pedir permiso a lo que siempre se ha hecho así.",
@@ -224,7 +228,7 @@
         ] },
       { role:"CTO", roleFull:"Chief Technology Officer", persona:"Jensen Huang", side:"racional", gen:"coetaneos", icon:"⚙️",
         machine:"MacBook Pro Negro 14", member:"Carlos Silva", pair:"CCO", pairPersona:"John Lasseter", alias:"Morfeo",
-        territory:"IA, GPUs y plataformas de cómputo", crop:{l:18,t:36,w:8,h:21},
+        territory:"IA, GPUs y plataformas de cómputo", crop:{l:17.8,t:42.5,w:8.6,h:15.3},
         quote:"Cuanto más compras, más ahorras.",
         bio:[
           "Es el CTO de la era de la IA: el que entiende que el cómputo, las GPUs y las plataformas son el cimiento sobre el que se construye todo lo demás. En el Consejo representa que la inteligencia artificial es infraestructura, no un adorno.",
@@ -233,7 +237,7 @@
         ] },
       { role:"COO", roleFull:"Chief Operations Officer", persona:"Gwynne Shotwell", side:"racional", gen:"coetaneos", icon:"📋",
         machine:"MacBook Air Plata", member:"Nines", pair:"CXO", pairPersona:"Carlos Ratti", alias:"Trinity",
-        territory:"Ejecución a escala y logística", crop:{l:31,t:30,w:8,h:24},
+        territory:"Ejecución a escala y logística", crop:{l:26,t:41,w:9,h:14},
         quote:"La visión sin ejecución es alucinación.",
         bio:[
           "Es la maestra de la ejecución a escala: la que convierte lo aparentemente imposible en un calendario que se cumple. En el Consejo representa que la visión sin ejecución es solo una alucinación.",
@@ -242,7 +246,7 @@
         ] },
       { role:"CFO", roleFull:"Chief Financial Officer", persona:"Ruth Porat", side:"racional", gen:"coetaneos", icon:"💰",
         machine:"Mac Mini", member:"Braulio Blanco", pair:"CDO", pairPersona:"Jony Ive", alias:"Oráculo",
-        territory:"Gestión financiera y crecimiento sostenible", crop:{l:43,t:27,w:8,h:26},
+        territory:"Gestión financiera y crecimiento sostenible", crop:null,
         quote:"La disciplina financiera es la que hace posible la ambición.",
         bio:[
           "Es el CFO contemporáneo: crecimiento sostenible y asignación de capital con cabeza en plena era de grandes apuestas tecnológicas. En el Consejo representa que la ambición necesita disciplina para no quemarse.",
@@ -251,7 +255,7 @@
         ] },
       { role:"CCO", roleFull:"Chief Creative Officer", persona:"John Lasseter", side:"creativo", gen:"coetaneos", icon:"💡",
         machine:"MacBook Air Blanco", member:"Cesar", pair:"CTO", pairPersona:"Jensen Huang", alias:"Mouse",
-        territory:"Animación, storytelling y creatividad", crop:{l:55,t:27,w:8,h:26},
+        territory:"Animación, storytelling y creatividad", crop:{l:74,t:42,w:11,h:16},
         quote:"La calidad es el mejor plan de negocio.",
         bio:[
           "Es la creatividad con corazón: animación y narrativa donde la tecnología existe para servir a la emoción, nunca al revés. En el Consejo representa que la historia siempre va por delante del efecto.",
@@ -260,7 +264,7 @@
         ] },
       { role:"CDO", roleFull:"Chief Design Officer", persona:"Jony Ive", side:"creativo", gen:"coetaneos", icon:"🎨",
         machine:"MacBook Air Azul", member:"Consejero", pair:"CFO", pairPersona:"Ruth Porat", alias:"Arquitecto",
-        territory:"Diseño industrial y simplicidad", crop:{l:66,t:31,w:7,h:23},
+        territory:"Diseño industrial y simplicidad", crop:{l:61,t:40.5,w:10,h:14},
         quote:"La simplicidad no es ausencia, es claridad.",
         bio:[
           "Es el diseño industrial llevado a la obsesión: materiales, simplicidad y cuidado por lo invisible. En el Consejo define cómo se ve, se toca y se siente todo lo que lleva la marca Admira.",
@@ -269,7 +273,7 @@
         ] },
       { role:"CXO", roleFull:"Chief Experience Officer", persona:"Carlos Ratti", side:"creativo", gen:"coetaneos", icon:"🧭",
         machine:"AdmiraTwin (PC)", member:"Laboratorio", pair:"COO", pairPersona:"Gwynne Shotwell", alias:"Link",
-        territory:"Ciudades inteligentes y experiencia urbana", crop:{l:77,t:34,w:8,h:21},
+        territory:"Ciudades inteligentes y experiencia urbana", crop:null,
         quote:"El espacio responde a quien lo habita.",
         bio:[
           "Es el arquitecto de espacios sensibles: entornos físicos y urbanos que reaccionan a las personas que los habitan. En el Consejo representa el cruce entre lo digital y lo construido, donde la experiencia ocurre en el mundo real.",
@@ -278,7 +282,7 @@
         ] },
       { role:"CSO", roleFull:"Chief Storytelling Officer", persona:"Ryan Reynolds", side:"creativo", gen:"coetaneos", icon:"📖",
         machine:"MacBook Air Crema", member:"Carla Rosa", pair:"CEO", pairPersona:"Elon Musk", alias:"Cypher",
-        territory:"Marketing viral y narrativa de marca", crop:{l:88,t:41,w:9,h:17},
+        territory:"Marketing viral y narrativa de marca", crop:{l:85,t:47,w:11,h:16},
         quote:"Si haces reír a la gente, te dejan entrar.",
         bio:[
           "Es el narrador viral: marca construida con humor, oportunidad y dominio de la cultura de internet. En el Consejo representa que una buena historia, contada con ingenio, abre todas las puertas.",
@@ -292,6 +296,8 @@
 
     function cropStyle(c){
       // Recorta la cara del consejero desde la imagen de grupo (coords body en % de la imagen).
+      // Ruth y Ratti conservan ficha, pero no están sentados en el arte de coetáneos.
+      if (!c.crop) return "background:#1a1208;";
       const {l,t,w,h} = c.crop;
       const sx = (10000/w).toFixed(1), sy = (10000/h).toFixed(1);
       const px = (l/(100-w)*100).toFixed(2), py = (t/(100-h)*100).toFixed(2);
@@ -333,6 +339,7 @@
 
         <div class="hero">
           <div class="portrait" style="${cropStyle(c)}">
+            ${c.crop ? "" : `<div class="portrait-inicial">${c.persona.split(" ").map(p => p[0]).join("")}</div>`}
             <div class="seat">${c.role} · ${sideLabel}</div>
           </div>
           <div class="hmeta">

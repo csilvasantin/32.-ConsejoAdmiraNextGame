@@ -323,7 +323,7 @@ test("r45 · Huang como Musk: activo vía Merovingio en Consejeros, su cara, mis
   assert.equal(t.filter((x) => x.agente === "Huang").length, 1);
   assert.deepEqual([h.estado, h.conCarlosEn, h.maquina, h.grupo, h.via], [m.estado, m.conCarlosEn, m.maquina, "consejeros", "Merovingio"]);
   assert.match(h.motivo, /^activo vía Merovingio/);
-  assert.deepEqual(h.retrato.cara, { l: 21.65, t: 44.5, w: 8.5, h: 15.1 });
+  assert.deepEqual(h.retrato.cara, { l: 17.8, t: 42.5, w: 8.6, h: 15.3 });
   assert.equal(h.tokHoy, null); assert.equal(m.tokHoy, 700);
   const g = tarjetas({ presencia: [], velocidad: null, ahoraS: T });
   assert.equal(de(g, "Huang").estado, "gris"); assert.match(de(g, "Huang").motivo, /^parado vía Merovingio/);

@@ -67,9 +67,11 @@ test("cada consejero de las dos salas tiene silueta en el arte", () => {
   for (const name of ["Steve Jobs", "Steve Wozniak", "Tim Cook", "Warren Buffett", "Walt Disney", "Dieter Rams", "Howard Schultz", "George Lucas"]) {
     assert.match(data.leyendas.paths[name], /^M\d+ \d+(?: L\d+ \d+){5,} Z$/, name);
   }
-  for (const name of ["Elon Musk", "Jensen Huang", "Gwynne Shotwell", "Ruth Porat", "John Lasseter", "Jony Ive", "Carlos Ratti", "Ryan Reynolds"]) {
+  for (const name of ["Elon Musk", "Jensen Huang", "Gwynne Shotwell", "Jony Ive", "John Lasseter", "Ryan Reynolds", "Carlos"]) {
     assert.match(data.coetaneos.paths[name], /^M\d+ \d+(?: L\d+ \d+){5,} Z$/, name);
   }
+  assert.equal(data.coetaneos.paths["Ruth Porat"], undefined);
+  assert.equal(data.coetaneos.paths["Carlos Ratti"], undefined);
 });
 
 test("la home solo renombra la entrada a Conversación", () => {

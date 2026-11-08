@@ -41,7 +41,7 @@ test('all eight legends have anatomically bounded anchors on the active 1360×76
         assert.ok(anchor.height <= 14 && anchor.opening <= 2);
     }
     const elon = anchors.coetaneos['Elon Musk'];
-    assert.deepEqual({ x: elon.x, y: elon.y, width: elon.width, height: elon.height }, { x: 181, y: 427, width: 32, height: 10 });
+    assert.deepEqual({ x: elon.x, y: elon.y, width: elon.width, height: elon.height }, { x: 158, y: 430, width: 34, height: 12 });
     assert.ok(elon.opening > 0 && elon.opening <= 2);
 });
 
@@ -226,10 +226,10 @@ test('canvas patch scales with the image, stays invisible at rest, and refuses o
     mouth.draw('Elon Musk', 1);
     assert.equal(canvas.style.display, 'block');
     assert.equal(canvas.dataset.persona, 'Elon Musk');
-    assert.equal(canvas.style.left, '80px');
-    assert.equal(canvas.style.top, '208.5px');
-    assert.equal(canvas.style.width, '21px');
-    assert.equal(canvas.style.height, '10px');
+    assert.equal(canvas.style.left, '68px');
+    assert.equal(canvas.style.top, '209.5px');
+    assert.equal(canvas.style.width, '22px');
+    assert.equal(canvas.style.height, '11px');
     img.src = 'https://www.admira.live/assets/council-leyendas.jpg';
     img.naturalWidth = 1360; img.naturalHeight = 768;
     mouth.draw('Elon Musk', 1);

@@ -13,7 +13,7 @@
 #                                        nadie toque el Mac y, pasada la gracia, PAUSA (SIGSTOP,
 #                                        reversible) sus vigilantes de encargos. Nunca duerme el Mac.
 #   "setup modo ahorro <Equipo>"      -> tool equipo_ahorro; el poller de <Equipo> SOLO apaga monitores.
-# Equipos: MacMini, MacStudio, MacBookPro16 (MBP16), MacBookProNegro14 (MBP14).
+# Equipos: MacMini, MacStudio, MacBookPro16 (MBP16), MacBookProNegro14 (MBP14), PCCocina (Windows).
 # XPACIOS (grupos de equipos): AdmiraNeXT = MacMini + MacStudio. «handOFF AdmiraNeXT» → el llamador
 #   llama UNA vez a la tool con el xpacio; la tool publica UN aviso con la marca
 #   [equipo_* … equipos=MacMini,MacStudio] y actúa cada poller cuyo Mac esté en la lista.
@@ -98,7 +98,7 @@ import sys, json, re
 last_ts, f_inbox, last_feed, f_feed, host = int(sys.argv[1] or 0), sys.argv[2], int(sys.argv[3] or 0), sys.argv[4], sys.argv[5]
 N = lambda s: re.sub(r'[^a-z0-9]', '', (s or '').lower())
 EQ = {'MacMini': ['macmini', 'mini'], 'MacStudio': ['macstudio', 'studio'],
-      'MacBookPro16': ['macbookpro16', 'mbp16'], 'MacBookProNegro14': ['macbookpronegro14', 'mbp14', 'macbookpro14', 'negro14']}
+      'MacBookPro16': ['macbookpro16', 'mbp16'], 'MacBookProNegro14': ['macbookpronegro14', 'mbp14', 'macbookpro14', 'negro14'], 'PCCocina': ['pccocina', 'pc-cocina', 'pc_cocina', 'admirapccocina', 'admira-pccocina']}
 XP = {'AdmiraNeXT': {'alias': ['admiranext', 'xpacioadmiranext'], 'equipos': ['MacMini', 'MacStudio']}}
 def canon(s):
     n = N(s)

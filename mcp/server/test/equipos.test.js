@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { tablaEquipos, equipoCanonico, crearEquipos, hoyMadrid } from '../src/equipos.js';
+import { tablaEquipos, equipoCanonico, crearEquipos, hoyMadrid, expandir, xpacioCanonico } from '../src/equipos.js';
 
 const AHORA = () => new Date('2026-10-22T05:45:00Z'); // 07:45 Madrid
 
@@ -141,4 +141,26 @@ test('handON y ahorro por xpacio (param xpacio); prueba no escribe nada', async 
   await eq.ahorro({ equipo: 'AdmiraNeXT' });
   assert.match(f.log.agora[1].texto, /^setup modo ahorro AdmiraNeXT · \[equipo_ahorro equipos=MacMini,MacStudio\]/);
   assert.equal(f.log.agora.length, 2);
+});
+
+test('PCCocina (Windows): alias y handON/handOFF en seco con Morfeo', async () => {
+  assert.equal(equipoCanonico('PCCocina'), 'pccocina');
+  assert.equal(equipoCanonico('pc-cocina'), 'pccocina');
+  assert.equal(equipoCanonico('admira-pccocina'), 'pccocina');
+  const t = tablaEquipos();
+  assert.equal(t.pccocina.maquina, 'PCCocina');
+  assert.deepEqual(t.pccocina.agentes.map((a) => a.persona), ['Morfeo']);
+  const f = falsos();
+  const r = await crearEquipos({ ...f, ahora: AHORA }).handon({ equipo: 'PCCocina', prueba: true });
+  assert.equal(r.ok, true);
+  assert.equal(r.prueba, true);
+  assert.equal(r.equipo, 'PCCocina');
+  assert.deepEqual(r.plan.agentes.map((a) => a.persona), ['Morfeo']);
+  assert.equal(f.log.encargos.length, 0);
+  assert.equal(f.log.agora.length, 0);
+  const off = await crearEquipos({ ...f, ahora: AHORA }).handoff({ equipo: 'PCCocina', prueba: true });
+  assert.equal(off.ok, true);
+  assert.equal(off.prueba, true);
+  assert.equal(off.equipo, 'PCCocina');
+  assert.match(off.plan.nunca, /no se apaga ni se duerme/);
 });

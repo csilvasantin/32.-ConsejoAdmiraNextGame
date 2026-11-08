@@ -31,6 +31,7 @@ const MAQUINAS = {
   macstudio: { maquina: 'MacStudio', alias: ['studio', 'mac studio', 'macstudio.local'], agentes: ['Neo', 'Trinity'] },
   macbookpro16: { maquina: 'MacBookPro16', alias: ['mbp16', 'macbook pro 16', 'macbook-pro-16', 'macbook-pro-16.local'], agentes: ['Smith', 'Neo', 'Trinity'] },
   macbookpronegro14: { maquina: 'MacBookProNegro14', alias: ['mbp14', 'macbook pro 14', 'macbookpro14', 'negro14', 'macbookpronegro14.local'], agentes: ['Neo', 'Trinity', 'Smith'] },
+  pccocina: { maquina: 'PCCocina', alias: ['pc-cocina', 'pc cocina', 'pc_cocina', 'admira-pccocina', 'pc-cocina.local'], agentes: ['Morfeo'] },
 };
 
 /** XPACIOS: grupos de equipos (Carlos, 22-10-2026). «handOFF AdmiraNeXT» = handOFF de cada equipo

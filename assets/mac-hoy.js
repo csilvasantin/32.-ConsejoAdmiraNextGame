@@ -1101,8 +1101,250 @@ export function clearRemote(root = lastRoot || (typeof document !== 'undefined' 
 export function closeFront(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
   focused = false;
   pararDetalle();
+  closeUltraDetalle();
   const el = root && root.querySelector('#mac-hoy-front');
   if (el) el.classList.remove('on');
+}
+
+/* ULTRADETALLE (#7460). Overlay a viewport completo (patrón .mac-ultra).
+   requestFullscreen solo con el botón explícito. No abre grokbot/remote. */
+export const DEEPAGENT_SEATS = ['Neo', 'Trinity', 'Oraculo', 'Morfeo', 'Smith', 'Merovingio'];
+const CONSEJERO_KEYS = new Set(['jobs', 'wozniak', 'lucas', 'disney', 'musk', 'huang', 'elon', 'jensen', 'steve', 'walt', 'george']);
+const ordenesDeepAgent = new Set();
+let ultraOverlay = null;
+let ultraEnteredFullscreen = false;
+
+function normClave(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+export function deepAgentId(nombre) {
+  const n = normClave(nombre);
+  if (!n || CONSEJERO_KEYS.has(n)) return null;
+  return DEEPAGENT_SEATS.find((a) => normClave(a) === n) || null;
+}
+export function etiquetaDeepAgent(id) {
+  return id === 'Oraculo' ? 'Oráculo' : (id || '');
+}
+export function capturaRealSrc(src) {
+  const s = String(src || '').trim();
+  if (!s || /^data:image\/svg/i.test(s)) return '';
+  if (/^https?:\/\//i.test(s) || /^blob:/i.test(s) || /^data:image\/(jpeg|jpg|png|webp|gif)/i.test(s)) return s;
+  return '';
+}
+export function fichaDeepAgent(tarjeta, extra = {}) {
+  const id = deepAgentId(tarjeta && tarjeta.agente);
+  if (!id) return null;
+  const src = capturaRealSrc(extra.src || extra.image || '');
+  return {
+    id,
+    nombre: etiquetaDeepAgent(id),
+    estado: tarjeta.estado || tarjeta.motivo || 'sin datos',
+    mision: tarjeta.encargo || tarjeta.tarea || tarjeta.foco || 'sin misión',
+    equipo: tarjeta.maquina || '—',
+    sesion: tarjeta.motor || tarjeta.modelo || tarjeta.proyecto || '—',
+    capturaAt: extra.capturaAt || null,
+    fuente: src ? (extra.fuente || tarjeta.fuente || 'captura') : (tarjeta.fuente || 'flota'),
+    src,
+  };
+}
+export function _resetOrdenesDeepAgent() { ordenesDeepAgent.clear(); }
+export async function enviarOrdenDeepAgent({ agente, texto, msg_id } = {}, fetchImpl) {
+  const dest = deepAgentId(agente);
+  if (!dest) return { ok: false, error: 'indisponible' };
+  const id = String(msg_id || '').trim();
+  if (id && ordenesDeepAgent.has(id)) return { ok: true, duplicado: true };
+  if (id) ordenesDeepAgent.add(id);
+  // Canal oficial: MCP consejero_mensaje / consejero_bandeja / consejero_responder.
+  // En el navegador no hay POST web verificado hacia un DeepAgent
+  // (la bandeja entre consejeros es solo lectura; el chat de silla es de consejeros).
+  // Un envío: no se mapea a un consejero falso ni se llama al remoto.
+  void fetchImpl; void texto;
+  return { ok: false, error: 'indisponible' };
+}
+export function isUltraOpen() { return !!ultraOverlay; }
+
+function horaCapturaUltra(ms) {
+  if (ms == null || ms === '') return '—';
+  let n = typeof ms === 'number' ? ms : (/^\d+$/.test(String(ms)) ? Number(ms) : Date.parse(ms));
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  if (n < 1e12) n *= 1000;
+  try {
+    return new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(n));
+  } catch (_) { return '—'; }
+}
+
+async function fichasDeepAgents(fetchImpl) {
+  const request = fetchImpl || lastFetch || (typeof fetch === 'function' ? fetch : null);
+  const porId = new Map(DEEPAGENT_SEATS.map((id) => [id, fichaDeepAgent({ agente: id, estado: 'sin datos' })]));
+  if (!request) return [...porId.values()];
+  try {
+    const r = await request('/api/flota/trabajando', { cache: 'no-store', credentials: 'include', headers: { accept: 'application/json' } });
+    const data = await r.json().catch(() => null);
+    const tarjetas = (data && Array.isArray(data.tarjetas)) ? data.tarjetas : [];
+    tarjetas.forEach((t) => {
+      const f = fichaDeepAgent(t);
+      if (f) porId.set(f.id, f);
+    });
+  } catch (_) {}
+  await Promise.all([...porId.values()].map(async (f) => {
+    try {
+      const r = await request(EVIDENCE_URL + '?persona=' + encodeURIComponent(f.id) + '&t=' + Date.now(), { cache: 'no-store', credentials: 'include', headers: { accept: 'application/json' } });
+      const data = await r.json().catch(() => null);
+      const src = data && data.ok ? capturaRealSrc(data.image) : '';
+      if (src) {
+        f.src = src;
+        f.capturaAt = data.capturedAt || Date.now();
+        f.fuente = 'evidencia';
+      }
+    } catch (_) {}
+  }));
+  return DEEPAGENT_SEATS.map((id) => porId.get(id));
+}
+
+function pintarFichaUltra(doc, ficha, onAmpliar, onOrden) {
+  const tile = doc.createElement('article');
+  tile.className = 'mac-ultra__agent' + (ficha.src ? ' has-capture' : '');
+  tile.setAttribute('data-agent', ficha.id);
+  tile.setAttribute('role', 'button');
+  tile.tabIndex = 0;
+  const img = doc.createElement('img');
+  img.alt = ficha.src ? ('Captura de ' + ficha.nombre) : '';
+  if (ficha.src) img.src = ficha.src;
+  const meta = doc.createElement('dl');
+  [
+    ['Nombre', ficha.nombre],
+    ['Estado', ficha.estado],
+    ['Misión', ficha.mision],
+    ['Equipo', ficha.equipo],
+    ['Sesión', ficha.sesion],
+    ['Captura', horaCapturaUltra(ficha.capturaAt)],
+    ['Fuente', ficha.fuente],
+  ].forEach(([dt, dd]) => {
+    const t = doc.createElement('dt'); t.textContent = dt;
+    const d = doc.createElement('dd'); d.textContent = dd;
+    meta.append(t, d);
+  });
+  const abrir = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    onAmpliar(ficha);
+  };
+  tile.addEventListener('click', abrir);
+  tile.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') abrir(e); });
+  const orden = doc.createElement('button');
+  orden.type = 'button';
+  orden.textContent = 'Orden';
+  orden.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onOrden(ficha); });
+  tile.append(img, meta, orden);
+  return tile;
+}
+
+export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  const doc = (root && root.ownerDocument) || (typeof document !== 'undefined' ? document : null);
+  if (!doc || !doc.createElement || !doc.body) return false;
+  if (ultraOverlay) return true;
+  lastRoot = root || lastRoot;
+  lastFetch = fetchImpl || lastFetch;
+  const previousFocus = doc.activeElement;
+  const overflow = doc.body.style.overflow;
+  const rootOverflow = doc.documentElement ? doc.documentElement.style.overflow : '';
+  const overlay = doc.createElement('section');
+  overlay.className = 'mac-ultra';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Ultradetalle · DeepAgents');
+  overlay.innerHTML = '<header class="mac-ultra__bar"><strong>Ultradetalle · DeepAgents</strong><span role="status">Cargando agentes…</span><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><div class="mac-ultra__stage mac-ultra__agents" tabindex="0" role="grid" aria-label="DeepAgents"></div><div class="mac-ultra__zoom" hidden><img alt=""><p class="mac-ultra__hint" hidden></p><button type="button" data-unzoom>Volver a la rejilla</button></div><form class="mac-ultra__order" hidden><p data-order-agent></p><textarea aria-label="Texto de la orden" maxlength="2000"></textarea><button type="submit">Enviar</button><p data-order-status></p></form>';
+  doc.body.append(overlay);
+  doc.body.style.overflow = 'hidden';
+  if (doc.documentElement) doc.documentElement.style.overflow = 'hidden';
+  ultraOverlay = overlay;
+  const status = overlay.querySelector('[role="status"]');
+  const grid = overlay.querySelector('.mac-ultra__agents');
+  const zoom = overlay.querySelector('.mac-ultra__zoom');
+  const zoomImg = zoom.querySelector('img');
+  const zoomHint = zoom.querySelector('.mac-ultra__hint');
+  const form = overlay.querySelector('.mac-ultra__order');
+  const say = (t) => { status.textContent = t; };
+
+  function ampliar(ficha) {
+    const src = capturaRealSrc(ficha && ficha.src);
+    zoom.hidden = false;
+    grid.hidden = true;
+    form.hidden = true;
+    if (!src) {
+      zoomImg.removeAttribute('src');
+      zoomHint.hidden = false;
+      zoomHint.textContent = 'Sin captura real';
+      say('Sin captura real · no se inventa stream');
+      return;
+    }
+    zoomHint.hidden = true;
+    zoomImg.src = src;
+    zoomImg.alt = 'Captura de ' + ficha.nombre;
+    say('Captura real de ' + ficha.nombre + ' · ' + (ficha.fuente || ''));
+  }
+  function ordenA(ficha) {
+    form.hidden = false;
+    form.querySelector('[data-order-agent]').textContent = 'Orden a ' + ficha.nombre;
+    form.dataset.agent = ficha.id;
+    form.querySelector('[data-order-status]').textContent = '';
+    form.querySelector('textarea').value = '';
+    form.querySelector('textarea').focus();
+  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const agente = form.dataset.agent;
+    const texto = form.querySelector('textarea').value;
+    const msg_id = 'ultra-' + agente + '-' + Date.now();
+    const r = await enviarOrdenDeepAgent({ agente, texto, msg_id }, fetchImpl);
+    form.querySelector('[data-order-status]').textContent = r.ok ? (r.duplicado ? 'duplicado' : 'enviado') : (r.error || 'indisponible');
+  });
+  zoom.querySelector('[data-unzoom]').onclick = () => { zoom.hidden = true; grid.hidden = false; say('DeepAgents'); };
+
+  function fullscreen() {
+    if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
+  }
+  overlay.querySelector('[data-full]').onclick = fullscreen;
+  function onFullscreen() {
+    ultraEnteredFullscreen = doc.fullscreenElement === overlay;
+    overlay.querySelector('[data-full]').textContent = ultraEnteredFullscreen ? 'Pantalla completa activa' : 'Pantalla completa';
+  }
+  function onKey(e) {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    closeUltraDetalle();
+  }
+  overlay.querySelector('[data-close]').onclick = () => closeUltraDetalle();
+  doc.addEventListener('keydown', onKey, true);
+  doc.addEventListener('fullscreenchange', onFullscreen);
+  overlay.__ultra = { onKey, onFullscreen, previousFocus, overflow, rootOverflow, doc };
+
+  fichasDeepAgents(fetchImpl).then((fichas) => {
+    if (ultraOverlay !== overlay) return;
+    grid.textContent = '';
+    fichas.forEach((f) => grid.appendChild(pintarFichaUltra(doc, f, ampliar, ordenA)));
+    say('DeepAgents · ' + fichas.length);
+    grid.focus({ preventScroll: true });
+  }).catch(() => { if (ultraOverlay === overlay) say('DeepAgents indisponible'); });
+  return true;
+}
+
+export function closeUltraDetalle() {
+  if (!ultraOverlay) return false;
+  const overlay = ultraOverlay;
+  const meta = overlay.__ultra || {};
+  const doc = meta.doc || overlay.ownerDocument;
+  if (meta.onKey && doc) doc.removeEventListener('keydown', meta.onKey, true);
+  if (meta.onFullscreen && doc) doc.removeEventListener('fullscreenchange', meta.onFullscreen);
+  if (doc && doc.fullscreenElement === overlay && doc.exitFullscreen) doc.exitFullscreen().catch(() => {});
+  overlay.remove();
+  if (doc && doc.body) doc.body.style.overflow = meta.overflow || '';
+  if (doc && doc.documentElement) doc.documentElement.style.overflow = meta.rootOverflow || '';
+  try { meta.previousFocus && meta.previousFocus.focus && meta.previousFocus.focus({ preventScroll: true }); } catch (_) {}
+  ultraOverlay = null;
+  ultraEnteredFullscreen = false;
+  return true;
 }
 
 export function openFront(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
@@ -1183,14 +1425,15 @@ export function boot(root = document, fetchImpl = fetch) {
   // Pong puesto JUEGAN (mantener pulsado mueve la pala) y fuera de él pasan de
   // misión. Avanzar y retroceder es cosa del detalle, no del juego
   // (Carlos, 2026-09-19).
-  const mando = (sel, delta) => {
+  const mando = (sel, pala, nav) => {
+    const navega = nav == null ? pala : nav;
     root.querySelectorAll(sel).forEach((el) => {
       const empuja = (e) => {
         if (!visible || modo !== 'pong') return;
         e.preventDefault();
-        jugador = delta;                       // ratón (+1) baja, teclado (-1) sube
+        jugador = pala;                       // ratón (+1) baja, teclado (-1) sube
       };
-      const suelta = () => { if (jugador === delta) jugador = 0; };
+      const suelta = () => { if (jugador === pala) jugador = 0; };
       // Un clic de ratón no debe dejar el botón con el foco: si luego se pulsa
       // una tecla, el navegador lo pintaría con su marco encima del dibujo.
       el.addEventListener('mouseup', () => { try { el.blur(); } catch (e) {} });
@@ -1203,14 +1446,14 @@ export function boot(root = document, fetchImpl = fetch) {
         e.stopPropagation();
         if (!enciende(el)) return;
         if (modo === 'pong') return;           // jugando no se navega
-        avanzaPantalla(delta, root, fetchImpl);
+        avanzaPantalla(navega, root, fetchImpl);
       });
     });
   };
   // Por CLASE: la mesa, la vista grande y el de la barra llevan las mismas y se
   // enganchan los tres de una vez.
-  // #5113: el RATÓN enseña el proyecto anterior (última cerrada) de la silla
-  // seleccionada; el TECLADO sigue pasando fichas de detalle. En Pong ambos mueven pala.
+  // #7460: en Detalle el RATÓN abre ULTRADETALLE (overlay). La misión siguiente
+  // pasa al teclado/flechas. En Pong el ratón sigue bajando la pala.
   root.querySelectorAll('.mac-hoy-mouse, .mac-hoy-front-mouse').forEach((el) => {
     const empuja = (e) => {
       if (!visible || modo !== 'pong') return;
@@ -1228,19 +1471,27 @@ export function boot(root = document, fetchImpl = fetch) {
       e.stopPropagation();
       if (!enciende(el)) return;
       if (modo === 'pong') return;
-      mostrarProyectoAnterior(root, fetchImpl, remotePersona);
+      if (!focused) openFront(root, fetchImpl);
+      openUltraDetalle(root, fetchImpl);
     });
   });
-  mando('.mac-hoy-keys, .mac-hoy-front-keys', -1);     // teclado -> anterior  · pala arriba
+  mando('.mac-hoy-keys, .mac-hoy-front-keys', -1, 1);     // pala arriba · clic = misión siguiente
   // Y con el teclado de verdad, que para eso es un Pong. Nunca mientras se
-  // escribe en un campo: ahí las flechas son del texto.
+  // escribe en un campo: ahí las flechas son del texto. Fuera del Pong, las
+  // flechas pasan de misión (Detalle). El overlay ULTRADETALLE captura Esc.
   if (typeof document !== 'undefined' && !document.__macTeclas) {
     document.__macTeclas = true;
     const esCampo = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
     document.addEventListener('keydown', (e) => {
-      if (modo !== 'pong' || !visible || esCampo(e.target)) return;
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { jugador = -1; e.preventDefault(); }
-      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { jugador = 1; e.preventDefault(); }
+      if (esCampo(e.target) || isUltraOpen()) return;
+      if (modo === 'pong' && visible) {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { jugador = -1; e.preventDefault(); }
+        else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { jugador = 1; e.preventDefault(); }
+        return;
+      }
+      if (!visible) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { avanzaPantalla(1, lastRoot, lastFetch); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { avanzaPantalla(-1, lastRoot, lastFetch); e.preventDefault(); }
     });
     document.addEventListener('keyup', (e) => {
       if (['ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) jugador = 0;
@@ -1268,7 +1519,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS, DEEPAGENT_SEATS, deepAgentId, etiquetaDeepAgent, capturaRealSrc, fichaDeepAgent, enviarOrdenDeepAgent, openUltraDetalle, closeUltraDetalle, isUltraOpen };
   const bootAndMaybeRemote = () => {
     boot();
     try {

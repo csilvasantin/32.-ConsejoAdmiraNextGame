@@ -8,7 +8,7 @@
     const art=element.querySelector('.mac-scumm-stage');
     element.classList.add('council-preview');
     const controls=doc.createElement('div');controls.className='council-preview__controls';
-    controls.innerHTML='<div class="council-preview__views" aria-label="Vista de Previos"><button type="button" data-view="conversation">Conversación</button><button type="button" data-view="desktop">Escritorio</button><button type="button" data-view="pong">Pong</button></div><button type="button" data-preview-expand aria-label="Ampliar Previos">↗</button>';
+    controls.innerHTML='<div class="council-preview__views" aria-label="Vista de Previos"><button type="button" data-view="conversation">Conversación</button><button type="button" data-view="desktop">DeepAgents</button><button type="button" data-view="pong">Pong</button></div><button type="button" data-preview-expand aria-label="Ampliar Previos">↗</button>';
     const chat=doc.createElement('div');chat.className='council-preview__chat';chat.hidden=true;
     const status=doc.createElement('div');status.className='council-preview__screen-status';status.hidden=true;
     const message=doc.createElement('span');message.setAttribute('role','status');
@@ -25,8 +25,9 @@
       mac?.closeFront();
       if(view==='conversation'){mac?.setModo('logo');return;}
       if(view==='desktop'){
-        if(persona)mac?.showRemote(persona);
-        else{message.textContent='Elige un consejero con Examinar para ver su escritorio.';status.hidden=false;}
+        mac?.setVisible(true);
+        if(typeof mac.openUltraDetalle==='function')mac.openUltraDetalle();
+        else{message.textContent='DeepAgents indisponible.';status.hidden=false;}
       }else{mac?.setVisible(true);if(mac?.modoActual()!=='pong')mac?.alternaPong();}
     }
     function expand(on){

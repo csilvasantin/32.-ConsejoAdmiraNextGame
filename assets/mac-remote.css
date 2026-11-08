@@ -12,3 +12,13 @@
 .mac-ultra__text{display:flex;gap:8px;padding:8px;flex:none}.mac-ultra__text textarea{flex:1;background:#15110d;color:#fff0bc;padding:8px;font:16px system-ui;min-height:60px}
 .mac-ultra [hidden]{display:none!important}
 @media(max-width:600px){.mac-ultra__bar{gap:5px;padding:5px}.mac-ultra__bar [role=status]{order:5;width:100%;min-width:0}.mac-ultra button{padding:5px}.mac-ultra__bar strong{flex:1}}
+.mac-ultra__agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px;overflow:auto;align-content:start}
+.mac-ultra__agent{margin:0;background:#15110d;border:1px solid #9f7c3e;padding:8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;color:#f3e5be}
+.mac-ultra__agent img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#000;min-height:72px}
+.mac-ultra__agent dl{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin:0;font-size:11px}
+.mac-ultra__agent dt{color:#c4a56a}.mac-ultra__agent dd{margin:0}
+.mac-ultra__zoom{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px}
+.mac-ultra__zoom img{max-width:100%;max-height:calc(100dvh - 140px);object-fit:contain}
+.mac-ultra__order{display:flex;flex-wrap:wrap;gap:8px;padding:8px 12px;border-top:1px solid #92713c}
+.mac-ultra__order textarea{flex:1;min-width:200px;min-height:48px;background:#15110d;color:#fff0bc;padding:8px}
+@media(max-width:720px){.mac-ultra__agents{grid-template-columns:repeat(2,minmax(0,1fr))}}

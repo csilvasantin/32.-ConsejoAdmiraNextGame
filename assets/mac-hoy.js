@@ -1109,9 +1109,13 @@ export function closeFront(root = lastRoot || (typeof document !== 'undefined' ?
 /* ULTRADETALLE (#7460). Overlay a viewport completo (patrón .mac-ultra).
    requestFullscreen solo con el botón explícito. No abre grokbot/remote. */
 export const DEEPAGENT_SEATS = ['Neo', 'Trinity', 'Oraculo', 'Morfeo', 'Smith', 'Merovingio'];
-export const BOLA_TTL_MS = 15 * 60 * 1000;
+export const BOLA_TTL_MS = 10 * 60 * 1000;
 export const DATO_VACIO = 'sin datos actuales';
 export const SESION_SOLO_LECTURA = 'No hay fuente pública para incrustar la sesión en vivo. Representación de solo lectura.';
+export const SESION_SIN_PANE = 'No hay captura de terminal para la sesión verificada. El visor no publica esa sesión.';
+export const SESION_CAPTURA_TERMINAL = 'Captura de terminal · solo lectura.';
+export const VISOR_PANE_URL = '/api/visor/pane?g=6';
+export const VISOR_CADENCIA_S = 3;
 const CONSEJERO_KEYS = new Set(['jobs', 'wozniak', 'lucas', 'disney', 'musk', 'huang', 'elon', 'jensen', 'steve', 'walt', 'george']);
 const ordenesDeepAgent = new Set();
 let ultraOverlay = null;
@@ -1131,12 +1135,15 @@ function esClaveConsejero(n) {
   });
 }
 export function deepAgentId(nombre) {
-  const n = normClave(nombre);
+  const n = normClave(String(nombre || '').split(/\s*[·|]\s*/)[0]);
   if (!n || esClaveConsejero(n)) return null;
   return DEEPAGENT_SEATS.find((a) => {
     const k = normClave(a);
-    return n === k || n.startsWith(k);
+    return n === k || n.startsWith(k + '-');
   }) || null;
+}
+export function maqClave(m) {
+  return String(m || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\.local$/, '').replace(/[^a-z0-9]/g, '');
 }
 export function etiquetaDeepAgent(id) {
   return id === 'Oraculo' ? 'Oráculo' : (id || '');
@@ -1152,16 +1159,76 @@ export function datoActual(v) {
   if (!s || s === '—' || s === 'sin datos' || s === 'sin misión') return DATO_VACIO;
   return s;
 }
-export function tipoSesionVerificado(tarjeta = {}) {
+export function superficiesVerificadas(tarjeta = {}) {
+  const out = [];
   const host = String(tarjeta.host || tarjeta.agent_host || '').trim().toLowerCase();
-  if (host === 'app') return 'Desktop app';
-  if (host === 'cli') return 'CLI';
-  const tipos = new Set((Array.isArray(tarjeta.superficies) ? tarjeta.superficies : [])
-    .map((s) => s && String(s.tipo || '').toLowerCase())
-    .filter((t) => t === 'cli' || t === 'app'));
+  if (host === 'cli' || host === 'app') {
+    out.push({
+      tipo: host,
+      maquina: tarjeta.maquina || '',
+      sesion: tarjeta.session_id || '',
+      fuente: tarjeta.fuente || '',
+    });
+  }
+  for (const s of (Array.isArray(tarjeta.superficies) ? tarjeta.superficies : [])) {
+    if (!s) continue;
+    const t = String(s.tipo || '').toLowerCase();
+    if (t !== 'cli' && t !== 'app') continue;
+    out.push({
+      tipo: t,
+      maquina: s.maquina || '',
+      sesion: s.sesion || '',
+      fuente: s.fuente || tarjeta.fuente || '',
+    });
+  }
+  return out;
+}
+export function tipoSesionVerificado(tarjeta = {}) {
+  const list = Array.isArray(tarjeta) ? tarjeta : [tarjeta];
+  const tipos = new Set(list.flatMap(superficiesVerificadas).map((s) => s.tipo));
   if (tipos.has('cli')) return 'CLI';
   if (tipos.has('app')) return 'Desktop app';
   return 'desconocido';
+}
+export function sesionVerificada(tarjetas) {
+  const list = Array.isArray(tarjetas) ? tarjetas : (tarjetas ? [tarjetas] : []);
+  const clis = list.flatMap(superficiesVerificadas).filter((s) => s.tipo === 'cli');
+  const latidoMaqs = new Set(clis
+    .filter((s) => /^(latido|heartbeat|process_snapshot)$/i.test(String(s.fuente || '')) && s.maquina)
+    .map((s) => maqClave(s.maquina)));
+  const named = clis.filter((s) => String(s.sesion || '').trim());
+  const onLatido = latidoMaqs.size ? named.filter((s) => latidoMaqs.has(maqClave(s.maquina))) : named;
+  const pool = onLatido.length ? onLatido : named;
+  const uniq = [...new Set(pool.map((s) => String(s.sesion).trim()))];
+  if (uniq.length !== 1) return { sesion: '', maquina: '', fuente: '' };
+  const hit = pool.find((s) => String(s.sesion).trim() === uniq[0]);
+  return { sesion: uniq[0], maquina: (hit && hit.maquina) || '', fuente: (hit && hit.fuente) || '' };
+}
+export function llaveVisor(storage) {
+  try {
+    const s = storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    const v = s && s.getItem && s.getItem('visorLlave');
+    return (v && String(v).trim().length >= 20) ? String(v).trim() : '';
+  } catch (_) { return ''; }
+}
+export function paneDeAgente(fichas, agenteId, sesion) {
+  const want = String(sesion || '').trim();
+  if (!agenteId || !want) return null;
+  const rows = Array.isArray(fichas) ? fichas : [];
+  const hit = rows.find((f) => {
+    if (!f) return false;
+    const id = deepAgentId(f.titulo || f.sesion || f.nombre);
+    return id === agenteId && String(f.sesion || '').trim() === want;
+  });
+  if (!hit || !Array.isArray(hit.lineas) || !hit.lineas.length) return null;
+  return {
+    lineas: hit.lineas.slice(-80).map((l) => String(l == null ? '' : l)),
+    sesion: String(hit.sesion),
+    host: hit.host || '',
+    ts: hit.cambio || hit.ts || null,
+    cadenciaS: VISOR_CADENCIA_S,
+    fuente: 'visor/pane',
+  };
 }
 export function estaTrabajandoDeepAgent(tarjeta = {}) {
   const e = String(tarjeta.estado || '').toLowerCase();
@@ -1201,37 +1268,48 @@ export function agenteDeMision(mission) {
   if (ids.some((id) => id !== ids[0])) return null;
   return ids[0];
 }
-function sesionDeclarada(tarjeta = {}, extra = {}) {
-  if (extra.sesion) return extra.sesion;
-  if (tarjeta.session_id) return tarjeta.session_id;
-  const supers = Array.isArray(tarjeta.superficies) ? tarjeta.superficies : [];
-  for (const s of supers) if (s && s.sesion) return s.sesion;
-  return '';
+function tarjetasDe(tarjeta) {
+  return Array.isArray(tarjeta) ? tarjeta.filter(Boolean) : (tarjeta ? [tarjeta] : []);
+}
+function textoMision(t) {
+  if (!t) return '';
+  if (t.encargo) return t.encargo;
+  if (t.tarea) return t.tarea;
+  if (t.foco && typeof t.foco === 'object') return t.foco.proyecto || '';
+  return t.foco || '';
 }
 export function fichaDeepAgent(tarjeta, extra = {}, now = Date.now()) {
-  const id = deepAgentId(tarjeta && tarjeta.agente);
+  const tarjetas = tarjetasDe(tarjeta);
+  const id = tarjetas.map((t) => deepAgentId(t && t.agente)).find(Boolean);
   if (!id) return null;
+  const elig = sesionVerificada(tarjetas);
+  const base = tarjetas.find((t) => superficiesVerificadas(t).some((s) => s.sesion && s.sesion === elig.sesion)) || tarjetas[0];
   const src = capturaRealSrc(extra.src || extra.image || '');
-  const bola = bolaEstado(tarjeta, extra, now);
-  const tipo = tipoSesionVerificado(tarjeta);
-  const ultima = (tarjeta.actividad && tarjeta.actividad.fuente) || extra.ultimaAccion || '';
-  const evidenciaAt = evidenciaSesionMs(tarjeta, extra, now);
+  const bola = bolaEstado(base, extra, now);
+  const tipo = tipoSesionVerificado(tarjetas);
+  const ultima = tarjetas.map((t) => t.actividad && t.actividad.fuente).find(Boolean) || extra.ultimaAccion || '';
+  let evidenciaAt = 0;
+  for (const t of tarjetas) evidenciaAt = Math.max(evidenciaAt, evidenciaSesionMs(t, extra, now) || 0);
+  const lineas = Array.isArray(extra.lineas) ? extra.lineas : [];
+  const hayPane = lineas.length > 0;
   return {
     id,
     nombre: etiquetaDeepAgent(id),
     estado: etiquetaBola(bola),
     bola,
     tipo,
-    mision: datoActual(tarjeta.encargo || tarjeta.tarea || tarjeta.foco),
+    mision: datoActual(tarjetas.map(textoMision).find(Boolean)),
     ultimaAccion: datoActual(ultima),
-    equipo: datoActual(tarjeta.maquina),
-    sesion: datoActual(sesionDeclarada(tarjeta, extra)),
+    equipo: datoActual(elig.maquina || extra.equipo || base.maquina),
+    sesion: datoActual(elig.sesion),
     capturaAt: extra.capturaAt || null,
     evidenciaAt: evidenciaAt || null,
-    fuente: datoActual(src ? (extra.fuente || tarjeta.fuente) : (tarjeta.fuente || extra.fuente)),
-    src,
-    trabajando: estaTrabajandoDeepAgent(tarjeta),
-    lectura: SESION_SOLO_LECTURA,
+    fuente: datoActual(hayPane ? (extra.fuentePane || extra.fuente) : (src ? (extra.fuente || base.fuente) : (base.fuente || extra.fuente || elig.fuente))),
+    src: hayPane ? '' : src,
+    lineas,
+    cadenciaS: hayPane ? (extra.cadenciaS || VISOR_CADENCIA_S) : null,
+    trabajando: tarjetas.some(estaTrabajandoDeepAgent),
+    lectura: hayPane ? SESION_CAPTURA_TERMINAL : (elig.sesion ? SESION_SIN_PANE : SESION_SOLO_LECTURA),
   };
 }
 export function _resetOrdenesDeepAgent() { ordenesDeepAgent.clear(); }
@@ -1274,7 +1352,7 @@ function bolasEstadoNode(doc, bola) {
 }
 
 function metaSesion(ficha) {
-  return [
+  const rows = [
     ['Tipo', ficha.tipo || 'desconocido'],
     ['Misión', datoActual(ficha.mision)],
     ['Última acción', datoActual(ficha.ultimaAccion)],
@@ -1283,44 +1361,74 @@ function metaSesion(ficha) {
     ['Hora', ficha.evidenciaAt ? horaCapturaUltra(ficha.evidenciaAt) : DATO_VACIO],
     ['Fuente', datoActual(ficha.fuente)],
   ];
+  if (ficha.cadenciaS) rows.push(['Cadencia', ficha.cadenciaS + ' s']);
+  return rows;
 }
 
-async function fichasDeepAgents(fetchImpl) {
+async function panesVisor(fetchImpl, storage) {
   const request = fetchImpl || lastFetch || (typeof fetch === 'function' ? fetch : null);
-  const porId = new Map(DEEPAGENT_SEATS.map((id) => [id, fichaDeepAgent({ agente: id })]));
-  if (!request) return [...porId.values()];
+  const llave = llaveVisor(storage);
+  if (!request || !llave) return [];
   try {
-    const r = await request('/api/flota/trabajando', { cache: 'no-store', credentials: 'include', headers: { accept: 'application/json' } });
-    const data = await r.json().catch(() => null);
-    const tarjetas = (data && Array.isArray(data.tarjetas)) ? data.tarjetas : [];
-    tarjetas.forEach((t) => {
-      const f = fichaDeepAgent(t);
-      if (f) porId.set(f.id, f);
+    const r = await request(VISOR_PANE_URL, {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { accept: 'application/json', 'X-Visor-Key': llave },
     });
-  } catch (_) {}
-  // Captura solo si la misión es de ESTE agente. La evidencia de silla
+    if (!r || !r.ok) return [];
+    const data = await r.json().catch(() => null);
+    return (data && Array.isArray(data.fichas)) ? data.fichas : [];
+  } catch (_) { return []; }
+}
+async function fichasDeepAgents(fetchImpl, storage) {
+  const request = fetchImpl || lastFetch || (typeof fetch === 'function' ? fetch : null);
+  const grupos = new Map(DEEPAGENT_SEATS.map((id) => [id, []]));
+  if (request) {
+    try {
+      const r = await request('/api/flota/trabajando', { cache: 'no-store', credentials: 'include', headers: { accept: 'application/json' } });
+      const data = await r.json().catch(() => null);
+      const tarjetas = (data && Array.isArray(data.tarjetas)) ? data.tarjetas : [];
+      tarjetas.forEach((t) => {
+        const id = deepAgentId(t && t.agente);
+        if (id && grupos.has(id)) grupos.get(id).push(t);
+      });
+    } catch (_) {}
+  }
+  const panes = await panesVisor(request, storage);
+  const extras = new Map();
+  // Captura yokup solo si la misión es de ESTE agente. La evidencia de silla
   // (consejero) no se consulta: mezclaría Wozniak u otros (#7421).
-  try {
-    const r = await request('https://api.yokup.com/fleet/missions?status=in_progress&limit=80', { cache: 'no-store', headers: { accept: 'application/json' } });
-    const data = await r.json().catch(() => null);
-    const missions = (data && (data.missions || data.items)) || [];
-    missions.forEach((m) => {
-      const id = agenteDeMision(m);
-      if (!id || !porId.has(id)) return;
-      const src = capturaRealSrc(missionCaptureUrl(m));
-      if (!src) return;
-      const f = porId.get(id);
-      f.src = src;
-      let at = Number(m.process_captured_at || m.live_at || m.updated_at || 0);
-      if (at && at < 1e12) at *= 1000;
-      f.capturaAt = at || f.capturaAt;
-      f.evidenciaAt = Math.max(Number(f.evidenciaAt) || 0, at || 0) || f.evidenciaAt;
-      f.fuente = 'yokup';
-      f.bola = bolaEstado({ estado: f.trabajando ? 'verde' : 'gris' }, { capturaAt: f.capturaAt, evidenciaAt: f.evidenciaAt });
-      f.estado = etiquetaBola(f.bola);
-    });
-  } catch (_) {}
-  return DEEPAGENT_SEATS.map((id) => porId.get(id));
+  if (request) {
+    try {
+      const r = await request('https://api.yokup.com/fleet/missions?status=in_progress&limit=80', { cache: 'no-store', headers: { accept: 'application/json' } });
+      const data = await r.json().catch(() => null);
+      const missions = (data && (data.missions || data.items)) || [];
+      missions.forEach((m) => {
+        const id = agenteDeMision(m);
+        if (!id || !grupos.has(id)) return;
+        const src = capturaRealSrc(missionCaptureUrl(m));
+        if (!src) return;
+        let at = Number(m.process_captured_at || m.live_at || m.updated_at || 0);
+        if (at && at < 1e12) at *= 1000;
+        extras.set(id, { src, capturaAt: at || null, fuente: 'yokup' });
+      });
+    } catch (_) {}
+  }
+  return DEEPAGENT_SEATS.map((id) => {
+    const ts = grupos.get(id);
+    const seed = ts && ts.length ? ts : [{ agente: id }];
+    const elig = sesionVerificada(seed);
+    const pane = paneDeAgente(panes, id, elig.sesion);
+    const extra = Object.assign({}, extras.get(id) || {});
+    if (pane) {
+      extra.lineas = pane.lineas;
+      extra.fuentePane = pane.fuente;
+      extra.cadenciaS = pane.cadenciaS;
+      extra.paneAt = pane.ts;
+      extra.src = '';
+    }
+    return fichaDeepAgent(seed, extra);
+  });
 }
 
 function pintarFichaUltra(doc, ficha, onAmpliar, onOrden) {
@@ -1371,7 +1479,7 @@ export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefi
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Ultradetalle · DeepAgents');
-  overlay.innerHTML = '<header class="mac-ultra__bar"><strong>Ultradetalle · DeepAgents</strong><span role="status">Cargando agentes…</span><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><div class="mac-ultra__stage mac-ultra__agents" tabindex="0" role="grid" aria-label="DeepAgents"></div><div class="mac-ultra__session" hidden><p class="mac-ultra__tipo" data-session-tipo></p><img alt="" hidden><p class="mac-ultra__hint" data-session-hint></p><dl data-session-meta></dl><button type="button" data-unzoom>Volver a la rejilla</button></div><form class="mac-ultra__order" hidden><p data-order-agent></p><textarea aria-label="Texto de la orden" maxlength="2000"></textarea><button type="submit">Enviar</button><p data-order-status></p></form>';
+  overlay.innerHTML = '<header class="mac-ultra__bar"><strong>Ultradetalle · DeepAgents</strong><span role="status">Cargando agentes…</span><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><div class="mac-ultra__stage mac-ultra__agents" tabindex="0" role="grid" aria-label="DeepAgents"></div><div class="mac-ultra__session" hidden><p class="mac-ultra__tipo" data-session-tipo></p><pre class="mac-ultra__pane" hidden aria-readonly="true"></pre><img alt="" hidden><p class="mac-ultra__hint" data-session-hint></p><dl data-session-meta></dl><button type="button" data-unzoom>Volver a la rejilla</button></div><form class="mac-ultra__order" hidden><p data-order-agent></p><textarea aria-label="Texto de la orden" maxlength="2000"></textarea><button type="submit">Enviar</button><p data-order-status></p></form>';
   doc.body.append(overlay);
   doc.body.style.overflow = 'hidden';
   if (doc.documentElement) doc.documentElement.style.overflow = 'hidden';
@@ -1380,20 +1488,45 @@ export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefi
   const grid = overlay.querySelector('.mac-ultra__agents');
   const zoom = overlay.querySelector('.mac-ultra__session');
   const zoomImg = zoom.querySelector('img');
+  const zoomPane = zoom.querySelector('.mac-ultra__pane');
   const zoomHint = zoom.querySelector('[data-session-hint]');
   const zoomTipo = zoom.querySelector('[data-session-tipo]');
   const zoomMeta = zoom.querySelector('[data-session-meta]');
   const form = overlay.querySelector('.mac-ultra__order');
   const say = (t) => { status.textContent = t; };
+  let seleccionado = null;
+  let paneTimer = null;
+  function pararPane() { if (paneTimer) { clearInterval(paneTimer); paneTimer = null; } }
+  function arrancarPane() {
+    pararPane();
+    if (!seleccionado || !llaveVisor()) return;
+    paneTimer = setInterval(() => {
+      if (ultraOverlay !== overlay || !seleccionado) return;
+      fichasDeepAgents(fetchImpl).then((rows) => {
+        const f = (rows || []).find((x) => x && x.id === seleccionado);
+        if (f && ultraOverlay === overlay && !zoom.hidden) ampliar(f, true);
+      }).catch(() => {});
+    }, VISOR_CADENCIA_S * 1000);
+  }
 
-  function ampliar(ficha) {
+  function ampliar(ficha, desdePoll) {
     zoom.hidden = false;
     grid.hidden = true;
     form.hidden = true;
+    seleccionado = ficha && ficha.id;
     zoomTipo.textContent = (ficha.nombre || '') + ' · ' + (ficha.tipo || 'desconocido');
-    const src = capturaRealSrc(ficha && ficha.src);
+    const lineas = Array.isArray(ficha.lineas) ? ficha.lineas : [];
+    const src = lineas.length ? '' : capturaRealSrc(ficha && ficha.src);
     zoomHint.hidden = false;
-    zoomHint.textContent = ficha.lectura || SESION_SOLO_LECTURA;
+    if (lineas.length) {
+      zoomPane.hidden = false;
+      zoomPane.textContent = lineas.join('\n');
+      zoomHint.textContent = SESION_CAPTURA_TERMINAL + ' · cadencia ' + (ficha.cadenciaS || VISOR_CADENCIA_S) + ' s · fuente visor/pane';
+    } else {
+      zoomPane.hidden = true;
+      zoomPane.textContent = '';
+      zoomHint.textContent = ficha.lectura || (ficha.sesion && ficha.sesion !== DATO_VACIO ? SESION_SIN_PANE : SESION_SOLO_LECTURA);
+    }
     if (src) {
       zoomImg.hidden = false;
       zoomImg.src = src;
@@ -1410,6 +1543,7 @@ export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefi
       zoomMeta.append(t, d);
     });
     say(ficha.nombre + ' · ' + etiquetaBola(ficha.bola) + ' · ' + (ficha.tipo || 'desconocido'));
+    if (!desdePoll) arrancarPane();
   }
   function ordenA(ficha) {
     form.hidden = false;
@@ -1427,7 +1561,7 @@ export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefi
     const r = await enviarOrdenDeepAgent({ agente, texto, msg_id }, fetchImpl);
     form.querySelector('[data-order-status]').textContent = r.ok ? (r.duplicado ? 'duplicado' : 'enviado') : (r.error || 'indisponible');
   });
-  zoom.querySelector('[data-unzoom]').onclick = () => { zoom.hidden = true; grid.hidden = false; say('DeepAgents'); };
+  zoom.querySelector('[data-unzoom]').onclick = () => { pararPane(); seleccionado = null; zoom.hidden = true; grid.hidden = false; say('DeepAgents'); };
 
   function fullscreen() {
     if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
@@ -1446,7 +1580,7 @@ export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefi
   overlay.querySelector('[data-close]').onclick = () => closeUltraDetalle();
   doc.addEventListener('keydown', onKey, true);
   doc.addEventListener('fullscreenchange', onFullscreen);
-  overlay.__ultra = { onKey, onFullscreen, previousFocus, overflow, rootOverflow, doc };
+  overlay.__ultra = { onKey, onFullscreen, previousFocus, overflow, rootOverflow, doc, pararPane };
 
   fichasDeepAgents(fetchImpl).then((fichas) => {
     if (ultraOverlay !== overlay) return;
@@ -1463,6 +1597,7 @@ export function closeUltraDetalle() {
   const overlay = ultraOverlay;
   const meta = overlay.__ultra || {};
   const doc = meta.doc || overlay.ownerDocument;
+  if (meta.pararPane) meta.pararPane();
   if (meta.onKey && doc) doc.removeEventListener('keydown', meta.onKey, true);
   if (meta.onFullscreen && doc) doc.removeEventListener('fullscreenchange', meta.onFullscreen);
   if (doc && doc.fullscreenElement === overlay && doc.exitFullscreen) doc.exitFullscreen().catch(() => {});
@@ -1647,7 +1782,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS, DEEPAGENT_SEATS, BOLA_TTL_MS, DATO_VACIO, SESION_SOLO_LECTURA, deepAgentId, etiquetaDeepAgent, capturaRealSrc, datoActual, tipoSesionVerificado, estaTrabajandoDeepAgent, evidenciaSesionMs, bolaEstado, etiquetaBola, agenteDeMision, fichaDeepAgent, enviarOrdenDeepAgent, openUltraDetalle, closeUltraDetalle, isUltraOpen };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS, DEEPAGENT_SEATS, BOLA_TTL_MS, DATO_VACIO, SESION_SOLO_LECTURA, SESION_SIN_PANE, SESION_CAPTURA_TERMINAL, VISOR_PANE_URL, VISOR_CADENCIA_S, deepAgentId, etiquetaDeepAgent, capturaRealSrc, datoActual, tipoSesionVerificado, superficiesVerificadas, sesionVerificada, paneDeAgente, llaveVisor, estaTrabajandoDeepAgent, evidenciaSesionMs, bolaEstado, etiquetaBola, agenteDeMision, fichaDeepAgent, enviarOrdenDeepAgent, openUltraDetalle, closeUltraDetalle, isUltraOpen };
   const bootAndMaybeRemote = () => {
     boot();
     try {

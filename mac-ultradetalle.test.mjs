@@ -4,9 +4,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   DEEPAGENT_SEATS, MOSAIC_SEATS, BOLA_TTL_MS, DATO_VACIO, SESION_SOLO_LECTURA,
+  SESION_SIN_PANE, SESION_CAPTURA_TERMINAL, VISOR_PANE_URL, VISOR_CADENCIA_S,
   deepAgentId, etiquetaDeepAgent, capturaRealSrc, fichaDeepAgent,
   enviarOrdenDeepAgent, _resetOrdenesDeepAgent, isUltraOpen,
   tipoSesionVerificado, bolaEstado, etiquetaBola, agenteDeMision, datoActual,
+  sesionVerificada, paneDeAgente, llaveVisor, maqClave,
 } from './assets/mac-hoy.js';
 
 const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
@@ -31,7 +33,8 @@ test('#7460 DeepAgents: 6 asientos, separados de consejeros, Oráculo con tilde'
   assert.equal(deepAgentId('Walt Disney'), null);
   assert.equal(deepAgentId('Elon'), null);
   assert.equal(deepAgentId('Jensen'), null);
-  assert.equal(deepAgentId('SmithMacMini'), 'Smith');
+  assert.equal(deepAgentId('SmithMacMini'), null, 'SmithMacMini no es el asiento Smith');
+  assert.equal(deepAgentId('Smith-mapa'), 'Smith');
   assert.equal(deepAgentId('WozniakGrokBot'), null);
   assert.equal(fichaDeepAgent({ agente: 'Jobs', estado: 'verde' }), null);
 });
@@ -108,7 +111,8 @@ test('#7460 ratón abre ultradetalle; Pong conserva pala; teclado avanza misión
   assert.match(src, /mando\('\.mac-hoy-keys, \.mac-hoy-front-keys', -1, 1\)/);
   assert.match(src, /e\.key === 'ArrowRight' \|\| e\.key === 'ArrowDown'/);
   assert.match(openFn, /mac-ultra__session/);
-  assert.match(openFn, /capturaRealSrc\(ficha && ficha\.src\)/);
+  assert.match(openFn, /mac-ultra__pane/);
+  assert.match(openFn, /SESION_CAPTURA_TERMINAL/);
   assert.match(openFn, /SESION_SOLO_LECTURA/);
   assert.match(src, /\['Tipo', ficha\.tipo/);
   assert.match(src, /\['Misión', datoActual\(ficha\.mision\)\]/);
@@ -131,6 +135,7 @@ test('#7460 pestaña Escritorio → DeepAgents, sin showRemote de consejero', ()
 
 test('#7460 bolas: rojo trabajando, verde libre, amarillo caducado o sin evidencia', () => {
   const now = Date.parse('2026-11-08T18:12:00Z');
+  assert.equal(BOLA_TTL_MS, 10 * 60 * 1000);
   assert.equal(bolaEstado({ estado: 'verde', haceS: 12 }, {}, now), 'rojo');
   assert.equal(bolaEstado({ estado: 'gris', haceS: 20 }, {}, now), 'verde');
   assert.equal(bolaEstado({ estado: 'verde', haceS: (BOLA_TTL_MS / 1000) + 5 }, {}, now), 'amarillo');
@@ -151,7 +156,7 @@ test('#7460 tipo verificado: host/superficies; no inferir por motor; Woz no se m
   assert.equal(tipoSesionVerificado({ superficies: [{ tipo: 'app' }] }), 'Desktop app');
   assert.equal(tipoSesionVerificado({ motor: 'Claude Code', modelo: 'opus' }), 'desconocido');
   assert.equal(tipoSesionVerificado({}), 'desconocido');
-  assert.equal(agenteDeMision({ persona: 'SmithMacMini', assignee: 'Smith' }), 'Smith');
+  assert.equal(agenteDeMision({ persona: 'SmithMacMini', assignee: 'Smith' }), null);
   assert.equal(agenteDeMision({ persona: 'Wozniak', assignee: 'Smith' }), null);
   assert.equal(agenteDeMision({ persona: 'WozniakGrokBot', proof_image: 'https://x/woz.jpg' }), null);
   assert.equal(datoActual(''), DATO_VACIO);
@@ -166,4 +171,64 @@ test('#7460 tipo verificado: host/superficies; no inferir por motor; Woz no se m
   assert.match(fn, /agenteDeMision/);
   assert.match(openFn, /SESION_SOLO_LECTURA/);
   assert.equal(SESION_SOLO_LECTURA.includes('solo lectura'), true);
+});
+
+test('#7460 sesión verificada: CLI con nombre en la máquina del latido; no hardcode; visor solo si coincide', () => {
+  assert.equal(deepAgentId('Smith-mapa'), 'Smith');
+  assert.equal(deepAgentId('Smith · Grok'), 'Smith');
+  assert.equal(deepAgentId('SmithMacMini'), null);
+  assert.equal(agenteDeMision({ persona: 'SmithMacMini', assignee: 'Smith' }), null);
+  const elig = sesionVerificada([
+    {
+      agente: 'Smith',
+      superficies: [
+        { tipo: 'cli', maquina: 'MacBook Pro 16', sesion: null, fuente: 'latido' },
+        { tipo: 'cli', maquina: 'MacMini', sesion: 'smith', fuente: 'pulso' },
+      ],
+    },
+    {
+      agente: 'Smith-mapa',
+      superficies: [
+        { tipo: 'cli', maquina: 'MacBookPro16', sesion: 'smith-mapa', fuente: 'pulso' },
+      ],
+    },
+  ]);
+  assert.equal(elig.sesion, 'smith-mapa');
+  assert.equal(maqClave(elig.maquina), 'macbookpro16');
+  const ficha = fichaDeepAgent([
+    { agente: 'Smith', estado: 'gris', maquina: 'MacMini', superficies: [
+      { tipo: 'cli', maquina: 'MacBook Pro 16', sesion: null, fuente: 'latido' },
+      { tipo: 'cli', maquina: 'MacMini', sesion: 'smith', fuente: 'pulso' },
+    ] },
+    { agente: 'Smith-mapa', superficies: [
+      { tipo: 'cli', maquina: 'MacBookPro16', sesion: 'smith-mapa', fuente: 'pulso' },
+    ] },
+  ]);
+  assert.equal(ficha.tipo, 'CLI');
+  assert.equal(ficha.sesion, 'smith-mapa');
+  assert.equal(ficha.lectura, SESION_SIN_PANE);
+  assert.equal(ficha.lineas.length, 0);
+  const paneOk = paneDeAgente(
+    [{ titulo: 'Smith · Grok', sesion: 'smith-mapa', host: 'macbook-pro-16', lineas: ['hello from tmux'] }],
+    'Smith',
+    'smith-mapa',
+  );
+  assert.equal(paneOk.fuente, 'visor/pane');
+  assert.equal(paneOk.lineas[0], 'hello from tmux');
+  assert.equal(paneOk.cadenciaS, VISOR_CADENCIA_S);
+  assert.equal(paneDeAgente(
+    [{ titulo: 'Smith · Grok', sesion: 'smith', host: 'grokbotbox', lineas: ['otra sesión'] }],
+    'Smith',
+    'smith-mapa',
+  ), null, 'no mezclar el pane de otra sesión');
+  assert.equal(llaveVisor({ getItem: () => '' }), '');
+  assert.equal(llaveVisor({ getItem: () => 'x'.repeat(24) }).length, 24);
+  assert.equal(VISOR_PANE_URL, '/api/visor/pane?g=6');
+  assert.doesNotMatch(src, /smith-mbp16/);
+  assert.doesNotMatch(src, /tmux:smith/);
+  assert.doesNotMatch(src, /\/api\/term\/stream/);
+  assert.doesNotMatch(src, /\/api\/live\/frame/);
+  assert.doesNotMatch(openFn, /xterm/);
+  assert.match(css, /mac-ultra__pane/);
+  assert.equal(SESION_CAPTURA_TERMINAL.includes('solo lectura'), true);
 });

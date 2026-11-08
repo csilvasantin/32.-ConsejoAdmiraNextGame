@@ -18,7 +18,7 @@
     function setView(next,{activate=true}={}){
       if(!['conversation','desktop','pong'].includes(next))return;
       view=next;element.dataset.previewView=view;
-      chat.hidden=view!=='conversation';art.hidden=view==='conversation';status.hidden=view!=='desktop'||!message.textContent;
+      chat.hidden=view!=='conversation';art.hidden=view==='conversation'||view==='desktop';status.hidden=view!=='desktop'||!message.textContent;
       controls.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
       if(!activate)return;
       const mac=root.MacHoy;

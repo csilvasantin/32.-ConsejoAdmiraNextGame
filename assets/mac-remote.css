@@ -14,11 +14,19 @@
 @media(max-width:600px){.mac-ultra__bar{gap:5px;padding:5px}.mac-ultra__bar [role=status]{order:5;width:100%;min-width:0}.mac-ultra button{padding:5px}.mac-ultra__bar strong{flex:1}}
 .mac-ultra__agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px;overflow:auto;align-content:start}
 .mac-ultra__agent{margin:0;background:#15110d;border:1px solid #9f7c3e;padding:8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;color:#f3e5be}
+.mac-ultra__agent header{display:flex;align-items:center;gap:8px}
 .mac-ultra__agent img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#000;min-height:72px}
-.mac-ultra__agent dl{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin:0;font-size:11px}
-.mac-ultra__agent dt{color:#c4a56a}.mac-ultra__agent dd{margin:0}
-.mac-ultra__zoom{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px}
-.mac-ultra__zoom img{max-width:100%;max-height:calc(100dvh - 140px);object-fit:contain}
+.mac-ultra__agent dl,.mac-ultra__session dl{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin:0;font-size:11px}
+.mac-ultra__agent dt,.mac-ultra__session dt{color:#c4a56a}.mac-ultra__agent dd,.mac-ultra__session dd{margin:0}
+.mac-ultra__bolas{display:inline-flex;gap:5px;flex:none}
+.mac-ultra__bola{width:10px;height:10px;border-radius:50%;opacity:.28;display:inline-block;box-shadow:inset 0 0 0 1px #0006}
+.mac-ultra__bola.is-on{opacity:1}
+.mac-ultra__bola--rojo{background:#e24b4b}
+.mac-ultra__bola--amarillo{background:#e6c84a}
+.mac-ultra__bola--verde{background:#3cbf5a}
+.mac-ultra__tipo{margin:0;font-size:12px;color:#efd185}
+.mac-ultra__zoom,.mac-ultra__session{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;padding:12px;overflow:auto}
+.mac-ultra__zoom img,.mac-ultra__session img{max-width:100%;max-height:calc(100dvh - 220px);object-fit:contain;align-self:center}
 .mac-ultra__order{display:flex;flex-wrap:wrap;gap:8px;padding:8px 12px;border-top:1px solid #92713c}
 .mac-ultra__order textarea{flex:1;min-width:200px;min-height:48px;background:#15110d;color:#fff0bc;padding:8px}
 @media(max-width:720px){.mac-ultra__agents{grid-template-columns:repeat(2,minmax(0,1fr))}}

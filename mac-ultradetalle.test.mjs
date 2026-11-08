@@ -3,9 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-  DEEPAGENT_SEATS, MOSAIC_SEATS,
+  DEEPAGENT_SEATS, MOSAIC_SEATS, BOLA_TTL_MS, DATO_VACIO, SESION_SOLO_LECTURA,
   deepAgentId, etiquetaDeepAgent, capturaRealSrc, fichaDeepAgent,
   enviarOrdenDeepAgent, _resetOrdenesDeepAgent, isUltraOpen,
+  tipoSesionVerificado, bolaEstado, etiquetaBola, agenteDeMision, datoActual,
 } from './assets/mac-hoy.js';
 
 const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
@@ -30,6 +31,8 @@ test('#7460 DeepAgents: 6 asientos, separados de consejeros, Oráculo con tilde'
   assert.equal(deepAgentId('Walt Disney'), null);
   assert.equal(deepAgentId('Elon'), null);
   assert.equal(deepAgentId('Jensen'), null);
+  assert.equal(deepAgentId('SmithMacMini'), 'Smith');
+  assert.equal(deepAgentId('WozniakGrokBot'), null);
   assert.equal(fichaDeepAgent({ agente: 'Jobs', estado: 'verde' }), null);
 });
 
@@ -44,18 +47,22 @@ test('#7460 captura real: jpeg/https sí; SVG placard no', () => {
   assert.equal(capturaRealSrc('data:image/svg+xml,<svg></svg>'), '');
   assert.equal(capturaRealSrc('javascript:alert(1)'), '');
   assert.equal(fichaDeepAgent({ agente: 'Trinity' }, { src: 'data:image/svg+xml;utf8,<svg/>' }).src, '');
+  const now = Date.parse('2026-11-08T18:12:00Z');
   const real = fichaDeepAgent(
-    { agente: 'Morfeo', estado: 'verde', motivo: 'trabajando', encargo: '#7460', tarea: 'ULTRADETALLE', maquina: 'MBP16', motor: 'Claude Code', fuente: 'heartbeat' },
-    { src: 'https://shots.example/m.jpg', capturaAt: Date.parse('2026-11-08T17:08:00Z'), fuente: 'evidencia' },
+    { agente: 'Morfeo', estado: 'verde', motivo: 'trabajando', encargo: '#7460', tarea: 'ULTRADETALLE', maquina: 'MBP16', motor: 'Claude Code', session_id: 'morfeo', host: 'cli', fuente: 'heartbeat', haceS: 8 },
+    { src: 'https://shots.example/m.jpg', capturaAt: now - 8000, fuente: 'latido' },
+    now,
   );
   assert.equal(real.id, 'Morfeo');
   assert.equal(real.nombre, 'Morfeo');
-  assert.equal(real.estado, 'verde');
+  assert.equal(real.bola, 'rojo');
+  assert.equal(real.estado, 'trabajando');
+  assert.equal(real.tipo, 'CLI');
   assert.equal(real.mision, '#7460');
   assert.equal(real.equipo, 'MBP16');
-  assert.equal(real.sesion, 'Claude Code');
+  assert.equal(real.sesion, 'morfeo');
   assert.equal(real.src, 'https://shots.example/m.jpg');
-  assert.equal(real.fuente, 'evidencia');
+  assert.equal(real.fuente, 'latido');
   assert.ok(real.capturaAt);
 });
 
@@ -100,15 +107,16 @@ test('#7460 ratón abre ultradetalle; Pong conserva pala; teclado avanza misión
   assert.match(mouseFn, /jugador = \+1/);
   assert.match(src, /mando\('\.mac-hoy-keys, \.mac-hoy-front-keys', -1, 1\)/);
   assert.match(src, /e\.key === 'ArrowRight' \|\| e\.key === 'ArrowDown'/);
-  assert.match(openFn, /Sin captura real/);
+  assert.match(openFn, /mac-ultra__session/);
   assert.match(openFn, /capturaRealSrc\(ficha && ficha\.src\)/);
-  assert.match(src, /\['Nombre', ficha\.nombre\]/);
-  assert.match(src, /\['Estado', ficha\.estado\]/);
-  assert.match(src, /\['Misión', ficha\.mision\]/);
-  assert.match(src, /\['Equipo', ficha\.equipo\]/);
-  assert.match(src, /\['Sesión', ficha\.sesion\]/);
-  assert.match(src, /\['Captura', horaCapturaUltra\(ficha\.capturaAt\)\]/);
-  assert.match(src, /\['Fuente', ficha\.fuente\]/);
+  assert.match(openFn, /SESION_SOLO_LECTURA/);
+  assert.match(src, /\['Tipo', ficha\.tipo/);
+  assert.match(src, /\['Misión', datoActual\(ficha\.mision\)\]/);
+  assert.match(src, /\['Última acción', datoActual\(ficha\.ultimaAccion\)\]/);
+  assert.match(src, /\['Máquina', datoActual\(ficha\.equipo\)\]/);
+  assert.match(src, /\['Sesión', datoActual\(ficha\.sesion\)\]/);
+  assert.match(src, /\['Hora'/);
+  assert.match(src, /\['Fuente', datoActual\(ficha\.fuente\)\]/);
 });
 
 test('#7460 pestaña Escritorio → DeepAgents, sin showRemote de consejero', () => {
@@ -118,4 +126,44 @@ test('#7460 pestaña Escritorio → DeepAgents, sin showRemote de consejero', ()
   assert.match(preview, /DeepAgents indisponible/);
   const desktop = preview.slice(preview.indexOf("if(view==='desktop')"), preview.indexOf('else{mac?.setVisible'));
   assert.doesNotMatch(desktop, /showRemote/);
+  assert.match(preview, /art.hidden=view==='conversation'\|\|view==='desktop'/);
+});
+
+test('#7460 bolas: rojo trabajando, verde libre, amarillo caducado o sin evidencia', () => {
+  const now = Date.parse('2026-11-08T18:12:00Z');
+  assert.equal(bolaEstado({ estado: 'verde', haceS: 12 }, {}, now), 'rojo');
+  assert.equal(bolaEstado({ estado: 'gris', haceS: 20 }, {}, now), 'verde');
+  assert.equal(bolaEstado({ estado: 'verde', haceS: (BOLA_TTL_MS / 1000) + 5 }, {}, now), 'amarillo');
+  assert.equal(bolaEstado({ estado: 'verde' }, {}, now), 'amarillo');
+  assert.equal(etiquetaBola('rojo'), 'trabajando');
+  assert.equal(etiquetaBola('verde'), 'libre');
+  assert.equal(etiquetaBola('amarillo'), 'no lo sabemos');
+  assert.match(css, /mac-ultra__bola--rojo/);
+  assert.match(css, /mac-ultra__bola--verde/);
+  assert.match(css, /mac-ultra__bola--amarillo/);
+  assert.match(src, /Metáfora de estado/);
+});
+
+test('#7460 tipo verificado: host/superficies; no inferir por motor; Woz no se mezcla', () => {
+  assert.equal(tipoSesionVerificado({ host: 'cli' }), 'CLI');
+  assert.equal(tipoSesionVerificado({ host: 'app' }), 'Desktop app');
+  assert.equal(tipoSesionVerificado({ superficies: [{ tipo: 'cli', sesion: 'smith' }] }), 'CLI');
+  assert.equal(tipoSesionVerificado({ superficies: [{ tipo: 'app' }] }), 'Desktop app');
+  assert.equal(tipoSesionVerificado({ motor: 'Claude Code', modelo: 'opus' }), 'desconocido');
+  assert.equal(tipoSesionVerificado({}), 'desconocido');
+  assert.equal(agenteDeMision({ persona: 'SmithMacMini', assignee: 'Smith' }), 'Smith');
+  assert.equal(agenteDeMision({ persona: 'Wozniak', assignee: 'Smith' }), null);
+  assert.equal(agenteDeMision({ persona: 'WozniakGrokBot', proof_image: 'https://x/woz.jpg' }), null);
+  assert.equal(datoActual(''), DATO_VACIO);
+  const vacia = fichaDeepAgent({ agente: 'Trinity' });
+  assert.equal(vacia.mision, DATO_VACIO);
+  assert.equal(vacia.sesion, DATO_VACIO);
+  assert.equal(vacia.tipo, 'desconocido');
+  assert.equal(vacia.bola, 'amarillo');
+  const fn = src.slice(src.indexOf('async function fichasDeepAgents'), src.indexOf('function pintarFichaUltra'));
+  assert.doesNotMatch(fn, /EVIDENCE_URL/);
+  assert.doesNotMatch(fn, /\/api\/council\/evidence/);
+  assert.match(fn, /agenteDeMision/);
+  assert.match(openFn, /SESION_SOLO_LECTURA/);
+  assert.equal(SESION_SOLO_LECTURA.includes('solo lectura'), true);
 });

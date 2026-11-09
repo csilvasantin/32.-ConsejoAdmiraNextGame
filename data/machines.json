@@ -443,6 +443,90 @@
     "connect_tailscale": "ssh DigitalTwin@100.112.183.17"
    },
    "mac_address": ""
+  },
+  {
+   "id": "admira-admiranext01",
+   "unitType": "worker",
+   "color": "grafito",
+   "member": "AdmiraNeXT01",
+   "role": "PC AdmiraNeXT · Windows",
+   "name": "AdmiraNeXT01",
+   "machineRole": "PC de la flota AdmiraNeXT",
+   "location": "Madrid",
+   "platform": "Windows",
+   "status": "idle",
+   "note": "Alta #7469 (2026-11-09). LAN 192.168.1.201. Tailscale sin IP 100.x aún. sshd Running.",
+   "ssh": {
+    "enabled": true,
+    "user": "csilv",
+    "host": "192.168.1.201",
+    "host_local": "AdmiraNeXT01",
+    "ip_tailscale": "",
+    "lan_ip": "192.168.1.201",
+    "connect_lan": "ssh csilv@192.168.1.201",
+    "connect_tailscale": ""
+   },
+   "mac_address": "9c:6b:00:29:31:b3",
+   "mac_discovered_at": "2026-11-09",
+   "mac_source": "encargo #7469 (verificado 2026-11-09 Madrid)",
+   "wol": "Activado",
+   "machineId": "7d817289-d0a8-45ea-965a-0a8271b0c0d5"
+  },
+  {
+   "id": "admira-admiranext02",
+   "unitType": "worker",
+   "color": "grafito",
+   "member": "AdmiraNeXT02",
+   "role": "PC AdmiraNeXT · Windows",
+   "name": "AdmiraNeXT02",
+   "machineRole": "PC de la flota AdmiraNeXT",
+   "location": "Madrid",
+   "platform": "Windows",
+   "status": "idle",
+   "note": "Alta #7469 (2026-11-09). LAN 192.168.1.202. Tailscale sin IP 100.x aún. sshd sin verificar.",
+   "ssh": {
+    "enabled": false,
+    "user": "Usuario",
+    "host": "192.168.1.202",
+    "host_local": "AdmiraNeXT02",
+    "ip_tailscale": "",
+    "lan_ip": "192.168.1.202",
+    "connect_lan": "ssh Usuario@192.168.1.202",
+    "connect_tailscale": ""
+   },
+   "mac_address": "58:11:22:d0:2f:b6",
+   "mac_discovered_at": "2026-11-09",
+   "mac_source": "encargo #7469 (verificado 2026-11-09 Madrid)",
+   "wol": "Activado",
+   "machineId": "42f77bdb-332d-4505-bedd-212335668648"
+  },
+  {
+   "id": "admira-admiranext03",
+   "unitType": "worker",
+   "color": "grafito",
+   "member": "AdmiraNeXT03",
+   "role": "PC AdmiraNeXT · Windows",
+   "name": "AdmiraNeXT03",
+   "machineRole": "PC de la flota AdmiraNeXT",
+   "location": "Madrid",
+   "platform": "Windows",
+   "status": "idle",
+   "note": "Alta #7469 (2026-11-09). LAN 192.168.1.203. Tailscale sin IP 100.x aún. Antes Metaverso. Ficha parcial: falta machineId y estado sshd.",
+   "ssh": {
+    "enabled": false,
+    "user": "carlos",
+    "host": "192.168.1.203",
+    "host_local": "AdmiraNeXT03",
+    "ip_tailscale": "",
+    "lan_ip": "192.168.1.203",
+    "connect_lan": "ssh carlos@192.168.1.203",
+    "connect_tailscale": ""
+   },
+   "mac_address": "50:eb:f6:58:8a:df",
+   "mac_discovered_at": "2026-11-09",
+   "mac_source": "encargo #7469 (verificado 2026-11-09 Madrid)",
+   "wol": "Habilitado (pendiente confirmar)",
+   "machineId": ""
   }
  ]
 }

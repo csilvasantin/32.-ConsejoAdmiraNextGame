@@ -9,12 +9,26 @@ TMP="$(mktemp -d)"
 git archive --format=tar HEAD | tar -x -C "$TMP"
 
 # SEGURIDAD (09-11-2026, auditoría PortAventuraNeXT, aprobado por Carlos): fuera de lo publicado el
-# censo con IP/MAC/SSH (lo sirve saneado functions/*machines.json.js), las tareas internas, el código
+# censo con IP/MAC/SSH (se publica saneado más abajo), las tareas internas, el código
 # de servidor y los scripts de operación. Siguen en el repo; solo dejan de servirse en www.
 rm -f "$TMP/machines.json" "$TMP/docs/machines.json" "$TMP"/data/machines.json* "$TMP/data/tasks.json" \
       "$TMP"/fleet-control/fleet.json* "$TMP"/*.py "$TMP"/*.sh "$TMP/HANDOFF.md" "$TMP/docs/CONSEJO-TOKEN.md"
 rm -rf "$TMP/ops" "$TMP/src" "$TMP/workers" "$TMP/.wrangler" "$TMP/chatgpt-bridge"
 rm -f "$TMP"/fleet/*.py "$TMP"/fleet/*.sh
+# El censo se publica SANEADO (solo lo que pintan los paneles: nada de IP, MAC, SSH, FQDN ni notas).
+python3 - "$TMP" <<'CENSO'
+import json, pathlib, sys
+raiz = pathlib.Path(sys.argv[1]); repo = pathlib.Path(".")
+PUBLICOS = ("id","name","member","role","machineRole","status","lastSeen","unitType","color","platform","location")
+for rel in ("machines.json", "data/machines.json", "docs/machines.json"):
+    try: d = json.loads((repo / rel).read_text(encoding="utf-8"))
+    except Exception: continue
+    out = {"team": d.get("team",""), "updatedAt": d.get("updatedAt"),
+           "machines": [{k: m[k] for k in PUBLICOS if isinstance(m, dict) and m.get(k) is not None} for m in d.get("machines", [])]}
+    dst = raiz / rel; dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+print("  ✓ censo publicado saneado (sin IP/MAC/SSH)")
+CENSO
 
 # CORPUS DEL HACKEO · modo CÓDIGO (GrokBot, 07-10-2026). Código real de los 13 proyectos AdmiraNeXT
 # (repos públicos, sin secretos: ver tools/hackeo-corpus.py) generado en

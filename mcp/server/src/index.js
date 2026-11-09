@@ -560,6 +560,21 @@ export async function claveValida(request, env) {
   return !!(await identidadPorClaveAsync(cand, env));
 }
 
+/** Vista pública de /consejo/estado: solo contadores, sin nombres, máquinas ni tareas (seguridad 09-11-2026). */
+export function resumenEstadoPublico(cuerpo) {
+  const leyendas = (cuerpo && cuerpo.mesa && Array.isArray(cuerpo.mesa.leyendas)) ? cuerpo.mesa.leyendas : [];
+  const agentes = leyendas.flatMap((l) => Array.isArray(l.agentes) ? l.agentes : []);
+  return {
+    ok: !!(cuerpo && cuerpo.ok),
+    generado: cuerpo && cuerpo.generado || null,
+    publico: true,
+    sillas: leyendas.length,
+    sillas_trabajando: leyendas.filter((l) => l && l.estado && l.estado !== 'idle').length,
+    agentes: agentes.length,
+    agentes_vivos: agentes.filter((a) => a && a.vivo).length,
+  };
+}
+
 export async function manejar(request, env, deps = {}) {
   const url = new URL(request.url);
   const ruta = url.pathname.replace(/\/+$/, '') || '/';
@@ -576,6 +591,8 @@ export async function manejar(request, env, deps = {}) {
   }
 
   if (ruta === '/salud' && request.method === 'GET') {
+    // SEGURIDAD (09-11-2026, auditoría PortAventuraNeXT, OK Carlos): sin clave solo ok/ko.
+    if (!(await claveValida(request, env))) return json({ ok: true, worker: NOMBRE });
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
     return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_SILLAS: sillasConClave(env), MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, bandeja: env.BANDEJA ? 'durable-object' : 'kv', sandbox: !!env.AVISOS_SANDBOX_KEY, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
@@ -589,11 +606,17 @@ export async function manejar(request, env, deps = {}) {
     if (request.method !== 'GET') return json({ ok: false, error: 'solo GET' }, 405, cors);
     const cache = !deps.fetch && typeof caches !== 'undefined' && caches.default ? caches.default : null;
     const clave = new Request(`${url.origin}/consejo/estado`, { method: 'GET' });
-    if (cache) { const hit = await cache.match(clave).catch(() => null); if (hit) return hit; }
-    const cuerpo = await crearEstado(env, deps).mesa().catch((e) => ({ ok: false, error: String(e.message || e) }));
-    const resp = json(cuerpo, cuerpo.ok ? 200 : 502, { ...cors, 'cache-control': `public, max-age=${CACHE_SEG}` });
-    if (cache && cuerpo.ok) { const guardar = cache.put(clave, resp.clone()).catch(() => {}); if (deps.waitUntil) deps.waitUntil(guardar); }
-    return resp;
+    // SEGURIDAD (09-11-2026, auditoría PortAventuraNeXT, OK Carlos): el detalle (quién, en qué
+    // máquina, en qué tarea) solo con clave MCP; sin clave, contadores sin texto.
+    const conClave = await claveValida(request, env);
+    let cuerpo = null;
+    if (cache) { const hit = await cache.match(clave).catch(() => null); if (hit) cuerpo = await hit.json().catch(() => null); }
+    if (!cuerpo) {
+      cuerpo = await crearEstado(env, deps).mesa().catch((e) => ({ ok: false, error: String(e.message || e) }));
+      if (cache && cuerpo.ok) { const guardar = cache.put(clave, json(cuerpo, 200, { 'cache-control': `public, max-age=${CACHE_SEG}` })).catch(() => {}); if (deps.waitUntil) deps.waitUntil(guardar); }
+    }
+    if (conClave) return json(cuerpo, cuerpo.ok ? 200 : 502, { ...cors, 'cache-control': 'private, no-store' });
+    return json(resumenEstadoPublico(cuerpo), cuerpo.ok ? 200 : 502, { ...cors, 'cache-control': `public, max-age=${CACHE_SEG}` });
   }
 
   /* Latido de los consejeros (consejero_latido · latido.js). Público, solo lectura, sin secretos. */

@@ -46,7 +46,7 @@ test('tituloEncargo: en palabras, sin «Soy X.» ni emojis de cabecera', () => {
 // Merovingio vive en el Mac Mini desde el 15-10-2026 (sillas.js): un latido suyo en la caja ya no es el de Elon.
 test('GET /consejo/estado: Elon lee a Merovingio en el Mac Mini; datos reales, sin inventar', async () => {
   const peticiones = [];
-  const r = await manejar(new Request('https://mcp.test/consejo/estado'), { ADMIRA_TELEGRAM_URL: 'https://telegram.test' }, { fetch: fetchFalso(peticiones), now: () => AHORA });
+  const r = await manejar(new Request('https://mcp.test/consejo/estado', { headers: { authorization: 'Bearer clave-estado-de-prueba' } }), { ADMIRA_TELEGRAM_URL: 'https://telegram.test', MCP_KEY: 'clave-estado-de-prueba' }, { fetch: fetchFalso(peticiones), now: () => AHORA });
   assert.equal(r.status, 200);
   assert.equal(r.headers.get('access-control-allow-origin'), '*');
   const d = await r.json();
@@ -73,7 +73,7 @@ test('GET /consejo/estado: Elon lee a Merovingio en el Mac Mini; datos reales, s
 });
 
 test('presencia caída → latido null («sin datos»), no un cero inventado', async () => {
-  const r = await manejar(new Request('https://mcp.test/consejo/estado'), { ADMIRA_TELEGRAM_URL: 'https://telegram.test' }, { fetch: fetchFalso([], { presenciaCae: true }), now: () => AHORA });
+  const r = await manejar(new Request('https://mcp.test/consejo/estado', { headers: { authorization: 'Bearer clave-estado-de-prueba' } }), { ADMIRA_TELEGRAM_URL: 'https://telegram.test', MCP_KEY: 'clave-estado-de-prueba' }, { fetch: fetchFalso([], { presenciaCae: true }), now: () => AHORA });
   const d = await r.json();
   const jensen = d.mesa.coetaneos.find((s) => s.persona === 'Jensen Huang');
   assert.equal(jensen.ultimo_latido, null);
@@ -156,4 +156,15 @@ test('estadoSilla #5085: entre abiertos vivos gana el id más reciente', () => {
   assert.equal(s.estado, 'idle');
   assert.equal(s.encargo.numero, 200);
   assert.equal(s.encargo.titulo, 'nuevo id');
+});
+
+// Seguridad 09-11-2026 (auditoría PortAventuraNeXT, OK Carlos): sin clave, solo contadores.
+test('GET /consejo/estado sin clave: contadores sin nombres, máquinas ni tareas', async () => {
+  const r = await manejar(new Request('https://mcp.test/consejo/estado'), { ADMIRA_TELEGRAM_URL: 'https://telegram.test', MCP_KEY: 'clave-estado-de-prueba' }, { fetch: fetchFalso([]), now: () => AHORA });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.publico, true);
+  assert.equal(typeof d.sillas, 'number');
+  assert.equal(d.mesa, undefined);
+  assert.doesNotMatch(JSON.stringify(d), /MacMini|Merovingio|Revisar el sello/);
 });

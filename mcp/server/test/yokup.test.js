@@ -336,7 +336,7 @@ test('ventana, misiones, marcador y quién soy', async () => {
 });
 
 test('/salud declara los secretos nuevos y los consejeros con carné', async () => {
-  const salud = await (await manejar(new Request('https://mcp.test/salud'), ENV, { fetch: fetchFalso([]) })).json();
+  const salud = await (await manejar(new Request('https://mcp.test/salud', { headers: { authorization: `Bearer ${ENV.MCP_KEY}` } }), ENV, { fetch: fetchFalso([]) })).json();
   assert.equal(salud.secretos.MCP_KEYS, true); assert.equal(salud.secretos.ADMIRA_TELEGRAM_PANEL_KEY, true);
   assert.deepEqual(salud.consejeros_con_carne, ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk', 'Huang', 'Lasseter', 'Ive', 'Y']);
 });

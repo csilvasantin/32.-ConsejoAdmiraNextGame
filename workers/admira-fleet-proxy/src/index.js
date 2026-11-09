@@ -1,5 +1,8 @@
 const RELAYS = [
-  { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net/fleet' },
+  // 9-nov-2026 18:25 Madrid: el Funnel del Mini en :443 quedó "tailnet only" (525 desde el borde)
+  // y ese puerto expone también /terminales, /claw-gateway… Se publica SOLO /fleet por
+  // Funnel en :10000 (tailscale funnel --bg --https=10000 --set-path=/fleet 127.0.0.1:9140).
+  { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net:10000/fleet' },
   // 9-nov-2026: el Mac Mini y el MBP16 caídos dejaban /control en solo lectura.
   // El Mac Studio ya sirve FleetControl por su Funnel (/fleet → 127.0.0.1:9140).
   { id: 'macstudio', base: 'https://macstudio.tail48b61c.ts.net/fleet' },

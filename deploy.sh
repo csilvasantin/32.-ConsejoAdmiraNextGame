@@ -8,6 +8,14 @@ TMP="$(mktemp -d)"
 # Solo el contenido versionado de HEAD (sin .git ni basura del working tree)
 git archive --format=tar HEAD | tar -x -C "$TMP"
 
+# SEGURIDAD (09-11-2026, auditoría PortAventuraNeXT, aprobado por Carlos): fuera de lo publicado el
+# censo con IP/MAC/SSH (lo sirve saneado functions/*machines.json.js), las tareas internas, el código
+# de servidor y los scripts de operación. Siguen en el repo; solo dejan de servirse en www.
+rm -f "$TMP/machines.json" "$TMP/docs/machines.json" "$TMP"/data/machines.json* "$TMP/data/tasks.json" \
+      "$TMP"/fleet-control/fleet.json* "$TMP"/*.py "$TMP"/*.sh "$TMP/HANDOFF.md" "$TMP/docs/CONSEJO-TOKEN.md"
+rm -rf "$TMP/ops" "$TMP/src" "$TMP/workers" "$TMP/.wrangler" "$TMP/chatgpt-bridge"
+rm -f "$TMP"/fleet/*.py "$TMP"/fleet/*.sh
+
 # CORPUS DEL HACKEO · modo CÓDIGO (GrokBot, 07-10-2026). Código real de los 13 proyectos AdmiraNeXT
 # (repos públicos, sin secretos: ver tools/hackeo-corpus.py) generado en
 # cada despliegue en control/hackeo-corpus/. No se versiona. Si falla, el HACKEO cae al

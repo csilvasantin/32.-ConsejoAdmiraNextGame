@@ -308,7 +308,10 @@
   .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
   .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
   .info.offinfo{color:var(--warn);font-size:11px;word-break:break-word}
-  .shot{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000;cursor:zoom-in;display:none}
+  .shot{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000;cursor:pointer;display:none}
+  /* Sin ruta de control (el hub no la alcanza): el previo no abre nada, y lo dice. */
+  .card.sinruta .shot{cursor:not-allowed}
+  .sinruta-badge{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(255,106,106,.16);color:#ff8a8a;border:1px solid rgba(255,106,106,.45)}
   /* MISMA PROPORCIÓN EN TODAS (Carlos, 5-sep-2026, FLT-1827): la caja tomaba la altura de la imagen
      que llegara (un fondo 16:9 o una captura antigua 4:3) y las tarjetas crecían distinto. 16:9 fijo,
      recortando lo que sobre; la lupa (clic) sigue enseñando la imagen entera. */
@@ -1598,6 +1601,24 @@ function fleetOnline(m){ return _seenIn(FLEET_SEEN,m); }
    pinte pueda decirlo en vez de fingir certeza. */
 const ONLINE_GRACIA_MS=90000;
 let LAST_SIGNAL={};
+/* ALCANZABLE = el hub de control confirma la máquina AHORA (sonda SSH ok). Carlos, 9-nov-2026:
+   con el Mac Mini colgado su tarjeta seguía «en la red» con solo «SIN CAPTURA»; si no
+   responde, tiene que verse offline. Las señales secundarias (agente, presencia,
+   admira-fleet, gracia) y todo el modo degradado dicen «quizá encendida», NO «la controlo». */
+function alcanzable(m){ return !!(m && m.online && !m.degraded && !m.viaAgent && !m.viaPresence && !m.viaFleet && !m.viaGracia); }
+function motivoSinRuta(m){
+  const via=m.viaAgent?'agente':m.viaPresence?'presencia':m.viaFleet?'admira-fleet':m.viaGracia?'última señal':'';
+  const t=ultimaSenalEquipo(m); const ago=t?fmtAge(Date.now()-t*1000):'';
+  return (m.degraded?'sin relay de control':'el hub no la alcanza')+(ago?' · último latido '+ago:'')+(via?' ('+via+')':'');
+}
+// Clic en el PREVIO → control remoto de ESA máquina, directo (Carlos, 9-nov-2026:
+// «al pulsar encima del previo se tiene que abrir el control remoto directamente»).
+function abrirRcDesdePrevio(id){
+  const m=MACHINES.find(x=>x.id===id); if(!m) return;
+  if(!alcanzable(m)){ toast('warn','🖥️ '+(m.name||m.id),'offline — el control remoto necesita la máquina despierta'); return; }
+  if(typeof window.openRemoteControl!=='function') return;
+  window.openRemoteControl(rcMachineId(m.id), m.name||m.id);
+}
 function marcarSenal(m,via){ LAST_SIGNAL[m.id]=Date.now(); m.online=true; m[via]=true; }
 function onlineConGracia(m){
   const t=LAST_SIGNAL[m.id];
@@ -2000,11 +2021,12 @@ function renderCards(ms){
   // Franja(s) agregada(s) encima de la parrilla: ≥3 equipos caídos con la misma causa raíz.
   const pieFuera=fuera.length?('<div class="empty fuera" style="grid-column:1/-1" title="Desmarca «solo encendidos» para verlos">💤 '+fuera.length+' apagados: '+fuera.map(m=>m.name).join(' · ')+'</div>'):'';
   el.innerHTML=dsBands(list)+list.map(m=>`
-    <div class="card${isCollapsed(m.id)?' collapsed':''}" data-card="${m.id}">
+    <div class="card${isCollapsed(m.id)?' collapsed':''}${alcanzable(m)?'':' sinruta'}" data-card="${m.id}">
       <div class="top">
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
         <div class="cardmeta"><div class="nm">${m.name}</div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div>
+        ${alcanzable(m)?'':'<div class="sinruta-badge" title="'+dsEsc(motivoSinRuta(m))+'">💤 OFFLINE · no responde al control</div>'}
         ${(m.perifericos||[]).length?('<div class="perifericos" title="Periféricos conectados a este equipo (inventario fleet.json)">'+m.perifericos.map(p=>(p.url?'<a href="'+dsEsc(p.url)+'" target="_blank" rel="noopener">':'')+dsEsc((p.emoji||'🔌')+' '+(p.name||p.id))+(p.url?'</a>':'')).join(' · ')+'</div>'):''}
         ${agentNowHtml(m)}
         ${m.reaparecido?'<div class="reaparecido" title="Lo eliminaste cuando estaba callado y ha vuelto a latir después: se enseña otra vez. Puedes volver a eliminarlo.">↩ ha vuelto a latir tras eliminarlo</div>':''}
@@ -2021,7 +2043,7 @@ function renderCards(ms){
         ?(infoRedundante(m)?'':(m.info||'').replace(/</g,'&lt;'))
         :('💤 ssh '+((m.user||'csilvasantin')+'@'+(m.host||'?'))+'\n↳ '+((m.info||'sin respuesta').replace(/</g,'&lt;')))}</div>
       <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"><span class="shotage" data-age="${m.id}"></span></div>
-      <div class="acts" ${m.online?'':'style="opacity:.4;pointer-events:none"'}>
+      <div class="acts" ${alcanzable(m)?'':'style="opacity:.4;pointer-events:none"'}>
         <button data-a="screenshot" data-m="${m.id}">📸 captura</button>
         <button data-a="sysinfo" data-m="${m.id}">🩺 info</button>
         <button data-a="volume" data-m="${m.id}">🔊 volumen</button>
@@ -2039,7 +2061,7 @@ function renderCards(ms){
         <button data-a="signagetoggle" data-m="${m.id}" ${(!signageIsOn(m.id)&&!signageEligible(m.id))?'disabled':''} class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Requiere preflight elegible'}">${signageIsOn(m.id)?'⏹️ parar':'📺 arrancar DS'}</button>
         <button data-mando-emision="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         <button data-a="channeltoggle" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Cerrar la ventana del canal DS en el Chrome de esta máquina.':'Abrir el canal DS (admira.tv/canal) en el Chrome de esta máquina.'}">${signageIsOn(m.id)?'⏹ cerrar canal':'📺 abrir canal'}</button>
-        ${m.online?`<button data-rc="${rcMachineId(m.id)}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
+        ${alcanzable(m)?`<button data-rc="${rcMachineId(m.id)}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
         ${m.online&&interruptorAplica(m)?AdmiraInterruptores.html(m.id, INT_ESTADO[m.id]&&INT_ESTADO[m.id].st, INT_OCUPADO[m.id], interruptorCtx(m)):''}
       </div>
@@ -2120,7 +2142,7 @@ function showShot(machineId, src){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
   box.classList.remove('isWall'); box.classList.remove('nada'); const t=box.querySelector('.shot-nada'); if(t) t.remove();
   box.querySelector('img').src=src; box.style.display='block';
-  box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
+  box.onclick=null;   // el clic lo atiende #cards → abrirRcDesdePrevio (control remoto directo)
   setIconScreen(machineId, src);   // el monitor pequeño enseña lo mismo que la caja grande
 }
 
@@ -2128,7 +2150,15 @@ function showShot(machineId, src){
 // hasta que haya una captura real.
 function setDefaultShot(machineId){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
-  const img=box.querySelector('img'); box.style.display='block'; box.classList.add('isWall'); box.classList.remove('nada'); const t0=box.querySelector('.shot-nada'); if(t0) t0.remove();
+  const img=box.querySelector('img');
+  const mm=MACHINES.find(x=>x.id===machineId);
+  if(mm && !alcanzable(mm)){
+    // Inalcanzable: ni fondo de persona ni «SIN CAPTURA» que la haga parecer en la red.
+    box.classList.remove('isWall'); box.classList.add('nada'); box.style.display='flex'; box.onclick=null; img.removeAttribute('src');
+    let t=box.querySelector('.shot-nada'); if(!t){ t=document.createElement('div'); t.className='shot-nada'; box.appendChild(t); }
+    t.textContent='💤 OFFLINE · no responde · '+motivoSinRuta(mm); setIconScreen(machineId, null); return;
+  }
+  box.style.display='block'; box.classList.add('isWall'); box.classList.remove('nada'); const t0=box.querySelector('.shot-nada'); if(t0) t0.remove();
   img.onload=()=>{ img.onload=null; setIconScreen(machineId, img.src); };   // mismo fondo en el monitor pequeño
   loadImgChain(img, machineWallpapers(machineId), ()=>{
     img.onload=null; setIconScreen(machineId, null);
@@ -2138,7 +2168,7 @@ function setDefaultShot(machineId){
     box.classList.add('nada'); box.style.display='flex'; box.onclick=null;
     let t=box.querySelector('.shot-nada'); if(!t){ t=document.createElement('div'); t.className='shot-nada'; box.appendChild(t); }
     t.textContent='sin imagen · '+por+(m.online?'':' · ⚡ encender o revisar Tailscale'); });
-  box.onclick=()=>{ $('#lbImg').src=img.src; $('#lb').style.display='flex'; };
+  box.onclick=null;   // el clic lo atiende #cards → abrirRcDesdePrevio
 }
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 
@@ -2183,6 +2213,9 @@ async function navCmd(deviceId, action, url){
   return r.status>=200&&r.status<300&&r.data.ok ? {ok:true,id:r.data.id} : {ok:false,error:bridgeFallo(r)};
 }
 $('#cards').addEventListener('click', async e=>{
+  // Clic en el PREVIO (la miniatura o su imagen, no badges ni botones internos) → control remoto.
+  const previo=e.target.closest('.shot[data-m]');
+  if(previo && !e.target.closest('button,a,.capwarn,[data-fix],[data-msgbadge]')){ e.preventDefault(); abrirRcDesdePrevio(previo.dataset.m); return; }
   // Comprimir / expandir la tarjeta (chevron).
   const fold=e.target.closest('.card-fold,.card-opts'); if(fold){ toggleCollapse(fold.dataset.fold); return; }
   // Clic en el ICONO del ordenador: limpia el escritorio y muestra el fondo.

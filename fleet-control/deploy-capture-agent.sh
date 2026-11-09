@@ -15,7 +15,7 @@
 #   FLEET_CAPTURE_FORCE=1 bash deploy-capture-agent.sh local
 set -eu
 
-BUNDLED=3
+BUNDLED=4
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PY="$HERE/fleet-capture.py"
 GEO="$HERE/display_geometry.py"

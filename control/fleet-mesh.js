@@ -1,4 +1,4 @@
-/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.03.09.2026.r1.13:08
+/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.09.11.2026.control-lan
  *
  * Cliente de control sin punto único de fallo. Mantiene una sesión Google
  * independiente por relay, conmuta lecturas y comandos entre relays y adjunta
@@ -14,20 +14,13 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
   'use strict';
 
-  var VERSION = 'v.03.09.2026.r1.13:08';
+  var VERSION = 'v.09.11.2026.control-lan';
   var DEFAULT_RELAYS = [
     {
-      // PUERTA PÚBLICA (Carlos, 11-ago-2026: «le meto el usuario y va muy lento;
-      // en un navegador externo va sin problemas»). Los dos relays de abajo viven
-      // en nombres *.ts.net que, DENTRO del tailnet, MagicDNS resuelve a una IP
-      // PRIVADA (100.64/10). Chrome 138+ corta ese salto público→privado por
-      // «Local Network Access» sin dar error de CORS: la petición muere en 2 ms y
-      // el panel se queda sin sesión pareciendo lento. Fuera del tailnet el mismo
-      // nombre resuelve al Funnel (IP pública) y todo iba bien — de ahí el
-      // síntoma. Este relay va PRIMERO porque funciona en los dos escenarios: el
-      // navegador solo habla con Cloudflare y es el worker quien llama al hub.
-      // Los directos se quedan de respaldo: si el borde falla, siguen sirviendo
-      // a quien esté fuera del tailnet.
+      // Arranque universal. Un sondeo breve, paralelo a las peticiones, permite
+      // preferir un relay privado sólo si Serve acredita la ruta tailnet y ese
+      // host ya tiene su propia sesión. LNA denegado, Funnel o falta de cookie
+      // conservan esta puerta sin retrasar el panel.
       id: 'proxy',
       label: 'Puerta pública',
       base: 'https://fleet.admira.live/api',
@@ -88,10 +81,24 @@
     if (!fetchFn) throw new Error('Fleet Mesh necesita fetch');
     var timeoutMs = Math.max(1000, +(options.timeoutMs || 9000));
     var cooldownMs = Math.max(1000, +(options.cooldownMs || 15000));
+    var privateProbeMs = Math.max(500, Math.min(2000, +(options.privateProbeMs || 1000)));
+    var privateProbeIntervalMs = 30000;
     var state = {};
     var active = null;
     var sessions = {};
-    relays.forEach(function (r) { state[r.id] = { failures: 0, downUntil: 0, lastOk: 0, lastError: '' }; });
+    var authGeneration = 0;
+    var privateProbes = {};
+    var nextPrivateProbe = {};
+    relays.forEach(function (r) { state[r.id] = { failures: 0, downUntil: 0, lastOk: 0, lastError: '', privateUntil: 0 }; });
+
+    function knownDirect(relay) {
+      // No descubrir hosts de la red ni enviar credenciales a bases añadidas.
+      return DEFAULT_RELAYS.some(function (r) { return r.id !== 'proxy' && r.base === relay.base; });
+    }
+    function preferredPrivate(relay) {
+      return knownDirect(relay) && state[relay.id].privateUntil > Date.now()
+        && state[relay.id].downUntil <= Date.now() && sessionFor(relay);
+    }
 
     function sessionFor(relay) {
       return !!sessions[relay.id];
@@ -103,8 +110,10 @@
       if (relayId) return relays.filter(function (r) { return r.id === relayId; });
       var now = Date.now();
       return relays.slice().sort(function (a, b) {
-        if (active && a.id === active.id && state[a.id].downUntil <= now) return -1;
-        if (active && b.id === active.id && state[b.id].downUntil <= now) return 1;
+        var ap = preferredPrivate(a) ? 1 : 0, bp = preferredPrivate(b) ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        if (active && a.id === active.id && state[a.id].downUntil <= now && (!knownDirect(a) || ap)) return -1;
+        if (active && b.id === active.id && state[b.id].downUntil <= now && (!knownDirect(b) || bp)) return 1;
         var ad = state[a.id].downUntil > now ? 1 : 0;
         var bd = state[b.id].downUntil > now ? 1 : 0;
         return ad - bd || a.priority - b.priority;
@@ -115,13 +124,14 @@
       state[relay.id].downUntil = 0;
       state[relay.id].lastOk = Date.now();
       state[relay.id].lastError = '';
-      active = relay;
+      if (!active || !preferredPrivate(active) || preferredPrivate(relay)) active = relay;
     }
     function markFail(relay, err) {
       var s = state[relay.id];
       s.failures += 1;
       s.downUntil = Date.now() + cooldownMs;
       s.lastError = String(err && (err.message || err) || 'sin respuesta');
+      s.privateUntil = 0;
     }
     function pathOnly(path) {
       return String(path || '').split('?')[0];
@@ -169,19 +179,25 @@
         explain: function (err) { return vencido ? motivo : err; }
       };
     }
-    async function mint(relay, force) {
+    async function mint(relay, force, limitMs) {
       if (!force) {
         if (sessionFor(relay)) return true;
       }
+      var generation = authGeneration;
       var timed = withTimeout({
         method: 'GET', credentials:'include',
-        cache: 'no-store'
+        cache: 'no-store', timeoutMs: limitMs || timeoutMs
       }, relay.label + ' · auth');
       try {
         var r = await fetchFn(relay.base + '/auth/session', timed.init);
-        if (!r.ok) throw new Error('auth HTTP ' + r.status);
+        if (!r.ok) {
+          var authError = new Error('auth HTTP ' + r.status);
+          authError.status = r.status;
+          throw authError;
+        }
         var d = await r.json();
         if (!d || !d.ok) throw new Error('auth sin sesión');
+        if (generation !== authGeneration) throw new Error('sesión cerrada');
         // Agente: la API responde ok+agent+readOnly y no trae csrf de escritura.
         // Si además viniera un csrf, no se guarda: el agente no escribe.
         if (d.agent === true && d.readOnly === true) {
@@ -195,13 +211,91 @@
       } catch (err) { throw timed.explain(err); }
       finally { timed.cancel(); }
     }
+    async function bridgePrivateSession(relay, generation, serverId) {
+      try {
+        var proxy = relays.find(function (r) { return r.base === DEFAULT_RELAYS[0].base; });
+        if (!proxy || generation !== authGeneration) throw new Error('sesión privada no disponible');
+        await mint(proxy, false, privateProbeMs);
+        var human = sessions[proxy.id];
+        // Sólo una sesión humana activa con CSRF puede pedir el puente. La
+        // identidad Serve y las sesiones de agente no conceden control humano.
+        if (!human || human.agent || human.readOnly || !human.csrf || generation !== authGeneration) {
+          throw new Error('sesión privada no disponible');
+        }
+        var issued = await fetchRelay(proxy, '/auth/relay-ticket', {
+          method: 'POST', cache: 'no-store', redirect: 'error', timeoutMs: privateProbeMs,
+          headers: { 'Content-Type': 'application/json' }, body: '{}'
+        }, '');
+        if (!issued.ok) throw new Error('sesión privada no disponible');
+        var body = await issued.json();
+        if (!body || !body.ok || !serverId || body.relay !== serverId || typeof body.ticket !== 'string' || !body.ticket || body.ticket.length > 4096 || generation !== authGeneration) {
+          throw new Error('sesión privada no disponible');
+        }
+        // Ticket opaco, de un uso, sólo en memoria hasta consumirlo en el host
+        // privado. Nunca se guarda ni viaja en una URL, registro o mensaje.
+        var timed = withTimeout({
+          method: 'POST', credentials: 'include', cache: 'no-store', redirect: 'error', timeoutMs: privateProbeMs,
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: body.ticket })
+        }, relay.label + ' · sesión privada');
+        try {
+          var consumed = await fetchFn(relay.base + '/auth/relay-ticket/consume', timed.init);
+          if (!consumed.ok || generation !== authGeneration) throw new Error('sesión privada no disponible');
+          var result = await consumed.json();
+          if (!result || result.ok !== true) throw new Error('sesión privada no disponible');
+        } catch (err) { throw new Error('sesión privada no disponible'); }
+        finally { timed.cancel(); }
+        await mint(relay, true, privateProbeMs);
+      } catch (err) { throw new Error('sesión privada no disponible'); }
+    }
+    function probePrivate(relay, force) {
+      if (privateProbes[relay.id]) return privateProbes[relay.id];
+      if (!force && Date.now() < (nextPrivateProbe[relay.id] || 0)) return Promise.resolve(null);
+      nextPrivateProbe[relay.id] = Date.now() + privateProbeIntervalMs;
+      var generation = authGeneration;
+      privateProbes[relay.id] = (async function () {
+        var t0 = Date.now();
+        var timed = withTimeout({ method: 'GET', credentials: 'include', cache: 'no-store', redirect: 'error', timeoutMs: privateProbeMs }, relay.label + ' · red privada');
+        try {
+          var response = await fetchFn(relay.base + '/health', timed.init);
+          var body = response.ok ? await response.json() : null;
+          // Un *.ts.net accesible desde fuera puede estar pasando por Funnel.
+          // La salud declara sólo un booleano, nunca el usuario de Tailscale.
+          var privateRoute = !!(body && body.ok && body.service === 'fleet-control' && body.network && body.network.private === true);
+          if (!privateRoute || generation !== authGeneration) {
+            state[relay.id].privateUntil = 0;
+            return { relay: relay, reachable: response.ok, private: false, ms: Date.now() - t0, status: response.status, body: body };
+          }
+          try { await mint(relay, false, privateProbeMs); }
+          catch (err) {
+            if (!err || err.status !== 401) throw err;
+            await bridgePrivateSession(relay, generation, body.relay && body.relay.id);
+          }
+          if (generation !== authGeneration) return null;
+          state[relay.id].privateUntil = Date.now() + privateProbeIntervalMs * 2;
+          markOk(relay);
+          return { relay: relay, reachable: true, private: true, authenticated: true, ms: Date.now() - t0, status: response.status, body: body };
+        } catch (err) {
+          state[relay.id].privateUntil = 0;
+          state[relay.id].lastError = String(timed.explain(err).message || err);
+          return { relay: relay, reachable: false, private: false, ms: Date.now() - t0, error: state[relay.id].lastError };
+        } finally { timed.cancel(); }
+      })().finally(function () { delete privateProbes[relay.id]; });
+      return privateProbes[relay.id];
+    }
+    function schedulePrivateProbes() {
+      relays.filter(knownDirect).forEach(function (relay) { probePrivate(relay, false); });
+    }
     async function fetchRelay(relay, path, opts, commandId) {
       opts = Object.assign({}, opts || {});
       var headers = Object.assign({}, opts.headers || {});
-      if (opts.auth !== false) await mint(relay, false);
+      if (opts.auth !== false) await mint(relay, false, opts.timeoutMs);
       var ses = sessions[relay.id] || null;
       var method = String(opts.method || 'GET');
-      if (ses && ses.readOnly && !/^(GET|HEAD|OPTIONS)$/i.test(method)) throw new Error('solo lectura');
+      if (ses && ses.readOnly && !/^(GET|HEAD|OPTIONS)$/i.test(method)) {
+        var readOnlyError = new Error('solo lectura');
+        readOnlyError.fleetReadOnly = true;
+        throw readOnlyError;
+      }
       if (commandId) headers['X-Fleet-Command-Id'] = commandId;
       if (!/^(GET|HEAD|OPTIONS)$/i.test(method)) headers['X-Fleet-CSRF'] = (ses && ses.csrf) || '';
       opts.headers = headers;
@@ -215,7 +309,7 @@
         var response = await fetchFn(relay.base + path, timed.init);
         if (response.status === 401 && opts.auth !== false) {
           dropSession(relay);
-          await mint(relay, true);
+          await mint(relay, true, opts.timeoutMs);
           timed.cancel();
           timed = withTimeout(Object.assign({}, opts, { headers: headers }), relay.label);
           response = await fetchFn(relay.base + path, timed.init);
@@ -225,6 +319,7 @@
       finally { timed.cancel(); }
     }
     async function request(path, opts) {
+      schedulePrivateProbes();
       opts = Object.assign({}, opts || {});
       var method = String(opts.method || 'GET').toUpperCase();
       var mutating = !/^(GET|HEAD|OPTIONS)$/.test(method);
@@ -235,6 +330,9 @@
 
       for (var i = 0; i < candidates.length; i++) {
         var relay = candidates[i];
+        // La procedencia de esta petición no cambia si un sondeo paralelo
+        // invalida la ruta mientras esperamos su fotograma.
+        var wasPrivate = preferredPrivate(relay);
         try {
           var response = await fetchRelay(relay, path, opts, commandId);
           attempts.push({ relay: relay.id, status: response.status });
@@ -245,7 +343,7 @@
               noteSlow(relay, lastError);
               break;
             }
-            if (stickyControl(path) && sessions[relay.id]) {
+            if (stickyControl(path) && sessions[relay.id] && !wasPrivate) {
               noteSlow(relay, lastError);
               response.__admiraMesh = {
                 version: VERSION,
@@ -272,8 +370,9 @@
         } catch (err) {
           attempts.push({ relay: relay.id, error: String(err && (err.message || err) || err) });
           lastError = err;
+          if (err && err.fleetReadOnly) break;
           var timedOut = !!(err && err.fleetMeshTimeout);
-          if (timedOut && sessions[relay.id] && (heavyCensus(path) || stickyControl(path))) {
+          if (timedOut && sessions[relay.id] && (heavyCensus(path) || (stickyControl(path) && !wasPrivate))) {
             noteSlow(relay, err);
             break;
           }
@@ -292,6 +391,7 @@
       return { response: response, data: data };
     }
     async function ensureAnySession() {
+      schedulePrivateProbes();
       var candidates = ordered();
       for (var i = 0; i < candidates.length; i++) {
         try {
@@ -304,6 +404,7 @@
     }
     async function probeAll() {
       return Promise.all(relays.map(async function (relay) {
+        if (knownDirect(relay)) return probePrivate(relay, true);
         var t0 = Date.now();
         try {
           var response = await fetchRelay(relay, '/health', { method: 'GET', auth: false, cache: 'no-store' }, '');
@@ -319,6 +420,8 @@
       }));
     }
     async function logoutAll() {
+      authGeneration += 1;
+      relays.forEach(function (relay) { state[relay.id].privateUntil = 0; });
       await Promise.all(relays.map(function(relay){return fetchFn(relay.base+'/auth/logout',{method:'POST',credentials:'include',cache:'no-store'}).catch(function(){});}));
       sessions={}; active=null;
     }

@@ -156,7 +156,8 @@ test('el hub autoriza antes de resolver y el frame/input ejecutan la máquina re
   }
   const frame = block("if (url === '/api/live/frame')", "if (url === '/api/input'");
   const input = block("if (url === '/api/input' && req.method === 'POST')", 'DESPERTAR');
-  assert.match(frame, /cmd = fn\(dsp, m\)/);
+  assert.match(frame, /CaptureClient\.macosCaptureCommand\(dsp, frameOptions\)/);
+  assert.match(frame, /: fn\(dsp, m\)/);
   assert.match(frame, /run\(m, cmd, 22000\)/);
   assert.match(input, /run\(m, cmd, 8000\)/);
   assert.match(input, /machine: m\.id/);

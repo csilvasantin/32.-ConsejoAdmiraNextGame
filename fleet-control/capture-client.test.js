@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { execFileSync, spawn, spawnSync } = require('node:child_process');
 const C = require('./capture-client');
 
 function assertPlist(file, home) {
@@ -34,6 +34,88 @@ test('cada captura tiene su nonce y un índice inválido no cae en la principal'
   assert.throws(() => C.macosCaptureCommand('2abc'), /no numérica/);
   assert.throws(() => C.macosCaptureCommand(99), /rango/);
 });
+
+test('live opts reach the origin queue; legacy screenshots stay native and v3 is still accepted', () => {
+  const cmd = C.macosCaptureCommand(1, { scale: 0.5, quality: 60, maxWidth: 1600 });
+  assert.match(cmd, /display=1\\nscale=0\.5\\nq=60\\nmax_width=1600/);
+  assert.match(cmd, /FRAME_CLI_VERSION = 1/);
+  const encoded = cmd.match(/--frame '([^']+)'/)[1];
+  assert.equal(Buffer.from(encoded, 'base64').toString(), 'display=1\nscale=0.5\nq=60\nmax_width=1600\n');
+  assert.doesNotMatch(C.macosCaptureCommand(1), /scale=|q=|--frame/);
+  assert.throws(() => C.macosCaptureCommand(0, { scale: '$(bad)', quality: 60 }), /numérico/);
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');
+  assert.equal(C.parseCaptureStdout('OK\n' + jpeg + '\ncaptured_at=1000\noptimized=1\n', 1001).optimized, true);
+  assert.equal(C.parseCaptureStdout('OK\n' + jpeg + '\ncaptured_at=1000\n', 1001).optimized, false);
+});
+
+test('live CLI success returns once without asking the graphical queue', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cli-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(home, '.fleet'));
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.py'), 'FRAME_CLI_VERSION = 1\n');
+  const fakePython = path.join(home, 'python3');
+  fs.writeFileSync(fakePython, '#!/bin/bash\nprintf "%s\\n" "$FAKE_CLI_STDOUT"\nexit "$FAKE_CLI_STATUS"\n', { mode: 0o755 });
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');
+  const output = 'OK\n' + jpeg + '\ncaptured_at=1000\noptimized=1\n';
+  const command = C.macosCaptureCommand(0, { scale: 0.5, quality: 60 }).replace('/usr/bin/python3', C.shellQuote(fakePython));
+  const result = spawnSync('bash', ['-c', command], {
+    env: { ...process.env, HOME: home, FAKE_CLI_STDOUT: output.trimEnd(), FAKE_CLI_STATUS: '0' }, encoding: 'utf8', timeout: 5000
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, output);
+  assert.equal(fs.existsSync(path.join(home, '.fleet/capture-queue')), false);
+});
+
+for (const scenario of [
+  { name: 'CLI permission failure', cliStatus: '42', queueOk: true },
+  { name: 'CLI error with an incorrect zero exit status', cliStatus: '0', queueOk: true },
+  { name: 'both capture contexts failing', cliStatus: '42', queueOk: false }
+]) {
+  test('live capture falls back through the real shell queue: ' + scenario.name, (t) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cli-'));
+    t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+    fs.mkdirSync(path.join(home, '.fleet'));
+    fs.writeFileSync(path.join(home, '.fleet/fleet-capture.py'), 'FRAME_CLI_VERSION = 1\n');
+    const fakePython = path.join(home, 'python3');
+    fs.writeFileSync(fakePython, '#!/bin/bash\nprintf "%s\\n" "$FAKE_CLI_STDOUT"\necho "CLI context rejected" >&2\nexit "$FAKE_CLI_STATUS"\n', { mode: 0o755 });
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');
+    const output = scenario.queueOk ? 'OK\n' + jpeg + '\ncaptured_at=1000\noptimized=1\n'
+      : 'ERR_CAPTURE_TRANSIENT\ncaptured_at=1000\ndetail=graphical capture failed\n';
+    // A separate process stands in for the LaunchAgent: it consumes the
+    // generated request and writes exactly the queue response the hub reads.
+    const agent = spawn(process.execPath, ['-e', `
+      const fs = require('node:fs'), path = require('node:path');
+      const home = process.argv[1], response = process.argv[2];
+      const queue = path.join(home, '.fleet/capture-queue');
+      const stop = setTimeout(() => process.exit(1), 5000);
+      const poll = setInterval(() => {
+        const request = fs.existsSync(queue) && fs.readdirSync(queue).find(name => name.endsWith('.req'));
+        if (!request) return;
+        fs.writeFileSync(path.join(home, 'queue-request'), fs.readFileSync(path.join(queue, request)));
+        fs.writeFileSync(path.join(queue, request.replace(/\\.req$/, '.out')), response);
+        clearInterval(poll); clearTimeout(stop);
+      }, 5);
+    `, home, output], { stdio: 'ignore' });
+    t.after(() => agent.kill());
+    // Force the request writer to pause between settings. A watcher must
+    // never discover .req with the final max_width line still unwritten.
+    const slowPrintf = 'printf() { case "$1" in display=*) builtin printf "${1:0:11}"; sleep 0.1; builtin printf "${1:11}";; *) builtin printf "$@";; esac; }; ';
+    const command = slowPrintf + C.macosCaptureCommand(1, { scale: 0.5, quality: 60, maxWidth: 1600 }).replace('/usr/bin/python3', C.shellQuote(fakePython));
+    const result = spawnSync('bash', ['-c', command], {
+      env: { ...process.env, HOME: home, FAKE_CLI_STDOUT: 'ERR_CAPTURE_TRANSIENT\ndetail=CLI permission denied', FAKE_CLI_STATUS: scenario.cliStatus },
+      encoding: 'utf8', timeout: 5000
+    });
+    assert.equal(result.status, scenario.queueOk ? 0 : 42, result.stderr);
+    assert.equal(result.stdout, output);
+    assert.equal(result.stderr, '');
+    assert.equal(fs.readFileSync(path.join(home, 'queue-request'), 'utf8'), 'display=1\nscale=0.5\nq=60\nmax_width=1600\n');
+    assert.deepEqual(fs.readdirSync(path.join(home, '.fleet/capture-queue')), []);
+    const parsed = C.parseCaptureStdout(result.stdout, 1001);
+    assert.equal(parsed.ok, scenario.queueOk);
+    if (scenario.queueOk) assert.ok(C.jpegFromB64(parsed.b64));
+    else assert.equal(parsed.detail, 'graphical capture failed');
+  });
+}
 
 test('frescura, pantalla inexistente y fallo transitorio no se leen como permiso ni como jpeg', () => {
   const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');
@@ -87,13 +169,13 @@ test('el instalador es idempotente, no pisa una versión más nueva y no arranca
   const script = path.join(__dirname, 'deploy-capture-agent.sh');
   const run = (extra) => execFileSync('bash', [script, 'local'], { env: Object.assign({}, env, extra || {}), encoding: 'utf8' });
   const first = run();
-  assert.match(first, /instalado \(v3\)/);
+  assert.match(first, /instalado \(v4\)/);
   assertPlist(path.join(home, 'Library/LaunchAgents/com.admiranext.fleet-capture.plist'), home);
-  assert.equal(fs.readFileSync(path.join(home, '.fleet/fleet-capture.version'), 'utf8'), '3\n');
+  assert.equal(fs.readFileSync(path.join(home, '.fleet/fleet-capture.version'), 'utf8'), '4\n');
   const log1 = fs.readFileSync(path.join(home, 'launchctl.log'), 'utf8');
   assert.equal(log1.split('\n').filter((l) => l.startsWith('bootstrap ')).length, 1);
   const second = run();
-  assert.match(second, /ya instalado \(v3\)/);
+  assert.match(second, /ya instalado \(v4\)/);
   const log2 = fs.readFileSync(path.join(home, 'launchctl.log'), 'utf8');
   assert.equal(log2, log1);
   fs.writeFileSync(path.join(home, '.fleet', 'fleet-capture.version'), '9\n');
@@ -108,8 +190,8 @@ test('el instalador es idempotente, no pisa una versión más nueva y no arranca
   assert.match(respeta, /no se pisa/);
   assert.match(fs.readFileSync(path.join(solo, '.fleet', 'fleet-capture.py'), 'utf8'), /arreglo posterior/);
   const forced = run({ FLEET_CAPTURE_FORCE: '1' });
-  assert.match(forced, /instalado \(v3\)/);
-  assert.match(fs.readFileSync(path.join(home, '.fleet', 'fleet-capture.py'), 'utf8'), /CAPTURE_VERSION = 3/);
+  assert.match(forced, /instalado \(v4\)/);
+  assert.match(fs.readFileSync(path.join(home, '.fleet', 'fleet-capture.py'), 'utf8'), /CAPTURE_VERSION = 4/);
   const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cap-'));
   let code = 0;
   try {
@@ -153,11 +235,11 @@ test('un plist roto no se da por instalado y el generado anida array', () => {
   fs.mkdirSync(path.join(home, '.fleet'), { recursive: true });
   fs.mkdirSync(path.join(home, 'Library/LaunchAgents'), { recursive: true });
   fs.copyFileSync(path.join(__dirname, 'fleet-capture.py'), path.join(home, '.fleet/fleet-capture.py'));
-  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.version'), '3\n');
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.version'), '4\n');
   const plist = path.join(home, 'Library/LaunchAgents/com.admiranext.fleet-capture.plist');
   fs.writeFileSync(plist, '<plist><dict><key>ProgramArguments</key><array><string>/usr/bin/python3</string></key></dict></plist>\n');
   const out = execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
-  assert.match(out, /instalado \(v3\)/);
+  assert.match(out, /instalado \(v4\)/);
   assert.doesNotMatch(out, /ya instalado/);
   assertPlist(plist, home);
 });
@@ -220,7 +302,7 @@ test('preflight ve uchg y no llama a chflags', () => {
   fs.writeFileSync(path.join(home, 'uchg.list'), sh + '\n');
   const out = execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
   const err = execFileSync('bash', [path.join(__dirname, 'deploy-capture-agent.sh'), 'local'], { env, encoding: 'utf8' });
-  assert.match(out, /instalado \(v3\)/);
+  assert.match(out, /instalado \(v4\)/);
   assert.match(err, /ya instalado/);
   assert.equal(fs.readFileSync(sh, 'utf8'), 'OLD-BASH\n');
   assert.equal(fs.existsSync(path.join(home, 'chflags.log')), false);

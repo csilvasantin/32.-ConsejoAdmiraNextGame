@@ -29,17 +29,39 @@ function parseDisplayIndex(arg) {
   return n;
 }
 
-function macosCaptureCommand(arg) {
+function macosCaptureCommand(arg, frameOptions) {
   const dsp = parseDisplayIndex(arg);
+  // v3 ignores unknown lines and returns the full JPEG; the hub then resizes
+  // it. v4 reduces before base64/SSH and adds optimized=1 to avoid doing it twice.
+  let settings = '';
+  if (frameOptions) {
+    if (frameOptions.scale != null && !Number.isFinite(frameOptions.scale)) throw new Error('scale no numérico');
+    if (!Number.isFinite(frameOptions.quality)) throw new Error('q no numérico');
+    if (frameOptions.maxWidth != null && !Number.isFinite(frameOptions.maxWidth)) throw new Error('maxWidth no numérico');
+    settings = (frameOptions.scale == null ? '' : 'scale=' + Math.min(1, Math.max(0.1, frameOptions.scale)) + '\\n') +
+      'q=' + Math.round(Math.min(95, Math.max(20, frameOptions.quality))) + '\\n' + (frameOptions.maxWidth == null ? '' : 'max_width=' + Math.round(Math.min(5120, Math.max(320, frameOptions.maxWidth))) + '\\n');
+  }
+  const liveRequest = frameOptions ? Buffer.from(('display=' + dsp + '\\n' + settings).replace(/\\n/g, '\n')).toString('base64') : '';
   // El nonce viaja en el nombre del fichero. Nadie más escribe ese par .req/.out.
   return [
     'D="$HOME/.fleet"',
+    ...(frameOptions ? [
+      // v4 optional CLI avoids the launchd capture context and its IPC/polling.
+      // SSH can have a different Screen Recording context than launchd. Keep
+      // CLI output private until it succeeds; otherwise let the graphical
+      // agent answer through the queue without a second response on stdout.
+      'if grep -q "^FRAME_CLI_VERSION = 1$" "$D/fleet-capture.py" 2>/dev/null; then ' +
+        'if F=$(/usr/bin/python3 "$D/fleet-capture.py" --frame ' + shellQuote(liveRequest) + ' 2>/dev/null) && [ "$(printf \'%s\\n\' "$F" | head -1)" = OK ]; then printf \'%s\\n\' "$F"; exit 0; fi; unset F; fi'
+    ] : []),
     'Q="$D/capture-queue"',
     'mkdir -p "$Q"',
     'N="fc-$(date +%s)-$$-$RANDOM"',
     'case "$N" in *[!A-Za-z0-9._-]*) echo ERR_NO_CAPTURE; exit 42;; esac',
-    'printf "display=' + dsp + '\\n" > "$Q/$N.req"',
-    'for i in $(seq 1 40); do [ -s "$Q/$N.out" ] && break; sleep 0.3; done',
+    // Publish only complete requests: launchd may notice a newly opened file
+    // before printf has finished writing its last settings line.
+    'printf "display=' + dsp + '\\n' + settings + '" > "$Q/$N.tmp"',
+    'mv "$Q/$N.tmp" "$Q/$N.req"',
+    'for i in $(seq 1 240); do [ -s "$Q/$N.out" ] && break; sleep 0.05; done',
     'if [ ! -s "$Q/$N.out" ]; then echo ERR_NO_CAPTURE; echo "detail=el agente no contestó"; exit 42; fi',
     'cat "$Q/$N.out"',
     'st=$(head -1 "$Q/$N.out")',
@@ -69,7 +91,7 @@ function parseCaptureStdout(stdout, nowSec, maxAgeSec) {
   if (!/^[A-Za-z0-9+/=]+$/.test(b64) || b64.length < 32) {
     return { ok: false, error: 'ERR_NO_CAPTURE', detail: detail || 'sin jpeg', capturedAt: capturedAt };
   }
-  return { ok: true, b64: b64, capturedAt: capturedAt, detail: detail };
+  return { ok: true, b64: b64, capturedAt: capturedAt, detail: detail, optimized: lines.includes('optimized=1') };
 }
 
 function jpegFromB64(b64) {

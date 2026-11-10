@@ -14,6 +14,7 @@ captura, la petición termina en ERR_CAPTURE_TRANSIENT y el proceso sigue.
 from __future__ import annotations
 
 import base64
+import math
 import os
 import sys
 import time
@@ -22,7 +23,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from display_geometry import displays_from_ordered  # noqa: E402
 
-CAPTURE_VERSION = 3
+CAPTURE_VERSION = 4
+FRAME_CLI_VERSION = 1
 ATTEMPTS = 2
 CAPTURE_TIMEOUT_S = 5
 MIN_JPEG = 200
@@ -53,6 +55,68 @@ def parse_req(text):
         if line.startswith("display="):
             display = line.split("=", 1)[1].strip()
     return display
+
+
+def parse_frame_options(text):
+    """Only live requests opt in. Old screenshot/probe callers stay native."""
+    values = dict(line.split("=", 1) for line in str(text or "").splitlines() if "=" in line)
+    if "scale" not in values and "q" not in values:
+        return None
+    try:
+        scale = float(values["scale"]) if "scale" in values else None
+        quality = float(values.get("q", 60))
+        max_width = float(values["max_width"]) if "max_width" in values else None
+        if (scale is not None and not math.isfinite(scale)) or not math.isfinite(quality) or (max_width is not None and not math.isfinite(max_width)):
+            return None
+        if 0 < quality <= 1:
+            quality *= 100
+        return {"scale": None if scale is None else min(1, max(0.1, scale)),
+                "quality": int(min(95, max(20, quality))),
+                "max_width": None if max_width is None else round(min(5120, max(320, max_width)))}
+    except (ValueError, TypeError):
+        return None
+
+
+def frame_long_edge(width, height, options):
+    scale = options["scale"] if options["scale"] is not None else min(1, 1600 / width)
+    if options.get("max_width") is not None:
+        scale = min(scale, options["max_width"] / width)
+    return max(1, round(max(width, height) * scale))
+
+
+def jpeg_dimensions(blob):
+    """Read the native pixel dimensions, not NSScreen's Retina point size."""
+    if len(blob) < 4 or blob[:2] != b"\xff\xd8":
+        return None
+    at = 2
+    sof = (0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf)
+    while at + 3 < len(blob):
+        if blob[at] != 0xff:
+            return None
+        at += 1
+        while at < len(blob) and blob[at] == 0xff:
+            at += 1
+        if at >= len(blob):
+            return None
+        marker = blob[at]
+        at += 1
+        if marker in (0xd9, 0xda):
+            return None
+        if marker == 1 or 0xd0 <= marker <= 0xd8:
+            continue
+        if at + 2 > len(blob):
+            return None
+        size = int.from_bytes(blob[at:at + 2], "big")
+        if size < 2 or at + size > len(blob):
+            return None
+        if marker in sof:
+            if size < 8:
+                return None
+            height = int.from_bytes(blob[at + 3:at + 5], "big")
+            width = int.from_bytes(blob[at + 5:at + 7], "big")
+            return (width, height) if width and height else None
+        at += size
+    return None
 
 
 def claim_legacy(root):
@@ -124,6 +188,7 @@ def handle_request(req_path, backend, now=None, sleep_fn=None, attempts=ATTEMPTS
         return {"ok": False, "error": "ERR_NO_CAPTURE", "nonce": nonce}
 
     display_token = parse_req(text)
+    frame_options = parse_frame_options(text)
     displays = list(backend.displays() or [])
     from display_geometry import display_at
     target = display_at(displays, display_token)
@@ -139,8 +204,12 @@ def handle_request(req_path, backend, now=None, sleep_fn=None, attempts=ATTEMPTS
 
     last_detail = "SCREEN_CAPTURE_FAILED"
     for attempt in range(max(1, int(attempts))):
+        optimized = False
         try:
-            rc, err, blob = backend.capture(target)
+            if frame_options is not None and hasattr(backend, "capture_frame"):
+                rc, err, blob, optimized = backend.capture_frame(target, frame_options)
+            else:
+                rc, err, blob = backend.capture(target)
         except Exception as exc:  # el fallo de una petición no detiene el demonio
             rc, err, blob = 1, "RuntimeError: %s" % exc, b""
         err = str(err or "").strip().replace("\n", " ")
@@ -153,6 +222,7 @@ def handle_request(req_path, backend, now=None, sleep_fn=None, attempts=ATTEMPTS
                 "captured_at=%d" % taken,
                 "display=%d" % target["indice"],
                 "bytes=%d" % len(blob),
+                "optimized=%d" % bool(optimized),
             ])
             _drop(busy)
             return {"ok": True, "nonce": nonce, "display": target["indice"], "captured_at": taken, "bytes": len(blob)}
@@ -200,6 +270,12 @@ class ProductionBackend:
         return displays_from_ordered(nsscreen_raw())
 
     def capture(self, display):
+        return self._capture(display)[:3]
+
+    def capture_frame(self, display, options):
+        return self._capture(display, options)
+
+    def _capture(self, display, options=None):
         import subprocess
         import tempfile
         number = int(display["screencapture_d"])
@@ -216,9 +292,24 @@ class ProductionBackend:
             except OSError:
                 blob = b""
             err = (proc.stderr or b"").decode("utf-8", "replace")
-            return proc.returncode, err, blob
+            optimized = False
+            dims = jpeg_dimensions(blob) if proc.returncode == 0 and options else None
+            if dims:
+                width, height = dims
+                edge = frame_long_edge(width, height, options)
+                try:
+                    reduced = subprocess.run(
+                        ["/usr/bin/sips", "-Z", str(edge), "-s", "formatOptions", str(options["quality"]), name],
+                        capture_output=True, timeout=3,
+                    )
+                    candidate = Path(name).read_bytes()
+                    if reduced.returncode == 0 and _jpeg_b64(candidate) and jpeg_dimensions(candidate):
+                        blob, optimized = candidate, True
+                except (OSError, subprocess.SubprocessError):
+                    pass  # Fresh original travels to the hub for its fallback transform.
+            return proc.returncode, err, blob, optimized
         except Exception as exc:
-            return 1, "RuntimeError: %s" % exc, b""
+            return 1, "RuntimeError: %s" % exc, b"", False
         finally:
             try:
                 os.unlink(name)
@@ -264,7 +355,22 @@ def run_forever(root=None, backend=None, sleep_fn=None):
             service_once(root, backend)
         except Exception as exc:
             sys.stderr.write("capture loop: %s\n" % exc)
-        sleep_fn(0.2)
+        sleep_fn(0.03)
+
+
+def capture_stdout(text, backend, **kwargs):
+    """One live capture in the caller's existing SSH context, without launchd IPC.
+
+    Use the same validated request/response contract and retry/error handling as
+    the daemon. A private temporary queue cannot compete with other captures.
+    This grants no OS permission; screencapture still uses the caller's TCC.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="fleet-direct-") as directory:
+        request = Path(directory) / "frame.req"
+        request.write_text(text, encoding="utf-8")
+        result = handle_request(request, backend, **kwargs)
+        return result["ok"], request.with_suffix(".out").read_text(encoding="utf-8")
 
 
 def main(argv=None):
@@ -272,6 +378,16 @@ def main(argv=None):
     if "--version" in argv:
         print(CAPTURE_VERSION)
         return 0
+    if argv and argv[0] == "--frame":
+        try:
+            if len(argv) != 2 or len(argv[1]) > 2048:
+                raise ValueError("frame_request_invalid")
+            text = base64.b64decode(argv[1], validate=True).decode("ascii")
+            ok, output = capture_stdout(text, ProductionBackend())
+        except (ValueError, UnicodeError):
+            ok, output = False, "ERR_NO_CAPTURE\ndetail=frame_request_invalid\n"
+        sys.stdout.write(output)
+        return 0 if ok else 42
     if "--once" in argv:
         service_once(Path.home() / ".fleet", ProductionBackend())
         return 0

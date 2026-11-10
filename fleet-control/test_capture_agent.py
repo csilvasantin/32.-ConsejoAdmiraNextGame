@@ -3,6 +3,8 @@
 import importlib.util
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -56,6 +58,27 @@ class CaptureTests(unittest.TestCase):
         q = self.root / "capture-queue"
         q.mkdir(parents=True, exist_ok=True)
         (q / (nonce + ".req")).write_text("display=%s\n" % display, encoding="utf-8")
+
+    def test_direct_frame_uses_same_validation_and_capture_contract(self):
+        ok, output = CAP.capture_stdout("display=1\nscale=.3\nq=60\nmax_width=1600", self.backend, now=1000)
+        self.assertTrue(ok)
+        self.assertTrue(output.startswith("OK\n"))
+        self.assertIn("display=1", output)
+        self.assertIn("captured_at=1000", output)
+        ok, output = CAP.capture_stdout("display=99", self.backend, now=1001)
+        self.assertFalse(ok)
+        self.assertTrue(output.startswith("ERR_NO_SUCH_DISPLAY"))
+        self.backend.fail_remaining = 10
+        ok, output = CAP.capture_stdout("display=0", self.backend, now=1002, sleep_fn=lambda _s: None)
+        self.assertFalse(ok)
+        self.assertIn("ERR_CAPTURE_TRANSIENT", output)
+
+    def test_retina_width_cap_preserves_scale_upper_bound(self):
+        opts = CAP.parse_frame_options("scale=0.6\nq=60\nmax_width=1600")
+        self.assertEqual(CAP.frame_long_edge(5120, 2880, opts), 1600)
+        self.assertEqual(CAP.frame_long_edge(5120, 2880, CAP.parse_frame_options("scale=1\nq=80\nmax_width=2560")), 2560)
+        self.assertEqual(CAP.frame_long_edge(2560, 1440, opts), 1536)
+        self.assertIsNone(CAP.parse_frame_options("scale=.5\nmax_width=NaN"))
 
     def test_transient_then_next_request_works(self):
         (self.root / "capture.paused").write_text("1", encoding="utf-8")
@@ -161,6 +184,71 @@ class GeometryTests(unittest.TestCase):
         self.assertTrue(ok["ok"])
         self.assertEqual(posted[0]["text"], "ñ")
         self.assertNotIn("x", posted[0])
+
+
+class FrameOptionsTests(unittest.TestCase):
+    @staticmethod
+    def jpeg(width, height):
+        return b"\xff\xd8\xff\xc0\x00\x11\x08" + height.to_bytes(2, "big") + width.to_bytes(2, "big") + bytes(230)
+
+    def test_settings_are_opt_in_and_cannot_inject_commands(self):
+        self.assertIsNone(CAP.parse_frame_options("display=0\n"))
+        self.assertIsNone(CAP.parse_frame_options("display=0\nscale=nan\n"))
+        self.assertIsNone(CAP.parse_frame_options("q=$(bad)\n"))
+        self.assertEqual(CAP.parse_frame_options("scale=.5\nq=.6\n"), {"scale": .5, "quality": 60, "max_width": None})
+        self.assertEqual(CAP.parse_frame_options("scale=6\nq=600\n")["scale"], 1)
+
+    def test_origin_resizes_native_retina_pixels_and_preserves_normalized_geometry(self):
+        backend = CAP.ProductionBackend()
+        calls = []
+        def run(args, **kwargs):
+            calls.append(args)
+            if args[0].endswith("screencapture"):
+                Path(args[-1]).write_bytes(self.jpeg(2560, 1440))
+            else:
+                self.assertEqual(args[:6], ["/usr/bin/sips", "-Z", "1280", "-s", "formatOptions", "60"])
+                Path(args[-1]).write_bytes(self.jpeg(1280, 720))
+            return SimpleNamespace(returncode=0, stderr=b"")
+        with patch("subprocess.run", side_effect=run):
+            rc, _err, blob, optimized = backend.capture_frame({"screencapture_d": 2}, {"scale": .5, "quality": 60, "max_width": None})
+        self.assertEqual(rc, 0)
+        self.assertTrue(optimized)
+        self.assertEqual(CAP.jpeg_dimensions(blob), (1280, 720))
+        self.assertEqual(calls[0][-2], "2")
+        self.assertFalse(Path(calls[0][-1]).exists())
+
+    def test_origin_failure_preserves_original_for_hub_fallback_and_native_action_has_no_sips(self):
+        backend = CAP.ProductionBackend()
+        calls = []
+        source = self.jpeg(2560, 1440)
+        def run(args, **kwargs):
+            calls.append(args)
+            if args[0].endswith("screencapture"):
+                Path(args[-1]).write_bytes(source)
+                return SimpleNamespace(returncode=0, stderr=b"")
+            raise OSError("sips unavailable")
+        with patch("subprocess.run", side_effect=run):
+            result = backend.capture_frame({"screencapture_d": 1}, {"scale": .5, "quality": 60, "max_width": None})
+            self.assertEqual(result, (0, "", source, False))
+            calls.clear()
+            self.assertEqual(backend.capture({"screencapture_d": 1}), (0, "", source))
+            self.assertEqual(len(calls), 1)
+
+    def test_queue_reports_origin_optimization_without_changing_display(self):
+        root = Path(tempfile.mkdtemp())
+        q = root / "capture-queue"
+        q.mkdir()
+        (q / "live.req").write_text("display=1\nscale=.5\nq=60\n")
+        backend = FakeBackend()
+        got = []
+        def capture_frame(target, options):
+            got.append((target["indice"], options))
+            return 0, "", self.jpeg(1280, 720), True
+        backend.capture_frame = capture_frame
+        CAP.service_once(root, backend, now=1000)
+        self.assertIn("optimized=1", (q / "live.out").read_text())
+        self.assertEqual(got[0][0], 1)
+        self.assertEqual(got[0][1]["scale"], .5)
 
 
 if __name__ == "__main__":

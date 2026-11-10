@@ -39,6 +39,10 @@ const { createServiceBridge } = require('./service-bridge');
 const { createMachineRemoval, mintTicket } = require('./machine-removal');
 const { resolveMachine, unknownMachineBody } = require('./machine-id');
 const CaptureClient = require('./capture-client');
+const { parseFrameOptions, jpegDimensions, optimizeLiveFrame } = require('./live-frame-image');
+const { isPrivateServeRequest } = require('./private-network');
+const { createRelaySessionBridge, clearRelaySessionCookie } = require('./relay-session');
+const { isInteractiveEndpoint, createFleetRateLimits } = require('./rate-limits');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
@@ -77,7 +81,8 @@ const RELAY_LABEL = String(process.env.FLEET_RELAY_LABEL || os.hostname() || REL
 // —bloquearía al propio operador—: usamos tarpit creciente en fallos de auth,
 // un techo anti-flood y log de auditoría en fleet-control/audit.log.
 const RL_WINDOW_MS = 60000;
-const RL_MAX = 300;                          // techo de peticiones/min (anti-flood, no afecta a uso normal)
+const RL_MAX = 300;                          // presupuesto público/auth por IP y minuto
+const RL_INTERACTIVE_MAX = 3600;             // sesión humana: 30fps + entrada, sin gastar el presupuesto público
 const TARPIT_MAX_MS = 2000;                  // retardo máximo por fallo de auth
 const AUDIT_FILE = path.join(DIR, 'audit.log');
 
@@ -158,6 +163,9 @@ function mintYokupTicket(email) { return _yokupTickets.mint(email); }
 function consumeYokupTicket(ticket) { return _yokupTickets.consume(ticket); }
 const AUTH_EDGE_SHARED_SECRET = loadAuthEdgeSecretMaterial();
 const _sessionRegistry = createSessionRegistry({api:AUTH_SESSION_API, secret:AUTH_EDGE_SHARED_SECRET});
+const _relaySessionBridge = createRelaySessionBridge({
+  allowOrigins: ALLOW_ORIGINS, sessionState, isPrivateRequest: isPrivateServeRequest
+});
 
 // Verifica un ID token de Google con el endpoint tokeninfo (Google valida la
 // firma). Devuelve el email allowlisted o null.
@@ -208,7 +216,10 @@ function sessionFromReq(req) {
 }
 function appendSetCookie(res,value){const old=res.getHeader('Set-Cookie');res.setHeader('Set-Cookie',old?(Array.isArray(old)?old.concat(value):[old,value]):value);}
 function setSessionCookie(res, token, maxAge=Math.floor(SESSION_TTL_MS/1000)) { appendSetCookie(res,`${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`); }
-function clearSessionCookie(res) { appendSetCookie(res,`${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`); }
+function clearSessionCookie(res) {
+  appendSetCookie(res,`${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+  appendSetCookie(res, clearRelaySessionCookie());
+}
 function setChallengeCookie(res, state, maxAge=Math.floor(CHALLENGE_TTL_MS/1000), sameSite='Lax') { appendSetCookie(res,`${CHALLENGE_COOKIE}=${encodeURIComponent(state)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=${sameSite}`); }
 function clearChallengeCookie(res, sameSite='Lax') { appendSetCookie(res,`${CHALLENGE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=${sameSite}`); }
 function issueChallenge(returnTo='/', flow='popup') {
@@ -675,13 +686,8 @@ function clientIp(req) {
 function audit(ev) {
   try { fs.appendFile(AUDIT_FILE, JSON.stringify({ t: new Date().toISOString(), ...ev }) + '\n', () => {}); } catch (e) {}
 }
-const _hits = new Map();
-function rateLimited(ip) {
-  const now = Date.now();
-  const arr = (_hits.get(ip) || []).filter(ts => now - ts < RL_WINDOW_MS);
-  arr.push(now); _hits.set(ip, arr);
-  return arr.length > RL_MAX;
-}
+const _rateLimits = createFleetRateLimits({ windowMs: RL_WINDOW_MS, publicLimit: RL_MAX, interactiveLimit: RL_INTERACTIVE_MAX });
+function rateLimited(ip) { return _rateLimits.publicLimited(ip); }
 let _recentFails = [];
 function tarpitMs() {
   const now = Date.now();
@@ -695,10 +701,20 @@ async function gate(req, res, ip, allowToken) {
   const auth=await sessionState(sessionFromReq(req));
   if (auth.state===ACTIVE) {
     const mutationError=sessionMutationError(req,auth.session,ALLOW_ORIGINS);
-    if(mutationError){json(res,403,{error:mutationError});return false;}
+    if(mutationError){
+      if(req.fleetInteractive && rateLimited(ip)){audit({ip,ev:'rate_limited',url:req.url});json(res,429,{error:'demasiadas peticiones'});return false;}
+      json(res,403,{error:mutationError});return false;
+    }
+    if(req.fleetInteractive && _rateLimits.interactiveLimited(auth.session.jti)){
+      audit({ip,ev:'interactive_rate_limited',url:req.url});json(res,429,{error:'demasiadas peticiones de control'});return false;
+    }
     req.fleetSession = auth.session;
     return true;
   }
+  // These two routes defer public accounting until the human gate succeeds.
+  // Anonymous, revoked, read-only and invalid-CSRF requests still spend the
+  // original public budget; they never enter the larger session budget.
+  if(req.fleetInteractive && rateLimited(ip)){audit({ip,ev:'rate_limited',url:req.url});json(res,429,{error:'demasiadas peticiones'});return false;}
   // Sesión de agente (solo lectura). No sustituye a una sesión Google activa.
   const fleetAgent = agentFromReq(req);
   if (fleetAgent) {
@@ -858,11 +874,13 @@ const server = http.createServer(async (req, res) => {
   let url = requestUrl.pathname;
   if (url.startsWith(BASE)) url = url.slice(BASE.length) || '/';
 
-  if (rateLimited(ip)) { audit({ ip, ev: 'rate_limited', url }); return json(res, 429, { error: 'demasiadas peticiones' }); }
+  req.fleetInteractive = isInteractiveEndpoint(url, req.method);
+  if (!req.fleetInteractive && rateLimited(ip)) { audit({ ip, ev: 'rate_limited', url }); return json(res, 429, { error: 'demasiadas peticiones' }); }
 
   // salud (sin token)
   if (url === '/api/health' || url === '/health') return json(res, 200, {
     ok: true,
+    network: { private: isPrivateServeRequest(req) },
     service: 'fleet-control',
     relay: {
       id: RELAY_ID,
@@ -935,6 +953,31 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/auth/agente') {
     res.setHeader('Allow', 'POST');
     return json(res, 405, { error: 'method' });
+  }
+  // Transfer the current Google session to the direct Serve relay. The public
+  // origin issues only an opaque short-lived ticket; the session stays HttpOnly.
+  if (url === '/api/auth/relay-ticket' && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    if (!req.fleetSession || req.fleetAgent) return json(res, 403, { ok: false, error: 'sesión humana activa requerida' });
+    const result = _relaySessionBridge.issue(req, sessionFromReq(req), { state: ACTIVE, session: req.fleetSession });
+    return json(res, result.status, result.status === 200 ? { ...result.body, relay: RELAY_ID } : result.body);
+  }
+  if (url === '/api/auth/relay-ticket/consume' && req.method === 'POST') {
+    // Require JSON and bound the tiny one-time ticket body before redemption.
+    if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res, 403, { ok: false, error: 'origin no permitido' });
+    if (!isPrivateServeRequest(req)) return json(res, 403, { ok: false, error: 'relay privado requerido' });
+    if (String(req.headers['content-type'] || '').split(';', 1)[0].trim().toLowerCase() !== 'application/json') return json(res, 415, { ok: false, error: 'json requerido' });
+    const raw = await readRawBody(req, 2048);
+    let body;
+    try { body = raw == null ? null : JSON.parse(raw); } catch (_) { body = null; }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return json(res, 400, { ok: false, error: 'json no válido' });
+    const result = await _relaySessionBridge.consume(req, body.ticket);
+    if (result.cookie) appendSetCookie(res, result.cookie);
+    return json(res, result.status, result.body);
+  }
+  if (url === '/api/auth/relay-ticket' || url === '/api/auth/relay-ticket/consume') {
+    res.setHeader('Allow', 'POST');
+    return json(res, 405, { ok: false, error: 'method' });
   }
   if (url === '/api/auth/yokup-ticket' && req.method === 'POST') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
@@ -1319,11 +1362,13 @@ const server = http.createServer(async (req, res) => {
     const fn = resolveAction('screenshot', m);
     if (!fn) return json(res, 500, { error: 'sin acción screenshot' });
     // ?display=N → esa pantalla (FLT-1021). Sin parámetro, la principal (0).
-    let dsp;
+    let dsp, frameOptions;
     try { dsp = CaptureClient.parseDisplayIndex(q.get('display')); }
     catch (e) { return json(res, 400, { error: 'pantalla no válida', detail: String(e && e.message || e) }); }
+    try { frameOptions = parseFrameOptions(q); }
+    catch (e) { return json(res, 400, { error: 'ajustes de imagen no válidos', detail: String(e && e.message || e) }); }
     let cmd;
-    try { cmd = fn(dsp, m); }
+    try { cmd = platOf(m) === 'macos' ? CaptureClient.macosCaptureCommand(dsp, frameOptions) : fn(dsp, m); }
     catch (e) { return json(res, 400, { error: 'pantalla no válida', detail: String(e && e.message || e) }); }
     const r = await run(m, cmd, 22000);
     const parsed = CaptureClient.parseCaptureStdout(r.stdout, Date.now() / 1000);
@@ -1336,13 +1381,21 @@ const server = http.createServer(async (req, res) => {
       const fail = CaptureClient.liveFrameStatus(parsed.ok ? { error: 'ERR_NO_CAPTURE', detail: 'jpeg no válido' } : parsed);
       return json(res, fail.status, fail.body);
     }
+    const frame = parsed.optimized && jpegDimensions(jpeg)
+      ? { jpeg, size: jpegDimensions(jpeg), transformed: true, origin: true }
+      : await optimizeLiveFrame(jpeg, frameOptions);
+    if (frame.error) audit({ ip, ev: 'live_frame_transform_fail', machine: m.id, error: frame.error });
     res.writeHead(200, {
       'Content-Type': 'image/jpeg',
       'Cache-Control': 'no-store',
+      'Content-Length': String(frame.jpeg.length),
       'X-Capture-At': String(parsed.capturedAt || ''),
-      'X-Capture-Display': String(dsp)
+      'X-Capture-Display': String(dsp),
+      'X-Frame-Transform': frame.origin ? 'origin-sips' : frame.transformed ? 'sips' : 'original',
+      'X-Frame-Width': String(frame.size && frame.size.width || ''),
+      'X-Frame-Height': String(frame.size && frame.size.height || '')
     });
-    return res.end(jpeg);
+    return res.end(frame.jpeg);
   }
 
 

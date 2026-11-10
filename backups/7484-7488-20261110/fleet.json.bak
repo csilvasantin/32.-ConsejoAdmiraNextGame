@@ -1,0 +1,24 @@
+{
+  "team": "AdmiraNext Fleet",
+  "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows. host = MagicDNS <nombre>.tail48b61c.ts.net. Los equipos relayCapable pueden servir FleetControl y operar al resto por SSH; Mac Mini es una ruta preferida, no un punto único de fallo.",
+  "machines": [
+    { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Relay de control", "platform": "macos", "relayCapable": true, "signageBatch": false, "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookpro16", "name": "MacBook Pro 16", "emoji": "💻", "role": "Relay alternativo", "platform": "macos", "relayCapable": true, "signageBatch": true, "host": "macbook-pro-16.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookpronegro14", "name": "MacBook Pro Negro 14", "emoji": "💻", "role": "Desarrollo y pruebas", "platform": "macos", "signageBatch": false, "host": "macbookpronegro14.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookair16", "name": "MacBook Air 16", "emoji": "💻", "role": "Equipo · Trinity/Codex", "platform": "macos", "host": "macbookair16plata.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairplata", "name": "MacBook Air Plata", "emoji": "💻", "role": "COO · Operaciones", "platform": "macos", "signageBatch": true, "host": "macbookairplata.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairrosa", "name": "MacBook Air Rosa", "emoji": "💻", "role": "Equipo", "platform": "macos", "signageBatch": true, "host": "macbookairrosa.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookaircrema", "name": "MacBook Air Crema", "emoji": "💻", "role": "Equipo", "platform": "macos", "signageBatch": true, "host": "macbookaircrema.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairazul", "name": "MacBook Air Azul", "emoji": "💻", "role": "Equipo", "platform": "macos", "signageBatch": true, "host": "macbookairazul.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairluna", "name": "MacBook Air Luna", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairluna.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairluna1", "name": "MacBook Air Luna (2)", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairluna-1.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "dgx-spark", "name": "DGX Spark", "emoji": "🧠", "role": "Player DS · sesión csilva :2", "platform": "linux", "signageBatch": true, "host": "dgx-spark.tail48b61c.ts.net", "user": "bitsatoms", "signage": { "url": "https://www.admira.tv/canal", "screen": "dgx-spark", "start": "$HOME/.fleet/fleet-sesh /home/csilva/.fleet/ds-open.sh", "stop": "$HOME/.fleet/fleet-sesh /home/csilva/.fleet/ds-stop.sh" } },
+    { "id": "reuniones-1", "name": "REUNIONES-1", "emoji": "🪟", "role": "Reuniones · Windows", "platform": "windows", "signageBatch": true, "host": "reuniones-1.tail48b61c.ts.net", "user": "DigitalTwin" },
+    { "id": "thinkstation", "name": "ThinkStation PGX", "emoji": "🐧", "role": "Player DS · Linux (Ubuntu)", "platform": "linux", "host": "lenovo-thinkstation.tail48b61c.ts.net", "user": "test", "signage": { "url": "https://www.admira.tv/player", "start": "systemctl --user restart admira-signage", "stop": "systemctl --user stop admira-signage" } },
+    { "id": "asuszenbook", "name": "ASUS Zenbook", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "asuszenbook.tail48b61c.ts.net", "user": "carlos silva" },
+    { "id": "admiratwin", "name": "Admira Twin", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "admiratwin.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "metahuman", "name": "MetaHuman PC", "emoji": "🪟", "role": "Render · Windows", "perifericos": [{ "id": "streamdeck-xl", "name": "Elgato Stream Deck XL", "emoji": "🎛️", "tipo": "usb", "usb": "VID_0FD9&PID_006C", "url": "https://admira.store/objeto/stream-deck" }], "platform": "windows", "host": "metahuman.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "pc-gdg", "name": "PC GdG", "emoji": "🪟", "role": "PC Windows - GdG (Sitges)", "platform": "windows", "host": "pc-gdg.tail48b61c.ts.net", "user": "csilv" },
+    { "id": "asusfold", "name": "asusfold", "emoji": "🪟", "role": "Equipo AdmiraNeXT", "platform": "windows", "signageBatch": true, "host": "asusfold.tail48b61c.ts.net", "user": "csilv" }
+  ]
+}

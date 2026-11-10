@@ -47,8 +47,11 @@ function macosCaptureCommand(arg, frameOptions) {
     'D="$HOME/.fleet"',
     ...(frameOptions ? [
       // v4 optional CLI avoids the launchd capture context and its IPC/polling.
-      // Old v3/v4 agents keep the queue contract until the new file is installed.
-      'if grep -q "^FRAME_CLI_VERSION = 1$" "$D/fleet-capture.py" 2>/dev/null; then exec /usr/bin/python3 "$D/fleet-capture.py" --frame ' + shellQuote(liveRequest) + '; fi'
+      // SSH can have a different Screen Recording context than launchd. Keep
+      // CLI output private until it succeeds; otherwise let the graphical
+      // agent answer through the queue without a second response on stdout.
+      'if grep -q "^FRAME_CLI_VERSION = 1$" "$D/fleet-capture.py" 2>/dev/null; then ' +
+        'if F=$(/usr/bin/python3 "$D/fleet-capture.py" --frame ' + shellQuote(liveRequest) + ' 2>/dev/null) && [ "$(printf \'%s\\n\' "$F" | head -1)" = OK ]; then printf \'%s\\n\' "$F"; exit 0; fi; unset F; fi'
     ] : []),
     'Q="$D/capture-queue"',
     'mkdir -p "$Q"',

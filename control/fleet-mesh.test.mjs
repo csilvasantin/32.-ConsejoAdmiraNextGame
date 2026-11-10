@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 await import("./fleet-mesh.js");
 const { create } = globalThis.AdmiraFleetMesh;
@@ -279,6 +280,146 @@ const PUBLIC_BASE = "https://fleet.admira.live/api";
 const PRIVATE_BASE = "https://macmini.tail48b61c.ts.net/fleet/api";
 const PRIVATE_RELAYS = globalThis.AdmiraFleetMesh.DEFAULT_RELAYS.slice(0, 2);
 const health = (privateRoute) => json({ ok: true, service: "fleet-control", relay: { id: "hub-macmini" }, network: { private: privateRoute } });
+
+test("Studio tiene ruta Serve privada propia y conserva Mini y MBP16 como candidatos", async () => {
+  const defaults = globalThis.AdmiraFleetMesh.DEFAULT_RELAYS;
+  const studio = defaults.find((relay) => relay.id === "macstudio");
+  assert.equal(studio.base, "https://macstudio.tail48b61c.ts.net:8443/fleet/api");
+  assert.ok(defaults.find((relay) => relay.id === "macmini").priority < studio.priority);
+  assert.ok(defaults.find((relay) => relay.id === "macbookpro16").priority > studio.priority);
+  const mesh = create({
+    relays: [defaults[0], studio],
+    fetch: async (url) => {
+      if (url.endsWith("/health")) return health(url.startsWith(studio.base));
+      if (url.endsWith("/auth/session")) return json({ ok: true, csrf: "csrf-value" });
+      return json({ ok: true });
+    },
+  });
+  await mesh.probeAll();
+  assert.equal((await mesh.request("/live/frame?machine=macstudio")).__admiraMesh.relay.id, "macstudio");
+});
+
+test("logout envía el CSRF propio de cada relay y borra sólo tras confirmación", async () => {
+  const closes = [];
+  const mesh = create({
+    relays: RELAYS,
+    fetch: async (url, init = {}) => {
+      const host = new URL(url).host;
+      if (url.endsWith("/auth/session")) return json({ ok: true, csrf: "csrf-" + host });
+      if (url.endsWith("/auth/logout")) {
+        closes.push({ host, init });
+        assert.equal(mesh.snapshot().relays.find((entry) => entry.relay.base.startsWith("https://" + host)).session, true);
+      }
+      return json({ ok: true });
+    },
+  });
+  for (const relay of RELAYS) await mesh.request("/status", { relayId: relay.id });
+  await mesh.logoutAll();
+  assert.equal(closes.length, 2);
+  for (const { host, init } of closes) {
+    assert.equal(new Headers(init.headers).get("X-Fleet-CSRF"), "csrf-" + host);
+    assert.equal(init.credentials, "include");
+    assert.equal(init.redirect, "error");
+  }
+  assert.ok(mesh.snapshot().relays.every((entry) => !entry.session));
+  assert.equal(mesh.activeRelay(), null);
+});
+
+test("logout informa un cierre fallido, conserva esa sesión y permite reintentar", async () => {
+  let fail = true;
+  const mesh = create({
+    relays: RELAYS,
+    fetch: async (url) => {
+      if (url.endsWith("/auth/session")) return json({ ok: true, csrf: "csrf-value" });
+      if (url.startsWith(RELAYS[0].base) && url.endsWith("/auth/logout") && fail) return json({ error: "registry unavailable" }, { status: 503 });
+      return json({ ok: true });
+    },
+  });
+  for (const relay of RELAYS) await mesh.request("/status", { relayId: relay.id });
+  await assert.rejects(mesh.logoutAll(), /No se pudo cerrar la sesión.*Primary: HTTP 503/);
+  assert.deepEqual(mesh.snapshot().relays.map((entry) => entry.session), [true, false]);
+  fail = false;
+  await mesh.logoutAll();
+  assert.ok(mesh.snapshot().relays.every((entry) => !entry.session));
+});
+
+test("logout descubre la cookie de un host no usado sin bloquearse por un relay ajeno caído", async () => {
+  const closes = [];
+  const mesh = create({
+    relays: RELAYS,
+    fetch: async (url, init = {}) => {
+      if (url.startsWith(RELAYS[1].base)) throw new Error("offline");
+      if (url.endsWith("/auth/session")) return json({ ok: true, csrf: "discovered-csrf" });
+      closes.push(new Headers(init.headers).get("X-Fleet-CSRF"));
+      return json({ ok: true });
+    },
+  });
+  await mesh.logoutAll();
+  assert.deepEqual(closes, ["discovered-csrf"]);
+  assert.ok(mesh.snapshot().relays.every((entry) => !entry.session));
+});
+
+test("logout espera un bridge enviado y cierra su cookie antes de terminar", async () => {
+  let privateCookie = false;
+  let consumeStarted;
+  const consuming = new Promise((resolve) => { consumeStarted = resolve; });
+  let finishConsume;
+  const pendingConsume = new Promise((resolve) => { finishConsume = resolve; });
+  const closes = [];
+  const mesh = create({
+    relays: PRIVATE_RELAYS,
+    fetch: async (url, init = {}) => {
+      if (url.endsWith("/health")) return health(url.startsWith(PRIVATE_BASE));
+      if (url === PRIVATE_BASE + "/auth/session") return privateCookie
+        ? json({ ok: true, csrf: "private-csrf" }) : json({ ok: false }, { status: 401 });
+      if (url === PUBLIC_BASE + "/auth/session") return json({ ok: true, csrf: "public-csrf" });
+      if (url.endsWith("/auth/relay-ticket")) return json({ ok: true, ticket: "opaque-ticket", relay: "hub-macmini" });
+      if (url.endsWith("/auth/relay-ticket/consume")) {
+        consumeStarted();
+        await pendingConsume;
+        privateCookie = true;
+        return json({ ok: true });
+      }
+      if (url.endsWith("/auth/logout")) {
+        closes.push(url);
+        if (url.startsWith(PRIVATE_BASE)) {
+          assert.equal(privateCookie, true);
+          assert.equal(new Headers(init.headers).get("X-Fleet-CSRF"), "private-csrf");
+          privateCookie = false;
+        }
+      }
+      return json({ ok: true });
+    },
+  });
+  const probe = mesh.probeAll();
+  await consuming;
+  const closing = mesh.logoutAll();
+  assert.deepEqual(closes, [], "no cerrar antes de recibir el Set-Cookie pendiente");
+  await assert.rejects(mesh.request("/input", { method: "POST" }), /cierre de sesión en curso/);
+  finishConsume();
+  await Promise.all([probe, closing]);
+  assert.equal(privateCookie, false);
+  assert.equal(closes.length, 2);
+  assert.ok(mesh.snapshot().relays.every((entry) => !entry.session));
+});
+
+test("el panel muestra el cierre fallido sin salir ni recargar la página", async () => {
+  const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+  const source = html.match(/function forceRelogin\(\)\{[\s\S]*?\n\}/)[0];
+  let navigated = false;
+  const notices = [];
+  const logout = new Function("FLEET_MESH", "window", "location", "toast", source + ";return forceRelogin;")(
+    { logoutAll: async () => { throw new Error("Mac Mini: HTTP 503"); } },
+    { admiraGateLogout: () => { navigated = true; } },
+    { reload: () => { navigated = true; } },
+    (...args) => notices.push(args),
+  );
+  assert.equal(await logout(), false);
+  assert.equal(navigated, false);
+  assert.equal(notices.length, 1);
+  assert.equal(notices[0][1], "Cierre de sesión pendiente");
+  assert.match(notices[0][2], /Mac Mini: HTTP 503.*reintentar/);
+});
 
 test("una ruta privada con sesión propia sustituye a la puerta pública ya activa", async () => {
   const calls = [];

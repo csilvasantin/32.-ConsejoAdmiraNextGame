@@ -1,4 +1,4 @@
-/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.09.11.2026.control-lan
+/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.10.11.2026.control-lan
  *
  * Cliente de control sin punto único de fallo. Mantiene una sesión Google
  * independiente por relay, conmuta lecturas y comandos entre relays y adjunta
@@ -14,7 +14,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
   'use strict';
 
-  var VERSION = 'v.09.11.2026.control-lan';
+  var VERSION = 'v.10.11.2026.control-lan';
   var DEFAULT_RELAYS = [
     {
       // Arranque universal. Un sondeo breve, paralelo a las peticiones, permite
@@ -31,6 +31,12 @@
       label: 'Mac Mini',
       base: 'https://macmini.tail48b61c.ts.net/fleet/api',
       priority: 10
+    },
+    {
+      id: 'macstudio',
+      label: 'Mac Studio',
+      base: 'https://macstudio.tail48b61c.ts.net:8443/fleet/api',
+      priority: 15
     },
     {
       id: 'macbookpro16',
@@ -87,6 +93,8 @@
     var active = null;
     var sessions = {};
     var authGeneration = 0;
+    var loggingOut = false;
+    var logoutPromise = null;
     var privateProbes = {};
     var nextPrivateProbe = {};
     relays.forEach(function (r) { state[r.id] = { failures: 0, downUntil: 0, lastOk: 0, lastError: '', privateUntil: 0 }; });
@@ -180,6 +188,7 @@
       };
     }
     async function mint(relay, force, limitMs) {
+      if (loggingOut) throw new Error('cierre de sesión en curso');
       if (!force) {
         if (sessionFor(relay)) return true;
       }
@@ -248,6 +257,7 @@
       } catch (err) { throw new Error('sesión privada no disponible'); }
     }
     function probePrivate(relay, force) {
+      if (loggingOut) return Promise.resolve(null);
       if (privateProbes[relay.id]) return privateProbes[relay.id];
       if (!force && Date.now() < (nextPrivateProbe[relay.id] || 0)) return Promise.resolve(null);
       nextPrivateProbe[relay.id] = Date.now() + privateProbeIntervalMs;
@@ -283,6 +293,7 @@
       return privateProbes[relay.id];
     }
     function schedulePrivateProbes() {
+      if (loggingOut) return;
       relays.filter(knownDirect).forEach(function (relay) { probePrivate(relay, false); });
     }
     async function fetchRelay(relay, path, opts, commandId) {
@@ -419,11 +430,54 @@
         }
       }));
     }
-    async function logoutAll() {
+    function logoutAll() {
+      if (logoutPromise) return logoutPromise;
+      loggingOut = true;
       authGeneration += 1;
       relays.forEach(function (relay) { state[relay.id].privateUntil = 0; });
-      await Promise.all(relays.map(function(relay){return fetchFn(relay.base+'/auth/logout',{method:'POST',credentials:'include',cache:'no-store'}).catch(function(){});}));
-      sessions={}; active=null;
+      var pendingRelays = Object.keys(privateProbes);
+      // Un canje ya enviado puede recibir Set-Cookie aunque su generación haya
+      // caducado. Esperarlo asegura que el cierre borre esa cookie después.
+      var pending = pendingRelays.map(function (id) { return privateProbes[id].catch(function () {}); });
+      logoutPromise = (async function () {
+        await Promise.all(pending);
+        var failures = [];
+        await Promise.all(relays.map(async function (relay) {
+          var tracked = sessionFor(relay) || pendingRelays.includes(relay.id);
+          var ses = sessions[relay.id];
+          var timed = withTimeout({ method: 'GET', credentials: 'include', cache: 'no-store', redirect: 'error' }, relay.label + ' · cierre');
+          try {
+            // También puede haber cookie en un host aún no usado por la malla,
+            // o en un canje que acaba de terminar sin guardar sesión en memoria.
+            if (!ses) {
+              var probe = await fetchFn(relay.base + '/auth/session', timed.init);
+              if (probe.status === 401) { dropSession(relay); return; }
+              if (!probe.ok) throw new Error('HTTP ' + probe.status);
+              var body = await probe.json();
+              if (!body || !body.ok) throw new Error('auth sin sesión');
+              ses = { csrf: String(body.csrf || ''), agent: body.agent === true, readOnly: body.readOnly === true };
+              if (!ses.agent && !ses.csrf) throw new Error('auth sin CSRF');
+              sessions[relay.id] = ses;
+              tracked = true;
+            }
+            timed.cancel();
+            timed = withTimeout({ method: 'POST', credentials: 'include', cache: 'no-store', redirect: 'error',
+              headers: ses.csrf ? { 'X-Fleet-CSRF': ses.csrf } : {} }, relay.label + ' · cierre');
+            var response = await fetchFn(relay.base + '/auth/logout', timed.init);
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            var result = await response.json();
+            if (!result || !result.ok) throw new Error('cierre no confirmado');
+            dropSession(relay);
+          } catch (err) {
+            // Un relay sin sesión conocida y sin conexión no impide cerrar los
+            // hosts usados. Un fallo en una sesión activa sí debe mostrarse.
+            if (tracked) failures.push(relay.label + ': ' + String(timed.explain(err).message || 'sin respuesta'));
+          } finally { timed.cancel(); }
+        }));
+        if (active && !sessionFor(active)) active = null;
+        if (failures.length) throw new Error('No se pudo cerrar la sesión · ' + failures.join(' · '));
+      })().finally(function () { loggingOut = false; logoutPromise = null; });
+      return logoutPromise;
     }
     function agentReadOnly() {
       for (var i = 0; i < relays.length; i++) {

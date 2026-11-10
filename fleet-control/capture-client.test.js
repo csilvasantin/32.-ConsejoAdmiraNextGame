@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { execFileSync, spawn, spawnSync } = require('node:child_process');
 const C = require('./capture-client');
 
 function assertPlist(file, home) {
@@ -47,6 +47,72 @@ test('live opts reach the origin queue; legacy screenshots stay native and v3 is
   assert.equal(C.parseCaptureStdout('OK\n' + jpeg + '\ncaptured_at=1000\noptimized=1\n', 1001).optimized, true);
   assert.equal(C.parseCaptureStdout('OK\n' + jpeg + '\ncaptured_at=1000\n', 1001).optimized, false);
 });
+
+test('live CLI success returns once without asking the graphical queue', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cli-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(home, '.fleet'));
+  fs.writeFileSync(path.join(home, '.fleet/fleet-capture.py'), 'FRAME_CLI_VERSION = 1\n');
+  const fakePython = path.join(home, 'python3');
+  fs.writeFileSync(fakePython, '#!/bin/bash\nprintf "%s\\n" "$FAKE_CLI_STDOUT"\nexit "$FAKE_CLI_STATUS"\n', { mode: 0o755 });
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');
+  const output = 'OK\n' + jpeg + '\ncaptured_at=1000\noptimized=1\n';
+  const command = C.macosCaptureCommand(0, { scale: 0.5, quality: 60 }).replace('/usr/bin/python3', C.shellQuote(fakePython));
+  const result = spawnSync('bash', ['-c', command], {
+    env: { ...process.env, HOME: home, FAKE_CLI_STDOUT: output.trimEnd(), FAKE_CLI_STATUS: '0' }, encoding: 'utf8', timeout: 5000
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, output);
+  assert.equal(fs.existsSync(path.join(home, '.fleet/capture-queue')), false);
+});
+
+for (const scenario of [
+  { name: 'CLI permission failure', cliStatus: '42', queueOk: true },
+  { name: 'CLI error with an incorrect zero exit status', cliStatus: '0', queueOk: true },
+  { name: 'both capture contexts failing', cliStatus: '42', queueOk: false }
+]) {
+  test('live capture falls back through the real shell queue: ' + scenario.name, (t) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'fleet-cli-'));
+    t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+    fs.mkdirSync(path.join(home, '.fleet'));
+    fs.writeFileSync(path.join(home, '.fleet/fleet-capture.py'), 'FRAME_CLI_VERSION = 1\n');
+    const fakePython = path.join(home, 'python3');
+    fs.writeFileSync(fakePython, '#!/bin/bash\nprintf "%s\\n" "$FAKE_CLI_STDOUT"\necho "CLI context rejected" >&2\nexit "$FAKE_CLI_STATUS"\n', { mode: 0o755 });
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');
+    const output = scenario.queueOk ? 'OK\n' + jpeg + '\ncaptured_at=1000\noptimized=1\n'
+      : 'ERR_CAPTURE_TRANSIENT\ncaptured_at=1000\ndetail=graphical capture failed\n';
+    // A separate process stands in for the LaunchAgent: it consumes the
+    // generated request and writes exactly the queue response the hub reads.
+    const agent = spawn(process.execPath, ['-e', `
+      const fs = require('node:fs'), path = require('node:path');
+      const home = process.argv[1], response = process.argv[2];
+      const queue = path.join(home, '.fleet/capture-queue');
+      const stop = setTimeout(() => process.exit(1), 5000);
+      const poll = setInterval(() => {
+        const request = fs.existsSync(queue) && fs.readdirSync(queue).find(name => name.endsWith('.req'));
+        if (!request) return;
+        fs.writeFileSync(path.join(home, 'queue-request'), fs.readFileSync(path.join(queue, request)));
+        fs.writeFileSync(path.join(queue, request.replace(/\\.req$/, '.out')), response);
+        clearInterval(poll); clearTimeout(stop);
+      }, 5);
+    `, home, output], { stdio: 'ignore' });
+    t.after(() => agent.kill());
+    const command = C.macosCaptureCommand(1, { scale: 0.5, quality: 60, maxWidth: 1600 }).replace('/usr/bin/python3', C.shellQuote(fakePython));
+    const result = spawnSync('bash', ['-c', command], {
+      env: { ...process.env, HOME: home, FAKE_CLI_STDOUT: 'ERR_CAPTURE_TRANSIENT\ndetail=CLI permission denied', FAKE_CLI_STATUS: scenario.cliStatus },
+      encoding: 'utf8', timeout: 5000
+    });
+    assert.equal(result.status, scenario.queueOk ? 0 : 42, result.stderr);
+    assert.equal(result.stdout, output);
+    assert.equal(result.stderr, '');
+    assert.equal(fs.readFileSync(path.join(home, 'queue-request'), 'utf8'), 'display=1\nscale=0.5\nq=60\nmax_width=1600\n');
+    assert.deepEqual(fs.readdirSync(path.join(home, '.fleet/capture-queue')), []);
+    const parsed = C.parseCaptureStdout(result.stdout, 1001);
+    assert.equal(parsed.ok, scenario.queueOk);
+    if (scenario.queueOk) assert.ok(C.jpegFromB64(parsed.b64));
+    else assert.equal(parsed.detail, 'graphical capture failed');
+  });
+}
 
 test('frescura, pantalla inexistente y fallo transitorio no se leen como permiso ni como jpeg', () => {
   const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(220)]).toString('base64');

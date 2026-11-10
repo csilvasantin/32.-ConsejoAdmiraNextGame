@@ -1239,7 +1239,9 @@ function bridgeFallo(r){
 // login de Google (cred fresco). Es la red de seguridad si el refresco silencioso
 // no es posible (One Tap suprimido, varias cuentas, etc.).
 function forceRelogin(){
-  Promise.resolve(FLEET_MESH.logoutAll()).then(()=>window.admiraGateLogout?window.admiraGateLogout():location.reload());
+  return Promise.resolve().then(()=>FLEET_MESH.logoutAll())
+    .then(()=>window.admiraGateLogout?window.admiraGateLogout():location.reload())
+    .catch(err=>{toast('warn','Cierre de sesión pendiente',String(err&&err.message||'sin respuesta')+' · vuelve a pulsar cerrar sesión para reintentar');return false;});
 }
 
 /* ---------- fondo de pantalla (persona) por máquina ----------

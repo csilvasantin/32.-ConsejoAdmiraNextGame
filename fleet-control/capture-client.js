@@ -57,7 +57,10 @@ function macosCaptureCommand(arg, frameOptions) {
     'mkdir -p "$Q"',
     'N="fc-$(date +%s)-$$-$RANDOM"',
     'case "$N" in *[!A-Za-z0-9._-]*) echo ERR_NO_CAPTURE; exit 42;; esac',
-    'printf "display=' + dsp + '\\n' + settings + '" > "$Q/$N.req"',
+    // Publish only complete requests: launchd may notice a newly opened file
+    // before printf has finished writing its last settings line.
+    'printf "display=' + dsp + '\\n' + settings + '" > "$Q/$N.tmp"',
+    'mv "$Q/$N.tmp" "$Q/$N.req"',
     'for i in $(seq 1 240); do [ -s "$Q/$N.out" ] && break; sleep 0.05; done',
     'if [ ! -s "$Q/$N.out" ]; then echo ERR_NO_CAPTURE; echo "detail=el agente no contestó"; exit 42; fi',
     'cat "$Q/$N.out"',

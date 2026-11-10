@@ -97,7 +97,10 @@ for (const scenario of [
       }, 5);
     `, home, output], { stdio: 'ignore' });
     t.after(() => agent.kill());
-    const command = C.macosCaptureCommand(1, { scale: 0.5, quality: 60, maxWidth: 1600 }).replace('/usr/bin/python3', C.shellQuote(fakePython));
+    // Force the request writer to pause between settings. A watcher must
+    // never discover .req with the final max_width line still unwritten.
+    const slowPrintf = 'printf() { case "$1" in display=*) builtin printf "${1:0:11}"; sleep 0.1; builtin printf "${1:11}";; *) builtin printf "$@";; esac; }; ';
+    const command = slowPrintf + C.macosCaptureCommand(1, { scale: 0.5, quality: 60, maxWidth: 1600 }).replace('/usr/bin/python3', C.shellQuote(fakePython));
     const result = spawnSync('bash', ['-c', command], {
       env: { ...process.env, HOME: home, FAKE_CLI_STDOUT: 'ERR_CAPTURE_TRANSIENT\ndetail=CLI permission denied', FAKE_CLI_STATUS: scenario.cliStatus },
       encoding: 'utf8', timeout: 5000

@@ -14,7 +14,7 @@ const assets = [
   {
     path: '/control/fleet-mesh.js',
     file: new URL('./fleet-mesh.js', import.meta.url),
-    release: '20260903-r1',
+    release: '20261110-control-lan',
   },
 ];
 

@@ -455,7 +455,7 @@
    "location": "Madrid",
    "platform": "Windows",
    "status": "idle",
-   "note": "Alta #7469 (2026-11-09). LAN 192.168.1.201. Tailscale sin IP 100.x aún. sshd Running.",
+   "note": "Alta #7469 (2026-11-09). LAN 192.168.1.201. Tailscale sin IP 100.x aún. sshd Running. Antes MetaHuman (#7488): Stream Deck XL movido aquí.",
    "ssh": {
     "enabled": true,
     "user": "csilv",
@@ -470,7 +470,18 @@
    "mac_discovered_at": "2026-11-09",
    "mac_source": "encargo #7469 (verificado 2026-11-09 Madrid)",
    "wol": "Activado",
-   "machineId": "7d817289-d0a8-45ea-965a-0a8271b0c0d5"
+   "machineId": "7d817289-d0a8-45ea-965a-0a8271b0c0d5",
+   "perifericos": [
+    {
+     "id": "streamdeck-xl",
+     "name": "Elgato Stream Deck XL",
+     "emoji": "🎛️",
+     "tipo": "usb",
+     "usb": "VID_0FD9&PID_006C",
+     "serial": "CL37J1A02733",
+     "url": "https://www.admira.store/objeto/stream-deck/"
+    }
+   ]
   },
   {
    "id": "admira-admiranext02",
@@ -526,6 +537,52 @@
    "mac_discovered_at": "2026-11-09",
    "mac_source": "encargo #7469 (verificado 2026-11-09 Madrid)",
    "wol": "Habilitado (pendiente confirmar)",
+   "machineId": ""
+  },
+  {
+   "id": "admira-admiranext04",
+   "member": "AdmiraNeXT04",
+   "name": "AdmiraNeXT04",
+   "unitType": "worker",
+   "color": "grafito",
+   "role": "PC AdmiraNeXT · Windows",
+   "machineRole": "PC de la flota AdmiraNeXT",
+   "location": "Madrid",
+   "platform": "Windows",
+   "status": "idle",
+   "note": "Alta #7484 (2026-11-10). Ficha mínima: no está en Grok Bot; faltan LAN, MAC, usuario y Tailscale.",
+   "ssh": {
+    "enabled": false,
+    "user": "",
+    "host": "",
+    "host_local": "AdmiraNeXT04",
+    "ip_tailscale": "",
+    "connect_tailscale": ""
+   },
+   "mac_address": "",
+   "machineId": ""
+  },
+  {
+   "id": "admira-admiranext05",
+   "member": "AdmiraNeXT05",
+   "name": "AdmiraNeXT05",
+   "unitType": "worker",
+   "color": "grafito",
+   "role": "PC AdmiraNeXT · Windows",
+   "machineRole": "PC de la flota AdmiraNeXT",
+   "location": "Madrid",
+   "platform": "Windows",
+   "status": "idle",
+   "note": "Alta #7484 (2026-11-10). Tailscale OK admiranext05 (100.94.142.59), presence/poller como PCCocina. Faltan LAN/MAC/usuario.",
+   "ssh": {
+    "enabled": false,
+    "user": "",
+    "host": "admiranext05.tail48b61c.ts.net",
+    "host_local": "AdmiraNeXT05",
+    "ip_tailscale": "100.94.142.59",
+    "connect_tailscale": ""
+   },
+   "mac_address": "",
    "machineId": ""
   }
  ]

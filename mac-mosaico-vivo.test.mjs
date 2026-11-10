@@ -46,7 +46,7 @@ test('#5114 401 no apaga el vivo 5 min: reintento corto y sin sesión no se pide
 });
 
 test('#5114 cache-bust y estilo del sello', () => {
-  assert.match(html, /assets\/mac-hoy\.js\?v=20261004-5114-vivo/);
-  assert.match(html, /assets\/mac-remote\.js\?v=20261004-5114-vivo/);
+  assert.match(html, /assets\/mac-hoy\.js\?v=20261108-7460-cli/);
+  assert.match(html, /assets\/mac-remote\.js\?v=20261024-bloqueada/);
   assert.match(html, /\.mac-hoy-tile-time\s*\{/);
 });

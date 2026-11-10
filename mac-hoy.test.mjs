@@ -204,8 +204,8 @@ test('la vista frontal tiene sus propios mandos de misión', () => {
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   // Por clase, de una vez: mesa, vista grande y barra llevan las mismas.
   assert.match(src, /mac-hoy-mouse, \.mac-hoy-front-mouse/);
-  assert.match(src, /mostrarProyectoAnterior\(root, fetchImpl, remotePersona\)/);
-  assert.match(src, /mando\('\.mac-hoy-keys, \.mac-hoy-front-keys', -1\)/);
+  assert.match(src, /openUltraDetalle\(root, fetchImpl\)/);
+  assert.match(src, /mando\('\.mac-hoy-keys, \.mac-hoy-front-keys', -1, 1\)/);
   // y al abrirla, la ficha se pasea igual que en la mesa
   assert.match(src, /paintCrt\(front, lastText\)\.then\(\(\) => paseaTexto\(front\)\)/);
 });

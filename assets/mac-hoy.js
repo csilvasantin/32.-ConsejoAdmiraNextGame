@@ -1101,8 +1101,513 @@ export function clearRemote(root = lastRoot || (typeof document !== 'undefined' 
 export function closeFront(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
   focused = false;
   pararDetalle();
+  closeUltraDetalle();
   const el = root && root.querySelector('#mac-hoy-front');
   if (el) el.classList.remove('on');
+}
+
+/* ULTRADETALLE (#7460). Overlay a viewport completo (patrón .mac-ultra).
+   requestFullscreen solo con el botón explícito. No abre grokbot/remote. */
+export const DEEPAGENT_SEATS = ['Neo', 'Trinity', 'Oraculo', 'Morfeo', 'Smith', 'Merovingio'];
+export const BOLA_TTL_MS = 10 * 60 * 1000;
+export const DATO_VACIO = 'sin datos actuales';
+export const SESION_SOLO_LECTURA = 'No hay fuente pública para incrustar la sesión en vivo. Representación de solo lectura.';
+export const SESION_SIN_PANE = 'No hay captura de terminal para la sesión verificada. El visor no publica esa sesión.';
+export const SESION_CAPTURA_TERMINAL = 'Captura de terminal · solo lectura.';
+export const VISOR_PANE_URL = '/api/visor/pane?g=6';
+export const VISOR_CADENCIA_S = 3;
+const CONSEJERO_KEYS = new Set(['jobs', 'wozniak', 'lucas', 'disney', 'musk', 'huang', 'elon', 'jensen', 'steve', 'walt', 'george']);
+const ordenesDeepAgent = new Set();
+let ultraOverlay = null;
+let ultraEnteredFullscreen = false;
+
+function normClave(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+function esClaveConsejero(n) {
+  if (!n) return false;
+  if (CONSEJERO_KEYS.has(n)) return true;
+  const last = n.split(/[^a-z0-9]+/).filter(Boolean).pop();
+  if (CONSEJERO_KEYS.has(last)) return true;
+  return MOSAIC_SEATS.some((s) => {
+    const k = normClave(s);
+    return n === k || n.startsWith(k);
+  });
+}
+export function deepAgentId(nombre) {
+  const n = normClave(String(nombre || '').split(/\s*[·|]\s*/)[0]);
+  if (!n || esClaveConsejero(n)) return null;
+  return DEEPAGENT_SEATS.find((a) => {
+    const k = normClave(a);
+    return n === k || n.startsWith(k + '-');
+  }) || null;
+}
+export function maqClave(m) {
+  return String(m || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\.local$/, '').replace(/[^a-z0-9]/g, '');
+}
+export function etiquetaDeepAgent(id) {
+  return id === 'Oraculo' ? 'Oráculo' : (id || '');
+}
+export function capturaRealSrc(src) {
+  const s = String(src || '').trim();
+  if (!s || /^data:image\/svg/i.test(s)) return '';
+  if (/^https?:\/\//i.test(s) || /^blob:/i.test(s) || /^data:image\/(jpeg|jpg|png|webp|gif)/i.test(s)) return s;
+  return '';
+}
+export function datoActual(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (!s || s === '—' || s === 'sin datos' || s === 'sin misión') return DATO_VACIO;
+  return s;
+}
+export function superficiesVerificadas(tarjeta = {}) {
+  const out = [];
+  const host = String(tarjeta.host || tarjeta.agent_host || '').trim().toLowerCase();
+  if (host === 'cli' || host === 'app') {
+    out.push({
+      tipo: host,
+      maquina: tarjeta.maquina || '',
+      sesion: tarjeta.session_id || '',
+      fuente: tarjeta.fuente || '',
+    });
+  }
+  for (const s of (Array.isArray(tarjeta.superficies) ? tarjeta.superficies : [])) {
+    if (!s) continue;
+    const t = String(s.tipo || '').toLowerCase();
+    if (t !== 'cli' && t !== 'app') continue;
+    out.push({
+      tipo: t,
+      maquina: s.maquina || '',
+      sesion: s.sesion || '',
+      fuente: s.fuente || tarjeta.fuente || '',
+    });
+  }
+  return out;
+}
+export function tipoSesionVerificado(tarjeta = {}) {
+  const list = Array.isArray(tarjeta) ? tarjeta : [tarjeta];
+  const tipos = new Set(list.flatMap(superficiesVerificadas).map((s) => s.tipo));
+  if (tipos.has('cli')) return 'CLI';
+  if (tipos.has('app')) return 'Desktop app';
+  return 'desconocido';
+}
+export function sesionVerificada(tarjetas) {
+  const list = Array.isArray(tarjetas) ? tarjetas : (tarjetas ? [tarjetas] : []);
+  const clis = list.flatMap(superficiesVerificadas).filter((s) => s.tipo === 'cli');
+  const latidoMaqs = new Set(clis
+    .filter((s) => /^(latido|heartbeat|process_snapshot)$/i.test(String(s.fuente || '')) && s.maquina)
+    .map((s) => maqClave(s.maquina)));
+  const named = clis.filter((s) => String(s.sesion || '').trim());
+  const onLatido = latidoMaqs.size ? named.filter((s) => latidoMaqs.has(maqClave(s.maquina))) : named;
+  const pool = onLatido.length ? onLatido : named;
+  const uniq = [...new Set(pool.map((s) => String(s.sesion).trim()))];
+  if (uniq.length !== 1) return { sesion: '', maquina: '', fuente: '' };
+  const hit = pool.find((s) => String(s.sesion).trim() === uniq[0]);
+  return { sesion: uniq[0], maquina: (hit && hit.maquina) || '', fuente: (hit && hit.fuente) || '' };
+}
+export function llaveVisor(storage) {
+  try {
+    const s = storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    const v = s && s.getItem && s.getItem('visorLlave');
+    return (v && String(v).trim().length >= 20) ? String(v).trim() : '';
+  } catch (_) { return ''; }
+}
+export function paneDeAgente(fichas, agenteId, sesion) {
+  const want = String(sesion || '').trim();
+  if (!agenteId || !want) return null;
+  const rows = Array.isArray(fichas) ? fichas : [];
+  const hit = rows.find((f) => {
+    if (!f) return false;
+    const id = deepAgentId(f.titulo || f.sesion || f.nombre);
+    return id === agenteId && String(f.sesion || '').trim() === want;
+  });
+  if (!hit || !Array.isArray(hit.lineas) || !hit.lineas.length) return null;
+  return {
+    lineas: hit.lineas.slice(-80).map((l) => String(l == null ? '' : l)),
+    sesion: String(hit.sesion),
+    host: hit.host || '',
+    ts: hit.cambio || hit.ts || null,
+    cadenciaS: VISOR_CADENCIA_S,
+    fuente: 'visor/pane',
+  };
+}
+export function estaTrabajandoDeepAgent(tarjeta = {}) {
+  const e = String(tarjeta.estado || '').toLowerCase();
+  if (e === 'verde' || e === 'amarillo') return true;
+  if (Number(tarjeta.enCurso) > 0) return true;
+  const modo = String(tarjeta.mode || tarjeta.modo || '').toLowerCase();
+  return modo === 'trabajando' || modo === 'working';
+}
+export function evidenciaSesionMs(tarjeta = {}, extra = {}, now = Date.now()) {
+  const vals = [extra.capturaAt, extra.latidoAt, extra.evidenciaAt, tarjeta.latidoAt, tarjeta.capturaAt, tarjeta.ultimaActividad];
+  if (tarjeta.actividad && tarjeta.actividad.ts) vals.push(tarjeta.actividad.ts);
+  let best = 0;
+  for (const v of vals) {
+    if (v == null || v === '') continue;
+    let n = typeof v === 'number' ? v : (/^\d+$/.test(String(v)) ? Number(v) : Date.parse(v));
+    if (!Number.isFinite(n) || n <= 0) continue;
+    if (n < 1e12) n *= 1000;
+    if (n > best) best = n;
+  }
+  if (!best && tarjeta.haceS != null && Number.isFinite(Number(tarjeta.haceS))) best = now - Number(tarjeta.haceS) * 1000;
+  return best;
+}
+export function bolaEstado(tarjeta = {}, extra = {}, now = Date.now()) {
+  const at = evidenciaSesionMs(tarjeta, extra, now);
+  if (!at || now - at > BOLA_TTL_MS) return 'amarillo';
+  return estaTrabajandoDeepAgent(tarjeta) ? 'rojo' : 'verde';
+}
+export function etiquetaBola(bola) {
+  return bola === 'rojo' ? 'trabajando' : bola === 'verde' ? 'libre' : 'no lo sabemos';
+}
+export function agenteDeMision(mission) {
+  if (!mission) return null;
+  const raws = [mission.persona, mission.assignee].filter(Boolean);
+  if (!raws.length) return null;
+  const ids = raws.map((x) => deepAgentId(x));
+  if (ids.some((id) => !id)) return null;
+  if (ids.some((id) => id !== ids[0])) return null;
+  return ids[0];
+}
+function tarjetasDe(tarjeta) {
+  return Array.isArray(tarjeta) ? tarjeta.filter(Boolean) : (tarjeta ? [tarjeta] : []);
+}
+function textoMision(t) {
+  if (!t) return '';
+  if (t.encargo) return t.encargo;
+  if (t.tarea) return t.tarea;
+  if (t.foco && typeof t.foco === 'object') return t.foco.proyecto || '';
+  return t.foco || '';
+}
+export function fichaDeepAgent(tarjeta, extra = {}, now = Date.now()) {
+  const tarjetas = tarjetasDe(tarjeta);
+  const id = tarjetas.map((t) => deepAgentId(t && t.agente)).find(Boolean);
+  if (!id) return null;
+  const elig = sesionVerificada(tarjetas);
+  const base = tarjetas.find((t) => superficiesVerificadas(t).some((s) => s.sesion && s.sesion === elig.sesion)) || tarjetas[0];
+  const src = capturaRealSrc(extra.src || extra.image || '');
+  const bola = bolaEstado(base, extra, now);
+  const tipo = tipoSesionVerificado(tarjetas);
+  const ultima = tarjetas.map((t) => t.actividad && t.actividad.fuente).find(Boolean) || extra.ultimaAccion || '';
+  let evidenciaAt = 0;
+  for (const t of tarjetas) evidenciaAt = Math.max(evidenciaAt, evidenciaSesionMs(t, extra, now) || 0);
+  const lineas = Array.isArray(extra.lineas) ? extra.lineas : [];
+  const hayPane = lineas.length > 0;
+  return {
+    id,
+    nombre: etiquetaDeepAgent(id),
+    estado: etiquetaBola(bola),
+    bola,
+    tipo,
+    mision: datoActual(tarjetas.map(textoMision).find(Boolean)),
+    ultimaAccion: datoActual(ultima),
+    equipo: datoActual(elig.maquina || extra.equipo || base.maquina),
+    sesion: datoActual(elig.sesion),
+    capturaAt: extra.capturaAt || null,
+    evidenciaAt: evidenciaAt || null,
+    fuente: datoActual(hayPane ? (extra.fuentePane || extra.fuente) : (src ? (extra.fuente || base.fuente) : (base.fuente || extra.fuente || elig.fuente))),
+    src: hayPane ? '' : src,
+    lineas,
+    cadenciaS: hayPane ? (extra.cadenciaS || VISOR_CADENCIA_S) : null,
+    trabajando: tarjetas.some(estaTrabajandoDeepAgent),
+    lectura: hayPane ? SESION_CAPTURA_TERMINAL : (elig.sesion ? SESION_SIN_PANE : SESION_SOLO_LECTURA),
+  };
+}
+export function _resetOrdenesDeepAgent() { ordenesDeepAgent.clear(); }
+export async function enviarOrdenDeepAgent({ agente, texto, msg_id } = {}, fetchImpl) {
+  const dest = deepAgentId(agente);
+  if (!dest) return { ok: false, error: 'indisponible' };
+  const id = String(msg_id || '').trim();
+  if (id && ordenesDeepAgent.has(id)) return { ok: true, duplicado: true };
+  if (id) ordenesDeepAgent.add(id);
+  // Canal oficial: MCP consejero_mensaje / consejero_bandeja / consejero_responder.
+  // En el navegador no hay POST web verificado hacia un DeepAgent
+  // (la bandeja entre consejeros es solo lectura; el chat de silla es de consejeros).
+  // Un envío: no se mapea a un consejero falso ni se llama al remoto.
+  void fetchImpl; void texto;
+  return { ok: false, error: 'indisponible' };
+}
+export function isUltraOpen() { return !!ultraOverlay; }
+
+function horaCapturaUltra(ms) {
+  if (ms == null || ms === '') return '—';
+  let n = typeof ms === 'number' ? ms : (/^\d+$/.test(String(ms)) ? Number(ms) : Date.parse(ms));
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  if (n < 1e12) n *= 1000;
+  try {
+    return new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(n));
+  } catch (_) { return '—'; }
+}
+
+function bolasEstadoNode(doc, bola) {
+  const wrap = doc.createElement('span');
+  wrap.className = 'mac-ultra__bolas';
+  wrap.setAttribute('title', 'Metáfora de estado · rojo trabajando · verde libre · amarillo no lo sabemos');
+  wrap.setAttribute('aria-label', 'Estado: ' + etiquetaBola(bola));
+  ;['rojo', 'amarillo', 'verde'].forEach((c) => {
+    const b = doc.createElement('i');
+    b.className = 'mac-ultra__bola mac-ultra__bola--' + c + (c === bola ? ' is-on' : '');
+    wrap.append(b);
+  });
+  return wrap;
+}
+
+function metaSesion(ficha) {
+  const rows = [
+    ['Tipo', ficha.tipo || 'desconocido'],
+    ['Misión', datoActual(ficha.mision)],
+    ['Última acción', datoActual(ficha.ultimaAccion)],
+    ['Máquina', datoActual(ficha.equipo)],
+    ['Sesión', datoActual(ficha.sesion)],
+    ['Hora', ficha.evidenciaAt ? horaCapturaUltra(ficha.evidenciaAt) : DATO_VACIO],
+    ['Fuente', datoActual(ficha.fuente)],
+  ];
+  if (ficha.cadenciaS) rows.push(['Cadencia', ficha.cadenciaS + ' s']);
+  return rows;
+}
+
+async function panesVisor(fetchImpl, storage) {
+  const request = fetchImpl || lastFetch || (typeof fetch === 'function' ? fetch : null);
+  const llave = llaveVisor(storage);
+  if (!request || !llave) return [];
+  try {
+    const r = await request(VISOR_PANE_URL, {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { accept: 'application/json', 'X-Visor-Key': llave },
+    });
+    if (!r || !r.ok) return [];
+    const data = await r.json().catch(() => null);
+    return (data && Array.isArray(data.fichas)) ? data.fichas : [];
+  } catch (_) { return []; }
+}
+async function fichasDeepAgents(fetchImpl, storage) {
+  const request = fetchImpl || lastFetch || (typeof fetch === 'function' ? fetch : null);
+  const grupos = new Map(DEEPAGENT_SEATS.map((id) => [id, []]));
+  if (request) {
+    try {
+      const r = await request('/api/flota/trabajando', { cache: 'no-store', credentials: 'include', headers: { accept: 'application/json' } });
+      const data = await r.json().catch(() => null);
+      const tarjetas = (data && Array.isArray(data.tarjetas)) ? data.tarjetas : [];
+      tarjetas.forEach((t) => {
+        const id = deepAgentId(t && t.agente);
+        if (id && grupos.has(id)) grupos.get(id).push(t);
+      });
+    } catch (_) {}
+  }
+  const panes = await panesVisor(request, storage);
+  const extras = new Map();
+  // Captura yokup solo si la misión es de ESTE agente. La evidencia de silla
+  // (consejero) no se consulta: mezclaría Wozniak u otros (#7421).
+  if (request) {
+    try {
+      const r = await request('https://api.yokup.com/fleet/missions?status=in_progress&limit=80', { cache: 'no-store', headers: { accept: 'application/json' } });
+      const data = await r.json().catch(() => null);
+      const missions = (data && (data.missions || data.items)) || [];
+      missions.forEach((m) => {
+        const id = agenteDeMision(m);
+        if (!id || !grupos.has(id)) return;
+        const src = capturaRealSrc(missionCaptureUrl(m));
+        if (!src) return;
+        let at = Number(m.process_captured_at || m.live_at || m.updated_at || 0);
+        if (at && at < 1e12) at *= 1000;
+        extras.set(id, { src, capturaAt: at || null, fuente: 'yokup' });
+      });
+    } catch (_) {}
+  }
+  return DEEPAGENT_SEATS.map((id) => {
+    const ts = grupos.get(id);
+    const seed = ts && ts.length ? ts : [{ agente: id }];
+    const elig = sesionVerificada(seed);
+    const pane = paneDeAgente(panes, id, elig.sesion);
+    const extra = Object.assign({}, extras.get(id) || {});
+    if (pane) {
+      extra.lineas = pane.lineas;
+      extra.fuentePane = pane.fuente;
+      extra.cadenciaS = pane.cadenciaS;
+      extra.paneAt = pane.ts;
+      extra.src = '';
+    }
+    return fichaDeepAgent(seed, extra);
+  });
+}
+
+function pintarFichaUltra(doc, ficha, onAmpliar, onOrden) {
+  const tile = doc.createElement('article');
+  tile.className = 'mac-ultra__agent' + (ficha.src ? ' has-capture' : '');
+  tile.setAttribute('data-agent', ficha.id);
+  tile.setAttribute('role', 'button');
+  tile.tabIndex = 0;
+  const head = doc.createElement('header');
+  const name = doc.createElement('strong');
+  name.textContent = ficha.nombre;
+  head.append(bolasEstadoNode(doc, ficha.bola), name);
+  const tipo = doc.createElement('p');
+  tipo.className = 'mac-ultra__tipo';
+  tipo.textContent = ficha.tipo || 'desconocido';
+  const meta = doc.createElement('dl');
+  metaSesion(ficha).forEach(([dt, dd]) => {
+    const t = doc.createElement('dt'); t.textContent = dt;
+    const d = doc.createElement('dd'); d.textContent = dd;
+    meta.append(t, d);
+  });
+  const abrir = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    onAmpliar(ficha);
+  };
+  tile.addEventListener('click', abrir);
+  tile.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') abrir(e); });
+  const orden = doc.createElement('button');
+  orden.type = 'button';
+  orden.textContent = 'Orden';
+  orden.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onOrden(ficha); });
+  tile.append(head, tipo, meta, orden);
+  return tile;
+}
+
+export function openUltraDetalle(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  const doc = (root && root.ownerDocument) || (typeof document !== 'undefined' ? document : null);
+  if (!doc || !doc.createElement || !doc.body) return false;
+  if (ultraOverlay) return true;
+  lastRoot = root || lastRoot;
+  lastFetch = fetchImpl || lastFetch;
+  const previousFocus = doc.activeElement;
+  const overflow = doc.body.style.overflow;
+  const rootOverflow = doc.documentElement ? doc.documentElement.style.overflow : '';
+  const overlay = doc.createElement('section');
+  overlay.className = 'mac-ultra';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Ultradetalle · DeepAgents');
+  overlay.innerHTML = '<header class="mac-ultra__bar"><strong>Ultradetalle · DeepAgents</strong><span role="status">Cargando agentes…</span><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><div class="mac-ultra__stage mac-ultra__agents" tabindex="0" role="grid" aria-label="DeepAgents"></div><div class="mac-ultra__session" hidden><p class="mac-ultra__tipo" data-session-tipo></p><pre class="mac-ultra__pane" hidden aria-readonly="true"></pre><img alt="" hidden><p class="mac-ultra__hint" data-session-hint></p><dl data-session-meta></dl><button type="button" data-unzoom>Volver a la rejilla</button></div><form class="mac-ultra__order" hidden><p data-order-agent></p><textarea aria-label="Texto de la orden" maxlength="2000"></textarea><button type="submit">Enviar</button><p data-order-status></p></form>';
+  doc.body.append(overlay);
+  doc.body.style.overflow = 'hidden';
+  if (doc.documentElement) doc.documentElement.style.overflow = 'hidden';
+  ultraOverlay = overlay;
+  const status = overlay.querySelector('[role="status"]');
+  const grid = overlay.querySelector('.mac-ultra__agents');
+  const zoom = overlay.querySelector('.mac-ultra__session');
+  const zoomImg = zoom.querySelector('img');
+  const zoomPane = zoom.querySelector('.mac-ultra__pane');
+  const zoomHint = zoom.querySelector('[data-session-hint]');
+  const zoomTipo = zoom.querySelector('[data-session-tipo]');
+  const zoomMeta = zoom.querySelector('[data-session-meta]');
+  const form = overlay.querySelector('.mac-ultra__order');
+  const say = (t) => { status.textContent = t; };
+  let seleccionado = null;
+  let paneTimer = null;
+  function pararPane() { if (paneTimer) { clearInterval(paneTimer); paneTimer = null; } }
+  function arrancarPane() {
+    pararPane();
+    if (!seleccionado || !llaveVisor()) return;
+    paneTimer = setInterval(() => {
+      if (ultraOverlay !== overlay || !seleccionado) return;
+      fichasDeepAgents(fetchImpl).then((rows) => {
+        const f = (rows || []).find((x) => x && x.id === seleccionado);
+        if (f && ultraOverlay === overlay && !zoom.hidden) ampliar(f, true);
+      }).catch(() => {});
+    }, VISOR_CADENCIA_S * 1000);
+  }
+
+  function ampliar(ficha, desdePoll) {
+    zoom.hidden = false;
+    grid.hidden = true;
+    form.hidden = true;
+    seleccionado = ficha && ficha.id;
+    zoomTipo.textContent = (ficha.nombre || '') + ' · ' + (ficha.tipo || 'desconocido');
+    const lineas = Array.isArray(ficha.lineas) ? ficha.lineas : [];
+    const src = lineas.length ? '' : capturaRealSrc(ficha && ficha.src);
+    zoomHint.hidden = false;
+    if (lineas.length) {
+      zoomPane.hidden = false;
+      zoomPane.textContent = lineas.join('\n');
+      zoomHint.textContent = SESION_CAPTURA_TERMINAL + ' · cadencia ' + (ficha.cadenciaS || VISOR_CADENCIA_S) + ' s · fuente visor/pane';
+    } else {
+      zoomPane.hidden = true;
+      zoomPane.textContent = '';
+      zoomHint.textContent = ficha.lectura || (ficha.sesion && ficha.sesion !== DATO_VACIO ? SESION_SIN_PANE : SESION_SOLO_LECTURA);
+    }
+    if (src) {
+      zoomImg.hidden = false;
+      zoomImg.src = src;
+      zoomImg.alt = 'Captura de ' + ficha.nombre + ' · solo lectura';
+    } else {
+      zoomImg.hidden = true;
+      zoomImg.removeAttribute('src');
+      zoomImg.alt = '';
+    }
+    zoomMeta.textContent = '';
+    metaSesion(ficha).forEach(([dt, dd]) => {
+      const t = doc.createElement('dt'); t.textContent = dt;
+      const d = doc.createElement('dd'); d.textContent = dd;
+      zoomMeta.append(t, d);
+    });
+    say(ficha.nombre + ' · ' + etiquetaBola(ficha.bola) + ' · ' + (ficha.tipo || 'desconocido'));
+    if (!desdePoll) arrancarPane();
+  }
+  function ordenA(ficha) {
+    form.hidden = false;
+    form.querySelector('[data-order-agent]').textContent = 'Orden a ' + ficha.nombre;
+    form.dataset.agent = ficha.id;
+    form.querySelector('[data-order-status]').textContent = '';
+    form.querySelector('textarea').value = '';
+    form.querySelector('textarea').focus();
+  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const agente = form.dataset.agent;
+    const texto = form.querySelector('textarea').value;
+    const msg_id = 'ultra-' + agente + '-' + Date.now();
+    const r = await enviarOrdenDeepAgent({ agente, texto, msg_id }, fetchImpl);
+    form.querySelector('[data-order-status]').textContent = r.ok ? (r.duplicado ? 'duplicado' : 'enviado') : (r.error || 'indisponible');
+  });
+  zoom.querySelector('[data-unzoom]').onclick = () => { pararPane(); seleccionado = null; zoom.hidden = true; grid.hidden = false; say('DeepAgents'); };
+
+  function fullscreen() {
+    if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
+  }
+  overlay.querySelector('[data-full]').onclick = fullscreen;
+  function onFullscreen() {
+    ultraEnteredFullscreen = doc.fullscreenElement === overlay;
+    overlay.querySelector('[data-full]').textContent = ultraEnteredFullscreen ? 'Pantalla completa activa' : 'Pantalla completa';
+  }
+  function onKey(e) {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    closeUltraDetalle();
+  }
+  overlay.querySelector('[data-close]').onclick = () => closeUltraDetalle();
+  doc.addEventListener('keydown', onKey, true);
+  doc.addEventListener('fullscreenchange', onFullscreen);
+  overlay.__ultra = { onKey, onFullscreen, previousFocus, overflow, rootOverflow, doc, pararPane };
+
+  fichasDeepAgents(fetchImpl).then((fichas) => {
+    if (ultraOverlay !== overlay) return;
+    grid.textContent = '';
+    fichas.forEach((f) => grid.appendChild(pintarFichaUltra(doc, f, ampliar, ordenA)));
+    say('DeepAgents · ' + fichas.length);
+    grid.focus({ preventScroll: true });
+  }).catch(() => { if (ultraOverlay === overlay) say('DeepAgents indisponible'); });
+  return true;
+}
+
+export function closeUltraDetalle() {
+  if (!ultraOverlay) return false;
+  const overlay = ultraOverlay;
+  const meta = overlay.__ultra || {};
+  const doc = meta.doc || overlay.ownerDocument;
+  if (meta.pararPane) meta.pararPane();
+  if (meta.onKey && doc) doc.removeEventListener('keydown', meta.onKey, true);
+  if (meta.onFullscreen && doc) doc.removeEventListener('fullscreenchange', meta.onFullscreen);
+  if (doc && doc.fullscreenElement === overlay && doc.exitFullscreen) doc.exitFullscreen().catch(() => {});
+  overlay.remove();
+  if (doc && doc.body) doc.body.style.overflow = meta.overflow || '';
+  if (doc && doc.documentElement) doc.documentElement.style.overflow = meta.rootOverflow || '';
+  try { meta.previousFocus && meta.previousFocus.focus && meta.previousFocus.focus({ preventScroll: true }); } catch (_) {}
+  ultraOverlay = null;
+  ultraEnteredFullscreen = false;
+  return true;
 }
 
 export function openFront(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
@@ -1183,14 +1688,15 @@ export function boot(root = document, fetchImpl = fetch) {
   // Pong puesto JUEGAN (mantener pulsado mueve la pala) y fuera de él pasan de
   // misión. Avanzar y retroceder es cosa del detalle, no del juego
   // (Carlos, 2026-09-19).
-  const mando = (sel, delta) => {
+  const mando = (sel, pala, nav) => {
+    const navega = nav == null ? pala : nav;
     root.querySelectorAll(sel).forEach((el) => {
       const empuja = (e) => {
         if (!visible || modo !== 'pong') return;
         e.preventDefault();
-        jugador = delta;                       // ratón (+1) baja, teclado (-1) sube
+        jugador = pala;                       // ratón (+1) baja, teclado (-1) sube
       };
-      const suelta = () => { if (jugador === delta) jugador = 0; };
+      const suelta = () => { if (jugador === pala) jugador = 0; };
       // Un clic de ratón no debe dejar el botón con el foco: si luego se pulsa
       // una tecla, el navegador lo pintaría con su marco encima del dibujo.
       el.addEventListener('mouseup', () => { try { el.blur(); } catch (e) {} });
@@ -1203,14 +1709,14 @@ export function boot(root = document, fetchImpl = fetch) {
         e.stopPropagation();
         if (!enciende(el)) return;
         if (modo === 'pong') return;           // jugando no se navega
-        avanzaPantalla(delta, root, fetchImpl);
+        avanzaPantalla(navega, root, fetchImpl);
       });
     });
   };
   // Por CLASE: la mesa, la vista grande y el de la barra llevan las mismas y se
   // enganchan los tres de una vez.
-  // #5113: el RATÓN enseña el proyecto anterior (última cerrada) de la silla
-  // seleccionada; el TECLADO sigue pasando fichas de detalle. En Pong ambos mueven pala.
+  // #7460: en Detalle el RATÓN abre ULTRADETALLE (overlay). La misión siguiente
+  // pasa al teclado/flechas. En Pong el ratón sigue bajando la pala.
   root.querySelectorAll('.mac-hoy-mouse, .mac-hoy-front-mouse').forEach((el) => {
     const empuja = (e) => {
       if (!visible || modo !== 'pong') return;
@@ -1228,19 +1734,27 @@ export function boot(root = document, fetchImpl = fetch) {
       e.stopPropagation();
       if (!enciende(el)) return;
       if (modo === 'pong') return;
-      mostrarProyectoAnterior(root, fetchImpl, remotePersona);
+      if (!focused) openFront(root, fetchImpl);
+      openUltraDetalle(root, fetchImpl);
     });
   });
-  mando('.mac-hoy-keys, .mac-hoy-front-keys', -1);     // teclado -> anterior  · pala arriba
+  mando('.mac-hoy-keys, .mac-hoy-front-keys', -1, 1);     // pala arriba · clic = misión siguiente
   // Y con el teclado de verdad, que para eso es un Pong. Nunca mientras se
-  // escribe en un campo: ahí las flechas son del texto.
+  // escribe en un campo: ahí las flechas son del texto. Fuera del Pong, las
+  // flechas pasan de misión (Detalle). El overlay ULTRADETALLE captura Esc.
   if (typeof document !== 'undefined' && !document.__macTeclas) {
     document.__macTeclas = true;
     const esCampo = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
     document.addEventListener('keydown', (e) => {
-      if (modo !== 'pong' || !visible || esCampo(e.target)) return;
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { jugador = -1; e.preventDefault(); }
-      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { jugador = 1; e.preventDefault(); }
+      if (esCampo(e.target) || isUltraOpen()) return;
+      if (modo === 'pong' && visible) {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { jugador = -1; e.preventDefault(); }
+        else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { jugador = 1; e.preventDefault(); }
+        return;
+      }
+      if (!visible) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { avanzaPantalla(1, lastRoot, lastFetch); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { avanzaPantalla(-1, lastRoot, lastFetch); e.preventDefault(); }
     });
     document.addEventListener('keyup', (e) => {
       if (['ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) jugador = 0;
@@ -1268,7 +1782,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS, DEEPAGENT_SEATS, BOLA_TTL_MS, DATO_VACIO, SESION_SOLO_LECTURA, SESION_SIN_PANE, SESION_CAPTURA_TERMINAL, VISOR_PANE_URL, VISOR_CADENCIA_S, deepAgentId, etiquetaDeepAgent, capturaRealSrc, datoActual, tipoSesionVerificado, superficiesVerificadas, sesionVerificada, paneDeAgente, llaveVisor, estaTrabajandoDeepAgent, evidenciaSesionMs, bolaEstado, etiquetaBola, agenteDeMision, fichaDeepAgent, enviarOrdenDeepAgent, openUltraDetalle, closeUltraDetalle, isUltraOpen };
   const bootAndMaybeRemote = () => {
     boot();
     try {

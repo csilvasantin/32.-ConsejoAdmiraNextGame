@@ -112,17 +112,45 @@ test('hora de Madrid: mismo día solo HH:MM; otro día con fecha', () => {
 test('armarMesa cubre las dos generaciones y todos los papeles tienen posición', () => {
   const d = armarMesa({ latidos: { Wozniak: { modo: 'trabajando', mision: 'globo', encargo: 1, at: S - 10, hasta: S + 100 } }, bandejas: {}, ahoraMs: AHORA });
   assert.equal(d.mesa.leyendas.length, 8);
-  assert.equal(d.mesa.coetaneos.length, 8);
+  assert.equal(d.mesa.coetaneos.length, 6);
   const woz = d.mesa.leyendas.find((s) => s.persona === 'Steve Wozniak');
   assert.equal(woz.estado, 'trabajando');
   const cook = d.mesa.leyendas.find((s) => s.persona === 'Tim Cook');
   assert.equal(cook.estado, 'desconocido');
   for (const gen of Object.keys(MESA)) {
     for (const s of MESA[gen]) {
-      assert.ok(PAPEL_POS[gen][s.persona], 'falta papel de ' + s.persona);
+      const p = PAPEL_POS[gen][s.persona];
+      assert.ok(p, 'falta posición de ' + s.persona);
+      assert.ok(['papel', 'placa', 'cuerpo', 'ninguno'].includes(p.sobre), 'sobre inválido de ' + s.persona);
+      if (p.sobre !== 'ninguno') assert.ok(p.w > 0 && p.h > 0, 'caja vacía de ' + s.persona);
+      else assert.ok(p.w === 0 && p.h === 0, 'ninguno debe ir sin caja ' + s.persona);
     }
   }
   assert.equal(COLORES.trabajando, '#e23d3d');
   assert.equal(COLORES.libre, '#3ddc84');
   assert.equal(COLORES.desconocido, '#ffd60a');
+});
+
+test('halos: folio real o placa/cuerpo; nada en el centro vacío de la mesa de leyendas', () => {
+  const L = PAPEL_POS.leyendas;
+  assert.equal(L['Steve Wozniak'].sobre, 'papel');
+  assert.equal(L['Tim Cook'].sobre, 'papel');
+  assert.equal(L['Dieter Rams'].sobre, 'papel');
+  assert.equal(L['Howard Schultz'].sobre, 'papel');
+  assert.equal(L['George Lucas'].sobre, 'papel');
+  assert.equal(L['Steve Jobs'].sobre, 'cuerpo');
+  assert.equal(L['Warren Buffett'].sobre, 'cuerpo');
+  assert.equal(L['Walt Disney'].sobre, 'ninguno');
+  // El fallo de r134: halo verde en (54,58), madera vacía delante de Carlos.
+  // En carlos10 el asiento de Disney no tiene folio ni figura: no se pinta.
+  const jobs = L['Steve Jobs'];
+  assert.ok(jobs.x < 16, 'Jobs no debe usurpar los folios de Woz');
+  const C = PAPEL_POS.coetaneos;
+  assert.equal(Object.keys(C).length, 6);
+  assert.ok(!C['Ruth Porat'] && !C['Carlos Ratti'], 'Porat y Ratti ya no tienen asiento (#7520)');
+  for (const k of ['Elon Musk', 'Jensen Huang', 'Gwynne Shotwell', 'Jony Ive', 'John Lasseter', 'Ryan Reynolds']) {
+    assert.equal(C[k].sobre, 'placa', k);
+  }
+  // Lasseter está en la silla que era de Ratti; su placa no es la antigua (~56, 60).
+  assert.ok(C['John Lasseter'].y > 74 && C['John Lasseter'].x > 68);
 });

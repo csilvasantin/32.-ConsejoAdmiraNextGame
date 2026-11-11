@@ -10,29 +10,30 @@
   const COLORES = { trabajando: '#e23d3d', libre: '#3ddc84', desconocido: '#ffd60a' };
   const PAPEL = {
     leyendas: {
-      'Steve Jobs': { x: 20.5, y: 72.5, w: 9, h: 8 },
-      'Steve Wozniak': { x: 26.0, y: 69.0, w: 8, h: 7 },
-      'Tim Cook': { x: 34.0, y: 60.0, w: 8, h: 6 },
-      'Warren Buffett': { x: 40.0, y: 57.0, w: 7, h: 6 },
-      'Walt Disney': { x: 54.0, y: 58.0, w: 7, h: 6 },
-      'Dieter Rams': { x: 68.5, y: 59.0, w: 8, h: 6 },
-      'Howard Schultz': { x: 75.0, y: 62.0, w: 8, h: 6 },
-      'George Lucas': { x: 81.0, y: 68.0, w: 8, h: 7 }
+      'Steve Jobs': { x: 11.5, y: 57.0, w: 11.0, h: 20.0, sobre: 'cuerpo' },
+      'Steve Wozniak': { x: 24.5, y: 72.0, w: 12.0, h: 9.0, sobre: 'papel' },
+      'Tim Cook': { x: 34.5, y: 56.25, w: 14.0, h: 11.5, sobre: 'papel' },
+      'Warren Buffett': { x: 50.5, y: 41.0, w: 12.0, h: 16.0, sobre: 'cuerpo' },
+      'Walt Disney': { x: 0, y: 0, w: 0, h: 0, sobre: 'ninguno' },
+      'Dieter Rams': { x: 70.0, y: 59.75, w: 7.0, h: 5.5, sobre: 'papel' },
+      'Howard Schultz': { x: 76.75, y: 63.85, w: 7.0, h: 4.5, sobre: 'papel' },
+      'George Lucas': { x: 76.25, y: 71.15, w: 10.5, h: 5.3, sobre: 'papel' }
     },
     coetaneos: {
-      'Elon Musk': { x: 22.0, y: 78.0, w: 8, h: 6 },
-      'Jensen Huang': { x: 27.5, y: 64.0, w: 7, h: 6 },
-      'Gwynne Shotwell': { x: 36.0, y: 54.0, w: 7, h: 6 },
-      'Ruth Porat': { x: 48.5, y: 47.0, w: 6, h: 8 },
-      'John Lasseter': { x: 54.0, y: 58.0, w: 7, h: 6 },
-      'Jony Ive': { x: 64.0, y: 58.0, w: 7, h: 6 },
-      'Carlos Ratti': { x: 71.5, y: 66.0, w: 7, h: 6 },
-      'Ryan Reynolds': { x: 80.0, y: 74.0, w: 7, h: 6 }
+      'Elon Musk': { x: 22.4, y: 89.6, w: 12.2, h: 6.0, sobre: 'placa' },
+      'Jensen Huang': { x: 28.65, y: 80.35, w: 11.3, h: 6.1, sobre: 'placa' },
+      'Gwynne Shotwell': { x: 35.4, y: 71.2, w: 11.2, h: 5.2, sobre: 'placa' },
+      'Jony Ive': { x: 62.65, y: 65.0, w: 8.7, h: 4.4, sobre: 'placa' },
+      'John Lasseter': { x: 72.4, y: 78.0, w: 10.8, h: 5.6, sobre: 'placa' },
+      'Ryan Reynolds': { x: 79.35, y: 89.6, w: 12.3, h: 6.0, sobre: 'placa' }
     }
   };
   const CSS = `
 #papel-halos{position:absolute;inset:0;pointer-events:none;z-index:2}
-.papel-halo{position:absolute;transform:translate(-50%,-50%);border-radius:46% 46% 36% 36%;pointer-events:none;box-shadow:0 0 5px 2px var(--halo),0 0 14px 7px color-mix(in srgb,var(--halo) 65%,transparent);outline:1px solid color-mix(in srgb,var(--halo) 80%,transparent)}
+.papel-halo{position:absolute;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 5px 2px var(--halo),0 0 14px 7px color-mix(in srgb,var(--halo) 65%,transparent);outline:1px solid color-mix(in srgb,var(--halo) 80%,transparent)}
+.papel-halo[data-sobre=papel]{border-radius:46% 46% 36% 36%}
+.papel-halo[data-sobre=placa]{border-radius:10px;outline-width:2px}
+.papel-halo[data-sobre=cuerpo]{border-radius:42%}
 .papel-halo[data-estado=trabajando]{--halo:${COLORES.trabajando}}
 .papel-halo[data-estado=libre]{--halo:${COLORES.libre}}
 .papel-halo[data-estado=desconocido]{--halo:${COLORES.desconocido}}
@@ -91,25 +92,67 @@
     if (!c) { c = doc().createElement('div'); c.id = 'papel-halos'; c.setAttribute('aria-hidden', 'true'); stage.appendChild(c); }
     return c;
   }
+  /* Caja pintada del JPG, relativa a .council-image, teniendo en cuenta object-fit. */
+  function cajaArte(stage) {
+    if (!stage) return null;
+    const img = stage.querySelector('#council-img, img');
+    const sw = stage.clientWidth || 0, sh = stage.clientHeight || 0;
+    if (!img) return { x: 0, y: 0, w: sw, h: sh };
+    const sr = stage.getBoundingClientRect();
+    const ir = img.getBoundingClientRect();
+    let x = ir.left - sr.left, y = ir.top - sr.top, w = ir.width, h = ir.height;
+    const nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+    const cs = root.getComputedStyle ? root.getComputedStyle(img) : null;
+    const fit = ((cs && cs.objectFit) || 'fill').toLowerCase();
+    if (nw && nh && w && h && fit && fit !== 'fill' && fit !== 'none') {
+      let sx, sy;
+      if (fit === 'cover') { const s = Math.max(w / nw, h / nh); sx = s; sy = s; }
+      else if (fit === 'scale-down') { const s = Math.min(1, w / nw, h / nh); sx = s; sy = s; }
+      else { const s = Math.min(w / nw, h / nh); sx = s; sy = s; } /* contain */
+      const cw = nw * sx, ch = nh * sy;
+      x = ir.left - sr.left + (w - cw) / 2;
+      y = ir.top - sr.top + (h - ch) / 2;
+      w = cw; h = ch;
+    }
+    return { x, y, w, h };
+  }
+  function ajustarCapa(c) {
+    const stage = escena(); if (!c || !stage) return;
+    const box = cajaArte(stage);
+    if (!box || !box.w || !box.h) {
+      c.style.inset = '0';
+      c.style.left = c.style.top = c.style.width = c.style.height = '';
+      return;
+    }
+    c.style.inset = 'auto';
+    c.style.left = box.x + 'px';
+    c.style.top = box.y + 'px';
+    c.style.width = box.w + 'px';
+    c.style.height = box.h + 'px';
+  }
   function pintarHalos() {
     const d = doc(); if (!d) return;
     estilos();
     const c = capaHalos(); if (!c) return;
+    ajustarCapa(c);
     const gen = genActual();
     const pos = PAPEL[gen] || {};
     c.replaceChildren();
     Object.keys(pos).forEach((persona) => {
       const p = pos[persona];
+      if (!p || p.sobre === 'ninguno' || p.w <= 0 || p.h <= 0) return;
       const s = sillaDe(persona);
       const estado = (s && s.estado) || 'desconocido';
+      const sobre = p.sobre || 'papel';
       const el = d.createElement('div');
       el.className = 'papel-halo';
       el.dataset.persona = persona;
       el.dataset.estado = estado;
+      el.dataset.sobre = sobre;
       el.style.left = p.x + '%';
       el.style.top = p.y + '%';
       el.style.width = p.w + '%';
-      el.style.height = (p.h * 1.15) + '%';
+      el.style.height = p.h + '%';
       c.appendChild(el);
     });
   }
@@ -249,7 +292,22 @@
       new root.MutationObserver(() => { prepararHotspots(); pintarHalos(); })
         .observe(hot, { childList: true, subtree: true });
     }
-    if (root.addEventListener) root.addEventListener('resize', () => { if (abierto) colocarGlobo(abierto.anchor); });
+    if (root.addEventListener) {
+      root.addEventListener('resize', () => {
+        const c = doc().getElementById('papel-halos');
+        if (c) ajustarCapa(c);
+        if (abierto) colocarGlobo(abierto.anchor);
+      });
+    }
+    const img = escena() && escena().querySelector('#council-img, img');
+    if (img && img.addEventListener) img.addEventListener('load', pintarHalos);
+    if (root.ResizeObserver && escena()) {
+      new root.ResizeObserver(() => {
+        const c = doc().getElementById('papel-halos');
+        if (c) ajustarCapa(c);
+        if (abierto) colocarGlobo(abierto.anchor);
+      }).observe(escena());
+    }
   }
 
   function arrancar() {

@@ -8,7 +8,8 @@ const os = require('os');
 const path = require('path');
 
 const PROVIDER = 'https://bot.yokup.com/api/bot-inbox';
-const PERSONAS = Object.freeze({ Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas', Musk:'Elon Musk', Huang:'Jensen Huang', Shotwell:'Gwynne Shotwell' });
+const PERSONAS = Object.freeze({ Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas', Musk:'Elon Musk', Huang:'Jensen Huang', Murati:'Mira Murati' });
+const PERSONA_ALIAS = Object.freeze({ shotwell: 'Murati', gwynne: 'Murati', 'gwynne shotwell': 'Murati' });
 const MAX_RECORDS = 20000;
 const MAX_PROMPT = 16000;
 const MESSAGE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,119}$/;
@@ -27,6 +28,8 @@ class BridgeError extends Error {
 }
 function canonicalPersona(value) {
   const name = String(value || '').trim().toLowerCase();
+  const aliased = PERSONA_ALIAS[name];
+  if (aliased) return aliased;
   return Object.keys(PERSONAS).find(key => key.toLowerCase() === name || PERSONAS[key].toLowerCase() === name) || null;
 }
 function verifiedOwner(session) {

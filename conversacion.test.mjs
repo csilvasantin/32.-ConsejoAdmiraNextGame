@@ -67,7 +67,7 @@ test("cada consejero de las dos salas tiene silueta en el arte", () => {
   for (const name of ["Steve Jobs", "Steve Wozniak", "Tim Cook", "Warren Buffett", "Walt Disney", "Dieter Rams", "Howard Schultz", "George Lucas"]) {
     assert.match(data.leyendas.paths[name], /^M\d+ \d+(?: L\d+ \d+){5,} Z$/, name);
   }
-  for (const name of ["Elon Musk", "Jensen Huang", "Gwynne Shotwell", "Ruth Porat", "John Lasseter", "Jony Ive", "Carlos Ratti", "Ryan Reynolds"]) {
+  for (const name of ["Elon Musk", "Jensen Huang", "Mira Murati", "Ruth Porat", "John Lasseter", "Jony Ive", "Carlos Ratti", "Ryan Reynolds"]) {
     assert.match(data.coetaneos.paths[name], /^M\d+ \d+(?: L\d+ \d+){5,} Z$/, name);
   }
 });

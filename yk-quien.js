@@ -19,7 +19,7 @@
   var COETANEOS = [
     { id: "musk", quien: "Musk", label: "Musk", full: "Elon Musk", grupo: "coetaneos", deepagent: "merovingio" },
     { id: "huang", quien: "Huang", label: "Huang", full: "Jensen Huang", grupo: "coetaneos", deepagent: "cypher" },
-    { id: "shotwell", quien: "Shotwell", label: "Shotwell", full: "Gwynne Shotwell", grupo: "coetaneos", deepagent: "trinity" },
+    { id: "murati", quien: "Murati", label: "Murati", full: "Mira Murati", grupo: "coetaneos", deepagent: "trinity" },
     { id: "porat", quien: "Porat", label: "Porat", full: "Ruth Porat", grupo: "coetaneos", deepagent: "oraculo" },
     { id: "lasseter", quien: "Lasseter", label: "Lasseter", full: "John Lasseter", grupo: "coetaneos", deepagent: "mouse" },
     { id: "ive", quien: "Ive", label: "Ive", full: "Jony Ive", grupo: "coetaneos", deepagent: "arquitecto" },
@@ -74,7 +74,9 @@
   alias("GeorgeLucas", "lucas");
   alias("ElonMusk", "musk");
   alias("JensenHuang", "huang");
-  alias("GwynneShotwell", "shotwell");
+  alias("MiraMurati", "murati");
+  alias("GwynneShotwell", "murati");
+  alias("Shotwell", "murati");
   alias("RuthPorat", "porat");
   alias("JohnLasseter", "lasseter");
   alias("JonyIve", "ive");

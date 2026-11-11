@@ -42,7 +42,7 @@ export const fresca = (r, ahoraMs) => seg(r && r.updated) >= Math.floor(ahoraMs 
 export const CENSO_COETANEOS = [
   { id: 'Merovingio', role: 'CEO', persona: 'Elon Musk', agente: 'Merovingio', consejero: 'MuskGrokBot', deepagent_de: 'Musk', maquina: SILLAS.Musk.deepagent_maquina, runtime: SILLAS.Musk.deepagent_runtime },
   { id: 'Cypher', role: 'CTO', persona: 'Jensen Huang', agente: 'Cypher', consejero: 'HuangGrokBot', deepagent_de: 'Huang', maquina: SILLAS.Huang.deepagent_maquina, runtime: SILLAS.Huang.deepagent_runtime, modelo: SILLAS.Huang.deepagent_model },
-  { id: 'Trinity', role: 'COO', persona: 'Gwynne Shotwell', agente: 'Trinity' },
+  { id: 'Trinity', role: 'COO', persona: 'Mira Murati', agente: 'Trinity' },
   { id: 'Oráculo', role: 'CFO', persona: 'Ruth Porat', agente: 'Oraculo' },
   { id: 'Mouse', role: 'CCO', persona: 'John Lasseter', agente: 'Mouse' },
   { id: 'Arquitecto', role: 'CDO', persona: 'Jony Ive', agente: 'Arquitecto', excluir_maquina: 'CursorCloud' },

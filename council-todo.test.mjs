@@ -5,7 +5,7 @@ import './council-todo.js';
 const T = globalThis.CouncilTodo;
 const NOW = 1790513800;
 const leyendas = ['Steve Jobs', 'Steve Wozniak', 'Tim Cook', 'Warren Buffett', 'Walt Disney', 'Dieter Rams', 'Howard Schultz', 'George Lucas'];
-const coetaneos = ['Elon Musk', 'Jensen Huang', 'Gwynne Shotwell', 'Ruth Porat', 'John Lasseter', 'Jony Ive', 'Carlos Ratti', 'Ryan Reynolds'];
+const coetaneos = ['Elon Musk', 'Jensen Huang', 'Mira Murati', 'Ruth Porat', 'John Lasseter', 'Jony Ive', 'Carlos Ratti', 'Ryan Reynolds'];
 const sources = {
   activeWork: { ok: true, participants: [
     { family_key: 'jobs@grokbot', state: 'assigned_stale', reference: 'FLT-101116', title: 'Sincro matinal 27-sep · ArquitectoCursorCloud (Cursor Cloud) pide priorización del día.', ended_at: null },
@@ -53,7 +53,7 @@ test('mapa real: misión, presencia, encargo, nada y sin agente', () => {
   assert.equal(co['Ryan Reynolds'].text, 'sin datos ahora mismo');       // sin agente: Cypher ya no es del CSO
   assert.equal(co['Ryan Reynolds'].kind, 'sin-agente');
   assert.equal(co['Jony Ive'].text, 'Encargo #4490 en curso');           // Arquitecto en otras cajas, no CursorCloud
-  assert.equal(co['Gwynne Shotwell'].text, 'Evaluar tres mejoras');
+  assert.equal(co['Mira Murati'].text, 'Evaluar tres mejoras');
   assert.equal(co['John Lasseter'].text, 'ahora mismo nada');
 });
 

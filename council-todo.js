@@ -39,7 +39,7 @@
       'Walt Disney': 'Disney', 'Dieter Rams': null, 'Howard Schultz': null, 'George Lucas': 'Lucas'
     }),
     coetaneos: Object.freeze({
-      'Elon Musk': 'Merovingio', 'Jensen Huang': 'Cypher', 'Gwynne Shotwell': 'Trinity',
+      'Elon Musk': 'Merovingio', 'Jensen Huang': 'Cypher', 'Mira Murati': 'Trinity',
       'Ruth Porat': 'Oraculo', 'John Lasseter': 'Mouse', 'Jony Ive': 'Arquitecto',
       'Carlos Ratti': 'Link', 'Ryan Reynolds': null
     })

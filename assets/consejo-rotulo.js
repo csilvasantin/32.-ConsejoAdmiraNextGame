@@ -1,5 +1,5 @@
 /* Rótulo vivo de los 16 consejeros en la home de admira.live.
-   Cada placa alterna cada 15 s entre el título del cargo y el proyecto.
+   Cada placa alterna cada 15 s entre el nombre del consejero y el proyecto.
    Debajo: estado en vivo, encargos abiertos, consumo y si la máquina está encendida.
    Sin dato no se inventa un número: se dice sin proyecto, sin latido o sin medición.
    Fuente: GET /api/flota/trabajando (la misma que la barra de agentes). */
@@ -7,7 +7,7 @@
   "use strict";
   var CADA = 15000;
   var API = "/api/flota/trabajando";
-  var TITULO = {
+  var TITULO = { /* cargos retirados: solo se muestra el nombre */
     "Steve Jobs": "Chief Executive Officer",
     "Steve Wozniak": "Chief Technology Officer",
     "Tim Cook": "Chief Operations Officer",
@@ -101,13 +101,13 @@
       var persona = np.getAttribute("data-persona");
       var t = tarjeta(persona);
       var nodes = asegurar(np);
-      var titulo = TITULO[persona] || "";
+      var titulo = persona;
       var proy = proyecto(t);
       nodes.rota.textContent = f === 0 ? titulo : proy;
-      nodes.rota.setAttribute("title", "Cada 15 s: título ↔ proyecto. Ahora: " + (f === 0 ? "título" : "proyecto"));
+      nodes.rota.setAttribute("title", "Cada 15 s: nombre ↔ proyecto. Ahora: " + (f === 0 ? "nombre" : "proyecto"));
       var meta = estado(t, np) + " · " + encargos(t) + " · " + consumo(t);
       nodes.meta.textContent = meta;
-      np.setAttribute("data-rotulo", persona + " · " + titulo + " · " + proy + " · " + meta);
+      np.setAttribute("data-rotulo", persona + " · " + proy + " · " + meta);
       /* Datos sueltos para los bocadillos de Conversación (council-conversacion.js). */
       np.setAttribute("data-r-titulo", titulo);
       np.setAttribute("data-r-proyecto", proy);

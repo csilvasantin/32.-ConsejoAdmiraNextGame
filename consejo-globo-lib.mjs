@@ -1,3 +1,10 @@
+import {
+  RANKING_GRUPOS, grupoDe, enRankingGrupo, unirMisionesHoy, etiquetaHoy,
+  PERSONA_A_BOT,
+} from './consejo-misiones-hoy.mjs';
+
+export { RANKING_GRUPOS, grupoDe, enRankingGrupo, unirMisionesHoy, etiquetaHoy };
+
 /**
  * Estado público de la mesa del Consejo (globo + halo de papeles).
  * Fuente de verdad para consejeros con bot de Grok Bot: su propio
@@ -26,24 +33,16 @@ export const BOT_POR_PERSONA = Object.freeze({
 });
 
 /**
- * Los 6 consejeros del ranking de hoy (el denominador que pidió Carlos: 1/6).
- * Coinciden con las sillas oficiales de highscore-bando.js / mcp sillas.js:
- * Jobs, Wozniak, Disney, Lucas, Musk y Huang — los que tienen bot con
- * latido o encargos de verdad en el consejo.
- * Ive y Lasseter tienen flecha (bot en la mesa) pero aún no están en ese
- * elenco: no llevan etiqueta de ranking hasta que se activen como silla.
- * Carlos Silva (Y-3), Buffett, Rams y el resto de inactivos tampoco.
+ * Ranking por mesa: 6 consejeros en leyendas y 6 en coetáneos/actuales.
+ * Carlos (Y-3), Cook y Schultz no entran (Cook y Schultz ya no están en la foto).
+ * El puesto se pinta dentro de la flecha; la etiqueta es solo el recuento (sin «/6»).
  */
 export const CONSEJO_RANKING = Object.freeze([
-  'Steve Jobs',
-  'Steve Wozniak',
-  'Walt Disney',
-  'George Lucas',
-  'Elon Musk',
-  'Jensen Huang',
+  ...RANKING_GRUPOS.leyendas,
+  ...RANKING_GRUPOS.coetaneos,
 ]);
-export const CONSEJO_RANKING_TOTAL = CONSEJO_RANKING.length;
-export const enRanking = (persona) => CONSEJO_RANKING.includes(persona);
+export const CONSEJO_RANKING_TOTAL = 6;
+export const enRanking = (persona) => !!grupoDe(persona);
 
 export const MESA = Object.freeze({
   leyendas: [
@@ -74,8 +73,8 @@ export const MESA = Object.freeze({
  * flecha={x,y}: punta de la flecha (hacia abajo) justo encima de la coronilla;
  * ausente o null si ese consejero no aparece en la foto (p. ej. Tim Cook).
  * Las coordenadas se conservan aunque `activo` sea false, para reactivar con un flag.
- * activo: si es false no se pinta flecha ni halo de papel/placa (Buffett, Rams,
- * Schultz, Cook, Murati, Reynolds, hasta que se activen).
+ * activo: si es false no se pinta flecha ni halo (Cook y Schultz no están en
+ * la foto). Las 6 de cada mesa van con flecha.
  * nuncaFlecha: esa figura no lleva flecha nunca. En leyendas, Carlos Silva
  * (Y-3, centro) siempre está disponible y no lleva flecha. Disney sí: tiene
  * bot y está en la silla que era de Schultz (derecha).
@@ -91,20 +90,20 @@ export const PAPEL_POS = Object.freeze({
     'Steve Jobs': { activo: true, sobre: 'papel', puntos: [[18.162, 75.391], [21.397, 76.432], [25.588, 76.302], [27.5, 72.396], [29.559, 72.005], [30.147, 69.141], [25.662, 68.49], [25.588, 67.708], [24.338, 67.708], [23.971, 68.49], [21.324, 72.005], [20.074, 71.615]], flecha: { x: 10.368, y: 39.583 }, x: 24.154, y: 72.07, w: 11.985, h: 8.724 },
     'Steve Wozniak': { activo: true, sobre: 'papel', puntos: [[26.912, 61.458], [28.309, 62.5], [31.25, 62.5], [32.941, 60.156], [33.824, 59.115], [32.868, 58.594], [31.176, 58.724], [29.412, 58.464], [28.309, 58.333]], flecha: { x: 21.471, y: 31.51 }, x: 30.368, y: 60.416, w: 6.912, h: 4.167 },
     'Tim Cook': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
-    'Warren Buffett': { activo: false, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
+    'Warren Buffett': { activo: true, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
     'Carlos Silva': { activo: true, nuncaFlecha: true, sobre: 'ninguno', puntos: [], flecha: { x: 50, y: 23.958 }, x: 0, y: 0, w: 0, h: 0 },
     'Walt Disney': { activo: true, sobre: 'papel', puntos: [[73.382, 63.932], [73.382, 64.714], [75.882, 64.714], [75.882, 65.234], [78.529, 65.234], [78.529, 64.062], [78.088, 63.021], [77.059, 62.24], [73.676, 63.411]], flecha: { x: 80, y: 32.292 }, x: 75.956, y: 63.737, w: 5.147, h: 2.994 },
-    'Dieter Rams': { activo: false, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
+    'Dieter Rams': { activo: true, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
     'Howard Schultz': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
     'George Lucas': { activo: true, sobre: 'papel', puntos: [[72.279, 70.443], [75.588, 69.922], [77.059, 69.661], [78.235, 69.661], [79.265, 71.094], [81.25, 71.224], [82.5, 72.526], [79.118, 73.698], [73.529, 73.568], [72.279, 72.656]], flecha: { x: 90.735, y: 39.583 }, x: 77.389, y: 71.679, w: 10.221, h: 4.037 }
   },
   coetaneos: {
     'Elon Musk': { activo: true, sobre: 'placa', puntos: [[16.25, 85.833], [27.734, 85.833], [28.047, 86.25], [28.203, 87.222], [28.203, 91.111], [27.891, 92.361], [16.406, 92.361], [16.094, 91.806], [16.094, 86.389]], flecha: { x: 13.125, y: 42.778 }, x: 22.148, y: 89.097, w: 12.109, h: 6.528 },
-    'Jensen Huang': { activo: true, sobre: 'placa', puntos: [[22.891, 77.222], [33.516, 77.222], [33.828, 77.639], [33.984, 78.75], [33.984, 82.361], [33.672, 83.194], [22.891, 83.333], [22.656, 82.778], [22.656, 77.778]], flecha: { x: 24.375, y: 41.389 }, x: 28.32, y: 80.278, w: 11.328, h: 6.111 },
-    'Mira Murati': { activo: false, sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], flecha: { x: 35, y: 36.667 }, x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
+    'Jensen Huang': { activo: true, sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], flecha: { x: 24.375, y: 41.389 }, x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
+    'Mira Murati': { activo: true, sobre: 'placa', puntos: [[41.25, 67.5], [50.2, 67.5], [50.547, 67.9], [50.547, 74.3], [50.2, 74.722], [41.25, 74.722], [41.0, 74.3], [41.0, 67.9]], flecha: { x: 38.5, y: 36.667 }, x: 45.898, y: 71.111, w: 9.297, h: 7.222 },
     'Jony Ive': { activo: true, sobre: 'placa', puntos: [[58.281, 62.778], [65.703, 62.639], [65.938, 63.056], [66.016, 64.167], [66.016, 66.389], [65.781, 67.083], [58.359, 67.083], [58.125, 66.667], [58.125, 63.194]], flecha: { x: 68.594, y: 39.444 }, x: 62.071, y: 64.861, w: 7.891, h: 4.444 },
     'John Lasseter': { activo: true, sobre: 'placa', puntos: [[66.953, 74.861], [77.188, 74.861], [77.5, 75.278], [77.578, 76.389], [77.578, 80.139], [77.266, 80.972], [67.031, 80.972], [66.797, 80.417], [66.797, 75.417]], flecha: { x: 76.563, y: 42.222 }, x: 72.188, y: 77.916, w: 10.781, h: 6.111 },
-    'Ryan Reynolds': { activo: false, sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], flecha: { x: 88.75, y: 41.389 }, x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
+    'Ryan Reynolds': { activo: true, sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], flecha: { x: 88.75, y: 41.389 }, x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
   }
 });
 
@@ -324,9 +323,7 @@ export function hechosHoy(items, { desdeS, hastaS }) {
 }
 
 export function etiquetaRanking(n, puesto, total = CONSEJO_RANKING_TOTAL) {
-  if (n == null) return '—';
-  if (!puesto) return n + ' hoy';
-  return n + ' hoy · ' + puesto + '/' + total;
+  return etiquetaHoy(n);
 }
 
 /**
@@ -357,10 +354,10 @@ function itemsDeBandeja(bandejas, bot) {
 }
 
 function hoyVacio() {
-  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null };
+  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null, misiones: [], por_fuente: { inbox: 0, yokup: 0, pr: 0 } };
 }
 
-export function asientoPublico(def, { latidos, bandejas, ahoraS, desdeS }) {
+export function asientoPublico(def, { latidos, bandejas, prs, yokup, ahoraS, desdeS }) {
   const bot = botDe(def.persona);
   const entrada = bot && latidos && latidos[bot] ? latidos[bot] : null;
   const items = itemsDeBandeja(bandejas, bot);
@@ -378,36 +375,57 @@ export function asientoPublico(def, { latidos, bandejas, ahoraS, desdeS }) {
   };
   if (enRanking(def.persona)) {
     const inicio = Number.isFinite(desdeS) ? desdeS : inicioDiaMadridS(ahoraS * 1000);
-    const h = hechosHoy(items, { desdeS: inicio, hastaS: ahoraS });
-    s.hoy = { n: h.n, ultimo: h.ultimo, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null };
+    const u = unirMisionesHoy({
+      persona: def.persona,
+      bot,
+      inbox: items,
+      yokup: yokup == null ? null : yokup,
+      prs: prs == null ? null : prs,
+      desdeS: inicio,
+      hastaS: ahoraS,
+    });
+    s.hoy = {
+      n: u.n,
+      ultimo: u.ultimo,
+      puesto: null,
+      total: CONSEJO_RANKING_TOTAL,
+      etiqueta: null,
+      misiones: u.misiones,
+      por_fuente: u.por_fuente,
+    };
   }
   s.texto = textoGlobo(s, ahoraS * 1000);
   return s;
 }
 
 function aplicarRanking(mesa) {
-  const filas = [];
-  for (const gen of Object.values(mesa)) {
-    for (const s of gen) {
-      if (s && enRanking(s.persona)) filas.push({ persona: s.persona, n: s.hoy && s.hoy.n, ultimo: s.hoy && s.hoy.ultimo });
+  for (const [gen, sillas] of Object.entries(mesa)) {
+    const filas = [];
+    for (const s of sillas) {
+      if (s && enRankingGrupo(s.persona, gen)) filas.push({ persona: s.persona, n: s.hoy && s.hoy.n, ultimo: s.hoy && s.hoy.ultimo });
     }
-  }
-  const puestos = puestosHoy(filas);
-  for (const gen of Object.values(mesa)) {
-    for (const s of gen) {
-      if (!s || !s.hoy || !enRanking(s.persona)) continue;
+    const puestos = puestosHoy(filas);
+    for (const s of sillas) {
+      if (!s || !s.hoy || !enRankingGrupo(s.persona, gen)) continue;
       s.hoy.puesto = s.hoy.n == null ? null : (puestos.get(s.persona) || null);
       s.hoy.etiqueta = etiquetaRanking(s.hoy.n, s.hoy.puesto);
     }
   }
 }
 
-export function armarMesa({ latidos, bandejas, ahoraMs }) {
+export function armarMesa({ latidos, bandejas, prs, yokup, ahoraMs }) {
   const ahoraS = Math.floor((ahoraMs || Date.now()) / 1000);
   const desdeS = inicioDiaMadridS(ahoraMs || ahoraS * 1000);
   const mesa = {};
   for (const [gen, defs] of Object.entries(MESA)) {
-    mesa[gen] = defs.map((d) => asientoPublico(d, { latidos: latidos || {}, bandejas: bandejas || {}, ahoraS, desdeS }));
+    mesa[gen] = defs.map((d) => asientoPublico(d, {
+      latidos: latidos || {},
+      bandejas: bandejas || {},
+      prs: prs == null ? null : prs,
+      yokup: yokup,
+      ahoraS,
+      desdeS,
+    }));
   }
   aplicarRanking(mesa);
   return {
@@ -418,8 +436,11 @@ export function armarMesa({ latidos, bandejas, ahoraMs }) {
     ranking: {
       dia: diaMadrid(ahoraMs || ahoraS * 1000),
       total: CONSEJO_RANKING_TOTAL,
-      sillas: CONSEJO_RANKING.slice(),
-      fuente: 'bandeja pública (bot.yokup.com/api/public/inbox?persona=), status=done, done_at desde 00:00 Europe/Madrid',
+      por_grupo: {
+        leyendas: RANKING_GRUPOS.leyendas.slice(),
+        coetaneos: RANKING_GRUPOS.coetaneos.slice(),
+      },
+      fuente: 'inbox done + misiones Yokup resolved + PRs fusionados (rama woz/* = Wozniak; atribución expresa t1212u para anw #396 y #398), desde 00:00 Europe/Madrid, sin duplicar',
     },
   };
 }

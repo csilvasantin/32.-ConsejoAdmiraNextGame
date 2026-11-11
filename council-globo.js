@@ -1,7 +1,7 @@
 /* Globo de estado sobre cada consejero, flecha de color sobre la cabeza y halo con el perfil real del folio o placa.
  * Datos: GET /api/consejo/estado (latido de consejero_latido + últimos done públicos).
  * Papeles/placas, flecha, etiqueta de hoy y globo leen un único mapa / instantánea por pintado.
- * Encima de la flecha, los 6 del ranking muestran «N hoy · puesto/6».
+ * Encima de la flecha, un rectángulo con las misiones de hoy; el puesto va dentro de la flecha (ranking por mesa de 6, sin «/6»).
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
  * Disney está en la silla que era de Schultz y sí lleva flecha (tiene bot).
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
@@ -17,20 +17,20 @@
       'Steve Jobs': { activo: true, sobre: 'papel', puntos: [[18.162, 75.391], [21.397, 76.432], [25.588, 76.302], [27.5, 72.396], [29.559, 72.005], [30.147, 69.141], [25.662, 68.49], [25.588, 67.708], [24.338, 67.708], [23.971, 68.49], [21.324, 72.005], [20.074, 71.615]], flecha: { x: 10.368, y: 39.583 }, x: 24.154, y: 72.07, w: 11.985, h: 8.724 },
       'Steve Wozniak': { activo: true, sobre: 'papel', puntos: [[26.912, 61.458], [28.309, 62.5], [31.25, 62.5], [32.941, 60.156], [33.824, 59.115], [32.868, 58.594], [31.176, 58.724], [29.412, 58.464], [28.309, 58.333]], flecha: { x: 21.471, y: 31.51 }, x: 30.368, y: 60.416, w: 6.912, h: 4.167 },
       'Tim Cook': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
-      'Warren Buffett': { activo: false, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
+      'Warren Buffett': { activo: true, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
       'Carlos Silva': { activo: true, nuncaFlecha: true, sobre: 'ninguno', puntos: [], flecha: { x: 50, y: 23.958 }, x: 0, y: 0, w: 0, h: 0 },
       'Walt Disney': { activo: true, sobre: 'papel', puntos: [[73.382, 63.932], [73.382, 64.714], [75.882, 64.714], [75.882, 65.234], [78.529, 65.234], [78.529, 64.062], [78.088, 63.021], [77.059, 62.24], [73.676, 63.411]], flecha: { x: 80, y: 32.292 }, x: 75.956, y: 63.737, w: 5.147, h: 2.994 },
-      'Dieter Rams': { activo: false, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
+      'Dieter Rams': { activo: true, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
       'Howard Schultz': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
       'George Lucas': { activo: true, sobre: 'papel', puntos: [[72.279, 70.443], [75.588, 69.922], [77.059, 69.661], [78.235, 69.661], [79.265, 71.094], [81.25, 71.224], [82.5, 72.526], [79.118, 73.698], [73.529, 73.568], [72.279, 72.656]], flecha: { x: 90.735, y: 39.583 }, x: 77.389, y: 71.679, w: 10.221, h: 4.037 }
     },
     coetaneos: {
       'Elon Musk': { activo: true, sobre: 'placa', puntos: [[16.25, 85.833], [27.734, 85.833], [28.047, 86.25], [28.203, 87.222], [28.203, 91.111], [27.891, 92.361], [16.406, 92.361], [16.094, 91.806], [16.094, 86.389]], flecha: { x: 13.125, y: 42.778 }, x: 22.148, y: 89.097, w: 12.109, h: 6.528 },
-      'Jensen Huang': { activo: true, sobre: 'placa', puntos: [[22.891, 77.222], [33.516, 77.222], [33.828, 77.639], [33.984, 78.75], [33.984, 82.361], [33.672, 83.194], [22.891, 83.333], [22.656, 82.778], [22.656, 77.778]], flecha: { x: 24.375, y: 41.389 }, x: 28.32, y: 80.278, w: 11.328, h: 6.111 },
-      'Mira Murati': { activo: false, sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], flecha: { x: 35, y: 36.667 }, x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
+      'Jensen Huang': { activo: true, sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], flecha: { x: 24.375, y: 41.389 }, x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
+      'Mira Murati': { activo: true, sobre: 'placa', puntos: [[41.25, 67.5], [50.2, 67.5], [50.547, 67.9], [50.547, 74.3], [50.2, 74.722], [41.25, 74.722], [41.0, 74.3], [41.0, 67.9]], flecha: { x: 38.5, y: 36.667 }, x: 45.898, y: 71.111, w: 9.297, h: 7.222 },
       'Jony Ive': { activo: true, sobre: 'placa', puntos: [[58.281, 62.778], [65.703, 62.639], [65.938, 63.056], [66.016, 64.167], [66.016, 66.389], [65.781, 67.083], [58.359, 67.083], [58.125, 66.667], [58.125, 63.194]], flecha: { x: 68.594, y: 39.444 }, x: 62.071, y: 64.861, w: 7.891, h: 4.444 },
       'John Lasseter': { activo: true, sobre: 'placa', puntos: [[66.953, 74.861], [77.188, 74.861], [77.5, 75.278], [77.578, 76.389], [77.578, 80.139], [77.266, 80.972], [67.031, 80.972], [66.797, 80.417], [66.797, 75.417]], flecha: { x: 76.563, y: 42.222 }, x: 72.188, y: 77.916, w: 10.781, h: 6.111 },
-      'Ryan Reynolds': { activo: false, sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], flecha: { x: 88.75, y: 41.389 }, x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
+      'Ryan Reynolds': { activo: true, sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], flecha: { x: 88.75, y: 41.389 }, x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
     }
   };
   const CSS = `
@@ -39,9 +39,11 @@
 @keyframes papel-pulso{0%,100%{opacity:1}50%{opacity:.62}}
 .papel-halo[data-estado=trabajando]{animation:papel-pulso 1.8s ease-in-out infinite}
 #papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
-#papel-halos .consejero-flecha{width:clamp(24px,5.8%,44px);aspect-ratio:64/80;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor)}
+#papel-halos .consejero-flecha{width:clamp(30px,7.2%,56px);aspect-ratio:64/80;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor);position:relative}
 #papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible}
-#papel-halos .consejero-ranking{margin:0 0 3px;padding:2px 6px;background:rgba(20,14,6,.82);border:1px solid currentColor;border-radius:3px;color:inherit;font:700 11px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.01em;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06}
+#papel-halos .consejero-flecha .puesto{font:800 11px/1 "Press Start 2P",system-ui,sans-serif;fill:#140e06}
+#papel-halos .consejero-ranking{margin:0 0 3px;padding:3px 7px;background:rgba(20,14,6,.9);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
+#papel-halos .consejero-ranking:focus-visible{outline:2px dashed #ffd75e;outline-offset:2px}
 #papel-halos .consejero-marker[data-borde=izq] .consejero-ranking{align-self:flex-start}
 #papel-halos .consejero-marker[data-borde=der] .consejero-ranking{align-self:flex-end}
 #papel-halos .consejero-marker[data-cerca=izq] .consejero-ranking{transform:translateX(-22%)}
@@ -49,7 +51,8 @@
 @keyframes flecha-rebote{0%,100%{transform:translateY(0)}50%{transform:translateY(-26%)}}
 .consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite}
 @media (max-width:500px){
-  #papel-halos .consejero-ranking{font-size:9px;padding:1px 4px;margin-bottom:2px}
+  #papel-halos .consejero-flecha{width:clamp(26px,8.5%,44px)}
+  #papel-halos .consejero-ranking{font-size:11px;padding:2px 5px;margin-bottom:2px}
   #papel-halos .consejero-marker[data-cerca=izq] .consejero-ranking{transform:translateX(-42%)}
   #papel-halos .consejero-marker[data-cerca=der] .consejero-ranking{transform:translateX(42%)}
 }
@@ -65,6 +68,18 @@
 .consejo-globo::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-7px;border:7px solid transparent;border-top-color:#c9a227}
 .consejo-globo::before{content:"";position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-top-color:#140e06;z-index:1}
 #body-hotspots .body-hotspot:focus-visible{outline:2px dashed #ffd75e;outline-offset:3px;stroke:#ffd75e}
+
+.mac-hoy-lista{position:absolute;inset:6% 8% 8%;z-index:8;display:flex;flex-direction:column;background:#0b0b08;color:#7cff6b;border:2px solid #3a3a2a;font:10px/1.35 "VT323","Press Start 2P",ui-monospace,Menlo,monospace;overflow:hidden;box-shadow:inset 0 0 12px rgba(0,0,0,.6)}
+.mac-hoy-lista header{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;background:#111;border-bottom:1px solid #3a3a2a;color:#c8ffb0;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.mac-hoy-lista header b{font:inherit}
+.mac-hoy-lista button.cerrar{appearance:none;background:#1a1a12;color:#7cff6b;border:1px solid #7cff6b;padding:2px 6px;font:inherit;cursor:pointer}
+.mac-hoy-lista ol{margin:0;padding:4px 6px 6px 22px;overflow:auto;flex:1;list-style:decimal}
+.mac-hoy-lista li{margin:0 0 4px}
+.mac-hoy-lista a{color:#b8ff9a;text-decoration:underline}
+.mac-hoy-lista .hora{color:#9fd88a;margin-right:4px}
+.mac-hoy-lista .vacio{padding:10px 8px;opacity:.85}
+.mac-hoy-prop.has-lista .mac-hoy-glass > :not(.mac-hoy-lista),
+.mac-hoy-front-stage.has-lista .mac-hoy-crt-front > :not(.mac-hoy-lista){visibility:hidden}
 `;
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
@@ -116,7 +131,13 @@
     if (!p || p.sobre === 'ninguno' || p.sobre === 'cuerpo') return false;
     return puntosDe(p).length >= 3;
   }
-  const FLECHA_SVG = '<svg viewBox="0 0 64 80" focusable="false" aria-hidden="true"><path d="M32 76 L6 38 L22 38 L22 4 L42 4 L42 38 L58 38 Z" fill="currentColor" stroke="#140e06" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  function flechaSvg(puesto) {
+    const n = (puesto && Number(puesto) >= 1) ? String(puesto) : '';
+    const txt = n
+      ? '<text class="puesto" x="32" y="26" text-anchor="middle" font-size="' + (n.length > 1 ? '16' : '20') + '" font-weight="800" fill="#140e06">' + n + '</text>'
+      : '';
+    return '<svg viewBox="0 0 64 80" focusable="false" aria-hidden="true"><path d="M32 76 L6 38 L22 38 L22 4 L42 4 L42 38 L58 38 Z" fill="currentColor" stroke="#140e06" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>' + txt + '</svg>';
+  }
 
   function cargar(force) {
     if (!force && datos && Date.now() - datosAt < REUSE_MS) return Promise.resolve(datos);
@@ -266,16 +287,25 @@
       const x = Number(fl.x);
       if (x < 16) wrap.setAttribute('data-borde', 'izq');
       else if (x > 84) wrap.setAttribute('data-borde', 'der');
-      const etiqueta = silla && silla.hoy && silla.hoy.etiqueta;
-      if (etiqueta) {
+      const hoy = silla && silla.hoy;
+      if (hoy && (hoy.etiqueta || hoy.n != null)) {
         const lab = d.createElement('span');
         lab.className = 'consejero-ranking';
-        lab.textContent = textoEtiqueta(etiqueta);
+        lab.textContent = hoy.etiqueta != null ? String(hoy.etiqueta) : (hoy.n == null ? '—' : String(hoy.n));
+        lab.setAttribute('role', 'button');
+        lab.setAttribute('tabindex', '0');
+        lab.setAttribute('data-persona', persona);
+        lab.title = 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
+        lab.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona); });
+        lab.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
+        });
         wrap.appendChild(lab);
       }
       const el = d.createElement('span');
       el.className = 'consejero-flecha';
-      el.innerHTML = FLECHA_SVG;
+      el.innerHTML = flechaSvg(hoy && hoy.puesto);
       wrap.appendChild(el);
       c.appendChild(wrap);
     });
@@ -394,6 +424,98 @@
       if (p && !el.getAttribute('aria-label')) el.setAttribute('aria-label', 'Estado de ' + p);
     });
   }
+
+  function horaLista(unixS) {
+    if (!unixS) return '--:--';
+    try {
+      return new Date(Number(unixS) * 1000).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return '--:--'; }
+  }
+  function pintarListaEn(host, persona, silla) {
+    if (!host) return null;
+    let box = host.querySelector('.mac-hoy-lista');
+    if (!box) {
+      box = doc().createElement('div');
+      box.className = 'mac-hoy-lista';
+      host.appendChild(box);
+    }
+    const hoy = (silla && silla.hoy) || {};
+    const items = Array.isArray(hoy.misiones) ? hoy.misiones : [];
+    const puesto = hoy.puesto ? (' · puesto ' + hoy.puesto) : '';
+    const n = hoy.n == null ? '—' : String(hoy.n);
+    box.innerHTML = '';
+    const head = doc().createElement('header');
+    const b = doc().createElement('b');
+    b.textContent = persona + ' · ' + n + ' hoy' + puesto;
+    const btn = doc().createElement('button');
+    btn.type = 'button';
+    btn.className = 'cerrar';
+    btn.textContent = 'Cerrar';
+    btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); cerrarListaMac(); });
+    head.append(b, btn);
+    box.appendChild(head);
+    if (!items.length) {
+      const p = doc().createElement('p');
+      p.className = 'vacio';
+      p.textContent = hoy.n == null ? 'No hay datos atribuibles de hoy.' : 'Ninguna misión cerrada hoy.';
+      box.appendChild(p);
+    } else {
+      const ol = doc().createElement('ol');
+      items.forEach((m) => {
+        const li = doc().createElement('li');
+        const hora = doc().createElement('span');
+        hora.className = 'hora';
+        hora.textContent = horaLista(m.cuando);
+        li.appendChild(hora);
+        if (m.url) {
+          const a = doc().createElement('a');
+          a.href = m.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = (m.titulo || 'misión') + (m.ref ? '  ' + m.ref : '');
+          li.appendChild(a);
+        } else {
+          const span = doc().createElement('span');
+          span.textContent = (m.titulo || 'misión') + (m.ref ? '  ' + m.ref : '');
+          li.appendChild(span);
+        }
+        ol.appendChild(li);
+      });
+      box.appendChild(ol);
+    }
+    host.classList && host.closest && (host.closest('.mac-hoy-prop, .mac-hoy-front-stage, #mac-hoy-front') || host).classList.add('has-lista');
+    const wrap = host.closest && (host.closest('.mac-hoy-prop') || host.closest('.mac-hoy-front-stage') || host.closest('#mac-hoy-front'));
+    if (wrap) wrap.classList.add('has-lista');
+    return box;
+  }
+  let listaAbierta = null;
+  function pantallasMac() {
+    const d = doc(); if (!d) return [];
+    return [
+      d.querySelector('#mac-hoy-glass'),
+      d.querySelector('#mac-hoy-crt-front, .mac-hoy-crt-front'),
+    ].filter(Boolean);
+  }
+  function mostrarListaMac(persona) {
+    const silla = sillaDe(persona);
+    const pantallas = pantallasMac();
+    if (!pantallas.length) return;
+    listaAbierta = persona;
+    pantallas.forEach((h) => pintarListaEn(h, persona, silla));
+    if (root.MacHoy && typeof root.MacHoy.openFront === 'function') {
+      try { root.MacHoy.openFront(); } catch (e) {}
+    }
+  }
+  function cerrarListaMac() {
+    const d = doc(); if (!d) return;
+    d.querySelectorAll('.mac-hoy-lista').forEach((el) => el.remove());
+    d.querySelectorAll('.has-lista').forEach((el) => el.classList.remove('has-lista'));
+    listaAbierta = null;
+    if (root.MacHoy && typeof root.MacHoy.closeFront === 'function') {
+      try { root.MacHoy.closeFront(); } catch (e) {}
+    }
+  }
+
   function wire() {
     const d = doc(); if (!d || wired) return;
     wired = true;
@@ -444,7 +566,7 @@
       if (e.target.closest && e.target.closest('#body-hotspots [data-persona]')) return;
       if (abierto) ocultar();
     }, true);
-    d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && abierto) ocultar(); });
+    d.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (listaAbierta) { cerrarListaMac(); return; } if (abierto) ocultar(); } });
     const stage = escena();
     if (stage && root.MutationObserver) {
       new root.MutationObserver(() => { prepararHotspots(); pintarHalos(); if (abierto) colocarGlobo(abierto.anchor); })

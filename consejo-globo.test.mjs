@@ -190,20 +190,19 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
   }
   // Lasseter está en la silla que era de Ratti; su placa no es la antigua (~56, 60).
   assert.ok(C['John Lasseter'].y > 74 && C['John Lasseter'].x > 68);
-  assert.ok(C['Mira Murati'].y < 75 && C['Mira Murati'].x < 40, 'Murati hereda la placa que era de Shotwell, delante de esa figura');
-  assert.ok(C['Jensen Huang'].y > 76, 'la placa de Huang sigue delante de Huang, no en el asiento de atrás');
+  assert.ok(C['Jensen Huang'].y < 75 && C['Jensen Huang'].x < 40, 'Huang ocupa la placa que era de Mira, a su lado');
+  assert.ok(C['Mira Murati'].x > 40 && C['Mira Murati'].x < 52 && C['Mira Murati'].y < 76, 'Mira tiene placa nueva delante, sin tapar las demás');
 });
 
 
 test('solo los consejeros activos llevan flecha y halo; Carlos nunca', () => {
   const L = PAPEL_POS.leyendas;
-  // Los 4 con bot/latido real en leyendas: Jobs, Woz, Disney y Lucas.
-  // Carlos Silva (Y-3) está en el centro: siempre disponible, nunca flecha ni halo.
+  // Las 6 de la mesa de leyendas llevan flecha. Carlos (Y-3) nunca. Cook y Schultz no están en la foto.
   assert.deepEqual(
     Object.keys(L).filter((n) => llevaFlecha(n)),
-    ['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas'],
+    ['Steve Jobs', 'Steve Wozniak', 'Warren Buffett', 'Walt Disney', 'Dieter Rams', 'George Lucas'],
   );
-  for (const n of ['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas']) {
+  for (const n of ['Steve Jobs', 'Steve Wozniak', 'Warren Buffett', 'Walt Disney', 'Dieter Rams', 'George Lucas']) {
     assert.equal(esActivo(n), true, n);
     assert.equal(llevaFlecha(n), true, n);
     assert.equal(llevaHalo(n), true, n);
@@ -211,28 +210,21 @@ test('solo los consejeros activos llevan flecha y halo; Carlos nunca', () => {
   assert.equal(esActivo('Carlos Silva'), true);
   assert.equal(nuncaFlecha('Carlos Silva'), true);
   assert.equal(llevaFlecha('Carlos Silva'), false);
-  for (const n of ['Warren Buffett', 'Dieter Rams', 'Howard Schultz', 'Tim Cook']) {
+  for (const n of ['Howard Schultz', 'Tim Cook']) {
     assert.equal(esActivo(n), false, n);
     assert.equal(llevaFlecha(n), false, n);
     assert.equal(llevaHalo(n), false, n);
-    if (n !== 'Tim Cook' && n !== 'Howard Schultz') {
-      assert.ok(L[n].flecha || (L[n].puntos && L[n].puntos.length >= 4), 'coords guardadas para reactivar ' + n);
-    }
   }
-  // Reactivar es un flag: si Buffett pasa a activo, flecha y halo vuelven.
-  const reactivado = { ...L['Warren Buffett'], activo: true };
-  assert.equal(llevaFlecha(reactivado), true);
-  assert.equal(llevaHalo(reactivado), true);
 
   const C = PAPEL_POS.coetaneos;
   assert.deepEqual(
     Object.keys(C).filter((n) => llevaFlecha(n)),
-    ['Elon Musk', 'Jensen Huang', 'Jony Ive', 'John Lasseter'],
+    ['Elon Musk', 'Jensen Huang', 'Mira Murati', 'Jony Ive', 'John Lasseter', 'Ryan Reynolds'],
   );
-  for (const n of ['Mira Murati', 'Ryan Reynolds']) {
-    assert.equal(esActivo(n), false, n);
-    assert.equal(llevaFlecha(n), false, n);
-    assert.equal(llevaHalo(n), false, n);
+  for (const n of Object.keys(C)) {
+    assert.equal(esActivo(n), true, n);
+    assert.equal(llevaFlecha(n), true, n);
+    assert.equal(llevaHalo(n), true, n);
   }
 });
 
@@ -258,13 +250,14 @@ test('flecha y papeles de un consejero leen el mismo mapa de estado', () => {
 });
 
 
-test('el ranking de hoy es entre las 6 sillas oficiales, no Ive ni Lasseter', () => {
+test('el ranking de hoy es por mesa de 6: leyendas y coetáneos, no Cook ni Carlos', () => {
   assert.equal(CONSEJO_RANKING_TOTAL, 6);
   assert.deepEqual(CONSEJO_RANKING, [
-    'Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas', 'Elon Musk', 'Jensen Huang',
+    'Steve Jobs', 'Steve Wozniak', 'Warren Buffett', 'Walt Disney', 'Dieter Rams', 'George Lucas',
+    'Elon Musk', 'Jensen Huang', 'Mira Murati', 'John Lasseter', 'Jony Ive', 'Ryan Reynolds',
   ]);
   for (const n of CONSEJO_RANKING) assert.equal(enRanking(n), true, n);
-  for (const n of ['Jony Ive', 'John Lasseter', 'Carlos Silva', 'Warren Buffett', 'Dieter Rams', 'Mira Murati']) {
+  for (const n of ['Carlos Silva', 'Tim Cook', 'Howard Schultz']) {
     assert.equal(enRanking(n), false, n);
   }
 });
@@ -323,13 +316,22 @@ test('puestosHoy: más dones es 1/6; empate se desempata por el último done; si
   assert.equal(empate.get('B'), 1, 'mismo recuento, gana el done más reciente');
   assert.equal(empate.get('A'), 2);
   assert.equal(empate.get('C'), 3);
-  assert.equal(etiquetaRanking(10, 1), '10 hoy · 1/6');
-  assert.equal(etiquetaRanking(0, 4), '0 hoy · 4/6');
+  assert.equal(etiquetaRanking(10, 1), '10');
+  assert.equal(etiquetaRanking(0, 4), '0');
   assert.equal(etiquetaRanking(null, null), '—');
 });
 
-test('armarMesa pone en cada silla del 6 la etiqueta de hoy; inactivos e Ive/Lasseter no', () => {
+test('armarMesa recuenta por mesa de 6; la etiqueta es solo el número; PRs y Yokup entran en la unión', () => {
   const desde = inicioDiaMadridS(AHORA);
+  const prs = [
+    { repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 343, title: 'ranking flechas', merged_at: desde + 500, rama: 'woz/ranking-flechas' },
+    { repo: 'csilvasantin/admira-next-web', number: 396, title: 'cámara Link 2', merged_at: desde + 510, rama: 'feat/ojos-link2-macstudio-20261111' },
+    { repo: 'csilvasantin/admira-next-web', number: 401, title: 'sin marca', merged_at: desde + 520, rama: 'feat/otra-cosa' },
+  ];
+  const yokup = [
+    { id: 'FLT-1', status: 'resolved', assignee: 'WozniakGrokBot', title: 'cierre', updated_at: (desde + 600) * 1000 },
+    { id: 'FLT-102820', status: 'in_progress', assignee: 'WozniakGrokBot', title: 'no cuenta', updated_at: (desde + 700) * 1000 },
+  ];
   const d = armarMesa({
     latidos: { Wozniak: { modo: 'trabajando', mision: 'ranking', at: S - 10, hasta: S + 100 } },
     bandejas: {
@@ -346,40 +348,55 @@ test('armarMesa pone en cada silla del 6 la etiqueta de hoy; inactivos e Ive/Las
       ],
       Wozniak: [],
       Lucas: [],
-      Huang: null, // bandeja no respondió
-      Ive: [{ id: 99, status: 'done', text: 'fuera del 6', done_at: desde + 400 }],
+      Huang: null,
+      Ive: [{ id: 99, status: 'done', text: 'hoy de Ive', done_at: desde + 400 }],
       Lasseter: [],
     },
+    prs,
+    yokup,
     ahoraMs: AHORA,
   });
   assert.equal(d.ranking.total, 6);
   assert.equal(d.ranking.dia, '2026-11-11');
   const por = Object.fromEntries([...d.mesa.leyendas, ...d.mesa.coetaneos].map((s) => [s.persona, s]));
+  assert.equal(por['Steve Wozniak'].hoy.n, 3, 'PR #343 + anw #396 expresa + Yokup resuelta; in_progress no cuenta');
+  assert.equal(por['Steve Wozniak'].hoy.puesto, 1);
+  assert.equal(por['Steve Wozniak'].hoy.etiqueta, '3');
+  assert.deepEqual(por['Steve Wozniak'].hoy.por_fuente, { inbox: 0, yokup: 1, pr: 2 });
   assert.equal(por['Steve Jobs'].hoy.n, 2);
-  assert.equal(por['Steve Jobs'].hoy.puesto, 1);
-  assert.equal(por['Steve Jobs'].hoy.etiqueta, '2 hoy · 1/6');
+  assert.equal(por['Steve Jobs'].hoy.puesto, 2);
+  assert.equal(por['Steve Jobs'].hoy.etiqueta, '2');
   assert.equal(por['Walt Disney'].hoy.n, 1);
-  assert.equal(por['Walt Disney'].hoy.puesto, 2);
-  assert.equal(por['Walt Disney'].hoy.etiqueta, '1 hoy · 2/6');
-  assert.equal(por['Elon Musk'].hoy.n, 1);
-  assert.equal(por['Elon Musk'].hoy.puesto, 3, 'empate a 1 con Disney: Musk cerró antes, queda 3');
-  assert.equal(por['Elon Musk'].hoy.etiqueta, '1 hoy · 3/6');
-  assert.equal(por['Steve Wozniak'].hoy.n, 0);
-  assert.equal(por['Steve Wozniak'].hoy.puesto, 4);
-  assert.equal(por['Steve Wozniak'].hoy.etiqueta, '0 hoy · 4/6');
+  assert.equal(por['Walt Disney'].hoy.puesto, 3);
+  assert.equal(por['Walt Disney'].hoy.etiqueta, '1');
   assert.equal(por['George Lucas'].hoy.n, 0);
+  assert.equal(por['Warren Buffett'].hoy.n, 0);
+  assert.equal(por['Dieter Rams'].hoy.n, 0);
   assert.equal(por['George Lucas'].hoy.puesto, 4);
-  assert.equal(por['Jensen Huang'].hoy.n, null);
-  assert.equal(por['Jensen Huang'].hoy.puesto, null);
-  assert.equal(por['Jensen Huang'].hoy.etiqueta, '—');
-  assert.equal(por['Jony Ive'].hoy.etiqueta, null, 'Ive no está en el 6: sin etiqueta');
-  assert.equal(por['John Lasseter'].hoy.etiqueta, null);
-  assert.equal(por['Warren Buffett'].hoy.etiqueta, null);
-  assert.equal(por['Tim Cook'].hoy.etiqueta, null);
-  assert.equal(por['Mira Murati'].hoy.etiqueta, null);
-  // Misma instantánea: flecha, papeles y etiqueta leen el mismo asiento.
+  assert.equal(por['Warren Buffett'].hoy.puesto, 4);
+  assert.equal(por['Elon Musk'].hoy.n, 1);
+  assert.equal(por['Jony Ive'].hoy.n, 1);
+  assert.equal(por['Jony Ive'].hoy.puesto, 1, 'mismo recuento que Musk, Ive cerró más tarde');
+  assert.equal(por['Elon Musk'].hoy.puesto, 2);
+  assert.equal(por['Elon Musk'].hoy.etiqueta, '1');
+  assert.equal(por['Jensen Huang'].hoy.n, 0, 'bandeja falló, pero PRs/Yokup se leyeron: 0, no —');
+  assert.equal(por['Jensen Huang'].hoy.etiqueta, '0');
+  assert.equal(por['John Lasseter'].hoy.n, 0);
+  assert.equal(por['Mira Murati'].hoy.n, 0);
+  assert.equal(por['Ryan Reynolds'].hoy.n, 0);
+  assert.equal(por['Tim Cook'].hoy.etiqueta, null, 'Cook no entra en el ranking de leyendas');
+  const sinFuentes = armarMesa({
+    latidos: {},
+    bandejas: { Huang: null },
+    prs: null,
+    yokup: null,
+    ahoraMs: AHORA,
+  });
+  const huang = sinFuentes.mesa.coetaneos.find((s) => s.persona === 'Jensen Huang');
+  assert.equal(huang.hoy.n, null, 'si ninguna fuente se pudo leer, no se inventa el recuento');
+  assert.equal(huang.hoy.etiqueta, '—');
+  assert.equal(huang.hoy.puesto, null);
   const mapa = mapaEstados(d.mesa);
   assert.equal(estadoDe('Steve Wozniak', mapa), por['Steve Wozniak'].estado);
   assert.equal(por['Steve Wozniak'].estado, 'trabajando');
-  assert.equal(por['Steve Jobs'].hoy.etiqueta, por['Steve Jobs'].hoy.etiqueta);
 });

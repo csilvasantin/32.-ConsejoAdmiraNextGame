@@ -43,7 +43,7 @@
         if (plano(r[0]) === n || r[3].indexOf(n) >= 0) return { gen: g, persona: r[0] };
       }
     }
-    // Rol (CEO, CTO…) solo en la mesa actual y sin ambigüedad.
+    // El nombre corto (jobs, woz…) se resuelve en la mesa actual y sin ambigüedad.
     var porRol = (GENS[genActual] || []).filter(function (r) { return plano(r[1]) === n; });
     if (porRol.length === 1) return { gen: genActual, persona: porRol[0][0] };
     if (porRol.length > 1) return { error: 'Rol ambiguo: «' + nombre + '» — usa el nombre' };
@@ -80,7 +80,7 @@
     var t = String(texto || '').trim();
     if (/^\/(ceo|yo)$/i.test(t)) {
       var on = estado.toggleCarlos();
-      return { ok: true, gen: 'leyendas', carlos: true, msg: on ? '👤 Carlos en la mesa (CEO)' : '👤 Carlos fuera — su silla queda vacía' };
+      return { ok: true, gen: 'leyendas', carlos: true, msg: on ? '👤 Carlos en la mesa' : '👤 Carlos fuera — su silla queda vacía' };
     }
     var m = t.match(/^\/(consejeros?|advisors?|councill?ors?)(?:\s+(.+))?$/i);
     if (!m) return null;

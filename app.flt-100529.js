@@ -1874,6 +1874,7 @@
             li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
             li('<strong>/interface terminal 4 | 2 [dispositivo] · /interface 6 · /interface 2 claude|codex|grok · /interface 2 Neo Trinity · /interfaz</strong>', 'terminales en vivo de los deepagents (4 = Neo·Morfeo·Trinity·Oráculo · 2 = Smith·Merovingio · 6 = los seis en 3x2 · 2 claude|codex|grok = los 2 vivos de ese modelo · 2 Neo Trinity = esos dos): sin dispositivo aquí; Fold, Iphone, Air, MBP16, MBP14 allí · /interface off [dispositivo] · /interface help', 'live deepagent terminals (4 = Neo·Morph·Trinity·Oracle · 2 = Smith·Merovingio · 6 = all six in 3x2 · 2 claude|codex|grok = the 2 live on that model · 2 Neo Trinity = those two): no device = here; Fold, Iphone, Air, MBP16, MBP14 there · /interface off [device] · /interface help') +
+            li('<strong>/hablar [consejero] [mensaje] · /talk</strong>', 'habla con un consejero (Jobs en Leyendas, Elon en Coetáneos si no pones nombre). /hablar off cuelga. El literal no se envía al consejero', 'talk to a counsellor (Jobs on Legends, Elon on Contemporaries if you omit the name). /talk off hangs up. The literal is never sent to the counsellor') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/consejero</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table') +
             li('<strong>/ceo</strong>', 'aparece o desaparece Carlos (tú) en la silla central', 'shows or hides Carlos (you) in the centre chair') +
@@ -2230,7 +2231,9 @@
         // Orquestador (09-10-2026): /orquestar <texto> · /orchestrate <text> → /api/orquestar
         '/orquestar', '/orchestrate',
         // /interface (r29 · Jensen Huang, 11-10-2026): terminales de los deepagents aquí o en otro dispositivo
-        '/interface', '/interfaz'
+        '/interface', '/interfaz',
+        // /hablar (11-11-2026): mismo canal que /hola; se intercepta en el cliente, nunca se envía el literal
+        '/hablar', '/talk'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2299,6 +2302,23 @@
     function handleCliCommandBase(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
+        // /hablar [consejero] [mensaje] · /talk (11-11-2026): se intercepta aquí y en el panel de chat.
+        // El literal nunca llega al consejero.
+        if (/^\/(hablar|talk)(\s|$)/i.test(text) && window.AdmiraHablarCmd && typeof window.AdmiraHablarCmd.parseLinea === 'function') {
+            const linea = window.AdmiraHablarCmd.parseLinea(text, {
+                generation: currentGen,
+                persona: (selectedAgent && selectedAgent.persona) || window.CouncilInterface?.bridge?.selected || null
+            });
+            if (linea) {
+                addUserEntry(text);
+                if (window.CouncilInterface && typeof window.CouncilInterface.hablar === 'function') {
+                    window.CouncilInterface.hablar(linea);
+                } else {
+                    setActionLine(cliT('⚠️ /hablar no está listo; recarga la página', '⚠️ /talk is not ready; reload the page'));
+                }
+                return true;
+            }
+        }
         // /arquitectura · /architecture (9-oct-2026): abre el organigrama tecnológico de admiranext.com
         // (admira-idioma.js: castellano → ?lang=es, inglés → ?lang=en). Local: no va al Consejo.
         if (/^\/(arquitectura|architecture|organigrama-tecnologico|tech-chart)\s*$/i.test(text) && window.AdmiraIdioma && window.AdmiraIdioma.arquitectura) {

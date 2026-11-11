@@ -119,7 +119,77 @@
       img.src=url;
     });
   }
+  function mesaHablar(){
+    const C=window.AdmiraHablarCmd;
+    const g=C&&typeof C.mesaActiva==='function'?C.mesaActiva(document):null;
+    return g||generation||'leyendas';
+  }
+  function avisoHablar(msg){
+    const el=document.getElementById('sentence-line');
+    if(el)el.textContent=msg;
+  }
+  let hablarMic=null,hablarDestino=null;
+  function pararHablarMic(){
+    try{hablarMic&&hablarMic.parar();}catch(_){}
+    hablarMic=null;hablarDestino=null;
+  }
+  function arrancarHablarMic(persona){
+    const C=window.AdmiraHablarCmd;
+    if(!C||typeof C.crearMic!=='function')return;
+    pararHablarMic();
+    hablarDestino=persona;
+    hablarMic=C.crearMic({
+      onTexto(t){if(t&&hablarDestino)sendPreview(t);},
+      onSinMic(){avisoHablar('🎤 Hablas con '+persona+' · este navegador no reconoce la voz; escribe en el chat. /hablar off cuelga');},
+      onSinPermiso(){avisoHablar('Sin permiso de micrófono. Puedes escribir igual. /hablar off cuelga');}
+    });
+    const ok=hablarMic.arrancar();
+    if(ok)avisoHablar('🎤 Hablas con '+persona+' · /hablar off cuelga');
+  }
+  async function aplicarHablar(linea){
+    const C=window.AdmiraHablarCmd;
+    if(!linea)return;
+    if(linea.accion==='colgar'){
+      const quien=hablarDestino||draftPersona;
+      pararHablarMic();
+      avisoHablar(quien?'Has colgado de '+quien+'.':'Has colgado.');
+      return;
+    }
+    if(linea.accion==='ayuda'){avisoHablar(C?C.listaAyuda():'/hablar [consejero] [mensaje] · /hablar off cuelga');return;}
+    if(linea.accion==='estado'){
+      const p=hablarDestino||draftPersona;
+      avisoHablar(p?'En conversación con '+p+' · /hablar off cuelga.':'No hay conversación. /hablar a secas habla con el CEO de la mesa.');
+      return;
+    }
+    if(linea.accion==='error'){avisoHablar('No reconozco a ese consejero. Prueba /hablar Lucas, Jobs, Woz, Disney, Elon o Jensen.');return;}
+    if(linea.accion==='conectar'||linea.accion==='preguntar'){
+      const persona=linea.persona;
+      const pregunta=linea.pregunta||linea.texto||'';
+      const C2=window.AdmiraHablarCmd;
+      if(C2&&!C2.tieneLinea(persona)&&!(bridge&&bridge.has(persona))){
+        pararHablarMic();
+        avisoHablar(persona+' aún no tiene línea directa desde aquí. Prueba Jobs, Woz, Disney, Lucas, Elon o Jensen.');
+        return;
+      }
+      if(bridge&&persona&&bridge.has(persona)&&bridge.selected!==persona)await bridge.select(persona);
+      arrancarHablarMic(persona);
+      if(pregunta)await sendPreviewTexto(pregunta);
+    }
+  }
   async function sendPreview(text,meta){
+    const C=window.AdmiraHablarCmd;
+    const raw=String(text||'').trim();
+    if(C&&typeof C.parseLinea==='function'){
+      const linea=C.parseLinea(raw,{generation:mesaHablar(),persona:draftPersona});
+      if(linea){
+        writeDraft('');
+        await aplicarHablar(linea);
+        return;
+      }
+    }
+    await sendPreviewTexto(text,meta);
+  }
+  async function sendPreviewTexto(text,meta){
     const persona=draftPersona;
     if(!persona||sendingDrafts.has(persona))return;
     let prompt=String(text||'').trim();
@@ -201,17 +271,23 @@
     // compartido). Si no se acepta (p. ej. falta entrar con Google) el texto vuelve al compositor.
     async send(persona,text){
       saveDraft();
+      const C=window.AdmiraHablarCmd;
+      if(C&&typeof C.parseLinea==='function'){
+        const linea=C.parseLinea(String(text||'').trim(),{generation:mesaHablar(),persona:persona||draftPersona});
+        if(linea){writeDraft('');await aplicarHablar(linea);return true;}
+      }
       if(bridge.selected!==persona&&bridge.has(persona))await bridge.select(persona);
       let ok=false;
       try{ok=await bridge.send(persona,text);}
       finally{if(!ok&&String(text||'').trim()&&!String(drafts[persona]||'').includes(String(text).trim()))restoreDraft(persona,text);}
       return ok;
     },
+    hablar:linea=>aplicarHablar(linea),
     attachDataURL:(...args)=>bridge.attachDataURL(...args),
     hasAttachments:persona=>bridge.hasAttachments(persona),
     restoreDraft,bocadillo,
     show,close,
-    setGeneration(gen){generation=gen;speech.setGeneration(gen);if(working)working.setGeneration(gen);bridge.select(null);table.close();close();layoutBubble();},
+    setGeneration(gen){generation=gen;speech.setGeneration(gen);if(working)working.setGeneration(gen);pararHablarMic();bridge.select(null);table.close();close();layoutBubble();},
     cancel(){speech.cancel();},
     table,bridge,speech,working
   };

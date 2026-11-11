@@ -63,8 +63,8 @@ export const RETRATOS = {
   Wozniak: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 18, t: 36, w: 8, h: 21 }) },
   Disney: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 55, t: 27, w: 8, h: 26 }) },
   Lucas: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 88, t: 41, w: 9, h: 17 }) },
-  Musk: { img: "/assets/council-coetaneos.jpg", cara: { l: 9, t: 44, w: 9, h: 16 } },
-  Huang: { img: "/assets/council-coetaneos.jpg", cara: { l: 21.65, t: 44.5, w: 8.5, h: 15.1 } },
+  Musk: { img: "/assets/council-coetaneos.jpg", cara: { l: 7.0, t: 47.2, w: 9.4, h: 15.3 } },
+  Huang: { img: "/assets/council-coetaneos.jpg", cara: { l: 17.8, t: 42.5, w: 8.6, h: 15.3 } },
 };
 // r44 (Carlos, 13:14): Merovingio tiene SU cara (el Merovingio de Matrix, /avatars/merovingio.jpg); Musk, la suya.
 RETRATOS.Merovingio = { img: "/avatars/merovingio.jpg" };

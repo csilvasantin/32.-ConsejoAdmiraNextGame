@@ -123,6 +123,11 @@
       CEO:{l:7,t:44,w:7,h:17}, CTO:{l:18,t:36,w:8,h:21}, COO:{l:31,t:30,w:8,h:24}, CFO:{l:43,t:27,w:8,h:26},
       CCO:{l:55,t:27,w:8,h:26}, CDO:{l:66,t:31,w:7,h:23}, CXO:{l:77,t:34,w:8,h:21}, CSO:{l:88,t:41,w:9,h:17}
     };
+    const CROP_COET = {
+      "Elon Musk":{l:7,t:47.2,w:9.4,h:15.3}, "Jensen Huang":{l:17.8,t:42.5,w:8.6,h:15.3},
+      "Gwynne Shotwell":{l:26,t:41,w:9,h:14}, "Jony Ive":{l:61,t:40.5,w:10,h:14},
+      "John Lasseter":{l:74,t:42,w:11,h:16}, "Ryan Reynolds":{l:85,t:47,w:11,h:16}
+    };
     const R = [
       ["CEO","Chief Executive Officer","Steve Jobs","racional","leyendas"],
       ["CTO","Chief Technology Officer","Steve Wozniak","racional","leyendas"],
@@ -143,9 +148,10 @@
     ];
     const ICON = {CEO:"🏛️",CTO:"⚙️",COO:"📋",CFO:"💰",CCO:"💡",CDO:"🎨",CXO:"🧭",CSO:"📖"};
     const RL = {codex:"Codex",claude:"Claude",opencode:"OpenCode"};
-    const COUNCIL = R.map(x=>({role:x[0],roleFull:x[1],persona:x[2],side:x[3],gen:x[4],icon:ICON[x[0]],slug:slugify(x[2]),crop:CROP[x[0]]}));
+    const COUNCIL = R.map(x=>({role:x[0],roleFull:x[1],persona:x[2],side:x[3],gen:x[4],icon:ICON[x[0]],slug:slugify(x[2]),crop:x[4]==="coetaneos"?(CROP_COET[x[2]]||null):CROP[x[0]]}));
 
     function cropStyle(c){
+      if(!c.crop) return "background:#1a1208;";
       const {l,t,w,h}=c.crop, sx=(10000/w).toFixed(1), sy=(10000/h).toFixed(1),
         px=(l/(100-w)*100).toFixed(2), py=(t/(100-h)*100).toFixed(2);
       return `background-image:url('${IMG[c.gen]}');background-size:${sx}% ${sy}%;background-position:${px}% ${py}%;`;

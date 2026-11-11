@@ -88,7 +88,7 @@ test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pu
 
 test("retratos: Musk con recorte de cara propio, Merovingio con la suya (Matrix, r44); Oráculo con avatar de iniciales PNG", () => {
   const t = tarjetas({ presencia: [], velocidad: { porAgente: [{ agente: "Oráculo", tokHora: 0, tokHoy: 1 }] }, ahoraS: T });
-  assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
+  assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 7.0, t: 47.2, w: 9.4, h: 15.3 });
   assert.deepEqual(t.find((x) => x.agente === "Merovingio").retrato, { img: "/avatars/merovingio.jpg" });
   assert.equal(t.find((x) => x.agente === "Oráculo").retrato.img, "/avatars/oraculo.jpg");
 });

@@ -8,8 +8,8 @@
 
     // Image pixels, never viewport pixels; the renderer scales both.
     // Leyendas: measured on assets/council-leyendas.jpg (1360×768).
-    // Coetáneos: measured on assets/council-coetaneos.jpg (1280×720).
-    // Elon Musk lip centre ≈ (181, 427), lip box ≈ 32×10.
+    // Coetáneos: measured on assets/council-coetaneos.jpg (1280×720), arte de siete.
+    // Elon Musk lip centre ≈ (158, 430), lip box ≈ 34×12.
     const SOURCE = Object.freeze({
         leyendas: /council-leyendas\.(?:jpg|jpeg|png)(?:[?#]|$)/i,
         coetaneos: /council-coetaneos\./i
@@ -30,7 +30,7 @@
             'George Lucas':   Object.freeze({ x: 1223, y: 416, width: 25, height: 11, opening: 1.5 })
         }),
         coetaneos: Object.freeze({
-            'Elon Musk': Object.freeze({ x: 181, y: 427, width: 32, height: 10, opening: 1.5 })
+            'Elon Musk': Object.freeze({ x: 158, y: 430, width: 34, height: 12, opening: 1.5 })
         })
     });
     function sceneFor(source) {

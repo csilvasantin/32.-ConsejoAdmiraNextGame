@@ -900,6 +900,15 @@ const $=s=>document.querySelector(s);
 let MACHINES=[];
 let HUB_CENSUS=[];
 let ACTIVE_ROUTE=null;
+// 👁 Ojos remotos de los pilares (9-nov-2026): ver el clic [data-ojos] junto al del control remoto.
+window.OJOS_PILARES={
+  macmini:{nodo:'mm',cam:'link',camaras:'Link 2 + Fold 8'},
+  macstudio:{nodo:'ms',cam:'studio',camaras:'Studio Display + Luna Ultra'}
+};
+window.ojosDe=function(m){ if(!m)return null; const k=String(m.id||'').toLowerCase().replace(/^admira-/,'').replace(/[^a-z0-9]/g,'');
+  const n=String(m.name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const id=window.OJOS_PILARES[k]?k:(/^macmini/.test(n)?'macmini':/^macstudio/.test(n)?'macstudio':null); const o=id&&window.OJOS_PILARES[id]; if(!o)return null;
+  return {nodo:o.nodo,url:'https://www.admiranext.com/ojosremotos?nodo='+o.nodo+'&cam='+o.cam,ayuda:'Ojos remotos de este equipo ('+o.camaras+'): abre el visor de admiranext.com/ojosremotos en otra pestaña de este navegador, con tu misma sesión Google. Si una cámara está caída sale en rojo, sin imagen.'}; };
 function rcMachineId(id, requested){
   try{
     const api=window.AdmiraRcMachine;
@@ -2065,6 +2074,7 @@ function renderCards(ms){
         <button data-mando-emision="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         <button data-a="channeltoggle" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Cerrar la ventana del canal DS en el Chrome de esta máquina.':'Abrir el canal DS (admira.tv/canal) en el Chrome de esta máquina.'}">${signageIsOn(m.id)?'⏹ cerrar canal':'📺 abrir canal'}</button>
         ${alcanzable(m)?`<button data-rc="${rcMachineId(m.id)}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
+        ${ojosDe(m)?`<button data-ojos="${ojosDe(m).nodo}" data-ojosurl="${ojosDe(m).url}" title="${ojosDe(m).ayuda}" style="border-color:#7ee787;color:#7ee787;font-weight:700">👁 ojos remotos</button>`:''}
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
         ${m.online&&interruptorAplica(m)?AdmiraInterruptores.html(m.id, INT_ESTADO[m.id]&&INT_ESTADO[m.id].st, INT_OCUPADO[m.id], interruptorCtx(m)):''}
       </div>
@@ -4234,6 +4244,13 @@ function collapseAllToggle(){
     frameLoop();
   };
   // Botón "🖥️ control remoto" de cada tarjeta (delegación).
+  // 👁 OJOS REMOTOS de los pilares (Carlos, 9-nov-2026 · t1154u): «tanto el MacMini como el MacStudio tienen ojos
+  // remotos, dale un botón de acceso». Reutiliza el visor existente (admiranext.com/ojosremotos, misma sesión Google)
+  // y lo abre en una pestaña de ESTE navegador con ?nodo= (Mosaico con las cámaras de ese equipo). Los nodos van por
+  // Funnel /ojos con token Bearer (Mini :10000/ojos → 8765, Studio :443/ojos → 8766): se ven también fuera del tailnet.
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-ojos]'); if(!b)return; e.preventDefault(); e.stopPropagation();
+    const o=Object.values(window.OJOS_PILARES).find(x=>x.nodo===b.getAttribute('data-ojos')); if(!o)return;
+    window.open('https://www.admiranext.com/ojosremotos?nodo='+o.nodo+'&cam='+o.cam,'_blank','noopener'); });
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rc]'); if(!b)return; e.preventDefault(); window.openRemoteControl(b.getAttribute('data-rc'), b.getAttribute('data-rcname')||b.getAttribute('data-rc')); });
 
   // Botón "🎛 mando" — abre /control/remote (mando de emisión de UN solo equipo:

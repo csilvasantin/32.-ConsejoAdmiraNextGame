@@ -70,3 +70,39 @@ test('/hola: carga sus módulos, manifiesto instalable y enlace en la barra', ()
   assert.equal(man.start_url, '/hola/'); assert.equal(man.display, 'standalone');
   assert.match(leer('admira-bar.js'), /h: "https:\/\/www\.admira\.live\/hola\/"/);
 });
+
+test('lo que va detrás del nombre se reenvía ya como primera pregunta (bandera de Canadá)', () => {
+  const I = HolaIntent.interpretar;
+  assert.deepEqual(I({ fase: 'dormido' }, 'Hola Steve, quiero que dibujes una bandera de Canadá'),
+    { accion: 'conectar', persona: 'Steve Jobs', pregunta: 'quiero que dibujes una bandera de Canadá' });
+  assert.deepEqual(I({ fase: 'dormido' }, 'hola Elon'), { accion: 'conectar', persona: 'Elon Musk' });
+  assert.deepEqual(I({ fase: 'dormido' }, 'o la admira quiero hablar con Steve Jobs'), { accion: 'conectar', persona: 'Steve Jobs' });
+  assert.equal(I({ fase: 'dormido' }, 'Hola Admira, quiero hablar con Jobs para que me dibuje una bandera').pregunta, 'para que me dibuje una bandera');
+  assert.equal(I({ fase: 'eligiendo' }, 'con Elon, ¿qué opinas de Marte?').pregunta, '¿qué opinas de Marte?');
+  const conv = { fase: 'conversando', persona: 'Steve Jobs' };
+  assert.deepEqual(I(conv, 'hola Steve quiero que dibujes una bandera de Canadá'),
+    { accion: 'preguntar', persona: 'Steve Jobs', texto: 'quiero que dibujes una bandera de Canadá' });
+  assert.deepEqual(I(conv, 'cambia a Elon y dime qué opinas de Marte'), { accion: 'conectar', persona: 'Elon Musk', pregunta: 'dime qué opinas de Marte' });
+  assert.equal(I({ fase: 'dormido' }, 'hola, quiero saber de Elon').accion, 'nada');
+});
+
+test('respuestas con imagen: se muestran y no se leen en voz alta', () => {
+  const m = HolaIntent.extraerMedios('Aquí la tienes: https://img.example.com/canada.png. Y en SVG: <svg viewBox="0 0 2 1"><rect width="2" height="1" fill="red"/></svg> ¿Te vale?');
+  assert.equal(m.imagenes.length, 2);
+  assert.equal(m.imagenes[0].tipo, 'svg');
+  assert.equal(m.imagenes[1].src, 'https://img.example.com/canada.png');
+  assert.doesNotMatch(m.texto, /svg|https/);
+  assert.match(m.texto, /¿Te vale\?/);
+  assert.deepEqual(HolaIntent.extraerMedios('![bandera](https://x.test/b.webp)').imagenes, [{ src: 'https://x.test/b.webp', tipo: 'url' }]);
+  assert.equal(HolaIntent.extraerMedios('Mira https://apple.com y dime').imagenes.length, 0);
+});
+
+test('/hola: sigue sondeando tras la 1.ª respuesta, muestra imágenes y reenvía la pregunta al conectar', () => {
+  const html = readFileSync(new URL('./hola/index.html', import.meta.url), 'utf8');
+  assert.match(html, /conectar\(r\.persona, r\.pregunta\)/);
+  assert.match(html, /preguntar\(c\.persona, pregunta\)/);
+  assert.match(html, /p\.n-=nuevos\.length/, 'cuenta las preguntas pendientes');
+  assert.doesNotMatch(html, /S\.esperando=0; estado\("💬/, 'ya no corta el sondeo en la primera respuesta');
+  assert.match(html, /H\.extraerMedios\(texto\)/);
+  assert.match(html, /id="media"/);
+});

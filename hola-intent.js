@@ -58,8 +58,11 @@
     if (/^(admira|almira|adnira|admiral|admire|admir|almirar|admirar|ad mira)$/.test(w)) return true;
     return w.length >= 5 && w.length <= 8 && lev(w, "admira") <= 2 && /^a/.test(w);
   }
+  // El reconocimiento suele partir «hola» en «o la» u «ola»: se recompone.
+  function limpiaSaludo(t) { return String(t || "").replace(/^(?:o la|oh la|o ya|hora)\b/, "hola").replace(/^ola\b/, "hola"); }
+
   function despertar(texto) {
-    var t = norm(texto).replace(/\bad mira\b/g, "admira").replace(/\bal mira\b/g, "almira");
+    var t = limpiaSaludo(norm(texto)).replace(/\bad mira\b/g, "admira").replace(/\bal mira\b/g, "almira");
     var w = t.split(" ");
     for (var i = 0; i < w.length; i++) {
       // «hola admira…» (saludo delante) o «admira…» al principio de la frase
@@ -71,53 +74,129 @@
   }
 
   function buscar(frase) {
-    for (var i = 0; i < INDICE.length; i++) if (contiene(frase, INDICE[i][0])) return INDICE[i][1];
-    return null;
+    var m = buscarCon(frase);
+    return m ? m.persona : null;
   }
-  // «quiero hablar con X», «pásame con X», «ponme a X», o solo el nombre.
-  function consejero(texto) {
+  // Primer consejero nombrado (alias más largo en la posición más temprana) y lo que va detrás.
+  function buscarCon(frase) {
+    var f = " " + frase + " ", mejor = null;
+    for (var i = 0; i < INDICE.length; i++) {
+      var pos = f.indexOf(" " + INDICE[i][0] + " ");
+      if (pos < 0) continue;
+      if (!mejor || pos < mejor.pos || (pos === mejor.pos && INDICE[i][0].length > mejor.alias.length))
+        mejor = { pos: pos, alias: INDICE[i][0], persona: INDICE[i][1] };
+    }
+    if (!mejor) return null;
+    var resto = f.slice(mejor.pos + mejor.alias.length + 2).trim();
+    // apellido pegado al nombre ya contado («steve jobs» si casó «steve»)
+    var ap = mejor.persona.toLowerCase().split(" ").pop();
+    if (resto.split(" ")[0] === ap) resto = resto.split(" ").slice(1).join(" ");
+    return { persona: mejor.persona, resto: limpiaResto(resto) };
+  }
+  // Lo que sigue al nombre es la primera pregunta si tiene contenido (≥ 2 palabras útiles).
+  function limpiaResto(r) {
+    r = String(r || "").replace(/^(?:(?:por favor|porfa|oye|vale|bueno|pues|y|eh|mira)\b\s*)+/, "").replace(/\b(?:por favor|porfa)$/, "").trim();
+    return r.split(" ").filter(Boolean).length >= 2 ? r : "";
+  }
+  // «hola Steve…», «oye Elon…»: saludo + nombre despierta y elige a la vez.
+  function saludoNombre(texto) {
+    var t = limpiaSaludo(norm(texto)), w = t.split(" ");
+    if (SALUDOS.indexOf(w[0]) < 0 || w.length < 2) return null;
+    var m = buscarCon(w.slice(1).join(" "));
+    if (!m) return null;
+    // el nombre tiene que ir justo detrás del saludo (no «hola, quiero saber de Elon…»)
+    var tras = w.slice(1).join(" ");
+    return (" " + tras + " ").indexOf(" " + ALIAS[m.persona].map(norm).filter(function (a) { return (" " + tras + " ").indexOf(" " + a + " ") === 0; })[0] + " ") === 0 ? m : null;
+  }
+  // «quiero hablar con X <pregunta>» / «con X» / «X» → { persona, resto }
+  function consejeroCon(texto) {
     var t = norm(texto);
     if (!t) return null;
     var m = t.match(/\b(?:hablar|habla|hablo|charlar|pasame|pasa|ponme|pon|conecta|conectame|llama|llamame|quiero|con|a)\b(?: (?:con|a|al|la|el))? (.+)$/);
-    var p = m ? buscar(m[1]) : null;
-    return p || buscar(t);
+    return (m && buscarCon(m[1])) || buscarCon(t);
   }
+  // «quiero hablar con X», «pásame con X», «ponme a X», o solo el nombre.
+  function consejero(texto) { var m = consejeroCon(texto); return m ? m.persona : null; }
   // Solo con verbo de cambio explícito y el nombre en las 4 palabras siguientes:
   // «cambia a Woz», «pásame con Elon», «ahora con Disney», «quiero hablar con Jobs».
   function cambio(texto) {
     var t = norm(texto);
     var m = t.match(/\b(?:cambia|cambiar|cambiame|cambio|pasame|ponme|quiero hablar|hablar|ahora con|ahora a|mejor con)\b(?: (?:a|con|al|la|el|ahora|mejor))* (.+)$/);
-    return m ? buscar(m[1].split(" ").slice(0, 4).join(" ")) : null;
+    if (!m) return null;
+    return buscar(m[1].split(" ").slice(0, 4).join(" "));
+  }
+  function cambioCon(texto) {
+    var p = cambio(texto); if (!p) return null;
+    var c = buscarCon(norm(texto));
+    return { persona: p, resto: c && c.persona === p ? c.resto : "" };
   }
   var ADIOS = /\b(gracias|muchas gracias|adios|hasta luego|hasta pronto|nada mas|eso es todo|terminar|termina|para ya|duermete|a dormir|chao|ciao|bye)\b/;
   function despedida(texto) { return ADIOS.test(norm(texto)); }
 
   // Máquina de estados. estado: { fase: "dormido"|"eligiendo"|"conversando", persona }
+  // «conectar» puede traer «pregunta»: lo que se dijo detrás del nombre, para enviarlo ya.
+  function conectar(m) { var r = { accion: "conectar", persona: m.persona }; if (m.resto) r.pregunta = m.resto; return r; }
+  // Recupera del texto original (con tildes y mayúsculas) las últimas palabras que ocupan «resto».
+  function original(texto, resto) {
+    var n = String(resto || "").split(" ").filter(Boolean).length, w = String(texto || "").trim().split(/\s+/);
+    return n && w.length >= n ? w.slice(w.length - n).join(" ") : resto;
+  }
   function interpretar(estado, texto) {
+    var r = interpretar0(estado, texto);
+    if (r.pregunta) r.pregunta = original(texto, r.pregunta);
+    if (r.accion === "preguntar") r.texto = original(texto, r.texto);
+    return r;
+  }
+  function interpretar0(estado, texto) {
     var fase = (estado && estado.fase) || "dormido", t = norm(texto);
     if (!t) return { accion: "nada" };
+    var actual = estado && estado.persona;
     if (fase === "dormido") {
       var d = despertar(t);
-      if (!d.ok) return { accion: "nada" };
-      var p = d.resto ? consejero(d.resto) : null;
-      return p ? { accion: "conectar", persona: p } : { accion: "despierta" };
+      if (d.ok) { var p = d.resto ? consejeroCon(d.resto) : null; return p ? conectar(p) : { accion: "despierta" }; }
+      var sn = saludoNombre(t);
+      return sn ? conectar(sn) : { accion: "nada" };
     }
     if (fase === "eligiendo") {
-      if (despedida(t)) return { accion: "dormir" };
+      if (despedida(t) && t.split(" ").length <= 6) return { accion: "dormir" };
       var w = despertar(t); if (w.ok) t = norm(w.resto) || t;
-      var q = consejero(t);
-      return q ? { accion: "conectar", persona: q } : { accion: "no-entiendo", texto: t };
+      var q = saludoNombre(t) || consejeroCon(t);
+      return q ? conectar(q) : { accion: "no-entiendo", texto: t };
     }
     // conversando
-    var c = cambio(t);
-    if (c && c !== (estado && estado.persona)) return { accion: "conectar", persona: c };
-    if (despedida(t) && t.split(" ").length <= 6) return { accion: "dormir" };
+    var c = cambioCon(t);
+    if (c && c.persona !== actual) return conectar(c);
     var h = despertar(t);
-    if (h.ok) { var r = h.resto ? consejero(h.resto) : null; if (r) return { accion: "conectar", persona: r }; if (!h.resto) return { accion: "despierta" }; }
-    return { accion: "preguntar", persona: estado.persona, texto: String(texto || "").trim() };
+    if (h.ok) {
+      var r = h.resto ? consejeroCon(h.resto) : null;
+      if (r && r.persona !== actual) return conectar(r);
+      if (r && r.resto) return { accion: "preguntar", persona: actual, texto: r.resto };
+      if (!h.resto) return { accion: "despierta" };
+    }
+    var s2 = saludoNombre(t);
+    if (s2 && s2.persona !== actual) return conectar(s2);
+    if (s2 && s2.resto) return { accion: "preguntar", persona: actual, texto: s2.resto };
+    if (despedida(t) && t.split(" ").length <= 6) return { accion: "dormir" };
+    return { accion: "preguntar", persona: actual, texto: String(texto || "").trim() };
   }
 
-  var api = { norm: norm, ALIAS: ALIAS, despertar: despertar, consejero: consejero, cambio: cambio, despedida: despedida, interpretar: interpretar, lev: lev };
+  // Imágenes en una respuesta del hilo (solo texto): enlaces a imagen, ![](url) y <svg>…</svg>.
+  // Devuelve el texto para leer en voz alta (sin ellas) y la lista de imágenes a mostrar.
+  function extraerMedios(texto) {
+    var t = String(texto || ""), imgs = [], vistos = {};
+    function add(src, tipo) { if (!vistos[src]) { vistos[src] = 1; imgs.push({ src: src, tipo: tipo }); } }
+    t = t.replace(/<svg[\s\S]*?<\/svg>/gi, function (svg) { add(svg, "svg"); return " "; });
+    t = t.replace(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g, function (_, u) { add(u, "url"); return " "; });
+    t = t.replace(/https?:\/\/[^\s<>"')\]]+/g, function (u) {
+      var limpio = u.replace(/[.,;:!?]+$/, "");
+      if (/\.(?:png|jpe?g|gif|webp|svg|avif)(?:[?#][^\s]*)?$/i.test(limpio) || /\/media\/fleet\/|imagedelivery\.net|\/images?\//i.test(limpio)) { add(limpio, "url"); return " "; }
+      return u;
+    });
+    var hablar = t.replace(/https?:\/\/\S+/g, "enlace").replace(/[#*_`>|]/g, " ").replace(/\s+/g, " ").trim();
+    return { texto: hablar, imagenes: imgs };
+  }
+
+  var api = { norm: norm, ALIAS: ALIAS, despertar: despertar, consejero: consejero, consejeroCon: consejeroCon, saludoNombre: saludoNombre, extraerMedios: extraerMedios, cambio: cambio, despedida: despedida, interpretar: interpretar, lev: lev };
   root.HolaIntent = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

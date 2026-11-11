@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <script src="/admira-bar.js?v=20260918-r38"></script>
+  <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hola Admira · Consejo por voz · admira.live</title>
+  <meta name="admiranext-version" content="AdmiraNeXT v.11.11.2026.r1.13:00" />
+  <link rel="manifest" href="/hola/manifest.webmanifest">
+  <link rel="icon" href="/hola/icono-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/hola/icono-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hola Admira">
+  <meta name="theme-color" content="#0a0a14">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{--ink:#e7e7ef;--muted:#9aa0b4;--wood:#2a1a08;--wood-line:#8b5a14;--amber:#ffdd66;--c:#ffdd66}
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%}
+    body{font-family:'Press Start 2P',monospace;color:var(--ink);background:radial-gradient(900px 500px at 50% 0%,color-mix(in srgb,var(--c) 22%,#0a0a14) 0%,#0a0a14 70%);min-height:100dvh;padding:14px 14px calc(14px + env(safe-area-inset-bottom));transition:background .4s;-webkit-font-smoothing:none}
+    .wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px;min-height:calc(100dvh - 70px)}
+    .fase{font-size:.5rem;color:var(--muted);text-align:center;letter-spacing:1px;line-height:1.8}
+    .fase b{color:var(--c)}
+    .escena{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 10px;border:3px solid var(--c);background:#0c0f22;box-shadow:5px 5px 0 #000;transition:border-color .4s}
+    .retrato{width:min(62vw,250px);aspect-ratio:2/3;border:3px solid #000;outline:3px solid var(--c);outline-offset:-7px;background:#05060d center/cover no-repeat;image-rendering:pixelated;display:flex;align-items:center;justify-content:center;font-size:3.2rem;transition:outline-color .4s}
+    .escena.habla .retrato{animation:habla .22s steps(2) infinite}
+    @keyframes habla{50%{transform:translateY(-3px) scale(1.01)}}
+    .nombre{font-size:1.05rem;color:#fff;text-shadow:3px 3px 0 #000;text-align:center;line-height:1.4}
+    .cargo{font-size:.48rem;color:var(--c);text-align:center;line-height:1.8}
+    .voz{font-size:.4rem;color:var(--muted);text-align:center;line-height:1.7}
+    .mic{align-self:center;width:min(42vw,170px);aspect-ratio:1;border-radius:50%;border:4px solid var(--c);background:radial-gradient(circle,#1b2040,#0a0d1e);color:var(--c);font:inherit;font-size:2.6rem;cursor:pointer;box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent),4px 4px 0 #000;transition:.2s}
+    .mic.on{animation:pulso 1.8s infinite}
+    .mic.oye{background:radial-gradient(circle,color-mix(in srgb,var(--c) 45%,#1b2040),#0a0d1e)}
+    @keyframes pulso{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent),4px 4px 0 #000}70%{box-shadow:0 0 0 26px transparent,4px 4px 0 #000}100%{box-shadow:0 0 0 0 transparent,4px 4px 0 #000}}
+    .oido{min-height:3.4em;font-size:.5rem;line-height:1.8;color:#fff;text-align:center;word-break:break-word}
+    .oido i{color:var(--muted);font-style:normal}
+    .resp{font-size:.5rem;line-height:1.9;color:#d7dcf0;border-left:4px solid var(--c);background:#0a0d1e;padding:10px 12px;white-space:pre-wrap;display:none;max-height:38vh;overflow:auto}
+    .estado{font-size:.42rem;line-height:1.8;color:var(--amber);text-align:center;min-height:1.8em}
+    .estado.err{color:#ff9b8a}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+    .chip{background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);font:inherit;font-size:.42rem;padding:.55rem .6rem;box-shadow:2px 2px 0 #000;cursor:pointer}
+    .chip.big{font-size:.55rem;padding:.8rem 1rem}
+    .chip.sin{opacity:.55}
+    form{display:flex;gap:6px}
+    input[type=text]{flex:1;min-width:0;background:#080a18;border:2px solid var(--wood-line);color:var(--ink);font:inherit;font-size:.5rem;padding:.7rem}
+    .btn{background:var(--wood-line);border:2px solid var(--amber);color:#fff;font:inherit;font-size:.45rem;padding:.6rem .8rem;cursor:pointer}
+    .login{display:none;flex-direction:column;align-items:center;gap:8px;border:2px dashed var(--wood-line);padding:10px;font-size:.42rem;line-height:1.8;text-align:center}
+    details{font-size:.4rem;line-height:1.9;color:var(--muted)}
+    details summary{cursor:pointer;color:var(--amber)}
+    details p{margin-top:6px}
+    .foot{text-align:center;color:var(--muted);font-size:.38rem;line-height:2;margin-top:auto}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="fase" id="fase">Pulsa el micrófono y di <b>«Hola Admira»</b></div>
+
+  <div class="escena" id="escena">
+    <div class="retrato" id="retrato">🎙️</div>
+    <div class="nombre" id="nombre">Hola Admira</div>
+    <div class="cargo" id="cargo">El Consejo, por voz</div>
+    <div class="voz" id="voz"></div>
+  </div>
+
+  <button class="mic" id="mic" type="button" aria-label="Activar el micrófono">🎤</button>
+  <div class="oido" id="oido" aria-live="polite"></div>
+  <div class="estado" id="estado" role="status" aria-live="polite"></div>
+  <div class="resp" id="resp"></div>
+
+  <div class="login" id="login">
+    <span>Para que te contesten de verdad, entra con tu cuenta de Google de admira.live (la de Carlos).</span>
+    <button class="btn" type="button" id="loginBtn">Entrar con Google</button>
+    <div id="gbtn"></div>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <form id="form" autocomplete="off">
+    <input type="text" id="texto" placeholder="…o escríbelo aquí: «quiero hablar con Jobs»" enterkeyhint="send">
+    <button class="btn" type="submit">Enviar</button>
+  </form>
+
+  <details>
+    <summary>Cómo funciona y límites</summary>
+    <p>1) Pulsa 🎤 una vez: queda escuchando. 2) Di «Hola Admira». 3) «Quiero hablar con Jobs» (o Elon, Woz, Disney, Lucas, Jensen…). 4) Pregunta; contesta con su voz. «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
+    <p>Las respuestas son reales: tu pregunta entra en el hilo de ese consejero en admira.live y la contesta su bot de Grok Bot (Jobs, Woz, Disney y Lucas en la cuenta de leyendas; Elon y Jensen en la de coetáneos). Tarda lo que tarde su bot, de segundos a minutos. Los demás consejeros aún no tienen línea directa.</p>
+    <p>Mientras el consejero habla, el micrófono se pausa para no oírse a sí mismo. Chrome (Mac y Android) escucha de forma continua. En Safari (Mac/iPhone) el reconocimiento usa Siri y puede cortarse: si se para, vuelve a pulsar 🎤. En iPhone, desde el icono de la pantalla de inicio puede no haber micrófono; usa Safari. Firefox no tiene reconocimiento de voz: usa el cuadro de texto.</p>
+    <p><a href="/voces/" style="color:var(--amber)">🎙️ Personalizar las voces</a></p>
+  </details>
+  <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live/hola</div>
+</div>
+
+<script src="/consejeros-voces.js?v=20261111-hola1"></script>
+<script src="/hola-intent.js?v=20261111-hola1"></script>
+<script src="/assets/chat-hilo-client.js?v=20261111-hola1"></script>
+<script>
+(function(){
+  "use strict";
+  var V = window.AdmiraVoces, H = window.HolaIntent, C = window.ChatHiloClient;
+  var $ = function(id){ return document.getElementById(id); };
+  var IMG = { leyendas:"/assets/council-leyendas.jpg", coetaneos:"/assets/council-coetaneos.jpg" };
+  var CROP = { CEO:{l:7,t:44,w:7,h:17}, CTO:{l:18,t:36,w:8,h:21}, COO:{l:31,t:30,w:8,h:24}, CFO:{l:43,t:27,w:8,h:26},
+    CCO:{l:55,t:27,w:8,h:26}, CDO:{l:66,t:31,w:7,h:23}, CXO:{l:77,t:34,w:8,h:21}, CSO:{l:88,t:41,w:9,h:17} };
+  var RECORTE = { "steve-jobs":1, "steve-wozniak":1, "warren-buffett":1, "walt-disney":1, "dieter-rams":1, "george-lucas":1,
+    "elon-musk":1, "jensen-huang":1, "gwynne-shotwell":1, "ruth-porat":1, "john-lasseter":1, "jony-ive":1, "carlos-ratti":1, "ryan-reynolds":1 };
+  // Color propio: Jobs rojo (racional, leyendas) y Elon cian eléctrico, imposibles de confundir.
+  var COLOR = { "Steve Jobs":"#e74c3c", "Elon Musk":"#00d1ff", "Steve Wozniak":"#ff8a3d", "Tim Cook":"#c0392b", "Warren Buffett":"#2ecc71",
+    "Walt Disney":"#3498db", "Dieter Rams":"#bdc3c7", "Howard Schultz":"#9b6b43", "George Lucas":"#f1c40f", "Jensen Huang":"#76ff03",
+    "Gwynne Shotwell":"#e056fd", "Ruth Porat":"#16a085", "John Lasseter":"#ff6fae", "Jony Ive":"#ecf0f1", "Carlos Ratti":"#1abc9c", "Ryan Reynolds":"#ff3b3b" };
+  var CARGO = { CEO:"Chief Executive Officer", CTO:"Chief Technology Officer", COO:"Chief Operations Officer", CFO:"Chief Financial Officer",
+    CCO:"Chief Creative Officer", CDO:"Chief Design Officer", CXO:"Chief Experience Officer", CSO:"Chief Storytelling Officer" };
+  var ADMIRA_COLOR = "#ffdd66";
+  var SILENCIO_MS = 90000, ESPERA_MAX_MS = 6 * 60000, SONDEO_MS = 2500;
+
+  var S = { fase:"apagado", persona:null, escuchando:false, hablando:false, ultimo:Date.now(), base:{}, esperando:0, sondeo:null, wake:null };
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null;
+
+  // ── UI ──
+  function estado(t, err){ var e=$("estado"); e.textContent=t||""; e.className="estado"+(err?" err":""); }
+  function fase(html){ $("fase").innerHTML=html; }
+  function pintar(persona){
+    var c = persona ? V.casting(persona) : null;
+    document.documentElement.style.setProperty("--c", c ? COLOR[c.persona] : ADMIRA_COLOR);
+    var r = $("retrato");
+    if (!c){ r.style.cssText=""; r.textContent="🎙️"; $("nombre").textContent="Hola Admira"; $("cargo").textContent="El Consejo, por voz"; $("voz").textContent=""; return; }
+    r.textContent="";
+    if (RECORTE[c.slug]) r.style.cssText="background-image:url('/assets/consejo-vacio/"+c.gen+"-"+c.slug+".webp')";
+    else { var k=CROP[c.role]; r.style.cssText="background-image:url('"+IMG[c.gen]+"');background-size:"+(10000/k.w).toFixed(1)+"% "+(10000/k.h).toFixed(1)+"%;background-position:"+(k.l/(100-k.w)*100).toFixed(2)+"% "+(k.t/(100-k.h)*100).toFixed(2)+"%"; }
+    $("nombre").textContent=c.persona;
+    $("cargo").textContent=c.role+" · "+CARGO[c.role]+" · "+(c.gen==="leyendas"?"Leyenda":"Coetáneo");
+    var p=V.profile(c.persona);
+    $("voz").textContent="🔊 "+(p.voiceName||"voz por defecto")+" · ritmo "+p.rate.toFixed(2)+" · tono "+p.pitch.toFixed(2)+(linea(c.persona)?"":" · sin línea directa aún");
+  }
+  function chips(){
+    var box=$("chips"); box.innerHTML="";
+    var orden=["Steve Jobs","Elon Musk"].concat(V.CASTING.map(function(c){return c.persona;}).filter(function(p){return p!=="Steve Jobs"&&p!=="Elon Musk";}));
+    orden.forEach(function(p,i){
+      var b=document.createElement("button"); b.type="button"; b.className="chip"+(i<2?" big":"")+(linea(p)?"":" sin");
+      b.textContent=(i<2?"▶ ":"")+(p==="Elon Musk"?"Elon":p.split(" ").pop()); b.style.borderColor=COLOR[p];
+      b.title=linea(p)?("Hablar con "+p):(p+" aún no tiene línea directa");
+      b.addEventListener("click",function(){ desbloquearAudio(); conectar(p); });
+      box.appendChild(b);
+    });
+  }
+  function linea(persona){ return !!(C && C.personaDe(persona)); }
+
+  // ── Sonido ──
+  var actx=null;
+  function chime(subida){
+    try{
+      actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+      var t=actx.currentTime, notas=subida===false?[784,523]:[523,784,1047];
+      notas.forEach(function(f,i){ var o=actx.createOscillator(), g=actx.createGain(); o.type="square"; o.frequency.value=f;
+        g.gain.setValueAtTime(0.0001,t+i*0.09); g.gain.exponentialRampToValueAtTime(0.08,t+i*0.09+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.09+0.12);
+        o.connect(g); g.connect(actx.destination); o.start(t+i*0.09); o.stop(t+i*0.09+0.14); });
+    }catch(e){}
+  }
+  // iOS/Safari: la voz y el audio solo arrancan tras un gesto. El primer toque los desbloquea.
+  var desbloqueado=false;
+  function desbloquearAudio(){
+    if (desbloqueado) return; desbloqueado=true;
+    try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume&&actx.resume(); }catch(e){}
+    try{ var u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); }catch(e){}
+  }
+
+  // ── Voz: Admira (narradora neutra) y consejeros ──
+  function vozAdmira(){
+    var es=V.spanish(), activa=S.persona?V.profile(S.persona).voiceName:"";
+    var f=es.filter(function(v){ return V.generoDe(v)==="f" && v.name!==activa; });
+    var pref=["Monica","Mónica","Elvira","Google español","Paulina","Helena","Laura"];
+    for (var i=0;i<pref.length;i++){ var m=f.filter(function(v){ return v.name.indexOf(pref[i])>=0; })[0]; if(m) return m; }
+    return f[0] || es[0] || null;
+  }
+  function decir(quien, texto, fin){
+    pausarOido();
+    S.hablando=true;
+    var esc=$("escena");
+    function acabar(){ S.hablando=false; esc.classList.remove("habla"); S.ultimo=Date.now(); reanudarOido(); if(fin) fin(); }
+    if (quien){
+      var ok=V.speak(quien, texto, { onstart:function(){ esc.classList.add("habla"); }, onend:acabar, onerror:acabar });
+      if(!ok) acabar();
+      return;
+    }
+    try{
+      speechSynthesis.cancel();
+      var u=new SpeechSynthesisUtterance(texto), v=vozAdmira();
+      if(v){ u.voice=v; u.lang=v.lang; } else u.lang="es-ES";
+      u.rate=1.02; u.pitch=1.05; u.onend=acabar; u.onerror=acabar;
+      speechSynthesis.speak(u);
+    }catch(e){ acabar(); }
+  }
+
+  // ── Reconocimiento ──
+  function crearRec(){
+    if (!Rec) return null;
+    var r=new Rec(); r.lang="es-ES"; r.continuous=true; r.interimResults=true; r.maxAlternatives=1;
+    r.onresult=function(ev){
+      var interino="";
+      for (var i=ev.resultIndex;i<ev.results.length;i++){
+        var t=ev.results[i][0].transcript;
+        if (ev.results[i].isFinal) { $("oido").innerHTML="«"+esc(t.trim())+"»"; manejar(t); }
+        else interino+=t;
+      }
+      if (interino){ $("oido").innerHTML="<i>"+esc(interino)+"…</i>"; $("mic").classList.add("oye"); S.ultimo=Date.now(); }
+      else $("mic").classList.remove("oye");
+    };
+    r.onerror=function(e){
+      if (e.error==="not-allowed"||e.error==="service-not-allowed"){ S.escuchando=false; marcarMic(); estado("Sin permiso de micrófono: actívalo para admira.live en el navegador.", true); }
+      else if (e.error==="network") estado("El reconocimiento de voz necesita conexión.", true);
+    };
+    r.onend=function(){ if (S.escuchando && !S.hablando) setTimeout(function(){ try{ if(S.escuchando&&!S.hablando) r.start(); }catch(e){} }, 250); };
+    return r;
+  }
+  function pausarOido(){ if(rec) try{ rec.abort(); }catch(e){} }
+  function reanudarOido(){ if(rec && S.escuchando) setTimeout(function(){ try{ rec.start(); }catch(e){} }, 300); }
+  function marcarMic(){ var m=$("mic"); m.classList.toggle("on", S.escuchando); m.textContent=S.escuchando?"👂":"🎤"; m.setAttribute("aria-label", S.escuchando?"Dejar de escuchar":"Activar el micrófono"); }
+  var wakeLock=null;
+  function pantallaEncendida(on){
+    try{ if(on && navigator.wakeLock && !wakeLock) navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; w.addEventListener("release",function(){ wakeLock=null; }); }).catch(function(){});
+      if(!on && wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){}
+  }
+  function escuchar(on){
+    desbloquearAudio();
+    if (!Rec){ estado("Este navegador no reconoce la voz (usa Chrome o Safari). Puedes escribir abajo.", true); return; }
+    rec = rec || crearRec();
+    S.escuchando=on; marcarMic(); pantallaEncendida(on);
+    if (on){
+      if (S.fase==="apagado") dormir(true);
+      try{ rec.start(); }catch(e){}
+    } else { pausarOido(); fase("Micrófono en pausa · pulsa 🎤 para seguir"); }
+  }
+
+  // ── Fases ──
+  function dormir(silencioso){
+    S.fase="dormido"; S.persona=null; pintar(null);
+    fase('Escuchando… di <b>«Hola Admira»</b>');
+    $("resp").style.display="none";
+    if(!silencioso) chime(false);
+  }
+  function despertar(){
+    S.fase="eligiendo"; S.persona=null; pintar(null); chime(true);
+    fase('Te escucho · di <b>«quiero hablar con Jobs»</b> o <b>Elon</b>');
+    decir(null, "Te escucho. ¿Con quién quieres hablar?");
+  }
+  function conectar(persona){
+    var c=V.casting(persona); if(!c) return;
+    S.fase="conversando"; S.persona=c.persona; S.ultimo=Date.now(); pintar(c.persona); chime(true);
+    $("resp").style.display="none"; if(!S.esperando) estado("");
+    fase('Hablas con <b>'+esc(c.persona)+'</b> · «cambia a …» · «gracias» para terminar');
+    if (!linea(c.persona)){
+      decir(c.persona, c.frase, function(){ decir(null, c.persona.split(" ")[0]+" aún no tiene línea directa desde aquí. Puedo pasarte con Jobs, Wozniak, Disney, Lucas, Elon o Jensen."); });
+      S.fase="eligiendo"; return;
+    }
+    decir(c.persona, c.frase);
+    prepararHilo(c.persona);
+  }
+  function manejar(texto){
+    var t=String(texto||"").trim(); if(!t) return;
+    S.ultimo=Date.now();
+    var r=H.interpretar({ fase: S.fase==="apagado"?"dormido":S.fase, persona:S.persona }, t);
+    if (r.accion==="despierta") despertar();
+    else if (r.accion==="conectar") conectar(r.persona);
+    else if (r.accion==="dormir"){ var p=S.persona; if(p) decir(p, "Hasta pronto.", function(){ dormir(); }); else { decir(null,"Hasta luego."); dormir(); } }
+    else if (r.accion==="no-entiendo") decir(null, "No te he entendido. Di, por ejemplo: quiero hablar con Jobs, o con Elon.");
+    else if (r.accion==="preguntar") preguntar(r.persona, r.texto);
+  }
+
+  // ── Respuestas reales: hilo compartido de admira.live → bot de Grok Bot del consejero ──
+  function sesion(){ return !!(C && C.credencial()); }
+  function pedirLogin(){
+    $("login").style.display="flex";
+    estado("Entra con Google para enviarle la pregunta.", true);
+  }
+  function prepararHilo(persona){
+    var clave=C.personaDe(persona);
+    if (!sesion()){ pedirLogin(); return; }
+    if (S.base[clave]!=null) return;
+    C.leerHilo(clave,{limite:20}).then(function(r){
+      if (r.status===401){ pedirLogin(); return; }
+      var ult=0; (r.turnos||[]).forEach(function(x){ var ts=Date.parse(x.ts)||0; if(ts>ult) ult=ts; });
+      if (S.base[clave]==null) S.base[clave]=ult;
+    }).catch(function(){});
+  }
+  function preguntar(persona, texto){
+    var clave=C && C.personaDe(persona);
+    if (!clave){ decir(null, persona.split(" ")[0]+" aún no tiene línea directa."); return; }
+    if (!sesion()){ pedirLogin(); decir(null, "Antes entra con tu cuenta de Google."); return; }
+    estado("Enviando a "+persona+"…");
+    var id=C.nuevoId(), enviadoEn=Date.now();
+    if (S.base[clave]==null) S.base[clave]=enviadoEn-1000;
+    C.enviarTurno(clave, texto, id).then(function(r){
+      if (r.status===401){ pedirLogin(); decir(null,"Tu sesión ha caducado; vuelve a entrar con Google."); return; }
+      var t=r.turno||{};
+      if (t.entrega==="entregado"){
+        estado("✓ Enviado a "+persona+" · encargo #"+t.encargo+" · esperando su respuesta…");
+        S.esperando=Date.now(); esperar(persona, clave);
+      } else if (t.entrega==="sin_confirmar"){
+        estado("Enviado sin confirmar (el buzón no respondió). Te leo la respuesta si llega.", true);
+        S.esperando=Date.now(); esperar(persona, clave);
+      } else { estado("No se pudo entregar a "+persona+(t.entrega?" ("+t.entrega+")":"")+".", true); decir(null,"No he podido entregarle la pregunta."); }
+    }).catch(function(){ estado("Sin conexión con admira.live.", true); });
+  }
+  function esperar(persona, clave){
+    clearTimeout(S.sondeo);
+    (function tic(){
+      if (!S.esperando) return;
+      if (Date.now()-S.esperando > ESPERA_MAX_MS){ S.esperando=0; estado(persona+" no ha contestado aún; su respuesta quedará en su hilo (/chat/"+clave+"/).", true); return; }
+      C.leerHilo(clave,{limite:20}).then(function(r){
+        var nuevos=(r.turnos||[]).filter(function(x){ return x.rol===clave && (Date.parse(x.ts)||0) > (S.base[clave]||0) && String(x.texto||"").trim(); });
+        if (nuevos.length){
+          nuevos.forEach(function(x){ var ts=Date.parse(x.ts)||0; if(ts>S.base[clave]) S.base[clave]=ts; });
+          var texto=nuevos.map(function(x){ return x.texto; }).join("\n\n");
+          S.esperando=0; estado("💬 "+persona+" responde");
+          var r2=$("resp"); r2.style.display="block"; r2.textContent=texto; r2.scrollTop=0;
+          var hablado=texto.replace(/https?:\/\/\S+/g,"enlace").replace(/[#*_`>|]/g," ").slice(0,900);
+          if (S.persona===persona) decir(persona, hablado);
+          else decir(null, persona.split(" ")[0]+" te ha contestado. "+hablado.slice(0,300));
+          return;
+        }
+        S.sondeo=setTimeout(tic, SONDEO_MS);
+      }).catch(function(){ S.sondeo=setTimeout(tic, SONDEO_MS*2); });
+    })();
+  }
+
+  // Silencio: sin hablar 90 s (y sin esperar respuesta) → vuelve a dormir.
+  setInterval(function(){
+    if ((S.fase==="eligiendo"||S.fase==="conversando") && !S.hablando && !S.esperando && Date.now()-S.ultimo > SILENCIO_MS){ estado("Silencio · vuelvo a dormir"); dormir(); }
+  }, 5000);
+
+  function esc(s){ return String(s==null?"":s).replace(/[<>&]/g,function(x){ return {"<":"&lt;",">":"&gt;","&":"&amp;"}[x]; }); }
+
+  // ── Arranque ──
+  $("mic").addEventListener("click", function(){ escuchar(!S.escuchando); });
+  $("form").addEventListener("submit", function(e){
+    e.preventDefault(); desbloquearAudio();
+    var t=$("texto").value.trim(); if(!t) return; $("texto").value=""; $("oido").innerHTML="«"+esc(t)+"»";
+    // escrito: no hace falta «Hola Admira»
+    if (S.fase==="dormido"||S.fase==="apagado"){ var r=H.interpretar({fase:"eligiendo"}, t); if(r.accion==="conectar"){ conectar(r.persona); return; } if(H.despertar(t).ok){ manejar(t); return; } S.fase="eligiendo"; }
+    manejar(t);
+  });
+  $("loginBtn").addEventListener("click", function(){
+    C.cargarGoogle($("gbtn"), function(){ $("login").style.display="none"; estado("Sesión iniciada ✓"); if(S.persona) prepararHilo(S.persona); },
+      function(m){ estado(m, true); });
+  });
+  // ?con=jobs abre directamente con ese consejero (útil como acceso directo)
+  try{ var q=new URLSearchParams(location.search).get("con"); if(q){ var p=H.consejero(q); if(p) setTimeout(function(){ conectar(p); }, 400); } }catch(e){}
+  chips(); pintar(null);
+  if (!Rec) estado("Este navegador no reconoce la voz: usa Chrome o Safari, o escribe abajo.", true);
+  V.onVoices(function(){ if(S.persona) pintar(S.persona); });
+  if (C) C.restaurarSesion().then(function(ok){ if(!ok && !sesion()) $("login").style.display="flex"; });
+  window.__hola = { S:S, manejar:manejar };
+})();
+</script>
+</body>
+</html>

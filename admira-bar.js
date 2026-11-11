@@ -45,7 +45,8 @@
       { t: "🎯 Objetivos",   en: "🎯 Goals",       h: "https://www.admira.live/objetivos" },
       { t: "⚖️ Decisiones",  en: "⚖️ Decisions",   h: "https://www.admira.live/decisiones" },
       { t: "🚀 Misiones",    en: "🚀 Missions",    h: "https://www.admira.live/misiones" },
-      { t: "✅ Tareas",      en: "✅ Tasks",       h: "https://www.admira.live/tareas" }
+      { t: "✅ Tareas",      en: "✅ Tasks",       h: "https://www.admira.live/tareas" },
+      { t: "🎙️ Hola Admira", en: "🎙️ Hey Admira",  h: "https://www.admira.live/hola/" }
     ]},
     { t: "Flota ▾", en: "Fleet ▾", items: [
       { t: "🏆 Highscore",   en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },

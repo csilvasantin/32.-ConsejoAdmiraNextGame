@@ -26,8 +26,8 @@ test('casting: los 16 consejeros del Consejo, una entrada cada uno', () => {
   assert.deepEqual(V.CASTING.map(c => c.persona).sort(), [...personas].sort());
   for (const c of V.CASTING) {
     assert.match(c.lang, /^es-ES$/);
-    assert.ok(c.rate >= 0.8 && c.rate <= 1.2, c.persona);
-    assert.ok(c.pitch >= 0.7 && c.pitch <= 1.2, c.persona);
+    assert.ok(c.rate >= 0.8 && c.rate <= 1.25, c.persona);
+    assert.ok(c.pitch >= 0.7 && c.pitch <= 1.35, c.persona);
     assert.ok(c.prefer.length >= 3 && c.timbre && c.frase, c.persona);
   }
   assert.equal(V.casting('Gwynne Shotwell').genero, 'f');
@@ -77,7 +77,7 @@ test('personalización local: pisa al casting y se puede deshacer', () => {
   assert.notEqual(V.profile('Steve Jobs').voiceName, 'No existe aquí');
   V.resetOverride('Steve Jobs');
   p = V.profile('Steve Jobs');
-  assert.equal(p.custom, false); assert.equal(p.rate, 0.92);
+  assert.equal(p.custom, false); assert.equal(p.rate, 0.88);
 });
 
 test('guardar para el equipo: solo cambia «voices» y conserva agentes, máquinas y tablero', async () => {
@@ -117,4 +117,25 @@ test('portada: muda por defecto; las páginas cargan el módulo', () => {
     assert.match(leer(f), /consejeros-voces\.js/, f);
   assert.match(leer('council-integration.js'), /V\.portadaOn\(\)/);
   assert.match(leer('reunion.html'), /AdmiraVoces\.speak\(c\.persona/);
+});
+
+test('Jobs y Elon: contraste máximo y nunca la misma voz si hay otra en español', () => {
+  const J = V.casting('Steve Jobs'), E = V.casting('Elon Musk');
+  assert.ok(E.rate - J.rate >= 0.3 && E.pitch - J.pitch >= 0.5);
+  const escenarios = [
+    MAC,
+    [v('Jorge', 'es-ES'), v('Juan', 'es-MX')],
+    [v('Google español', 'es-ES'), v('Spanish (Spain)', 'es')],
+    [v('Microsoft Alvaro Online (Natural) - Spanish (Spain)', 'es-ES'), v('Microsoft Elvira Online (Natural) - Spanish (Spain)', 'es-ES')],
+    [v('Rocko (Español (España))', 'es-ES'), v('Mónica', 'es-ES'), v('Paulina', 'es-MX')],
+  ];
+  for (const lista of escenarios) {
+    V._setVoicesForTest(lista);
+    const a = V.profile('Steve Jobs'), b = V.profile('Elon Musk');
+    assert.ok(a.voice && b.voice);
+    assert.notEqual(a.voiceName, b.voiceName, lista.map(x => x.name).join(','));
+  }
+  V._setVoicesForTest(MAC);
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
+  assert.equal(V.profile('Elon Musk').voiceName, 'Reed (Español (España))');
 });

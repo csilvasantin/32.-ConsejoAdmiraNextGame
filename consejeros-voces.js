@@ -42,12 +42,12 @@
   // y Chrome (Google español). La parte de idioma se comprueba con «lang».
   var CASTING = [
     // ── Leyendas ──
-    { persona: "Steve Jobs", role: "CEO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 0.92, pitch: 0.92,
-      prefer: ["Alvaro", "Jorge", "Pablo", "Eddy"],
-      timbre: "Sereno, preciso, registro medio-grave. Frases cortas con pausa.",
+    { persona: "Steve Jobs", role: "CEO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 0.88, pitch: 0.75,
+      prefer: ["Alvaro", "Jorge", "Rocko", "Pablo"],
+      timbre: "Grave, lento y preciso. Frases cortas con pausa: el contrapunto de Elon.",
       frase: "Hola, soy Steve Jobs. Menos ruido y más foco: ¿qué vamos a crear hoy?" },
     { persona: "Steve Wozniak", role: "CTO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 1.06, pitch: 1.14,
-      prefer: ["Reed", "Pablo", "Juan", "Alonso", "Gonzalo"],
+      prefer: ["Pablo", "Juan", "Reed", "Alonso", "Gonzalo"],
       timbre: "Cálido y juguetón, un punto agudo; el ingeniero que se ríe construyendo.",
       frase: "¡Hola! Soy Woz. Si es elegante por dentro, lo demás llega solo. ¿Qué construimos?" },
     { persona: "Tim Cook", role: "COO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 0.95, pitch: 1.0,
@@ -75,9 +75,9 @@
       timbre: "Grave y narrativo; el que abre la saga en una galaxia muy lejana.",
       frase: "Soy George Lucas. Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?" },
     // ── Coetáneos ──
-    { persona: "Elon Musk", role: "CEO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.14, pitch: 0.98,
-      prefer: ["Gonzalo", "Reed", "Diego", "Pablo"],
-      timbre: "Rápido, a saltos, ideas que se atropellan; tono medio.",
+    { persona: "Elon Musk", role: "CEO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.2, pitch: 1.3,
+      prefer: ["Reed", "Gonzalo", "Eddy", "Diego", "Juan", "Tomas"], evita: ["steve-jobs"],
+      timbre: "Rápido y agudo, ideas que se atropellan: nunca suena como Jobs.",
       frase: "Soy Elon. Pensemos desde los primeros principios. ¿Qué límite rompemos?" },
     { persona: "Jensen Huang", role: "CTO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.1, pitch: 1.08,
       prefer: ["Jorge", "Juan", "Tomas", "Eddy"],
@@ -216,6 +216,23 @@
         used[key] = (used[key] || 0) + 1;
         out[c.slug] = { voice: best, via: "respaldo" };
       } else out[c.slug] = { voice: null, via: "sin-voces" };
+    });
+    // «evita»: Elon nunca con la misma voz que Jobs mientras exista otra voz en español.
+    CASTING.forEach(function (c) {
+      (c.evita || []).forEach(function (otro) {
+        var a = out[c.slug], b = out[otro];
+        if (!a || !b || !a.voice || !b.voice || (a.voice.voiceURI || a.voice.name) !== (b.voice.voiceURI || b.voice.name)) return;
+        var prohibida = b.voice.voiceURI || b.voice.name;
+        var resto = pool.filter(function (v) { return (v.voiceURI || v.name) !== prohibida; });
+        if (!resto.length) return;
+        var pref = null;
+        for (var i = 0; i < c.prefer.length && !pref; i++) pref = findPreferred(resto, c.prefer[i], c.lang);
+        var mismo = resto.filter(function (v) { return generoDe(v) === c.genero; });
+        var elegida = pref || (mismo.length ? mismo : resto).slice().sort(function (x, y) {
+          return (used[x.voiceURI || x.name] || 0) - (used[y.voiceURI || y.name] || 0);
+        })[0];
+        out[c.slug] = { voice: elegida, via: a.via };
+      });
     });
     resolved = out;
     return out;

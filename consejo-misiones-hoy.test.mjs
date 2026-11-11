@@ -62,12 +62,12 @@ test('seg entiende epoch s/ms y merged_at ISO de GitHub', () => {
   assert.equal(u.lista[0].numero, 348);
 });
 
-test('latidos únicos de hoy cuentan como misiones y no se duplican al renovar', () => {
+test('el latido no cuenta como misión ni entra en la lista (Carlos, r151)', () => {
   const desde = 1794420000, hasta = 1794432000;
   const u = unirMisionesHoy({
     persona: 'George Lucas', bot: 'Lucas',
     inbox: [],
-    yokup: null, // Yokup caído no anula el recuento
+    yokup: null,
     prs: [],
     latidoPayload: {
       consejeros: {
@@ -76,53 +76,26 @@ test('latidos únicos de hoy cuentan como misiones y no se duplican al renovar',
       misiones_hoy: {
         Lucas: [
           { mision: 'prueba estado mesa', cuando: 1794422220 },
-          { mision: 'prueba estado mesa', cuando: 1794422300 },
           { mision: '/hablar consejero en modo experto', cuando: 1794423300 },
         ],
       },
     },
-    desdeS: desde, hastaS: hasta,
-  });
-  assert.ok(u.n >= 3);
-  assert.equal(u.por_fuente.latido, u.n);
-  assert.equal(u.por_fuente.inbox, 0);
-  assert.equal(u.desglose.includes('0 encargos'), true);
-  assert.equal(u.desglose.includes('misiones'), true);
-  const titulos = u.misiones.map((m) => m.titulo);
-  assert.equal(titulos.filter((t) => /prueba estado mesa/i.test(t)).length, 1);
-});
-
-test('semilla del 11-nov-2026 da a Lucas al menos 5 misiones de latido, sin duplicar el actual', () => {
-  const desde = 1794409200, hasta = 1794435600; // 00:00–10:00 del 12, holgado
-  const u = unirMisionesHoy({
-    persona: 'George Lucas', bot: 'Lucas',
-    inbox: [], prs: [], yokup: [],
-    latidoPayload: {
-      consejeros: {
-        Lucas: { modo: 'trabajando', mision: 'Silueta hover Walt Disney + alta misiones del día', at: 1794429900, desde: 1794429900 },
-      },
-    },
     desdeS: desde, hastaS: hasta, dia: '2026-11-11', usarSemilla: true,
   });
-  assert.ok(u.n >= 5, 'Lucas debe marcar al menos 5 hoy, n=' + u.n);
-  assert.equal(u.por_fuente.latido, u.n);
-  const titulos = new Set(u.misiones.map((m) => m.titulo));
-  assert.equal(titulos.size, u.n);
-  assert.ok([...titulos].some((t) => /prueba estado mesa/i.test(t)));
-  assert.ok([...titulos].some((t) => /hablar consejero/i.test(t)));
-});
-
-test('un latido con encargo #N no duplica el inbox done #N', () => {
-  const u = unirMisionesHoy({
-    persona: 'George Lucas', bot: 'Lucas',
-    inbox: [{ id: 7400, status: 'done', text: 'arreglar mesa', done_at: 1500 }],
-    latidos: [{ mision: 'encargo #7400', encargo: 7400, cuando: 1490 }],
-    yokup: [], prs: [],
-    desdeS: 1000, hastaS: 2000,
-  });
-  assert.equal(u.n, 1);
-  assert.equal(u.por_fuente.inbox, 1);
+  assert.equal(u.n, 0);
   assert.equal(u.por_fuente.latido, 0);
+  assert.equal(u.misiones.length, 0);
+  const conPr = unirMisionesHoy({
+    persona: 'Steve Wozniak', bot: 'Wozniak',
+    inbox: [], yokup: [],
+    prs: [{ repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 349, title: 'ua', merged_at: 1794421000, rama: 'woz/prs-github-ua' }],
+    latidos: [{ mision: 'Recuento real de misiones', cuando: 1794420800 }],
+    desdeS: desde, hastaS: hasta,
+  });
+  assert.equal(conPr.n, 1);
+  assert.equal(conPr.por_fuente.pr, 1);
+  assert.equal(conPr.por_fuente.latido, 0);
+  assert.ok(!conPr.misiones.some((m) => m.fuente === 'latido'));
 });
 
 test('Yokup caído no pone n a null si hay otras fuentes', () => {
@@ -154,7 +127,7 @@ test('encargos firmados por el consejero para otra persona cuentan, sin duplicar
   assert.ok(u.misiones.some((m) => m.numero === 11 && m.para_otro));
 });
 
-test('desgloseHoy es legible', () => {
-  assert.equal(desgloseHoy({ inbox: 0, latido: 5 }), '0 encargos · 5 misiones');
-  assert.equal(desgloseHoy({ inbox: 1, latido: 1, pr: 2 }), '1 encargo · 1 misión · 2 PRs');
+test('desgloseHoy es legible y no incluye latidos', () => {
+  assert.equal(desgloseHoy({ inbox: 0, latido: 5 }), '0 encargos');
+  assert.equal(desgloseHoy({ inbox: 1, latido: 1, pr: 2 }), '1 encargo · 2 PRs');
 });

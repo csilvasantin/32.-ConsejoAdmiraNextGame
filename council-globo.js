@@ -43,9 +43,9 @@
 #papel-halos{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:visible}
 #papel-halos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:block}
 #papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;gap:10px;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
-#papel-halos .consejero-flecha{width:clamp(30px,7.2%,56px);aspect-ratio:64/80;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor);position:relative;flex:0 0 auto}
-#papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible}
-#papel-halos .consejero-flecha .puesto{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:800;fill:#140e06}
+#papel-halos .consejero-flecha{width:clamp(40px,9.2%,72px);aspect-ratio:80/88;line-height:normal;position:relative;flex:0 0 auto}
+#papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor)}
+#papel-halos .consejero-flecha .puesto{position:absolute;left:0;right:0;top:44%;height:50%;display:flex;align-items:center;justify-content:center;margin:0;padding:0;font:800 20px/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:#140e06;-webkit-text-stroke:0.4px rgba(243,230,196,.45);text-shadow:none;pointer-events:none;z-index:2}
 #papel-halos .consejero-ranking{margin:0;padding:3px 8px 4px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
 #papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1}
 #papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:11em;overflow:hidden;text-overflow:ellipsis}
@@ -54,7 +54,8 @@
 .consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite;transform-origin:center bottom}
 @media (max-width:500px){
   #papel-halos .consejero-marker{gap:8px}
-  #papel-halos .consejero-flecha{width:clamp(26px,8.5%,44px)}
+  #papel-halos .consejero-flecha{width:clamp(34px,10%,56px)}
+  #papel-halos .consejero-flecha .puesto{font-size:16px}
   #papel-halos .consejero-ranking{padding:2px 6px 3px}
   #papel-halos .consejero-ranking .ranking-n{font-size:12px}
   #papel-halos .consejero-ranking .ranking-proy{font-size:8px}
@@ -100,7 +101,14 @@
 .mac-hoy-lista .hora{color:#9fd88a;margin-right:4px}
 .mac-hoy-lista .vacio{padding:10px 8px;opacity:.85}
 .mac-hoy-prop.has-lista .mac-hoy-glass > :not(.mac-hoy-lista),
-.mac-hoy-front-stage.has-lista .mac-hoy-crt-front > :not(.mac-hoy-lista){visibility:hidden}
+.mac-hoy-front-stage.has-lista .mac-hoy-crt-front > :not(.mac-hoy-lista),
+.mac-hoy-front.has-lista #mac-hoy-pantalla > :not(.mac-hoy-lista){visibility:hidden}
+.mac-hoy-front.on.has-lista .mac-hoy-front-stage .mac-hoy-crt-front,
+.mac-hoy-front.on.has-lista #mac-hoy-pantalla{visibility:visible!important;z-index:9}
+.mac-hoy-front.on.has-lista #mac-hoy-pantalla{position:absolute;inset:11% 16% 18%;z-index:10;display:block;background:#0b0b08}
+.mac-hoy-front .mac-hoy-lista{inset:0;font-size:16px;line-height:1.4;z-index:11}
+.mac-hoy-front .mac-hoy-lista header{font-size:15px}
+.mac-hoy-front .mac-hoy-lista ol{font-size:15px}
 `;
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
@@ -201,12 +209,11 @@
   function llevaHalo() { return false; }
   function flechaSvg(puesto) {
     const n = (puesto && Number(puesto) >= 1) ? String(puesto) : '';
-    /* Punta (triángulo) de y=38 a y=76; el número va en su centro, no en el tallo (y≈26). */
-    const fs = n.length > 1 ? '20' : '26';
-    const txt = n
-      ? '<text class="puesto" x="32" y="54" text-anchor="middle" dominant-baseline="middle" font-size="' + fs + '" font-weight="800" fill="#140e06">' + n + '</text>'
-      : '';
-    return '<svg viewBox="0 0 64 80" focusable="false" aria-hidden="true"><path d="M32 76 L6 38 L22 38 L22 4 L42 4 L42 38 L58 38 Z" fill="currentColor" stroke="#140e06" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>' + txt + '</svg>';
+    /* Flecha más ancha. El puesto va en un <span> HTML sobre el triángulo
+     * (negro sobre el color), no en SVG: el texto SVG se perdía en la punta. */
+    const svg = '<svg viewBox="0 0 80 88" focusable="false" aria-hidden="true"><path d="M40 84 L6 40 L24 40 L24 4 L56 4 L56 40 L74 40 Z" fill="currentColor" stroke="#140e06" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+    const num = n ? '<span class="puesto">' + n + '</span>' : '';
+    return svg + num;
   }
 
   function cargar(force) {
@@ -535,9 +542,10 @@
       host.appendChild(box);
     }
     const hoy = (silla && silla.hoy) || {};
-    const items = Array.isArray(hoy.misiones) ? hoy.misiones : [];
+    const items = (Array.isArray(hoy.misiones) ? hoy.misiones : []).filter((m) => m && m.fuente !== 'latido');
     const puesto = hoy.puesto ? (' · puesto ' + hoy.puesto) : '';
-    const n = hoy.n == null ? '—' : String(hoy.n);
+    const nFiltrado = items.length;
+    const n = hoy.n == null ? '—' : String(nFiltrado);
     box.innerHTML = '';
     const head = doc().createElement('header');
     const b = doc().createElement('b');
@@ -601,25 +609,37 @@
     return [
       d.querySelector('#mac-hoy-glass'),
       d.querySelector('#mac-hoy-crt-front, .mac-hoy-crt-front'),
+      d.querySelector('#mac-hoy-pantalla'),
     ].filter(Boolean);
   }
-  function mostrarListaMac(persona) {
+  function pintarListas(persona) {
     const silla = sillaDe(persona);
+    pantallasMac().forEach((h) => pintarListaEn(h, persona, silla));
+    const front = doc().getElementById('mac-hoy-front');
+    if (front) front.classList.add('has-lista');
+    const stage = doc().querySelector('.mac-hoy-front-stage');
+    if (stage) stage.classList.add('has-lista');
+  }
+  function mostrarListaMac(persona) {
     const pantallas = pantallasMac();
     if (!pantallas.length) return;
     listaAbierta = persona;
-    pantallas.forEach((h) => pintarListaEn(h, persona, silla));
-    if (root.MacHoy && typeof root.MacHoy.openFront === 'function') {
-      try { root.MacHoy.openFront(); } catch (e) {}
+    const mac = root.MacHoy;
+    if (mac) {
+      try { if (typeof mac.setVisible === 'function') mac.setVisible(true); } catch (e) {}
+      try { if (typeof mac.openFront === 'function') mac.openFront(); } catch (e) {}
     }
+    /* openFront pinta el mosaico en #mac-hoy-pantalla; la lista va después. */
+    pintarListas(persona);
   }
   function cerrarListaMac() {
     const d = doc(); if (!d) return;
     d.querySelectorAll('.mac-hoy-lista').forEach((el) => el.remove());
     d.querySelectorAll('.has-lista').forEach((el) => el.classList.remove('has-lista'));
     listaAbierta = null;
-    if (root.MacHoy && typeof root.MacHoy.closeFront === 'function') {
-      try { root.MacHoy.closeFront(); } catch (e) {}
+    const mac = root.MacHoy;
+    if (mac) {
+      try { if (typeof mac.closeFront === 'function') mac.closeFront(); } catch (e) {}
     }
   }
 
@@ -627,6 +647,14 @@
     const d = doc(); if (!d || wired) return;
     wired = true;
     estilos();
+    const frontClose = d.getElementById('mac-hoy-front-close');
+    if (frontClose) {
+      frontClose.addEventListener('click', () => { cerrarListaMac(); });
+    }
+    const front = d.getElementById('mac-hoy-front');
+    if (front) {
+      front.addEventListener('click', (e) => { if (e.target === front) cerrarListaMac(); });
+    }
     const c = d.getElementById('body-hotspots');
     if (c) {
       c.addEventListener('mouseover', (e) => {

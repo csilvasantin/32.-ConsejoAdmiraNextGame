@@ -2,9 +2,10 @@
  * Recuento real de misiones de hoy (00:00 Europe/Madrid).
  * Une, sin duplicar y sin inventar:
  *  1. encargos done de la bandeja (a su nombre o firmados/cerrados por él);
- *  2. misiones únicas de consejero_latido (modo trabajando) de hoy;
- *  3. misiones Yokup resueltas/cerradas hoy (si la API responde);
- *  4. PRs fusionados hoy con marca de autor clara.
+ *  2. misiones Yokup resueltas/cerradas hoy (si la API responde);
+ *  3. PRs fusionados hoy con marca de autor clara.
+ * El latido (consejero_latido) NO cuenta como misión ni entra en la lista
+ * del Mac (Carlos, r151). Sigue usándose solo para el estado trabajando/libre.
  * Si una fuente cae, las demás siguen contando.
  *
  * Regla de autor de un PR (en este orden):
@@ -273,13 +274,9 @@ export function latidosDePayload(payload, { bot, persona, desdeS, hastaS, dia, u
 
 export function desgloseHoy(por = {}) {
   const encargos = Number(por.inbox || 0);
-  const misiones = Number(por.latido || 0);
   const yokup = Number(por.yokup || 0);
   const prs = Number(por.pr || 0);
-  const partes = [
-    encargos + (encargos === 1 ? ' encargo' : ' encargos'),
-    misiones + (misiones === 1 ? ' misión' : ' misiones'),
-  ];
+  const partes = [encargos + (encargos === 1 ? ' encargo' : ' encargos')];
   if (yokup) partes.push(yokup === 1 ? '1 Yokup' : yokup + ' Yokup');
   if (prs) partes.push(prs === 1 ? '1 PR' : prs + ' PRs');
   return partes.join(' · ');
@@ -434,21 +431,18 @@ export function unirMisionesHoy({ persona, bot, inbox, inboxOtros, yokup, prs, l
     ok: propios.ok || firmados.ok,
     lista: [...(propios.ok ? propios.lista : []), ...(firmados.ok ? firmados.lista : [])],
   };
-  const lat = latidos != null
-    ? misionesLatidoHoy(latidos, { desdeS, hastaS })
-    : latidosDePayload(latidoPayload, { bot, persona, desdeS, hastaS, dia, usarSemilla });
+  // El latido no se une: no cuenta como misión ni aparece en el Mac.
   const fuentes = {
     inbox: inboxUnido,
     yokup: misionesYokupHoy(yokup, { persona, bot, desdeS, hastaS }),
     pr: misionesPrHoy(prs, { bot, desdeS, hastaS }),
-    latido: lat,
   };
   const leidas = Object.values(fuentes).filter((f) => f.ok).length;
   const porFuente = { inbox: 0, yokup: 0, pr: 0, latido: 0 };
   if (!leidas) return { n: null, ultimo: 0, misiones: [], por_fuente: porFuente, desglose: desgloseHoy(porFuente), fuentes_ok: fuentes };
 
-  // Orden de dedup: PRs e inbox primero (más atribuibles), luego latidos, luego yokup.
-  const orden = [...fuentes.pr.lista, ...fuentes.inbox.lista, ...fuentes.latido.lista, ...fuentes.yokup.lista];
+  // Orden de dedup: PRs e inbox primero (más atribuibles), luego yokup.
+  const orden = [...fuentes.pr.lista, ...fuentes.inbox.lista, ...fuentes.yokup.lista];
   const aceptadas = [];
   for (const item of orden) {
     if (esDuplicado(item, aceptadas)) continue;

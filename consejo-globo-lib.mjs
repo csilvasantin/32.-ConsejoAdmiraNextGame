@@ -40,35 +40,38 @@ export const MESA = Object.freeze({
     { persona: 'Elon Musk', rol: 'CEO' },
     { persona: 'Jensen Huang', rol: 'CTO' },
     { persona: 'Gwynne Shotwell', rol: 'COO' },
-    { persona: 'Ruth Porat', rol: 'CFO' },
     { persona: 'John Lasseter', rol: 'CCO' },
     { persona: 'Jony Ive', rol: 'CDO' },
-    { persona: 'Carlos Ratti', rol: 'CXO' },
     { persona: 'Ryan Reynolds', rol: 'CSO' },
   ],
 });
 
-/** Posiciones del portapapeles/folios, en % del arte, medidas sobre las imágenes de origin/main. */
+/**
+ * Caja del halo, en % del arte (centro x,y + ancho/alto), medida sobre
+ * council-leyendas.jpg (carlos10) y council-coetaneos.jpg de origin/main (#7520: Lasseter en la silla de Ratti, sin Porat ni Ratti).
+ * sobre=papel: el folio o portapapeles real más cercano al asiento.
+ * sobre=placa: no hay folio; el halo rodea la placa dorada.
+ * sobre=cuerpo: no hay folio ni placa; el halo rodea el torso del consejero.
+ * sobre=ninguno: en la foto no hay folio, placa ni cuerpo en ese asiento; no se pinta (evita un halo en madera o cielo vacíos).
+ */
 export const PAPEL_POS = Object.freeze({
   leyendas: {
-    'Steve Jobs': { x: 20.5, y: 72.5, w: 9, h: 8 },
-    'Steve Wozniak': { x: 26.0, y: 69.0, w: 8, h: 7 },
-    'Tim Cook': { x: 34.0, y: 60.0, w: 8, h: 6 },
-    'Warren Buffett': { x: 40.0, y: 57.0, w: 7, h: 6 },
-    'Walt Disney': { x: 54.0, y: 58.0, w: 7, h: 6 },
-    'Dieter Rams': { x: 68.5, y: 59.0, w: 8, h: 6 },
-    'Howard Schultz': { x: 75.0, y: 62.0, w: 8, h: 6 },
-    'George Lucas': { x: 81.0, y: 68.0, w: 8, h: 7 },
+    'Steve Jobs': { x: 11.5, y: 57.0, w: 11.0, h: 20.0, sobre: 'cuerpo' },
+    'Steve Wozniak': { x: 24.5, y: 72.0, w: 12.0, h: 9.0, sobre: 'papel' },
+    'Tim Cook': { x: 34.5, y: 56.25, w: 14.0, h: 11.5, sobre: 'papel' },
+    'Warren Buffett': { x: 50.5, y: 41.0, w: 12.0, h: 16.0, sobre: 'cuerpo' },
+    'Walt Disney': { x: 0, y: 0, w: 0, h: 0, sobre: 'ninguno' },  // en carlos10 no hay folio, placa ni cuerpo en ese asiento
+    'Dieter Rams': { x: 70.0, y: 59.75, w: 7.0, h: 5.5, sobre: 'papel' },
+    'Howard Schultz': { x: 76.75, y: 63.85, w: 7.0, h: 4.5, sobre: 'papel' },
+    'George Lucas': { x: 76.25, y: 71.15, w: 10.5, h: 5.3, sobre: 'papel' },
   },
   coetaneos: {
-    'Elon Musk': { x: 22.0, y: 78.0, w: 8, h: 6 },
-    'Jensen Huang': { x: 27.5, y: 64.0, w: 7, h: 6 },
-    'Gwynne Shotwell': { x: 36.0, y: 54.0, w: 7, h: 6 },
-    'Ruth Porat': { x: 48.5, y: 47.0, w: 6, h: 8 },
-    'John Lasseter': { x: 54.0, y: 58.0, w: 7, h: 6 },
-    'Jony Ive': { x: 64.0, y: 58.0, w: 7, h: 6 },
-    'Carlos Ratti': { x: 71.5, y: 66.0, w: 7, h: 6 },
-    'Ryan Reynolds': { x: 80.0, y: 74.0, w: 7, h: 6 },
+    'Elon Musk': { x: 22.4, y: 89.6, w: 12.2, h: 6.0, sobre: 'placa' },
+    'Jensen Huang': { x: 28.65, y: 80.35, w: 11.3, h: 6.1, sobre: 'placa' },
+    'Gwynne Shotwell': { x: 35.4, y: 71.2, w: 11.2, h: 5.2, sobre: 'placa' },
+    'Jony Ive': { x: 62.65, y: 65.0, w: 8.7, h: 4.4, sobre: 'placa' },
+    'John Lasseter': { x: 72.4, y: 78.0, w: 10.8, h: 5.6, sobre: 'placa' },
+    'Ryan Reynolds': { x: 79.35, y: 89.6, w: 12.3, h: 6.0, sobre: 'placa' },
   },
 });
 

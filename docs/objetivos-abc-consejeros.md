@@ -8,10 +8,10 @@ de la mesa de leyendas).
 
 | Orden | id | Nombre en el globo | Titular |
 |------:|----|--------------------|---------|
-| 1 | `portaventura-next` | PortAventuraNeXT | Jobs |
+| 1 | `portaventura-next` | PortAventuraNeXT | Walt (Disney) |
 | 2 | `admiranext` | AdmiraNeXT | Lucas |
-| 3 | `alsea` | Alsea | Walt |
-| 4 | `dia-a-dia` | Día a día | Woz |
+| 3 | `alsea` | Alsea | Woz |
+| 4 | `dia-a-dia` | Día a día | Jobs |
 
 El carrusel admite el 4.º panel; las flechas ◀ ▶ recorren los cuatro en círculo.
 
@@ -33,7 +33,7 @@ Si omite `id`, se usa el panel que le corresponde.
 
 ```json
 {
-  "autor": "jobs",
+  "autor": "walt",
   "id": "portaventura-next",
   "objetivos": {
     "a": "Primera mejora del día",
@@ -48,10 +48,10 @@ Alias de `autor`: `jobs` / `Steve Jobs`; `lucas` / `George Lucas`;
 
 Ejemplos por consejero:
 
-- Jobs: `"autor": "jobs", "id": "portaventura-next"`
+- Walt: `"autor": "walt"` (alias `disney`), `"id": "portaventura-next"`
 - Lucas: `"autor": "lucas", "id": "admiranext"`
-- Walt: `"autor": "walt", "id": "alsea"`
-- Woz: `"autor": "woz", "id": "dia-a-dia"`
+- Woz: `"autor": "woz"` (alias `wozniak`), `"id": "alsea"`
+- Jobs: `"autor": "jobs", "id": "dia-a-dia"`
 
 La respuesta incluye `escritos`, `conservados`, `conflictos` y `rechazados`.
 Cada hueco queda firmado con `firmas.{a|b|c} = { autor, actualizado }`

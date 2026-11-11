@@ -26,6 +26,7 @@
     el.innerHTML =
       '<div class="abc-card-head">' +
         '<label>Proyecto <input class="abc-nombre" maxlength="80" value=""></label>' +
+        '<span class="abc-titular"></span>' +
         '<label class="abc-activo"><input type="checkbox" class="abc-on"> Activo en el hover</label>' +
         '<span class="abc-ord">#' + (i + 1) + '</span>' +
         '<button type="button" class="abc-up" title="Subir">↑</button>' +
@@ -36,9 +37,25 @@
       '<label>b. <input class="abc-obj" data-k="b" maxlength="280" placeholder="— sin definir —"></label>' +
       '<label>c. <input class="abc-obj" data-k="c" maxlength="280" placeholder="— sin definir —"></label>';
     $(".abc-nombre", el).value = p.nombre || "";
+    var tit = el.querySelector(".abc-titular");
+    if (tit) tit.textContent = p.titular ? ("Titular: " + p.titular) : "";
     $(".abc-on", el).checked = p.activo !== false;
     var objs = p.objetivos || {};
-    el.querySelectorAll(".abc-obj").forEach(function (inp) { inp.value = objs[inp.getAttribute("data-k")] || ""; });
+    el.querySelectorAll(".abc-obj").forEach(function (inp) {
+      var k = inp.getAttribute("data-k");
+      inp.value = objs[k] || "";
+      var f = (p.firmas && p.firmas[k]) || {};
+      if (f.autor || f.actualizado) {
+        var s = document.createElement("span");
+        s.className = "abc-firma";
+        var hora = "";
+        if (f.actualizado) {
+          try { hora = new Date(Number(f.actualizado)).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) {}
+        }
+        s.textContent = (f.autor || "") + (hora ? " · " + hora + " Europe/Madrid" : "");
+        inp.parentNode.appendChild(s);
+      }
+    });
     $(".abc-up", el).addEventListener("click", function () { mover(el, -1); });
     $(".abc-down", el).addEventListener("click", function () { mover(el, 1); });
     $(".abc-del", el).addEventListener("click", function () { el.remove(); numerar(); });
@@ -75,7 +92,7 @@
     if (!proyectos.length) {
       var p = document.createElement("p");
       p.className = "abc-vacio";
-      p.textContent = "No hay proyectos. Añade uno. Hasta que guardes, el hover usará la plantilla de nombres (PortAventuraNeXT, AdmiraNeXT, Alsea) con objetivos «— sin definir —».";
+      p.textContent = "No hay proyectos. Añade uno. Hasta que guardes, el hover usará la plantilla: PortAventuraNeXT (Jobs), AdmiraNeXT (Lucas), Alsea (Walt) y Día a día (Woz), con objetivos «— sin definir —».";
       lista.appendChild(p);
     } else {
       proyectos.forEach(function (proy, i) { lista.appendChild(card(proy, i)); });
@@ -110,7 +127,7 @@
       var r = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Council-Token": t, Authorization: "Bearer " + t },
-        body: JSON.stringify({ proyectos: proyectos }),
+        body: JSON.stringify({ autor: "carlos", proyectos: proyectos }),
       });
       var d = await r.json().catch(function () { return {}; });
       if (r.status === 401) {

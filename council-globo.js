@@ -44,9 +44,15 @@
 #papel-halos .consejero-ranking{margin:0 0 3px;padding:2px 6px;background:rgba(20,14,6,.82);border:1px solid currentColor;border-radius:3px;color:inherit;font:700 11px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.01em;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06}
 #papel-halos .consejero-marker[data-borde=izq] .consejero-ranking{align-self:flex-start}
 #papel-halos .consejero-marker[data-borde=der] .consejero-ranking{align-self:flex-end}
+#papel-halos .consejero-marker[data-cerca=izq] .consejero-ranking{transform:translateX(-22%)}
+#papel-halos .consejero-marker[data-cerca=der] .consejero-ranking{transform:translateX(22%)}
 @keyframes flecha-rebote{0%,100%{transform:translateY(0)}50%{transform:translateY(-26%)}}
 .consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite}
-@media (max-width:500px){#papel-halos .consejero-ranking{font-size:9px;padding:1px 4px;margin-bottom:2px}}
+@media (max-width:500px){
+  #papel-halos .consejero-ranking{font-size:9px;padding:1px 4px;margin-bottom:2px}
+  #papel-halos .consejero-marker[data-cerca=izq] .consejero-ranking{transform:translateX(-42%)}
+  #papel-halos .consejero-marker[data-cerca=der] .consejero-ranking{transform:translateX(42%)}
+}
 @media (prefers-reduced-motion:reduce){.papel-halo,.consejero-flecha{animation:none!important}}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
@@ -264,7 +270,7 @@
       if (etiqueta) {
         const lab = d.createElement('span');
         lab.className = 'consejero-ranking';
-        lab.textContent = etiqueta;
+        lab.textContent = textoEtiqueta(etiqueta);
         wrap.appendChild(lab);
       }
       const el = d.createElement('span');
@@ -273,6 +279,28 @@
       wrap.appendChild(el);
       c.appendChild(wrap);
     });
+    separarEtiquetas(c);
+  }
+
+  function textoEtiqueta(et) {
+    const t = String(et || '');
+    const d = doc();
+    const compacto = !!(d && d.documentElement && d.documentElement.clientWidth <= 500);
+    return compacto ? t.replace(/\s*hoy\s*·\s*/, '·') : t;
+  }
+
+  /* Musk y Huang (y cualquier par a menos de 14 % de ancho) no pueden pisarse. */
+  function separarEtiquetas(c) {
+    const items = [...c.querySelectorAll('.consejero-marker')].filter((el) => el.querySelector('.consejero-ranking'))
+      .map((el) => ({ el, x: parseFloat(el.style.left) }))
+      .filter((x) => Number.isFinite(x.x))
+      .sort((a, b) => a.x - b.x);
+    for (let i = 0; i < items.length - 1; i++) {
+      if (items[i + 1].x - items[i].x < 14) {
+        items[i].el.setAttribute('data-cerca', 'izq');
+        items[i + 1].el.setAttribute('data-cerca', 'der');
+      }
+    }
   }
 
   function colocarGlobo(anchor) {

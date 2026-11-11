@@ -104,6 +104,7 @@
 /* La lista frontal vive en #mac-hoy-lista-crt, el mismo plano 512×342
    proyectado y recortado al cristal. No se toca left/top/transform/clip-path. */
 .mac-hoy-lista-crt{display:none;overflow:hidden;pointer-events:auto;background:#030806;z-index:8}
+.mac-hoy-front.on.has-lista{position:fixed;inset:0;z-index:40}
 .mac-hoy-front.on.has-lista .mac-hoy-lista-crt{display:block}
 .mac-hoy-front.on.has-lista #mac-hoy-pantalla,
 .mac-hoy-front.on.has-lista .mac-hoy-logo-front,

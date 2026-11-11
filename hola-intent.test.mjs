@@ -46,10 +46,10 @@ test('despedidas y cambios', () => {
 test('máquina de estados de /hola', () => {
   const I = H.interpretar;
   assert.deepEqual(I({ fase: 'dormido' }, 'qué tiempo hace'), { accion: 'nada' });
-  assert.deepEqual(I({ fase: 'dormido' }, 'Hola Admira'), { accion: 'despierta' });
+  assert.deepEqual(I({ fase: 'dormido' }, 'Hola Admira'), { accion: 'conectar', persona: 'Steve Jobs' });
   assert.deepEqual(I({ fase: 'dormido' }, 'Hola Admira quiero hablar con Elon'), { accion: 'conectar', persona: 'Elon Musk' });
   assert.deepEqual(I({ fase: 'eligiendo' }, 'con Jobs'), { accion: 'conectar', persona: 'Steve Jobs' });
-  assert.equal(I({ fase: 'eligiendo' }, 'no sé').accion, 'no-entiendo');
+  assert.deepEqual(I({ fase: 'eligiendo' }, 'no sé'), { accion: 'conectar', persona: 'Steve Jobs', pregunta: 'no sé' });
   assert.deepEqual(I({ fase: 'eligiendo' }, 'gracias'), { accion: 'dormir' });
   const conv = { fase: 'conversando', persona: 'Steve Jobs' };
   assert.deepEqual(I(conv, '¿Qué producto lanzamos este año?'), { accion: 'preguntar', persona: 'Steve Jobs', texto: '¿Qué producto lanzamos este año?' });
@@ -62,12 +62,24 @@ test('máquina de estados de /hola', () => {
 test('/hola: carga sus módulos, manifiesto instalable y enlace en la barra', () => {
   const leer = f => readFileSync(new URL('./' + f, import.meta.url), 'utf8');
   const html = leer('hola/index.html');
-  for (const m of ['consejeros-voces.js', 'hola-intent.js', 'assets/chat-hilo-client.js', 'rel="manifest"', 'apple-touch-icon', 'apple-mobile-web-app-capable'])
+  for (const m of ['consejeros-voces.js', 'hola-intent.js', 'assets/chat-hilo-client.js', 'rel="manifest"', 'apple-touch-icon', 'apple-mobile-web-app-capable', 'apple-mobile-web-app-title" content="Admira Live', 'serviceWorker', '/hola/sw.js', 'getUserMedia', 'John Lasseter', 'con=lasseter'])
     assert.ok(html.includes(m), m);
-  assert.match(html, /r\.lang="es-ES"; r\.continuous=true; r\.interimResults=true/);
+  assert.match(html, /r\.lang="es-ES"; r\.continuous=!isIOS; r\.interimResults=true/);
   assert.match(html, /C\.enviarTurno\(clave, texto, id\)/, 'las respuestas van por el hilo real, no inventadas');
+  assert.match(html, /mantén pulsado|Mantén pulsado/);
+  assert.match(html, /No te escucho/);
   const man = JSON.parse(leer('hola/manifest.webmanifest'));
-  assert.equal(man.start_url, '/hola/'); assert.equal(man.display, 'standalone');
+  assert.equal(man.id, '/hola/');
+  assert.equal(man.name, 'Admira Live');
+  assert.equal(man.short_name, 'Admira Live');
+  assert.equal(man.start_url, '/hola/');
+  assert.equal(man.scope, '/hola/');
+  assert.equal(man.display, 'standalone');
+  assert.ok(man.icons.some(i => i.sizes === '192x192' && i.purpose === 'any'));
+  assert.ok(man.icons.some(i => i.sizes === '512x512' && i.purpose === 'maskable'));
+  const sw = leer('hola/sw.js');
+  assert.match(sw, /addEventListener\("fetch"/);
+  assert.doesNotMatch(sw, /caches\.|CacheStorage/);
   assert.match(leer('admira-bar.js'), /h: "https:\/\/www\.admira\.live\/hola\/"/);
 });
 
@@ -105,4 +117,29 @@ test('/hola: sigue sondeando tras la 1.ª respuesta, muestra imágenes y reenví
   assert.doesNotMatch(html, /S\.esperando=0; estado\("💬/, 'ya no corta el sondeo en la primera respuesta');
   assert.match(html, /H\.extraerMedios\(texto\)/);
   assert.match(html, /id="media"/);
+});
+
+test('cabecera por cuenta: Jobs para csilva@admira.com, Elon para gmail, Jobs sin sesión', () => {
+  assert.equal(H.cabeceraDe('csilva@admira.com'), 'Steve Jobs');
+  assert.equal(H.cabeceraDe('CSILVA@admira.com'), 'Steve Jobs');
+  assert.equal(H.cabeceraDe('csilvasantin@gmail.com'), 'Elon Musk');
+  assert.equal(H.cabeceraDe('  csilvasantin@gmail.com  '), 'Elon Musk');
+  assert.equal(H.cabeceraDe(''), 'Steve Jobs');
+  assert.equal(H.cabeceraDe(null), 'Steve Jobs');
+  assert.equal(H.cabeceraDe('otro@admira.com'), 'Steve Jobs');
+});
+
+test('Hola Admira dispara y conecta: variantes, Lasseter, frase sin nombre y cabecera por email', () => {
+  const I = H.interpretar;
+  for (const t of ['Hola Admira', 'hola, admira', 'Ola Admira', 'hola almira', 'Hola Admiral', 'HOLA ADMIRA', 'Hola Admira.'])
+    assert.deepEqual(I({ fase: 'dormido' }, t), { accion: 'conectar', persona: 'Steve Jobs' }, t);
+  assert.deepEqual(I({ fase: 'dormido', email: 'csilva@admira.com' }, 'Hola Admira'), { accion: 'conectar', persona: 'Steve Jobs' });
+  assert.deepEqual(I({ fase: 'dormido', email: 'csilvasantin@gmail.com' }, 'Hola Admira'), { accion: 'conectar', persona: 'Elon Musk' });
+  assert.deepEqual(I({ fase: 'dormido', email: 'csilvasantin@gmail.com' }, 'Hola Admira, Lasseter'), { accion: 'conectar', persona: 'John Lasseter' });
+  assert.deepEqual(I({ fase: 'dormido' }, 'Hola Admira, Lasseter, dibuja un coche'), { accion: 'conectar', persona: 'John Lasseter', pregunta: 'dibuja un coche' });
+  assert.deepEqual(I({ fase: 'dormido', email: 'csilva@admira.com' }, 'Hola Admira qué hora es'), { accion: 'conectar', persona: 'Steve Jobs', pregunta: 'qué hora es' });
+  assert.deepEqual(I({ fase: 'dormido', email: 'csilvasantin@gmail.com' }, 'Hola Admira qué hora es'), { accion: 'conectar', persona: 'Elon Musk', pregunta: 'qué hora es' });
+  assert.deepEqual(I({ fase: 'dormido' }, 'Hola Admira qué hora es'), { accion: 'conectar', persona: 'Steve Jobs', pregunta: 'qué hora es' });
+  assert.deepEqual(I({ fase: 'eligiendo', email: 'csilvasantin@gmail.com' }, 'Hola Admira'), { accion: 'conectar', persona: 'Elon Musk' });
+  assert.deepEqual(I({ fase: 'eligiendo', email: 'csilva@admira.com' }, 'con Lasseter'), { accion: 'conectar', persona: 'John Lasseter' });
 });

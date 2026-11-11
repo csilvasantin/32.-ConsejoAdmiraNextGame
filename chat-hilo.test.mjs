@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizarTurno, anadirTurno, salud, emailGoogle, MAX_TURNOS, GOOGLE_CLIENT_ID } from "./chat-hilo-lib.mjs";
+import { normalizarTurno, anadirTurno, salud, emailGoogle, MAX_TURNOS, GOOGLE_CLIENT_ID, normalizarPersona, PERSONAS, PERSONA_INBOX, NOMBRES, cabeceraDe, CABECERA_DEFECTO } from "./chat-hilo-lib.mjs";
 import * as hilo from "./functions/api/chat/hilo.js";
 import * as saludApi from "./functions/api/chat/salud.js";
 
@@ -192,12 +192,25 @@ test("cliente compartido: /chat/jobs/ y la home cargan el mismo módulo", () => 
   assert.match(home, /src="assets\/chat-hilo-client\.js[^"]*"><\/script>\s*<script defer src="council-grokbot\.js/);
   assert.doesNotMatch(jobs, /\/\*sondeo:inicio\*\//);
 });
-test("cliente compartido: personaDe solo activa el hilo para Steve Jobs", () => {
+test("cliente compartido: personaDe activa el hilo de los 16 consejeros", () => {
   const C = cliente();
   assert.equal(C.personaDe("Steve Jobs"), "jobs");
-  assert.equal(C.personaDe("Steve Wozniak"), null);
+  assert.equal(C.personaDe("Steve Wozniak"), "wozniak");
+  assert.equal(C.personaDe("John Lasseter"), "lasseter");
+  assert.equal(C.personaDe("Jony Ive"), "ive");
   assert.equal(C.personaDe("toString"), null);
   assert.equal(C.personaDe(null), null);
+  for (const [nombre, clave] of Object.entries(C.PERSONAS)) {
+    assert.equal(C.personaDe(nombre), clave, nombre);
+    assert.ok(PERSONAS.includes(clave), clave + " está en el servidor");
+    assert.equal(NOMBRES[clave], nombre);
+    assert.ok(PERSONA_INBOX[clave], clave);
+  }
+  assert.equal(Object.keys(C.PERSONAS).length, 16);
+  assert.equal(PERSONAS.length, 16);
+  assert.equal(normalizarPersona("lasseter"), "lasseter");
+  assert.equal(normalizarPersona("Jobs"), "jobs");
+  assert.equal(normalizarPersona("nadie"), null);
 });
 test("cliente compartido: textoEstado y fundir", () => {
   const C = cliente();
@@ -234,4 +247,15 @@ test("cliente compartido: turnosDeVisita — la home solo enseña lo enviado en 
   assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, t0).map((t) => t.id), ["live-1", "resp"]);
   assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, NaN), []);
   assert.deepEqual(C.turnosDeVisita([null, { id: "r", rol: "persona", ts: "x" }], {}, t0), []);
+});
+
+test("cabeceraDe: Jobs para csilva@admira.com, Musk para gmail, Jobs por defecto", () => {
+  assert.deepEqual(cabeceraDe("csilva@admira.com"), { clave: "jobs", persona: "Steve Jobs" });
+  assert.deepEqual(cabeceraDe("csilvasantin@gmail.com"), { clave: "musk", persona: "Elon Musk" });
+  assert.deepEqual(cabeceraDe(""), { clave: CABECERA_DEFECTO, persona: "Steve Jobs" });
+  assert.deepEqual(cabeceraDe("otro@admira.com"), { clave: "jobs", persona: "Steve Jobs" });
+  const C = cliente();
+  assert.equal(C.cabeceraDe("csilva@admira.com"), "Steve Jobs");
+  assert.equal(C.cabeceraDe("csilvasantin@gmail.com"), "Elon Musk");
+  assert.equal(C.cabeceraDe(null), "Steve Jobs");
 });

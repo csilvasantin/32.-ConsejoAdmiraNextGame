@@ -12,14 +12,24 @@
   var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };
   var ESTADO = { enviando: "enviando…", entregado: "entregado", error: "error", sin_confirmar: "sin confirmar" };
   // Consejeros con hilo compartido (nombre visible → persona de la API).
-  // Los seis que el servidor ya acepta. El resto de sillas no tiene hilo.
+  // Los 16 del Consejo: el servidor acepta las mismas claves (#7546).
   var PERSONAS = {
     "Steve Jobs": "jobs",
     "Steve Wozniak": "wozniak",
+    "Tim Cook": "cook",
+    "Warren Buffett": "buffett",
     "Walt Disney": "disney",
+    "Dieter Rams": "rams",
+    "Howard Schultz": "schultz",
     "George Lucas": "lucas",
     "Elon Musk": "musk",
-    "Jensen Huang": "huang"
+    "Jensen Huang": "huang",
+    "Gwynne Shotwell": "shotwell",
+    "Ruth Porat": "porat",
+    "John Lasseter": "lasseter",
+    "Jony Ive": "ive",
+    "Carlos Ratti": "ratti",
+    "Ryan Reynolds": "reynolds"
   };
 
   // ── Lógica pura ──────────────────────────────────────────────────────────
@@ -90,6 +100,13 @@
   }
   function personaDe(nombre) { return Object.prototype.hasOwnProperty.call(PERSONAS, nombre) ? PERSONAS[nombre] : null; }
   function nuevoId() { return "live-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
+  // Cabecera por cuenta (#7546). Mismo mapa que el servidor (chat-hilo-lib.mjs) y hola-intent.js.
+  var CABECERA_POR_EMAIL = { "csilva@admira.com": "Steve Jobs", "csilvasantin@gmail.com": "Elon Musk" };
+  var CABECERA_DEFECTO = "Steve Jobs";
+  function cabeceraDe(email) {
+    var e = String(email || "").trim().toLowerCase();
+    return CABECERA_POR_EMAIL[e] || CABECERA_DEFECTO;
+  }
 
   // ── Credencial (ID token de Google, el mismo client_id del login de admira.live) ──
   function almacen() { try { return root.sessionStorage || null; } catch (e) { return null; } }
@@ -197,7 +214,7 @@
     CLIENT_ID: CLIENT_ID, CLAVE: CLAVE, ORIGEN: ORIGEN, ESTADO: ESTADO, PERSONAS: PERSONAS,
     esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado, origenTurno: origenTurno, horaMadrid: horaMadrid, metaTurno: metaTurno,
     fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
-    credencial: credencial, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion,
+    credencial: credencial, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion, avisoSesion: avisoSesion, cabeceraDe: cabeceraDe, CABECERA_DEFECTO: CABECERA_DEFECTO,
     leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
   };
   if (root.document && root.fetch && root.location && /admira\.live$|pages\.dev$|localhost$/.test(root.location.hostname || "")) restaurarSesion();

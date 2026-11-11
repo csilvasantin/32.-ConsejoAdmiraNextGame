@@ -5,7 +5,7 @@
   <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Hola Admira · Consejo por voz · admira.live</title>
+  <title>Admira Live · Consejo por voz · admira.live</title>
   <meta name="admiranext-version" content="AdmiraNeXT v.11.11.2026.r1.13:00" />
   <link rel="manifest" href="/hola/manifest.webmanifest">
   <link rel="icon" href="/hola/icono-192.png">
@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Hola Admira">
+  <meta name="apple-mobile-web-app-title" content="Admira Live">
   <meta name="theme-color" content="#0a0a14">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
@@ -31,9 +31,10 @@
     .nombre{font-size:1.05rem;color:#fff;text-shadow:3px 3px 0 #000;text-align:center;line-height:1.4}
     .cargo{font-size:.48rem;color:var(--c);text-align:center;line-height:1.8}
     .voz{font:600 .72rem/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);text-align:center;-webkit-font-smoothing:auto}
-    .mic{align-self:center;width:min(42vw,170px);aspect-ratio:1;border-radius:50%;border:4px solid var(--c);background:radial-gradient(circle,#1b2040,#0a0d1e);color:var(--c);font:inherit;font-size:2.6rem;cursor:pointer;box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent),4px 4px 0 #000;transition:.2s}
+    .mic{align-self:center;width:min(42vw,170px);aspect-ratio:1;border-radius:50%;border:4px solid var(--c);background:radial-gradient(circle,#1b2040,#0a0d1e);color:var(--c);font:inherit;font-size:2.6rem;cursor:pointer;box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent),4px 4px 0 #000;transition:.2s;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
     .mic.on{animation:pulso 1.8s infinite}
     .mic.oye{background:radial-gradient(circle,color-mix(in srgb,var(--c) 45%,#1b2040),#0a0d1e)}
+    .mic.sordo{border-color:#ff9b8a;color:#ff9b8a;animation:none}
     @keyframes pulso{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent),4px 4px 0 #000}70%{box-shadow:0 0 0 26px transparent,4px 4px 0 #000}100%{box-shadow:0 0 0 0 transparent,4px 4px 0 #000}}
     .oido{min-height:3.4em;font-size:.5rem;line-height:1.8;color:#fff;text-align:center;word-break:break-word}
     .oido i{color:var(--muted);font-style:normal}
@@ -89,17 +90,17 @@
 
   <details>
     <summary>Cómo funciona y límites</summary>
-    <p>1) Pulsa 🎤 una vez: queda escuchando. 2) Di «Hola Admira». 3) «Quiero hablar con Jobs» (o Elon, Woz, Disney, Lucas, Jensen…). Atajo: «Hola Steve, dibuja una bandera de Canadá» despierta, elige y pregunta de una vez. 4) Pregunta; contesta con su voz (y si manda una imagen, se ve en grande). «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
-    <p>Las respuestas son reales: tu pregunta entra en el hilo de ese consejero en admira.live y la contesta su bot de Grok Bot (Jobs, Woz, Disney y Lucas en la cuenta de leyendas; Elon y Jensen en la de coetáneos). Tarda lo que tarde su bot, de segundos a minutos. Los demás consejeros aún no tienen línea directa.</p>
-    <p>Mientras el consejero habla, el micrófono se pausa para no oírse a sí mismo. Chrome (Mac y Android) escucha de forma continua. En Safari (Mac/iPhone) el reconocimiento usa Siri y puede cortarse: si se para, vuelve a pulsar 🎤. En iPhone, desde el icono de la pantalla de inicio puede no haber micrófono; usa Safari. Firefox no tiene reconocimiento de voz: usa el cuadro de texto.</p>
+    <p>1) En Android, pulsa 🎤 una vez: queda escuchando. En iPhone, mantén pulsado 🎤 para hablar. 2) Di «Hola Admira»: entra con tu consejero de cabecera (Jobs si eres csilva@admira.com, Elon si eres csilvasantin@gmail.com; sin sesión, Jobs). 3) «Quiero hablar con Lasseter» (o Jobs, Elon, Woz, Disney, Lucas, Jensen, Ive…). Atajo: «Hola Steve, dibuja una bandera de Canadá» despierta, elige y pregunta de una vez. Acceso directo a Lasseter: pulsa ▶ Lasseter o abre /hola/?con=lasseter. 4) Pregunta; contesta con su voz (y si manda una imagen, se ve en grande). «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
+    <p>Las respuestas son reales: tu pregunta entra en el hilo de ese consejero en admira.live. Los 16 consejeros tienen línea directa desde aquí. Tarda lo que tarde su bot, de segundos a minutos.</p>
+    <p>Mientras el consejero habla, el micrófono se pausa para no oírse a sí mismo. Chrome en Android escucha de forma continua; si deja de oírte verás «No te escucho». En iPhone, mantén pulsado para hablar; si se para, tócalo para reiniciar. Si no hay micrófono (a veces ocurre al abrirla desde el icono de inicio), ábrela en Safari. Firefox no tiene reconocimiento de voz: usa el cuadro de texto.</p>
     <p><a href="/voces/" style="color:var(--amber)">🎙️ Personalizar las voces</a></p>
   </details>
   <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live/hola</div>
 </div>
 
-<script src="/consejeros-voces.js?v=20261111-hola1"></script>
-<script src="/hola-intent.js?v=20261111-hola1"></script>
-<script src="/assets/chat-hilo-client.js?v=20261111-hola1"></script>
+<script src="/consejeros-voces.js?v=20261111-7546"></script>
+<script src="/hola-intent.js?v=20261111-7546"></script>
+<script src="/assets/chat-hilo-client.js?v=20261111-7546"></script>
 <script>
 (function(){
   "use strict";
@@ -140,16 +141,19 @@
   }
   function chips(){
     var box=$("chips"); box.innerHTML="";
-    var orden=["Steve Jobs","Elon Musk"].concat(V.CASTING.map(function(c){return c.persona;}).filter(function(p){return p!=="Steve Jobs"&&p!=="Elon Musk";}));
+    var dest=["Steve Jobs","John Lasseter","Elon Musk"];
+    var orden=dest.concat(V.CASTING.map(function(c){return c.persona;}).filter(function(p){return dest.indexOf(p)<0;}));
     orden.forEach(function(p,i){
-      var b=document.createElement("button"); b.type="button"; b.className="chip"+(i<2?" big":"")+(linea(p)?"":" sin");
-      b.textContent=(i<2?"▶ ":"")+(p==="Elon Musk"?"Elon":p.split(" ").pop()); b.style.borderColor=COLOR[p];
+      var b=document.createElement("button"); b.type="button"; b.className="chip"+(i<dest.length?" big":"")+(linea(p)?"":" sin");
+      b.textContent=(i<dest.length?"▶ ":"")+(p==="Elon Musk"?"Elon":p==="John Lasseter"?"Lasseter":p.split(" ").pop()); b.style.borderColor=COLOR[p];
       b.title=linea(p)?("Hablar con "+p):(p+" aún no tiene línea directa");
       b.addEventListener("click",function(){ desbloquearAudio(); conectar(p); });
       box.appendChild(b);
     });
   }
   function linea(persona){ return !!(C && C.personaDe(persona)); }
+  function emailSesion(){ var a=C && C.avisoSesion && C.avisoSesion(); return (a && a.email) || ""; }
+  function cabeceraActual(){ return (H && H.cabeceraDe && H.cabeceraDe(emailSesion())) || "Steve Jobs"; }
 
   // ── Sonido ──
   var actx=null;
@@ -198,11 +202,46 @@
   }
 
   // ── Reconocimiento ──
+  // iPhone (Safari / PWA): «mantén pulsado para hablar». Android (Chrome): escucha continua
+  // con reintento de espera creciente (menos pitidos) y aviso «No te escucho».
+  var UA=navigator.userAgent||"";
+  var isIOS=/iP(hone|ad|od)/.test(UA)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  var isAndroid=/Android/i.test(UA);
+  var micDenegado=false, recIntento=0, noEscuchoTimer=null, S_pulsando=false;
+  function avisoNoEscucho(on, msg){
+    var m=$("mic");
+    if(on){ m.classList.add("sordo"); estado(msg||"No te escucho. Pulsa 🎤 para reactivar.", true); }
+    else { m.classList.remove("sordo"); }
+  }
+  function programarNoEscucho(){
+    clearTimeout(noEscuchoTimer);
+    noEscuchoTimer=setTimeout(function(){
+      if(S.escuchando&&!S.hablando) avisoNoEscucho(true, isIOS?"No te escucho. Mantén pulsado 🎤 o tócalo para reiniciar.":"No te escucho. Pulsa 🎤 para reactivar.");
+    }, 12000);
+  }
+  function pedirMicro(){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return Promise.resolve(null);
+    return navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(stream){
+      try{ stream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){}
+      micDenegado=false; return true;
+    }).catch(function(err){
+      var name=err&&err.name||"";
+      micDenegado=(name==="NotAllowedError"||name==="PermissionDeniedError"||name==="SecurityError");
+      if(micDenegado) estado("Sin permiso de micrófono: actívalo para admira.live en el navegador.", true);
+      else if(name==="NotFoundError"||name==="DevicesNotFoundError") estado("No se ha encontrado un micrófono en este dispositivo.", true);
+      else estado("No he podido acceder al micrófono"+(err&&err.message?": "+err.message:".") , true);
+      return false;
+    });
+  }
+  function avisoSinReconocimiento(){
+    if(isIOS) estado("En este modo no hay micrófono. Abre admira.live/hola en Safari (no desde el icono de inicio si no te deja hablar).", true);
+    else estado("Este navegador no reconoce la voz (usa Chrome o Safari). Puedes escribir abajo.", true);
+  }
   function crearRec(){
     if (!Rec) return null;
-    var r=new Rec(); r.lang="es-ES"; r.continuous=true; r.interimResults=true; r.maxAlternatives=1;
+    var r=new Rec(); r.lang="es-ES"; r.continuous=!isIOS; r.interimResults=true; r.maxAlternatives=1;
     r.onresult=function(ev){
-      var interino="";
+      var interino=""; recIntento=0; avisoNoEscucho(false); programarNoEscucho();
       for (var i=ev.resultIndex;i<ev.results.length;i++){
         var t=ev.results[i][0].transcript;
         if (ev.results[i].isFinal) { $("oido").innerHTML="«"+esc(t.trim())+"»"; manejar(t); }
@@ -212,42 +251,66 @@
       else $("mic").classList.remove("oye");
     };
     r.onerror=function(e){
-      if (e.error==="not-allowed"||e.error==="service-not-allowed"){ S.escuchando=false; marcarMic(); estado("Sin permiso de micrófono: actívalo para admira.live en el navegador.", true); }
+      if (e.error==="not-allowed"||e.error==="service-not-allowed"){ micDenegado=true; S.escuchando=false; S_pulsando=false; clearTimeout(noEscuchoTimer); marcarMic(); estado("Sin permiso de micrófono: actívalo para admira.live en el navegador.", true); }
       else if (e.error==="network") estado("El reconocimiento de voz necesita conexión.", true);
+      else if (e.error==="no-speech") avisoNoEscucho(true, "No te escucho. "+(isIOS?"Mantén pulsado 🎤 para hablar.":"Pulsa 🎤 para reactivar."));
     };
-    r.onend=function(){ if (S.escuchando && !S.hablando) setTimeout(function(){ try{ if(S.escuchando&&!S.hablando) r.start(); }catch(e){} }, 250); };
+    r.onend=function(){
+      $("mic").classList.remove("oye");
+      if (micDenegado) return;
+      // iOS: si sigue pulsando, reinicia al momento; si se cortó solo, avisa y espera un toque.
+      if (isIOS){
+        if (S_pulsando && !S.hablando){ try{ r.start(); }catch(e){} return; }
+        if (S.escuchando && !S.hablando && !S_pulsando) avisoNoEscucho(true, "Se ha parado la escucha. Toca 🎤 para reiniciar o mantén pulsado para hablar.");
+        return;
+      }
+      if (S.escuchando && !S.hablando){
+        var espera=Math.min(4000, 300*Math.pow(2, recIntento));
+        recIntento++;
+        setTimeout(function(){ try{ if(S.escuchando&&!S.hablando&&!micDenegado) r.start(); }catch(e){} }, espera);
+      }
+    };
     return r;
   }
   function pausarOido(){ if(rec) try{ rec.abort(); }catch(e){} }
-  function reanudarOido(){ if(rec && S.escuchando) setTimeout(function(){ try{ rec.start(); }catch(e){} }, 300); }
-  function marcarMic(){ var m=$("mic"); m.classList.toggle("on", S.escuchando); m.textContent=S.escuchando?"👂":"🎤"; m.setAttribute("aria-label", S.escuchando?"Dejar de escuchar":"Activar el micrófono"); }
+  function reanudarOido(){ if(rec && S.escuchando && !micDenegado) setTimeout(function(){ try{ rec.start(); }catch(e){} }, 300); }
+  function marcarMic(){ var m=$("mic"); m.classList.toggle("on", S.escuchando||S_pulsando); m.textContent=(S.escuchando||S_pulsando)?"👂":"🎤"; m.setAttribute("aria-label", isIOS?((S.escuchando||S_pulsando)?"Suelta para enviar":"Mantén pulsado para hablar"):(S.escuchando?"Dejar de escuchar":"Activar el micrófono")); }
   var wakeLock=null;
   function pantallaEncendida(on){
-    try{ if(on && navigator.wakeLock && !wakeLock) navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; w.addEventListener("release",function(){ wakeLock=null; }); }).catch(function(){});
+    try{ if(on && navigator.wakeLock){ if(wakeLock) return; navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; w.addEventListener("release",function(){ wakeLock=null; }); }).catch(function(){}); }
       if(!on && wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){}
+  }
+  function alVolverVisible(){
+    if(document.visibilityState && document.visibilityState!=="visible") return;
+    if(S.escuchando){ wakeLock=null; pantallaEncendida(true); if(!isIOS && rec && !micDenegado){ try{ rec.start(); }catch(e){} } }
   }
   function escuchar(on){
     desbloquearAudio();
-    if (!Rec){ estado("Este navegador no reconoce la voz (usa Chrome o Safari). Puedes escribir abajo.", true); return; }
+    if (!Rec){ avisoSinReconocimiento(); return; }
+    if (on && micDenegado){ estado("Sin permiso de micrófono: actívalo para admira.live en el navegador.", true); return; }
     rec = rec || crearRec();
     S.escuchando=on; marcarMic(); pantallaEncendida(on);
     if (on){
+      avisoNoEscucho(false);
       if (S.fase==="apagado") dormir(true);
       try{ rec.start(); }catch(e){}
-    } else { pausarOido(); fase("Micrófono en pausa · pulsa 🎤 para seguir"); }
+      programarNoEscucho();
+      // El start() va en el gesto del usuario (necesario en iOS). getUserMedia solo informa del permiso.
+      pedirMicro();
+    } else { clearTimeout(noEscuchoTimer); pausarOido(); fase(isIOS?"Suelta · mantén pulsado 🎤 para hablar o tócalo para reiniciar":"Micrófono en pausa · pulsa 🎤 para seguir"); }
   }
 
   // ── Fases ──
   function dormir(silencioso){
     S.fase="dormido"; S.persona=null; pintar(null);
-    fase('Escuchando… di <b>«Hola Admira»</b> o <b>«Hola Steve…»</b>');
+    fase('Escuchando… di <b>«Hola Admira»</b> (te pongo con <b>'+esc(cabeceraActual())+'</b>) o nombra a un consejero');
     $("resp").style.display="none"; $("media").style.display="none";
     if(!silencioso) chime(false);
   }
   function despertar(){
-    S.fase="eligiendo"; S.persona=null; pintar(null); chime(true);
-    fase('Te escucho · di <b>«quiero hablar con Jobs»</b> o <b>Elon</b>');
-    decir(null, "Te escucho. ¿Con quién quieres hablar?");
+    // «Hola Admira» sin nombre: la máquina de estados ya conecta con la cabecera.
+    // Si aún llega «despierta», hacemos lo mismo (no preguntamos con quién).
+    conectar(cabeceraActual());
   }
   function conectar(persona, pregunta){
     var c=V.casting(persona); if(!c) return;
@@ -270,7 +333,7 @@
   function manejar(texto){
     var t=String(texto||"").trim(); if(!t) return;
     S.ultimo=Date.now();
-    var r=H.interpretar({ fase: S.fase==="apagado"?"dormido":S.fase, persona:S.persona }, t);
+    var r=H.interpretar({ fase: S.fase==="apagado"?"dormido":S.fase, persona:S.persona, email:emailSesion(), cabecera:cabeceraActual() }, t);
     if (r.accion==="despierta") despertar();
     else if (r.accion==="conectar") conectar(r.persona, r.pregunta);
     else if (r.accion==="dormir"){ var p=S.persona; if(p) decir(p, "Hasta pronto.", function(){ dormir(); }); else { decir(null,"Hasta luego."); dormir(); } }
@@ -376,12 +439,48 @@
   function esc(s){ return String(s==null?"":s).replace(/[<>&]/g,function(x){ return {"<":"&lt;",">":"&gt;","&":"&amp;"}[x]; }); }
 
   // ── Arranque ──
-  $("mic").addEventListener("click", function(){ escuchar(!S.escuchando); });
+  (function engancharMic(){
+    var el=$("mic");
+    if(isIOS){
+      el.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+      el.addEventListener("pointerdown", function(e){
+        if(e.button!=null && e.button!==0) return;
+        e.preventDefault();
+        el._t0=Date.now();
+        S_pulsando=true; avisoNoEscucho(false);
+        if(!S.escuchando) escuchar(true);
+        else { desbloquearAudio(); try{ rec && rec.start(); }catch(err){} programarNoEscucho(); }
+        marcarMic();
+      });
+      function soltar(e){
+        if(!S_pulsando) return;
+        if(e) e.preventDefault();
+        var tap=Date.now()-(el._t0||0)<350;
+        S_pulsando=false;
+        if(tap){
+          // Toque: reinicia y deja la escucha hasta que el reconocimiento termine.
+          S.escuchando=true; marcarMic(); pantallaEncendida(true);
+          return;
+        }
+        if(rec) try{ rec.stop(); }catch(err){}
+        S.escuchando=false; marcarMic(); pantallaEncendida(false); clearTimeout(noEscuchoTimer);
+      }
+      el.addEventListener("pointerup", soltar);
+      el.addEventListener("pointercancel", soltar);
+    } else {
+      el.addEventListener("click", function(){ escuchar(!S.escuchando); });
+    }
+  })();
+  document.addEventListener("visibilitychange", alVolverVisible);
+  window.addEventListener("pageshow", alVolverVisible);
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("/hola/sw.js", { scope:"/hola/" }).catch(function(){});
+  }
   $("form").addEventListener("submit", function(e){
     e.preventDefault(); desbloquearAudio();
     var t=$("texto").value.trim(); if(!t) return; $("texto").value=""; $("oido").innerHTML="«"+esc(t)+"»";
     // escrito: no hace falta «Hola Admira»
-    if (S.fase==="dormido"||S.fase==="apagado"){ var r=H.interpretar({fase:"eligiendo"}, t); if(r.accion==="conectar"){ conectar(r.persona); return; } if(H.despertar(t).ok){ manejar(t); return; } S.fase="eligiendo"; }
+    if (S.fase==="dormido"||S.fase==="apagado"){ var r=H.interpretar({fase:"eligiendo", email:emailSesion(), cabecera:cabeceraActual()}, t); if(r.accion==="conectar"){ conectar(r.persona, r.pregunta); return; } if(H.despertar(t).ok){ manejar(t); return; } S.fase="eligiendo"; }
     manejar(t);
   });
   $("loginBtn").addEventListener("click", function(){
@@ -391,9 +490,10 @@
   // ?con=jobs abre directamente con ese consejero (útil como acceso directo)
   try{ var q=new URLSearchParams(location.search).get("con"); if(q){ var p=H.consejero(q); if(p) setTimeout(function(){ conectar(p); }, 400); } }catch(e){}
   chips(); pintar(null);
-  if (!Rec) estado("Este navegador no reconoce la voz: usa Chrome o Safari, o escribe abajo.", true);
+  if (!Rec) avisoSinReconocimiento();
+  else if(isIOS) fase('En iPhone, mantén pulsado 🎤 y di <b>«Hola Admira»</b>');
   V.onVoices(function(){ if(S.persona) pintar(S.persona); });
-  if (C) C.restaurarSesion().then(function(ok){ if(!ok && !sesion()) $("login").style.display="flex"; });
+  if (C) C.restaurarSesion().then(function(ok){ if(!ok && !sesion()) $("login").style.display="flex"; if(S.fase==="apagado"||S.fase==="dormido") fase('Pulsa el micrófono y di <b>«Hola Admira»</b> · cabecera: <b>'+esc(cabeceraActual())+'</b>'); });
   window.__hola = { S:S, manejar:manejar };
 })();
 </script>

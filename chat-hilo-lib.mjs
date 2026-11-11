@@ -5,7 +5,7 @@
  * que despierta el webhook («rutina»). Se guarda en una sola clave KV por persona.
  * Sin dependencias: lo usan las Functions de Pages y los tests de Node.
  */
-export const PERSONAS = ["jobs", "wozniak", "disney", "lucas", "musk", "huang"];
+export const PERSONAS = ["jobs", "wozniak", "disney", "lucas", "musk", "huang", "lasseter", "ive", "cook", "buffett", "rams", "schultz", "shotwell", "porat", "ratti", "reynolds"];
 export const ORIGENES = ["app", "live", "rutina"];
 export const MAX_TEXTO = 8000;
 export const MAX_TURNOS = 500;
@@ -236,8 +236,17 @@ export async function emailSesion(request, env, ahora = Date.now(), fetchImpl = 
 // ── Entrega 2 (09-10-2026): enviar desde admira.live al consejero por el bot-inbox ──
 export const BOT_INBOX = "https://bot.yokup.com/api/bot-inbox";
 export const MARCA_CHAT = "[chat-coetaneos]";
-export const NOMBRES = { jobs: "Steve Jobs", wozniak: "Steve Wozniak", disney: "Walt Disney", lucas: "George Lucas", musk: "Elon Musk", huang: "Jensen Huang" };
-export const PERSONA_INBOX = { jobs: "Jobs", wozniak: "Wozniak", disney: "Disney", lucas: "Lucas", musk: "Musk", huang: "Huang" };
+export const NOMBRES = { jobs: "Steve Jobs", wozniak: "Steve Wozniak", disney: "Walt Disney", lucas: "George Lucas", musk: "Elon Musk", huang: "Jensen Huang", lasseter: "John Lasseter", ive: "Jony Ive", cook: "Tim Cook", buffett: "Warren Buffett", rams: "Dieter Rams", schultz: "Howard Schultz", shotwell: "Gwynne Shotwell", porat: "Ruth Porat", ratti: "Carlos Ratti", reynolds: "Ryan Reynolds" };
+export const PERSONA_INBOX = { jobs: "Jobs", wozniak: "Wozniak", disney: "Disney", lucas: "Lucas", musk: "Musk", huang: "Huang", lasseter: "Lasseter", ive: "Ive", cook: "Cook", buffett: "Buffett", rams: "Rams", schultz: "Schultz", shotwell: "Shotwell", porat: "Porat", ratti: "Ratti", reynolds: "Reynolds" };
+// Consejero de cabecera por cuenta (#7546). Sin sesión o email no listado: Steve Jobs.
+export const CABECERA_POR_EMAIL = { "csilva@admira.com": "jobs", "csilvasantin@gmail.com": "musk" };
+export const CABECERA_DEFECTO = "jobs";
+export function cabeceraDe(email) {
+  const e = String(email || "").trim().toLowerCase();
+  const clave = CABECERA_POR_EMAIL[e] || CABECERA_DEFECTO;
+  return { clave, persona: NOMBRES[clave] || "Steve Jobs" };
+}
+
 export const idRespuesta = (encargo) => `enc-${Number(encargo)}-resp`;
 const corto = (t, n) => { const s = String(t || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 

@@ -261,7 +261,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20261111-flechas";
+    const COUNCIL_IMAGE_VERSION = "20261111-carteles-v2";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",
@@ -365,7 +365,7 @@
         grid.innerHTML = legends.map(m => {
             const mandate = LEGEND_MANDATES[m.persona] || {};
             const active = m.persona === activeLegendPersona ? " active" : "";
-            return `<button class="legend-chip${active}" type="button" data-persona="${m.persona}" onclick="activateLegend('${m.persona.replace(/'/g, "\\'")}')">${m.icon} ${m.persona}<span>${m.name} · ${mandate.short || m.territory || ""}</span></button>`;
+            return `<button class="legend-chip${active}" type="button" data-persona="${m.persona}" onclick="activateLegend('${m.persona.replace(/'/g, "\\'")}')">${m.icon} ${m.persona}<span>${mandate.short || m.territory || ""}</span></button>`;
         }).join("");
         updateLegendReadout();
     }
@@ -376,7 +376,7 @@
         const member = COUNCIL.find(m => m.gen === "leyendas" && m.persona === activeLegendPersona);
         if (!activeEl || !focusEl || !member) return;
         const mandate = LEGEND_MANDATES[member.persona] || {};
-        activeEl.textContent = member.icon + " " + member.persona + " · " + member.name + " · " + member.role;
+        activeEl.textContent = member.icon + " " + member.persona;
         focusEl.textContent = mandate.short ? (mandate.short + " · " + member.territory) : member.territory;
     }
 
@@ -593,21 +593,20 @@
                         ${member.icon}
                         <div class="council-dropdown" data-cd="${machineIdAttr}">
                             <div class="cd-title">
-                                ${member.name} <span class="cd-badge ${member.side}">${member.side === 'racional' ? 'Operativo' : 'Creativo'}</span>
+                                ${member.persona} <span class="cd-badge ${member.side}">${member.side === 'racional' ? 'Operativo' : 'Creativo'}</span>
                             </div>
-                            <div class="cd-row"><span class="cd-key">Consejero</span><span class="cd-val">${member.persona}</span></div>
+                            
                             ${matrixRow}
                             <div class="cd-row"><span class="cd-key">Operador</span><span class="cd-val">${member.member || '—'}</span></div>
                             <div class="cd-row"><span class="cd-key">Maquina</span><span class="cd-val">${member.machine || machineName}</span></div>
                             <div class="cd-row"><span class="cd-key">Estado</span><span class="cd-val" style="color:${isOnline ? '#44bb44' : '#e74c3c'}">${isOnline ? (machineStatusText || 'online') : 'offline'}</span></div>
-                            <div class="cd-row"><span class="cd-key">Pareja</span><span class="cd-val">${member.pair || '—'} (${member.pairPersona || '—'})</span></div>
+                            <div class="cd-row"><span class="cd-key">Pareja</span><span class="cd-val">${member.pairPersona || '—'}</span></div>
                             ${member.territory ? `<div class="cd-focus"><div class="cd-focus-label">Territorio</div>${member.territory}</div>` : ''}
                             <a class="cd-ficha" href="consejero.html?p=${cSlug(member.persona)}" onclick="event.stopPropagation()" target="_blank" rel="noopener" style="display:block;margin-top:8px;padding:6px 8px;text-align:center;font-size:9px;background:#2a1a08;border:1px solid #8b5a14;color:#ffdd66;text-decoration:none;border-radius:3px;">📋 Ver ficha completa →</a>
                         </div>
                     </span>
                     <div class="member-info">
-                        <div class="member-name">${member.name} — ${member.persona}</div>
-                        <div class="member-role">${member.role}</div>
+                        <div class="member-name">${member.persona}</div>
                         ${window.CouncilPresencia ? window.CouncilPresencia.casilla(currentGen, member.persona) : ''}
                     </div>
                     <div class="machine-tag ${isOnline ? 'online' : ''}">
@@ -647,7 +646,7 @@
                 : '<span class="np-via np-via-pago" title="Pendiente de crear su silla en GrokBot — aun no se le puede preguntar">⏳</span>';
             return `<div class="np ${cls} ${porGrokBot ? 'np-libre' : 'np-pago'}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
                 <span class="np-turn"></span>
-                ${p.persona}${marca}<span class="np-role">${p.role}</span>
+                ${p.persona}${marca}
             </div>`;
         }).join("");
         applySpeakerTurns();
@@ -2774,7 +2773,7 @@
                     <div style="font-size:11px;color:#8a97ab;margin:6px 2px 2px">— o reunión privada 1-a-1 —</div>
                     ${COUNCIL.filter(m => m.gen === currentGen).map(m =>
                         `<div class="inv-item" data-persona="${m.persona}" onclick="selectAdvisorForMeeting('${m.persona}')">
-                            ${m.icon} ${m.persona} (${m.name}) — ${m.side === 'racional' ? '🧠 Racional' : '🎨 Creativo'}
+                            ${m.icon} ${m.persona} — ${m.side === 'racional' ? '🧠 Racional' : '🎨 Creativo'}
                         </div>`
                     ).join('')}
                 </div>
@@ -2814,9 +2813,9 @@
         img.src = `assets/advisor-${agent.role.toLowerCase()}.png`;
         img.onerror = () => { img.src = `assets/council-${currentGen}.jpg?v=${COUNCIL_IMAGE_VERSION}`; };
         
-        document.getElementById("meeting-advisor-name").textContent = agent.name;
-        document.getElementById("meeting-advisor-role").textContent = agent.role;
-        document.getElementById("meeting-advisor-persona").textContent = "Persona: " + agent.persona;
+        document.getElementById("meeting-advisor-name").textContent = agent.persona;
+        document.getElementById("meeting-advisor-role").textContent = "";
+        document.getElementById("meeting-advisor-persona").textContent = "";
         const badge = document.getElementById("meeting-side-badge");
         badge.textContent = agent.side === "racional" ? "🧠 Racional" : "🎨 Creativo";
         badge.className = "meeting-side-badge " + agent.side;
@@ -6020,8 +6019,7 @@
             `<tr>
                 <td style="padding:4px 10px">${m.icon}</td>
                 <td style="padding:4px 10px;color:#ccc">${m.persona}</td>
-                <td style="padding:4px 10px;color:#888;font-size:0.78em">${m.name}</td>
-                <td style="padding:4px 10px;font-size:1.1em;text-align:center">${vIcon[m.vote] || "?"}</td>
+                                <td style="padding:4px 10px;font-size:1.1em;text-align:center">${vIcon[m.vote] || "?"}</td>
             </tr>`
         ).join('');
 

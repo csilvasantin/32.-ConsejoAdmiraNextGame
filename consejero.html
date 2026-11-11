@@ -318,7 +318,7 @@
         return;
       }
 
-      document.title = `${c.persona} · ${c.role} · AdmiraNext Council`;
+      document.title = `${c.persona} · AdmiraNext Council`;
       const sideLabel = c.side === "racional" ? "Racional" : "Creativo";
       const genLabel = c.gen === "leyendas" ? "Leyenda" : "Coetáneo";
       const aliasBadge = c.alias ? `<span class="badge b-alias">Matrix · ${c.alias}</span>` : "";
@@ -328,16 +328,16 @@
           <a class="pill" href="index.html">◀ Consejo</a>
           <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
           <span class="bar-spacer"></span>
-          <span class="pill flat">${c.icon} ${c.role}</span>
+          <span class="pill flat">${c.icon} ${c.persona}</span>
           <span class="pill flat">v.26.06.21.r1</span>
         </div>
 
         <div class="hero">
           <div class="portrait" style="${cropStyle(c)}">
-            <div class="seat">${c.role} · ${sideLabel}</div>
+            <div class="seat">${sideLabel}</div>
           </div>
           <div class="hmeta">
-            <span class="role-chip">${c.icon} ${c.role} — ${c.roleFull}</span>
+            
             <div class="name">${c.persona}</div>
             <div class="badges">
               <span class="badge b-${c.side}">${sideLabel}</span>
@@ -351,10 +351,9 @@
         <div class="grid">
           <div class="card">
             <h2>En el Consejo</h2>
-            <div class="row"><span class="k">Rol</span><span class="v">${c.role} · ${c.roleFull}</span></div>
-            <div class="row"><span class="k">Lado</span><span class="v">${sideLabel}</span></div>
+                        <div class="row"><span class="k">Lado</span><span class="v">${sideLabel}</span></div>
             <div class="row"><span class="k">Generación</span><span class="v">${genLabel}</span></div>
-            <div class="row"><span class="k">Pareja</span><span class="v">${c.pair} · ${c.pairPersona}</span></div>
+            <div class="row"><span class="k">Pareja</span><span class="v">${c.pairPersona}</span></div>
             ${c.alias ? `<div class="row"><span class="k">Alias Matrix</span><span class="v">${c.alias}</span></div>`:""}
           </div>
           <div class="card" id="asig">
@@ -368,7 +367,7 @@
         <div class="bio">
           <h2>Quién es en AdmiraNeXT</h2>
           ${c.bio.map(p=>`<p>${p}</p>`).join("")}
-          <div class="quote">“${c.quote}”<span class="who">— ${c.persona}, ${c.role} del Consejo</span></div>
+          <div class="quote">“${c.quote}”<span class="who">— ${c.persona}</span></div>
           <div class="cta" id="voz">
             <button class="pill go" type="button" id="vozPlay">🔊 Escuchar su voz</button>
             <a class="pill" href="/voces/">🎙️ Personalizar voces</a>

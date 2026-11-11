@@ -158,7 +158,7 @@
     if(linea.accion==='ayuda'){avisoHablar(C?C.listaAyuda():'/hablar [consejero] [mensaje] · /hablar off cuelga');return;}
     if(linea.accion==='estado'){
       const p=hablarDestino||draftPersona;
-      avisoHablar(p?'En conversación con '+p+' · /hablar off cuelga.':'No hay conversación. /hablar a secas habla con el CEO de la mesa.');
+      avisoHablar(p?'En conversación con '+p+' · /hablar off cuelga.':'No hay conversación. /hablar a secas habla con el consejero de la mesa.');
       return;
     }
     if(linea.accion==='error'){avisoHablar('No reconozco a ese consejero. Prueba /hablar Lucas, Jobs, Woz, Disney, Elon o Jensen.');return;}

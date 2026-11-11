@@ -253,7 +253,9 @@
   function conectar(persona, pregunta){
     var c=V.casting(persona); if(!c) return;
     S.fase="conversando"; S.persona=c.persona; S.ultimo=Date.now(); pintar(c.persona); chime(true);
-    $("resp").style.display="none"; $("media").style.display="none"; if(!S.esperando) estado("");
+    $("resp").style.display="none"; $("media").style.display="none";
+    // Confirmación local corta en la línea de estado (además de la cabecera).
+    if(!S.esperando) estado(pregunta ? "" : ("Hablas con "+c.persona+"."));
     fase('Hablas con <b>'+esc(c.persona)+'</b> · «cambia a …» · «gracias» para terminar');
     if (!linea(c.persona)){
       decir(c.persona, c.frase, function(){ decir(null, c.persona.split(" ")[0]+" aún no tiene línea directa desde aquí. Puedo pasarte con Jobs, Wozniak, Disney, Lucas, Elon o Jensen."); });
@@ -295,12 +297,18 @@
       if (S.base[clave]==null) S.base[clave]=ult;
     }).catch(function(){});
   }
+  // Evita dos encargos del mismo texto (p. ej. Enter + submit, o un doble clic).
+  // El API solo deduplica por msg_id, y cada envío genera uno nuevo.
+  var EN_VUELO = {}, EN_VUELO_MS = 3000;
   function preguntar(persona, texto){
     var clave=C && C.personaDe(persona);
     if (!clave){ decir(null, persona.split(" ")[0]+" aún no tiene línea directa."); return; }
     if (!sesion()){ pedirLogin(); decir(null, "Antes entra con tu cuenta de Google."); return; }
+    var firma=clave+"\0"+String(texto||""), ahora=Date.now();
+    if (EN_VUELO[firma] && ahora-EN_VUELO[firma] < EN_VUELO_MS) return;
+    EN_VUELO[firma]=ahora;
     estado("Enviando a "+persona+"…");
-    var id=C.nuevoId(), enviadoEn=Date.now();
+    var id=C.nuevoId(), enviadoEn=ahora;
     if (S.base[clave]==null) S.base[clave]=enviadoEn-1000;
     C.enviarTurno(clave, texto, id).then(function(r){
       if (r.status===401){ pedirLogin(); decir(null,"Tu sesión ha caducado; vuelve a entrar con Google."); return; }
@@ -312,7 +320,8 @@
         estado("Enviado sin confirmar (el buzón no respondió). Te leo la respuesta si llega.", true);
         esperar(persona, clave);
       } else { estado("No se pudo entregar a "+persona+(t.entrega?" ("+t.entrega+")":"")+".", true); decir(null,"No he podido entregarle la pregunta."); }
-    }).catch(function(){ estado("Sin conexión con admira.live.", true); });
+    }).catch(function(){ estado("Sin conexión con admira.live.", true); })
+    .then(function(){ if (EN_VUELO[firma]===ahora) delete EN_VUELO[firma]; });
   }
   // Sondeo del hilo por consejero. Sigue mientras haya preguntas sin contestar y un
   // rato de gracia tras la última respuesta (los bots a veces contestan en dos turnos):
@@ -379,16 +388,19 @@
   // ── Arranque ──
   $("mic").addEventListener("click", function(){ escuchar(!S.escuchando); });
   $("form").addEventListener("submit", function(e){
-    e.preventDefault(); desbloquearAudio();
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    desbloquearAudio();
     var t=$("texto").value.trim(); if(!t) return; $("texto").value=""; $("oido").innerHTML="«"+esc(t)+"»";
-    // /hablar [consejero] [mensaje]: nunca se manda el literal al consejero.
+    // /hablar [consejero] [mensaje]: cambia el destinatario en esta página.
+    // Nunca se crea un encargo ni se manda el comando a ningún backend o bot.
     if (window.AdmiraHablarCmd && typeof AdmiraHablarCmd.parseLinea === "function") {
       var linea=AdmiraHablarCmd.parseLinea(t, { persona: S.persona });
       if (linea) {
         if (linea.accion==="colgar") { estado("Has colgado."); dormir(); return; }
         if (linea.accion==="ayuda") { estado(AdmiraHablarCmd.listaAyuda()); return; }
         if (linea.accion==="estado") { estado(S.persona ? ("Hablas con "+S.persona) : "No hay conversación"); return; }
-        if (linea.accion==="error") { estado("No reconozco a ese consejero. Prueba Jobs, Woz, Disney, Lucas, Elon o Jensen.", true); return; }
+        if (linea.accion==="error") { estado("No reconozco a ese consejero. Prueba Jobs, Woz, Disney, Lucas, Elon, Jensen o Lasseter.", true); return; }
         if (linea.accion==="conectar") { conectar(linea.persona); if (linea.pregunta) preguntar(linea.persona, linea.pregunta); return; }
         if (linea.accion==="preguntar") { preguntar(linea.persona, linea.texto); return; }
         return;

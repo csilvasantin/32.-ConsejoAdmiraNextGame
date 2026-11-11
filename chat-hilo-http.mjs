@@ -1,7 +1,13 @@
 // Utilidades compartidas de /api/chat/* (GrokBotBox, 09-10-2026).
 import { claveHilo } from "./chat-hilo-lib.mjs";
 
-const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
+// El ⌘ Experto de admiranext.com (/hablar) llama a este mismo API desde otro origen
+// con el ID token de Google (Authorization: Bearer). La cookie __Host- no viaja
+// entre sitios (SameSite=Lax); CORS aquí solo habilita esa llamada con JWT.
+const ALLOW = new Set([
+  "https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev",
+  "https://www.admiranext.com", "https://admiranext.com",
+]);
 export function cabeceras(origin, metodos = "GET, POST, OPTIONS") {
   const h = {
     "content-type": "application/json; charset=utf-8",

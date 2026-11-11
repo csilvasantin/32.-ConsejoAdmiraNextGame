@@ -13,7 +13,7 @@
   function dims(gen) { var s = sil(gen); return s ? [s.width, s.height] : (gen === 'coetaneos' ? [1280, 720] : [1360, 768]); }
   // Recortes guardados ANTES de la foto actual de cada sala no valen: son de otro arte.
   // (11-nov-2026: los del 4-oct, sala de 8, ponían a Disney sobre Carlos y a Lucas en la silla de Disney.)
-  var ARTE_DESDE = { leyendas: '2026-11-06T00:00:00Z', coetaneos: '2026-11-11T17:00:00Z' };
+  var ARTE_DESDE = { leyendas: '2026-11-06T00:00:00Z', coetaneos: '2026-11-11T21:40:00Z' };
   function vigente(gen) { var desde = ARTE_DESDE[gen]; if (!desde) return true; var t = Date.parse(data.updatedAt || ''); return !!t && t >= Date.parse(desde); }
   function poly(gen, persona) { if (!vigente(gen)) return null; var g = data.polys && data.polys[gen]; return g && g[persona] && g[persona].length >= 3 ? g[persona] : null; }
   function toPath(pts, W, H) {

@@ -261,7 +261,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20261111-carteles-v2";
+    const COUNCIL_IMAGE_VERSION = "20261111-murati";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",
@@ -351,6 +351,10 @@
         if (preguntarMode && currentVerb === 'preguntar' && (agentePorDefecto || !selectedAgent || selectedAgent.gen !== gen)) elegirCeoPorDefecto();
         if (window.CouncilTodo && window.CouncilTodo.isOpen()) {
             window.CouncilTodo.setGeneration(gen, (NAMEPLATE_POS[gen] || []).map(p => ({ persona: p.persona, role: p.role, x: p.x, y: p.y })));
+        }
+        // El Mac 1984 de la mesa solo pertenece a Leyendas.
+        if (gen === "coetaneos" && window.MacHoy && typeof window.MacHoy.setVisible === "function") {
+            window.MacHoy.setVisible(false);
         }
     }
 

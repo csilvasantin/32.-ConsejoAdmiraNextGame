@@ -1098,6 +1098,11 @@ export function clearRemote(root = lastRoot || (typeof document !== 'undefined' 
   }
 }
 
+function mesaGeneration(root) {
+  const el = root && root.querySelector && root.querySelector('.council-image');
+  return (el && el.getAttribute && el.getAttribute('data-generation')) || 'leyendas';
+}
+
 export function closeFront(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
   focused = false;
   pararDetalle();
@@ -1106,7 +1111,13 @@ export function closeFront(root = lastRoot || (typeof document !== 'undefined' ?
 }
 
 export function openFront(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
-  if (!root || !visible) return false;
+  /* En Coetáneos el Mac de la mesa está oculto, pero el frente (lista de hoy) puede abrirse. */
+  if (!root || (!visible && mesaGeneration(root) !== 'coetaneos')) return false;
+  if (mesaGeneration(root) === 'coetaneos' && !visible) {
+    visible = true;
+    lastRoot = root;
+    lastFetch = fetchImpl;
+  }
   lastRoot = root;
   lastFetch = fetchImpl;
   focused = true;
@@ -1129,8 +1140,9 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   const prop = root.querySelector('#mac-hoy-prop');
   const btn = root.querySelector('#btn-mostrar');
   visible = !!on;
-  if (prop) prop.classList.toggle('on', visible);
-  if (btn) btn.classList.toggle('active', visible);
+  const enMesa = mesaGeneration(root) !== 'coetaneos';
+  if (prop) prop.classList.toggle('on', visible && enMesa);
+  if (btn) btn.classList.toggle('active', visible && enMesa);
   if (!visible) { stopRemotePoll(); remotePersona = null; modo = 'logo'; detalleIdx = 0; paraPong(); paraPaseo(root); aplicarModo(root); closeFront(root); }
   if (visible) {
     fitScreen(root);              // oculto medía 0: el encaje se rehace al mostrarlo
@@ -1144,6 +1156,13 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
 }
 
 export function toggle(root, fetchImpl) {
+  root = root || lastRoot || (typeof document !== 'undefined' ? document : null);
+  if (mesaGeneration(root) === 'coetaneos') {
+    lastRoot = root;
+    if (fetchImpl) lastFetch = fetchImpl;
+    if (focused) { closeFront(root); visible = false; return false; }
+    return openFront(root, fetchImpl || lastFetch);
+  }
   return setVisible(!visible, root, fetchImpl);
 }
 

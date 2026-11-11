@@ -4,6 +4,7 @@ import {
   clasificar, textoGlobo, latidoVigente, tituloCorto, horaMadrid,
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
   CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
+  esActivo, llevaFlecha, llevaHalo, nuncaFlecha,
 } from './consejo-globo-lib.mjs';
 
 const AHORA = Date.UTC(2026, 10, 11, 16, 50, 0); // 17:50 Madrid (UTC+1)
@@ -165,7 +166,10 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
   assert.equal(cook.puntos.length, 0);
   const buffett = L['Warren Buffett'];
   assert.ok(buffett.x < 45 && buffett.y > 48, 'Buffett en sus folios, no en el cuerpo de Y');
-  assert.ok(L['Walt Disney'].flecha && L['Walt Disney'].flecha.x > 47 && L['Walt Disney'].flecha.x < 53, 'flecha sobre Y (asiento de Disney)');
+  assert.equal(L['Walt Disney'].nuncaFlecha, true, 'la figura del asiento es Carlos Silva, nunca flecha');
+  assert.equal(L['Walt Disney'].figura, 'Carlos Silva');
+  assert.equal(llevaFlecha('Walt Disney'), false, 'Carlos/Y no lleva flecha');
+  assert.equal(llevaHalo('Walt Disney'), false);
   const C = PAPEL_POS.coetaneos;
   assert.equal(Object.keys(C).length, 6);
   assert.ok(!C['Ruth Porat'] && !C['Carlos Ratti'], 'Porat y Ratti ya no tienen asiento (#7520)');
@@ -179,6 +183,49 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
   assert.ok(C['John Lasseter'].y > 74 && C['John Lasseter'].x > 68);
   assert.ok(C['Mira Murati'].y < 75 && C['Mira Murati'].x < 40, 'Murati hereda la placa que era de Shotwell, delante de esa figura');
   assert.ok(C['Jensen Huang'].y > 76, 'la placa de Huang sigue delante de Huang, no en el asiento de atrás');
+});
+
+
+test('solo los consejeros activos llevan flecha y halo; Carlos nunca', () => {
+  const L = PAPEL_POS.leyendas;
+  // Los 4 con bot/latido real en leyendas: Jobs, Woz, Lucas y Disney.
+  // Disney tiene bot, pero en la foto el asiento lo ocupa Carlos Silva (Y-3):
+  // siempre disponible, nunca flecha ni halo.
+  assert.deepEqual(
+    Object.keys(L).filter((n) => llevaFlecha(n)),
+    ['Steve Jobs', 'Steve Wozniak', 'George Lucas'],
+  );
+  for (const n of ['Steve Jobs', 'Steve Wozniak', 'George Lucas']) {
+    assert.equal(esActivo(n), true, n);
+    assert.equal(llevaFlecha(n), true, n);
+    assert.equal(llevaHalo(n), true, n);
+  }
+  assert.equal(esActivo('Walt Disney'), true);
+  assert.equal(nuncaFlecha('Walt Disney'), true);
+  assert.equal(llevaFlecha('Walt Disney'), false);
+  for (const n of ['Warren Buffett', 'Dieter Rams', 'Howard Schultz', 'Tim Cook']) {
+    assert.equal(esActivo(n), false, n);
+    assert.equal(llevaFlecha(n), false, n);
+    assert.equal(llevaHalo(n), false, n);
+    if (n !== 'Tim Cook') {
+      assert.ok(L[n].flecha || (L[n].puntos && L[n].puntos.length >= 4), 'coords guardadas para reactivar ' + n);
+    }
+  }
+  // Reactivar es un flag: si Buffett pasa a activo, flecha y halo vuelven.
+  const reactivado = { ...L['Warren Buffett'], activo: true };
+  assert.equal(llevaFlecha(reactivado), true);
+  assert.equal(llevaHalo(reactivado), true);
+
+  const C = PAPEL_POS.coetaneos;
+  assert.deepEqual(
+    Object.keys(C).filter((n) => llevaFlecha(n)),
+    ['Elon Musk', 'Jensen Huang', 'Jony Ive', 'John Lasseter'],
+  );
+  for (const n of ['Mira Murati', 'Ryan Reynolds']) {
+    assert.equal(esActivo(n), false, n);
+    assert.equal(llevaFlecha(n), false, n);
+    assert.equal(llevaHalo(n), false, n);
+  }
 });
 
 test('flecha y papeles de un consejero leen el mismo mapa de estado', () => {

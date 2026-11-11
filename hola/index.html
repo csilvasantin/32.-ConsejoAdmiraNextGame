@@ -402,7 +402,8 @@
         if (linea.accion==="estado") { estado(S.persona ? ("Hablas con "+S.persona) : "No hay conversación"); return; }
         if (linea.accion==="error") { estado("No reconozco a ese consejero. Prueba Jobs, Woz, Disney, Lucas, Elon, Jensen o Lasseter.", true); return; }
         if (linea.accion==="conectar") { conectar(linea.persona); if (linea.pregunta) preguntar(linea.persona, linea.pregunta); return; }
-        if (linea.accion==="preguntar") { preguntar(linea.persona, linea.texto); return; }
+        // «/hablar <algo>» sin nombre reconocible: aviso local, nunca un encargo.
+        if (linea.accion==="preguntar") { estado("No reconozco a ese consejero. Prueba Jobs, Woz, Disney, Lucas, Elon, Jensen o Lasseter.", true); return; }
         return;
       }
     }

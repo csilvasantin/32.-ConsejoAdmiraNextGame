@@ -61,6 +61,9 @@
     if(ultima.length>max)ultima=ultima.slice(0,max-1).replace(/\s+\S*$/,'').replace(/[\s,;:.]+$/,'')+'…';
     return ultima;
   }
+  // VOCES DEL CONSEJO (11-11-2026): si se activa en /voces («Locutar en la portada»), el bocadillo
+  // final de una respuesta nueva se dice con la voz propia del consejero. Por defecto, muda.
+  function locutar(persona,dicho){try{const V=window.AdmiraVoces;if(V&&dicho&&V.portadaOn()&&V.casting(persona))V.speak(persona,dicho);}catch(_){}}
   function show(persona,role,text,{animate=false,messageId='message',status='done'}={}){
     prepare(persona,role);text=bocadillo(text);
     if(animate){
@@ -143,7 +146,7 @@
     onPending({persona}){if(activePersona!==persona)return;dismissed=false;activeTurn=null;prepare(persona,'GrokBot');speech.begin({persona,turnId:'pending'});bubble.querySelector('.speech-text').textContent='Enviando al bot…';},
     onAnswer({persona,text,messageId,status}){if(activePersona===persona&&!dismissed)show(persona,'GrokBot',text,{animate:true,messageId,status});},
     onRestore({persona,text,messageId,status='done'}){if(activePersona===persona){dismissed=false;show(persona,'GrokBot',text,{messageId,status});}},
-    onSettled({persona,status,text,messageId}){if(activePersona!==persona||dismissed)return;if(!text){activeTurn=null;speech.cancel();bubble.querySelector('.speech-text').textContent=CouncilGrokBot.LABELS[status]||'Sin respuesta';}else if(activeTurn?.messageId===messageId){speech.update(activeTurn.token,bocadillo(text),{final:true,revision:++activeTurn.revision});}},
+    onSettled({persona,status,text,messageId}){if(activePersona!==persona||dismissed)return;if(!text){activeTurn=null;speech.cancel();bubble.querySelector('.speech-text').textContent=CouncilGrokBot.LABELS[status]||'Sin respuesta';}else if(activeTurn?.messageId===messageId){const dicho=bocadillo(text);speech.update(activeTurn.token,dicho,{final:true,revision:++activeTurn.revision});locutar(persona,dicho);}},
     onError({persona,message}){if(activePersona===persona){speech.cancel();bubble.querySelector('.speech-text').textContent=message;}},
     onStatus(message){if(typeof setActionLine==='function')setActionLine(message);},
     onDesktop({persona}){

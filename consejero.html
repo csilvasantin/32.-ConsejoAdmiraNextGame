@@ -6,6 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/failover.js"></script>
+  <script src="/consejeros-voces.js?v=20261111-voces1"></script>
   <title>Consejero · AdmiraNext Council</title>
   <meta name="admiranext-version" content="v.26.06.21.r1">
   <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
@@ -368,6 +369,11 @@
           <h2>Quién es en AdmiraNeXT</h2>
           ${c.bio.map(p=>`<p>${p}</p>`).join("")}
           <div class="quote">“${c.quote}”<span class="who">— ${c.persona}, ${c.role} del Consejo</span></div>
+          <div class="cta" id="voz">
+            <button class="pill go" type="button" id="vozPlay">🔊 Escuchar su voz</button>
+            <a class="pill" href="/voces/">🎙️ Personalizar voces</a>
+            <span class="chat-status" id="vozInfo"></span>
+          </div>
         </div>
 
         <div class="card chat" id="chat">
@@ -391,7 +397,22 @@
           Ficha de consejero · v.26.06.21.r1
         </div>`;
 
+      setupVoz(c);
       loadLive(c);
+    }
+
+    // VOCES DEL CONSEJO (11-11-2026): su voz propia (consejeros-voces.js), personalizable en /voces.
+    function setupVoz(c){
+      const b=document.getElementById("vozPlay"), info=document.getElementById("vozInfo"), V=window.AdmiraVoces;
+      if(!b) return;
+      if(!V || !V.supported() || !V.casting(c.persona)){ b.disabled=true; b.style.opacity=".45"; if(info) info.textContent="· este navegador no tiene síntesis de voz"; return; }
+      const paint=()=>{ const p=V.profile(c.persona); if(info) info.textContent=p&&p.voiceName?("· "+p.voiceName):""; };
+      paint(); V.onVoices(paint); V.ready().then(paint);
+      b.addEventListener("click",()=>{
+        if(V.speaking()){ V.stop(); b.textContent="🔊 Escuchar su voz"; return; }
+        const done=()=>{ b.textContent="🔊 Escuchar su voz"; };
+        V.speak(c.persona, c.quote, { onstart:()=>{ b.textContent="■ Parar"; }, onend:done, onerror:done });
+      });
     }
 
     // Asignación real desde /equipos (auto-login en máquinas de la tailnet).

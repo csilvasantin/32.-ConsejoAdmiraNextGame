@@ -2096,6 +2096,10 @@
     pcBtn.type = "button";
     pcBtn.addEventListener("click", function () { openPanelControl(); });
     body.appendChild(pcBtn);
+    // VOCES DEL CONSEJO (11-11-2026): la voz propia de cada consejero se elige en /voces.
+    var vozBtn = el("a", "yk-set-btn", '<span aria-hidden="true">🎙</span> VOCES DEL CONSEJO');
+    vozBtn.href = "/voces/";
+    body.appendChild(vozBtn);
 
     btn.addEventListener("click", function () {
       var open = !set.classList.contains("open");

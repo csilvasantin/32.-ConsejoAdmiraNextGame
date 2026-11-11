@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/failover.js"></script>
   <script src="/comic.js" defer></script>
+  <script src="/consejeros-voces.js?v=20261111-voces1"></script>
   <title>La Mesa del Consejo · AdmiraNext Council</title>
   <meta name="admiranext-version" content="v.26.06.21.r11">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -112,6 +113,7 @@
       </label>
       <button class="btn" id="mod">🎙️ Moderador: off</button>
       <button class="btn" id="voice">🔊 Voz: on</button>
+      <a class="btn" href="/voces/" title="Personalizar la voz de cada consejero">🎙️ Voces</a>
       <button class="btn go" id="start" disabled>▶ Iniciar reunión</button>
       <button class="btn" id="next" disabled>⏭ Siguiente turno</button>
       <button class="btn stop" id="stop" disabled>⏹ Parar</button>
@@ -249,10 +251,18 @@
       const es=_voices.filter(v=>/^es/i.test(v.lang||"")); const pool=es.length?es:_voices;
       return pool.length ? pool[_hash(c.slug||c.persona)%pool.length] : null;   // misma voz siempre para cada uno
     }
-    function stopSpeech(){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(_){}
+    function stopSpeech(){ try{ if(window.AdmiraVoces) AdmiraVoces.stop(); if(window.speechSynthesis) speechSynthesis.cancel(); }catch(_){}
       document.querySelectorAll(".av.talking").forEach(a=>a.classList.remove("talking")); }
     function speakTurn(c, text, avEl){
       if(!VOICE_ON || !window.speechSynthesis || !text) return;
+      // VOCES DEL CONSEJO (11-11-2026): voz propia de cada consejero (consejeros-voces.js,
+      // personalizable en /voces). Si el módulo no carga, sigue el reparto anterior.
+      if(window.AdmiraVoces && AdmiraVoces.casting(c.persona)){
+        const off=()=>{ if(avEl) avEl.classList.remove("talking"); };
+        AdmiraVoces.speak(c.persona, String(text).slice(0,600), {
+          onstart:()=>{ if(avEl) avEl.classList.add("talking"); }, onend:off, onerror:off });
+        return;
+      }
       try{
         const u=new SpeechSynthesisUtterance(String(text).slice(0,600));
         const v=pickVoice(c); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="es-ES";

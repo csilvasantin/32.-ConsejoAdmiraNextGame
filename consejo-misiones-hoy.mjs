@@ -63,7 +63,20 @@ export function enRankingGrupo(persona, gen) {
   return !!(lista && lista.includes(persona));
 }
 
-const seg = (ts) => (Number(ts) > 4102444800 ? Math.floor(Number(ts) / 1000) : Number(ts) || 0);
+export function seg(ts) {
+  if (ts == null || ts === '') return 0;
+  if (typeof ts === 'number' && Number.isFinite(ts)) {
+    return ts > 4102444800 ? Math.floor(ts / 1000) : ts;
+  }
+  const s = String(ts).trim();
+  if (!s) return 0;
+  const n = Number(s);
+  if (Number.isFinite(n) && n > 0 && !/[^0-9.]/.test(s)) {
+    return n > 4102444800 ? Math.floor(n / 1000) : n;
+  }
+  const ms = Date.parse(s);
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
+}
 
 export function normalizarRepo(repo) {
   return String(repo || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/^\/+/, '');
@@ -137,6 +150,40 @@ export function misionesInboxHoy(items, { desdeS, hastaS } = {}) {
 
 const YOKUP_OK = new Set(['resolved', 'done', 'completed', 'closed']);
 
+/**
+ * Filtro ?agent= de api.yokup.com/fleet/missions. El listado global
+ * ?status=resolved&limit=120 es una ventana única y a menudo no incluye
+ * al consejero (yokup_ok=true pero su recuento sale 0). Se consulta por
+ * el alias corto que el API acepta; no se inventan agentes.
+ */
+export const YOKUP_AGENT_QUERY = Object.freeze({
+  Wozniak: Object.freeze(['woz']),
+  Jobs: Object.freeze(['jobs']),
+  Disney: Object.freeze(['disney']),
+  Lucas: Object.freeze(['lucas']),
+  Musk: Object.freeze(['musk']),
+  Huang: Object.freeze(['huang']),
+  Lasseter: Object.freeze(['lasseter']),
+  Ive: Object.freeze(['ive']),
+});
+
+export const YOKUP_HOSTS = Object.freeze(['https://api.yokup.com', 'https://rtc.yokup.com']);
+
+export function urlsYokupPorAgente(host = YOKUP_HOSTS[0], limit = 80) {
+  const n = Number(limit) || 80;
+  return Object.entries(YOKUP_AGENT_QUERY).map(([bot, aliases]) => ({
+    bot,
+    agent: aliases[0],
+    url: host + '/fleet/missions?status=resolved&limit=' + n + '&agent=' + encodeURIComponent(aliases[0]),
+  }));
+}
+
+export function yokupIdentidades(x) {
+  if (!x || typeof x !== 'object') return [];
+  const dup = x.duplicate || {};
+  return [x.persona, x.assignee, x.agent, x.agent_key, dup.agent_key, x.owner].filter(Boolean);
+}
+
 export function personaYokupEs(persona, bot, raw) {
   const s = String(raw || '').replace(/GrokBot/gi, '').replace(/[^a-z]/gi, '').toLowerCase();
   if (!s) return false;
@@ -148,14 +195,17 @@ export function personaYokupEs(persona, bot, raw) {
   return false;
 }
 
+export function misionYokupDePersona(x, { persona, bot } = {}) {
+  return yokupIdentidades(x).some((who) => personaYokupEs(persona, bot, who));
+}
+
 export function misionesYokupHoy(items, { persona, bot, desdeS, hastaS } = {}) {
   if (items == null) return { ok: false, lista: [] };
   const lista = [];
   for (const x of (Array.isArray(items) ? items : [])) {
     const st = String(x && x.status || '').toLowerCase();
     if (!YOKUP_OK.has(st)) continue;
-    const who = x.persona || x.assignee || x.agent || '';
-    if (!personaYokupEs(persona, bot, who)) continue;
+    if (!misionYokupDePersona(x, { persona, bot })) continue;
     const t = seg(x.updated_at) || seg(x.finished_at) || seg(x.closed_at) || seg(x.done_at) || 0;
     const dia = x.display_day || null;
     const enDia = dia ? true : (t && (!desdeS || t >= desdeS) && (!hastaS || t <= hastaS));

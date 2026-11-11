@@ -1,12 +1,17 @@
 /**
  * GET /api/consejo/estado — público, solo #, título corto y hora.
  * Junta el latido de los consejeros (mcp.admira.live/consejeros/latido) con
- * los done de la bandeja pública, las misiones Yokup resueltas y los PRs
- * fusionados de hoy (00:00 Europe/Madrid). Ranking por mesa de 6, sin «/6».
- * Sin textos privados.
- * Caché corta. No escribe: el POST/tool sigue siendo consejero_latido.
+ * los done de la bandeja pública, las misiones Yokup resueltas (por ?agent=)
+ * y los PRs fusionados de hoy (00:00 Europe/Madrid). Ranking por mesa de 6,
+ * sin «/6». Sin textos privados. Caché corta. No escribe el latido.
+ *
+ * GitHub: User-Agent admira-live-consejo + Accept application/vnd.github+json;
+ * GITHUB_TOKEN opcional; resultado en KV 8 min. Si el Worker sigue recibiendo
+ * 403/404, se usa el snapshot de tools/consejo-prs-hoy.mjs.
  */
 import { armarMesa, CACHE_SEG, botDe, MESA } from "../../../consejo-globo-lib.mjs";
+import { obtenerPrs, REPOS_PR } from "../../../consejo-prs-lib.mjs";
+import { leerYokup, YOKUP_RES_GLOBAL } from "../../../consejo-yokup-lib.mjs";
 
 const LATIDO = "https://mcp.admira.live/consejeros/latido";
 const BANDEJA = "https://bot.yokup.com/api/public/inbox";
@@ -17,60 +22,20 @@ const cab = {
   "access-control-allow-methods": "GET, OPTIONS",
 };
 
-const REPOS_PR = ["csilvasantin/32.-ConsejoAdmiraNextGame", "csilvasantin/admira-next-web"];
-const YOKUP_RES = "https://api.yokup.com/fleet/missions?status=resolved&limit=120";
-const YOKUP_ALL = "https://api.yokup.com/fleet/missions?limit=80";
-const GH = "https://api.github.com";
-
 async function leerJson(fetchImpl, url, ms = 8000) {
-  const r = await fetchImpl(url, { headers: { accept: "application/json", "user-agent": "admira-live-globo" }, signal: AbortSignal.timeout(ms) });
+  const r = await fetchImpl(url, { headers: { accept: "application/json", "user-agent": "admira-live-consejo" }, signal: AbortSignal.timeout(ms) });
   if (!r.ok) throw new Error(r.status + " en " + url);
   return r.json();
 }
 
-function prsDe(lista, repo) {
-  return (Array.isArray(lista) ? lista : []).map((pr) => ({
-    repo,
-    number: pr.number,
-    title: pr.title,
-    merged_at: pr.merged_at,
-    rama: pr.head && pr.head.ref,
-  }));
-}
-
-async function leerPrs(f, errores) {
-  const partes = await Promise.all(REPOS_PR.map((repo) =>
-    leerJson(f, GH + "/repos/" + repo + "/pulls?state=closed&sort=updated&direction=desc&per_page=50")
-      .then((d) => prsDe(d, repo))
-      .catch((e) => { errores["pr_" + repo] = String(e.message || e); return null; })
-  ));
-  if (partes.every((p) => p == null)) return null;
-  return partes.filter(Boolean).flat();
-}
-
-async function leerYokup(f, errores) {
-  try {
-    const d = await leerJson(f, YOKUP_RES);
-    return (d && d.missions) || [];
-  } catch (e) {
-    try {
-      const d = await leerJson(f, YOKUP_ALL);
-      return (d && d.missions) || [];
-    } catch (e2) {
-      errores.yokup = String(e2.message || e2);
-      return null;
-    }
-  }
-}
-
-export async function construir({ fetchImpl, ahoraMs } = {}) {
+export async function construir({ fetchImpl, ahoraMs, env, waitUntil, kv } = {}) {
   const f = fetchImpl || fetch;
   const ahora = ahoraMs || Date.now();
   const personas = [...new Set(Object.values(MESA).flat().map((d) => botDe(d.persona)).filter(Boolean))];
   const errores = {};
-  const [latido, prs, yokup, ...listas] = await Promise.all([
+  const [latido, prsInfo, yokupInfo, ...listas] = await Promise.all([
     leerJson(f, LATIDO).catch((e) => { errores.latido = String(e.message || e); return null; }),
-    leerPrs(f, errores),
+    obtenerPrs({ fetchImpl: f, env, ahoraMs: ahora, waitUntil, kv }),
     leerYokup(f, errores),
     ...personas.map((p) => leerJson(f, BANDEJA + "?persona=" + encodeURIComponent(p))
       .then((d) => (d && d.items) || [])
@@ -78,12 +43,22 @@ export async function construir({ fetchImpl, ahoraMs } = {}) {
   ]);
   const bandejas = Object.fromEntries(personas.map((p, i) => [p, listas[i]]));
   const latidos = (latido && latido.consejeros) || {};
+  if (prsInfo && prsInfo.errores) Object.assign(errores, prsInfo.errores);
+  const prs = prsInfo ? prsInfo.prs : null;
+  const yokup = yokupInfo ? yokupInfo.misiones : null;
   const cuerpo = armarMesa({ latidos, bandejas, prs, yokup, ahoraMs: ahora });
   cuerpo.fuentes = {
     latido: LATIDO,
     bandeja: BANDEJA,
-    yokup: YOKUP_RES,
+    yokup: yokupInfo && yokupInfo.modo === "por-agente"
+      ? (yokupInfo.host || "https://api.yokup.com") + "/fleet/missions?status=resolved&agent="
+      : YOKUP_RES_GLOBAL,
+    yokup_modo: yokupInfo && yokupInfo.modo || null,
+    yokup_agentes_ok: yokupInfo && yokupInfo.agentes_ok || [],
     prs: REPOS_PR.map((r) => "https://github.com/" + r),
+    prs_fuente: prsInfo && prsInfo.fuente || null,
+    prs_cache: !!(prsInfo && prsInfo.cache),
+    prs_actualizado: prsInfo && prsInfo.actualizado || null,
     latido_ok: !!latido,
     yokup_ok: yokup != null,
     prs_ok: prs != null,
@@ -98,7 +73,11 @@ export async function onRequestGet(ctx) {
   if (cache) {
     try { const hit = await cache.match(ck); if (hit) return new Response(await hit.text(), { status: 200, headers: cab }); } catch (e) {}
   }
-  const cuerpo = JSON.stringify(await construir({ fetchImpl: ctx.env && ctx.env.fetch ? ctx.env.fetch.bind(ctx.env) : fetch }));
+  const cuerpo = JSON.stringify(await construir({
+    fetchImpl: ctx.env && ctx.env.fetch ? ctx.env.fetch.bind(ctx.env) : fetch,
+    env: ctx.env,
+    waitUntil: ctx.waitUntil && ctx.waitUntil.bind(ctx),
+  }));
   if (cache) {
     try { const pr = cache.put(ck, new Response(cuerpo, { headers: cab })); if (ctx.waitUntil) ctx.waitUntil(pr); else await pr; } catch (e) {}
   }

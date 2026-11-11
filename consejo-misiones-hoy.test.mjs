@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  atribuirPr, unirMisionesHoy, etiquetaHoy, grupoDe, RANKING_GRUPOS,
+  atribuirPr, unirMisionesHoy, etiquetaHoy, grupoDe, RANKING_GRUPOS, seg, misionesPrHoy,
 } from './consejo-misiones-hoy.mjs';
 
 test('atribuirPr: prefijo de rama, lista expresa de Carlos, y sin marca no se inventa', () => {
@@ -43,4 +43,19 @@ test('grupos de ranking: 6 leyendas y 6 coetáneos', () => {
   assert.equal(grupoDe('Mira Murati'), 'coetaneos');
   assert.equal(grupoDe('Tim Cook'), null);
   assert.equal(grupoDe('Carlos Silva'), null);
+});
+
+test('seg entiende epoch s/ms y merged_at ISO de GitHub', () => {
+  assert.equal(seg('2026-11-11T20:52:23Z'), Date.parse('2026-11-11T20:52:23Z') / 1000);
+  assert.equal(seg(1794431020), 1794431020);
+  assert.equal(seg(1794431020000), 1794431020);
+  const desde = Date.parse('2026-11-10T23:00:00Z') / 1000;
+  const hasta = Date.parse('2026-11-11T22:59:59Z') / 1000;
+  const u = misionesPrHoy([
+    { repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 348, title: 'globo', merged_at: '2026-11-11T20:52:23Z', rama: 'woz/carlos-globo-jobs' },
+    { repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 300, title: 'ayer', merged_at: '2026-11-10T10:00:00Z', rama: 'woz/ayer' },
+  ], { bot: 'Wozniak', desdeS: desde, hastaS: hasta });
+  assert.equal(u.ok, true);
+  assert.equal(u.lista.length, 1);
+  assert.equal(u.lista[0].numero, 348);
 });

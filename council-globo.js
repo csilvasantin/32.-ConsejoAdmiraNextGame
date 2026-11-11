@@ -1,6 +1,7 @@
 /* Globo de estado sobre cada consejero, flecha de color sobre la cabeza y halo con el perfil real del folio o placa.
  * Datos: GET /api/consejo/estado (latido de consejero_latido + último done público).
  * Papeles/placas y flecha de un mismo consejero leen un único mapa de estado por pintado.
+ * Flag `activo` (y `nuncaFlecha` en el asiento de Carlos Silva / Y-3): fácil de reactivar.
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
  * prefers-reduced-motion: halo y flecha sin animación. */
 (function (root) {
@@ -11,22 +12,22 @@
   const COLORES = { trabajando: '#e23d3d', libre: '#3ddc84', desconocido: '#ffd60a' };
   const PAPEL = {
     leyendas: {
-      'Steve Jobs': { sobre: 'papel', puntos: [[18.162, 75.391], [21.397, 76.432], [25.588, 76.302], [27.5, 72.396], [29.559, 72.005], [30.147, 69.141], [25.662, 68.49], [25.588, 67.708], [24.338, 67.708], [23.971, 68.49], [21.324, 72.005], [20.074, 71.615]], flecha: { x: 10.368, y: 39.583 }, x: 24.154, y: 72.07, w: 11.985, h: 8.724 },
-      'Steve Wozniak': { sobre: 'papel', puntos: [[26.912, 61.458], [28.309, 62.5], [31.25, 62.5], [32.941, 60.156], [33.824, 59.115], [32.868, 58.594], [31.176, 58.724], [29.412, 58.464], [28.309, 58.333]], flecha: { x: 21.471, y: 31.51 }, x: 30.368, y: 60.416, w: 6.912, h: 4.167 },
-      'Tim Cook': { sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
-      'Warren Buffett': { sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
-      'Walt Disney': { sobre: 'ninguno', puntos: [], flecha: { x: 50, y: 23.958 }, x: 0, y: 0, w: 0, h: 0 },
-      'Dieter Rams': { sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
-      'Howard Schultz': { sobre: 'papel', puntos: [[73.382, 63.932], [73.382, 64.714], [75.882, 64.714], [75.882, 65.234], [78.529, 65.234], [78.529, 64.062], [78.088, 63.021], [77.059, 62.24], [73.676, 63.411]], flecha: { x: 80, y: 32.292 }, x: 75.956, y: 63.737, w: 5.147, h: 2.994 },
-      'George Lucas': { sobre: 'papel', puntos: [[72.279, 70.443], [75.588, 69.922], [77.059, 69.661], [78.235, 69.661], [79.265, 71.094], [81.25, 71.224], [82.5, 72.526], [79.118, 73.698], [73.529, 73.568], [72.279, 72.656]], flecha: { x: 90.735, y: 39.583 }, x: 77.389, y: 71.679, w: 10.221, h: 4.037 }
+      'Steve Jobs': { activo: true, sobre: 'papel', puntos: [[18.162, 75.391], [21.397, 76.432], [25.588, 76.302], [27.5, 72.396], [29.559, 72.005], [30.147, 69.141], [25.662, 68.49], [25.588, 67.708], [24.338, 67.708], [23.971, 68.49], [21.324, 72.005], [20.074, 71.615]], flecha: { x: 10.368, y: 39.583 }, x: 24.154, y: 72.07, w: 11.985, h: 8.724 },
+      'Steve Wozniak': { activo: true, sobre: 'papel', puntos: [[26.912, 61.458], [28.309, 62.5], [31.25, 62.5], [32.941, 60.156], [33.824, 59.115], [32.868, 58.594], [31.176, 58.724], [29.412, 58.464], [28.309, 58.333]], flecha: { x: 21.471, y: 31.51 }, x: 30.368, y: 60.416, w: 6.912, h: 4.167 },
+      'Tim Cook': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
+      'Warren Buffett': { activo: false, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
+      'Walt Disney': { activo: true, nuncaFlecha: true, figura: 'Carlos Silva', sobre: 'ninguno', puntos: [], flecha: { x: 50, y: 23.958 }, x: 0, y: 0, w: 0, h: 0 },
+      'Dieter Rams': { activo: false, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
+      'Howard Schultz': { activo: false, sobre: 'papel', puntos: [[73.382, 63.932], [73.382, 64.714], [75.882, 64.714], [75.882, 65.234], [78.529, 65.234], [78.529, 64.062], [78.088, 63.021], [77.059, 62.24], [73.676, 63.411]], flecha: { x: 80, y: 32.292 }, x: 75.956, y: 63.737, w: 5.147, h: 2.994 },
+      'George Lucas': { activo: true, sobre: 'papel', puntos: [[72.279, 70.443], [75.588, 69.922], [77.059, 69.661], [78.235, 69.661], [79.265, 71.094], [81.25, 71.224], [82.5, 72.526], [79.118, 73.698], [73.529, 73.568], [72.279, 72.656]], flecha: { x: 90.735, y: 39.583 }, x: 77.389, y: 71.679, w: 10.221, h: 4.037 }
     },
     coetaneos: {
-      'Elon Musk': { sobre: 'placa', puntos: [[16.25, 85.833], [27.734, 85.833], [28.047, 86.25], [28.203, 87.222], [28.203, 91.111], [27.891, 92.361], [16.406, 92.361], [16.094, 91.806], [16.094, 86.389]], flecha: { x: 13.125, y: 42.778 }, x: 22.148, y: 89.097, w: 12.109, h: 6.528 },
-      'Jensen Huang': { sobre: 'placa', puntos: [[22.891, 77.222], [33.516, 77.222], [33.828, 77.639], [33.984, 78.75], [33.984, 82.361], [33.672, 83.194], [22.891, 83.333], [22.656, 82.778], [22.656, 77.778]], flecha: { x: 24.375, y: 41.389 }, x: 28.32, y: 80.278, w: 11.328, h: 6.111 },
-      'Mira Murati': { sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], flecha: { x: 35, y: 36.667 }, x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
-      'Jony Ive': { sobre: 'placa', puntos: [[58.281, 62.778], [65.703, 62.639], [65.938, 63.056], [66.016, 64.167], [66.016, 66.389], [65.781, 67.083], [58.359, 67.083], [58.125, 66.667], [58.125, 63.194]], flecha: { x: 68.594, y: 39.444 }, x: 62.071, y: 64.861, w: 7.891, h: 4.444 },
-      'John Lasseter': { sobre: 'placa', puntos: [[66.953, 74.861], [77.188, 74.861], [77.5, 75.278], [77.578, 76.389], [77.578, 80.139], [77.266, 80.972], [67.031, 80.972], [66.797, 80.417], [66.797, 75.417]], flecha: { x: 76.563, y: 42.222 }, x: 72.188, y: 77.916, w: 10.781, h: 6.111 },
-      'Ryan Reynolds': { sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], flecha: { x: 88.75, y: 41.389 }, x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
+      'Elon Musk': { activo: true, sobre: 'placa', puntos: [[16.25, 85.833], [27.734, 85.833], [28.047, 86.25], [28.203, 87.222], [28.203, 91.111], [27.891, 92.361], [16.406, 92.361], [16.094, 91.806], [16.094, 86.389]], flecha: { x: 13.125, y: 42.778 }, x: 22.148, y: 89.097, w: 12.109, h: 6.528 },
+      'Jensen Huang': { activo: true, sobre: 'placa', puntos: [[22.891, 77.222], [33.516, 77.222], [33.828, 77.639], [33.984, 78.75], [33.984, 82.361], [33.672, 83.194], [22.891, 83.333], [22.656, 82.778], [22.656, 77.778]], flecha: { x: 24.375, y: 41.389 }, x: 28.32, y: 80.278, w: 11.328, h: 6.111 },
+      'Mira Murati': { activo: false, sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], flecha: { x: 35, y: 36.667 }, x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
+      'Jony Ive': { activo: true, sobre: 'placa', puntos: [[58.281, 62.778], [65.703, 62.639], [65.938, 63.056], [66.016, 64.167], [66.016, 66.389], [65.781, 67.083], [58.359, 67.083], [58.125, 66.667], [58.125, 63.194]], flecha: { x: 68.594, y: 39.444 }, x: 62.071, y: 64.861, w: 7.891, h: 4.444 },
+      'John Lasseter': { activo: true, sobre: 'placa', puntos: [[66.953, 74.861], [77.188, 74.861], [77.5, 75.278], [77.578, 76.389], [77.578, 80.139], [77.266, 80.972], [67.031, 80.972], [66.797, 80.417], [66.797, 75.417]], flecha: { x: 76.563, y: 42.222 }, x: 72.188, y: 77.916, w: 10.781, h: 6.111 },
+      'Ryan Reynolds': { activo: false, sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], flecha: { x: 88.75, y: 41.389 }, x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
     }
   };
   const CSS = `
@@ -87,6 +88,18 @@
   }
   function estadoDe(persona, mapa) {
     return (mapa && mapa[key(persona)]) || 'desconocido';
+  }
+
+  function esActivo(p) { return !!(p && p.activo !== false); }
+  function llevaFlecha(p) {
+    if (!p || p.activo === false || p.nuncaFlecha) return false;
+    const fl = p.flecha;
+    return !!(fl && Number.isFinite(Number(fl.x)) && Number.isFinite(Number(fl.y)));
+  }
+  function llevaHalo(p) {
+    if (!p || p.activo === false) return false;
+    if (!p || p.sobre === 'ninguno' || p.sobre === 'cuerpo') return false;
+    return puntosDe(p).length >= 3;
   }
   const FLECHA_SVG = '<svg viewBox="0 0 64 80" focusable="false" aria-hidden="true"><path d="M32 76 L6 38 L22 38 L22 4 L42 4 L42 38 L58 38 Z" fill="currentColor" stroke="#140e06" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
 
@@ -199,8 +212,8 @@
     const estados = mapaEstados();
     Object.keys(pos).forEach((persona) => {
       const p = pos[persona];
+      if (!llevaHalo(p)) return;
       const pts = puntosDe(p);
-      if (!p || p.sobre === 'ninguno' || p.sobre === 'cuerpo' || pts.length < 3) return;
       const estado = estadoDe(persona, estados);
       const sobre = p.sobre || 'papel';
       const g = d.createElementNS(NS, 'g');
@@ -223,8 +236,8 @@
     c.appendChild(svg);
     Object.keys(pos).forEach((persona) => {
       const p = pos[persona];
-      const fl = p && p.flecha;
-      if (!fl || !Number.isFinite(Number(fl.x)) || !Number.isFinite(Number(fl.y))) return;
+      if (!llevaFlecha(p)) return;
+      const fl = p.flecha;
       const estado = estadoDe(persona, estados);
       const el = d.createElement('span');
       el.className = 'consejero-flecha';
@@ -264,8 +277,18 @@
       escena() && escena().appendChild(globo);
     }
     const s = sillaDe(persona);
-    const estado = (s && s.estado) || (datos ? 'desconocido' : 'desconocido');
-    const texto = s ? s.texto : (enVuelo ? 'mirando…' : 'desconocido');
+    let estado, texto;
+    if (s) {
+      estado = s.estado || 'desconocido';
+      texto = s.texto;
+    } else if (key(persona) === 'carlossilva') {
+      /* La figura Y-3 no tiene silla en /api/consejo/estado; siempre está disponible. */
+      estado = 'libre';
+      texto = 'Siempre disponible';
+    } else {
+      estado = 'desconocido';
+      texto = enVuelo ? 'mirando…' : 'desconocido';
+    }
     globo.hidden = false;
     globo.dataset.estado = estado;
     globo.dataset.persona = persona;

@@ -222,13 +222,14 @@
     // Precisely mapped to each character silhouette, no table/documents
     const NAMEPLATE_POS = {
         leyendas: [
-            // Racional (left/red) — posiciones sobre la cabeza de cada personaje
+            // Racional (left/red) — posiciones sobre la cabeza de cada personaje.
+            // En la foto actual no están Tim Cook ni Walt Disney: no llevan máscara ni placa.
             { role: "CEO", persona: "Steve Jobs",      x: 10, y: 38, machineId: "admira-macbookair16",      body: { left: 7,  top: 44, width: 7,  height: 17 } },
             { role: "CTO", persona: "Steve Wozniak",   x: 20, y: 32, machineId: "admira-macbookpronegro14", body: { left: 18, top: 36, width: 8,  height: 21 } },
-            { role: "COO", persona: "Tim Cook",        x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
-            { role: "CFO", persona: "Warren Buffett",  x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
+            { role: "CFO", persona: "Warren Buffett",  x: 33, y: 26, machineId: "admira-macmini",           body: { left: 27, top: 27, width: 11, height: 36 } },
+            // Centro, figura Y-3: Carlos Silva, siempre disponible. No es una silla C-level.
+            { role: "Y-3", persona: "Carlos Silva",    x: 50, y: 22, body: { left: 44, top: 23, width: 14, height: 31 } },
             // Creativo (right/blue)
-            { role: "CCO", persona: "Walt Disney",     x: 58, y: 23, machineId: "admira-macbookairluna",  body: { left: 55, top: 27, width: 8,  height: 26 } },
             { role: "CDO", persona: "Dieter Rams",     x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
             { role: "CXO", persona: "Howard Schultz",  x: 82, y: 32, machineId: "admira-pctwin",            body: { left: 77, top: 34, width: 8,  height: 21 } },
             { role: "CSO", persona: "George Lucas",    x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
@@ -659,15 +660,14 @@
                 // /recorte: el contorno manual guardado manda sobre el automático.
                 const d = (window.CouncilRecorte && window.CouncilRecorte.pathFor(currentGen, p.persona, sil.width, sil.height)) || sil.paths[p.persona];
                 if (!d) return '';
-                const title = `Ver ficha de ${p.persona} (${p.role})`;
-                return `<path class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" d="${d}"><title>${title}</title></path>`;
+                return `<path class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" d="${d}" aria-label="${p.persona}"></path>`;
             }).join("");
             bhEl.innerHTML = `<svg class="silhouette-svg" viewBox="0 0 ${sil.width} ${sil.height}" preserveAspectRatio="none" aria-hidden="false">${paths}</svg>`;
         } else {
             bhEl.innerHTML = plates.map(p => {
                 if (!p.body) return '';
                 const b = p.body;
-                return `<div class="body-hotspot" data-persona="${p.persona}" title="Ver ficha de ${p.persona} (${p.role})"
+                return `<div class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" aria-label="${p.persona}"
                     style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
             }).join("");
         }

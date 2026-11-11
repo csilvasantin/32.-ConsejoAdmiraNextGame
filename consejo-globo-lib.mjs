@@ -455,7 +455,7 @@ export function armarMesa({ latidos, latidoPayload, bandejas, inboxOtros, prs, y
         leyendas: RANKING_GRUPOS.leyendas.slice(),
         coetaneos: RANKING_GRUPOS.coetaneos.slice(),
       },
-      fuente: 'inbox done (propios o firmados) + latidos trabajando únicos + misiones Yokup resolved + PRs fusionados (rama woz/* = Wozniak; atribución expresa t1212u para anw #396 y #398), desde 00:00 Europe/Madrid, sin duplicar',
+      fuente: 'inbox done (propios o firmados) + misiones Yokup resolved + PRs fusionados (rama woz/* = Wozniak; atribución expresa t1212u para anw #396 y #398), desde 00:00 Europe/Madrid, sin duplicar. El latido no cuenta.',
     },
   };
 }

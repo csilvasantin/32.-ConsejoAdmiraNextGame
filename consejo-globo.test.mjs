@@ -364,10 +364,11 @@ test('armarMesa recuenta por mesa de 6; la etiqueta es solo el número; PRs y Yo
   assert.equal(d.ranking.total, 6);
   assert.equal(d.ranking.dia, '2026-11-11');
   const por = Object.fromEntries([...d.mesa.leyendas, ...d.mesa.coetaneos].map((s) => [s.persona, s]));
-  assert.equal(por['Steve Wozniak'].hoy.n, 4, 'PR #343 + anw #396 expresa + Yokup resuelta + latido «ranking»; in_progress no cuenta');
+  assert.equal(por['Steve Wozniak'].hoy.n, 3, 'PR #343 + anw #396 expresa + Yokup resuelta; el latido no cuenta; in_progress no');
   assert.equal(por['Steve Wozniak'].hoy.puesto, 1);
-  assert.equal(por['Steve Wozniak'].hoy.etiqueta, '4');
-  assert.deepEqual(por['Steve Wozniak'].hoy.por_fuente, { inbox: 0, yokup: 1, pr: 2, latido: 1 });
+  assert.equal(por['Steve Wozniak'].hoy.etiqueta, '3');
+  assert.deepEqual(por['Steve Wozniak'].hoy.por_fuente, { inbox: 0, yokup: 1, pr: 2, latido: 0 });
+  assert.ok(!(por['Steve Wozniak'].hoy.misiones || []).some((m) => m.fuente === 'latido'));
   assert.equal(por['Steve Jobs'].hoy.n, 2);
   assert.equal(por['Steve Jobs'].hoy.puesto, 2);
   assert.equal(por['Steve Jobs'].hoy.etiqueta, '2');

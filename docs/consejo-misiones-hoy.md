@@ -7,6 +7,10 @@ Unión, desde las 00:00 Europe/Madrid, de:
 3. PRs **fusionados** en `csilvasantin/32.-ConsejoAdmiraNextGame` y
    `csilvasantin/admira-next-web`.
 
+El latido (`consejero_latido`, modo trabajando) **no cuenta** como misión
+ni entra en la lista del Mac. Sigue usándose solo para el estado
+trabajando/libre.
+
 No se inventan cifras. Si una fuente no se puede leer, no aporta; `n` es
 `null` («—») solo cuando no se ha podido leer ninguna.
 

@@ -1,6 +1,7 @@
 /* Globo de estado sobre cada consejero, flecha de color sobre la cabeza y halo con el perfil real del folio o placa.
- * Datos: GET /api/consejo/estado (latido de consejero_latido + último done público).
- * Papeles/placas y flecha de un mismo consejero leen un único mapa de estado por pintado.
+ * Datos: GET /api/consejo/estado (latido de consejero_latido + últimos done públicos).
+ * Papeles/placas, flecha, etiqueta de hoy y globo leen un único mapa / instantánea por pintado.
+ * Encima de la flecha, los 6 del ranking muestran «N hoy · puesto/6».
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
  * Disney está en la silla que era de Schultz y sí lleva flecha (tiene bot).
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
@@ -37,15 +38,21 @@
 #papel-halos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:block}
 @keyframes papel-pulso{0%,100%{opacity:1}50%{opacity:.62}}
 .papel-halo[data-estado=trabajando]{animation:papel-pulso 1.8s ease-in-out infinite}
-#papel-halos .consejero-flecha{position:absolute;z-index:3;width:clamp(24px,5.8%,44px);aspect-ratio:64/80;transform:translate(-50%,-100%);pointer-events:none;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor)}
+#papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
+#papel-halos .consejero-flecha{width:clamp(24px,5.8%,44px);aspect-ratio:64/80;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor)}
 #papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible}
-@keyframes flecha-rebote{0%,100%{transform:translate(-50%,-100%)}50%{transform:translate(-50%,-126%)}}
+#papel-halos .consejero-ranking{margin:0 0 3px;padding:2px 6px;background:rgba(20,14,6,.82);border:1px solid currentColor;border-radius:3px;color:inherit;font:700 11px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.01em;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06}
+#papel-halos .consejero-marker[data-borde=izq] .consejero-ranking{align-self:flex-start}
+#papel-halos .consejero-marker[data-borde=der] .consejero-ranking{align-self:flex-end}
+@keyframes flecha-rebote{0%,100%{transform:translateY(0)}50%{transform:translateY(-26%)}}
 .consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite}
+@media (max-width:500px){#papel-halos .consejero-ranking{font-size:9px;padding:1px 4px;margin-bottom:2px}}
 @media (prefers-reduced-motion:reduce){.papel-halo,.consejero-flecha{animation:none!important}}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
 .consejo-globo b{display:block;margin:0 0 3px;font:bold 9px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.3px}
 .consejo-globo p{margin:0;word-break:break-word}
+.consejo-globo .consejero-ranking-globo{display:block;margin-top:4px;font:700 10px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:inherit;opacity:.95}
 .consejo-globo[data-estado=trabajando]{border-color:${COLORES.trabajando}}
 .consejo-globo[data-estado=libre]{border-color:${COLORES.libre}}
 .consejo-globo[data-estado=desconocido]{border-color:${COLORES.desconocido}}
@@ -241,16 +248,30 @@
       if (!llevaFlecha(p)) return;
       const fl = p.flecha;
       const estado = estadoDe(persona, estados);
+      const silla = sillaDe(persona);
+      const wrap = d.createElement('span');
+      wrap.className = 'consejero-marker';
+      wrap.setAttribute('data-persona', persona);
+      wrap.setAttribute('data-estado', estado);
+      wrap.setAttribute('aria-hidden', 'true');
+      wrap.style.left = fl.x + '%';
+      wrap.style.top = fl.y + '%';
+      wrap.style.color = COLORES[estado] || COLORES.desconocido;
+      const x = Number(fl.x);
+      if (x < 16) wrap.setAttribute('data-borde', 'izq');
+      else if (x > 84) wrap.setAttribute('data-borde', 'der');
+      const etiqueta = silla && silla.hoy && silla.hoy.etiqueta;
+      if (etiqueta) {
+        const lab = d.createElement('span');
+        lab.className = 'consejero-ranking';
+        lab.textContent = etiqueta;
+        wrap.appendChild(lab);
+      }
       const el = d.createElement('span');
       el.className = 'consejero-flecha';
-      el.setAttribute('data-persona', persona);
-      el.setAttribute('data-estado', estado);
-      el.setAttribute('aria-hidden', 'true');
-      el.style.left = fl.x + '%';
-      el.style.top = fl.y + '%';
-      el.style.color = COLORES[estado] || COLORES.desconocido;
       el.innerHTML = FLECHA_SVG;
-      c.appendChild(el);
+      wrap.appendChild(el);
+      c.appendChild(wrap);
     });
   }
 
@@ -298,7 +319,14 @@
     const b = d.createElement('b'); b.textContent = persona;
     const p = d.createElement('p'); p.textContent = texto;
     globo.append(b, p);
-    globo.setAttribute('aria-label', persona + ': ' + texto);
+    const etiqueta = s && s.hoy && s.hoy.etiqueta;
+    if (etiqueta) {
+      const r = d.createElement('span');
+      r.className = 'consejero-ranking-globo';
+      r.textContent = etiqueta;
+      globo.appendChild(r);
+    }
+    globo.setAttribute('aria-label', persona + ': ' + texto + (etiqueta ? ' · ' + etiqueta : ''));
     colocarGlobo(anchor);
     abierto = { persona, anchor };
     const hot = d.getElementById('body-hotspots');

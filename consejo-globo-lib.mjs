@@ -25,6 +25,26 @@ export const BOT_POR_PERSONA = Object.freeze({
   'Jony Ive': 'Ive',
 });
 
+/**
+ * Los 6 consejeros del ranking de hoy (el denominador que pidió Carlos: 1/6).
+ * Coinciden con las sillas oficiales de highscore-bando.js / mcp sillas.js:
+ * Jobs, Wozniak, Disney, Lucas, Musk y Huang — los que tienen bot con
+ * latido o encargos de verdad en el consejo.
+ * Ive y Lasseter tienen flecha (bot en la mesa) pero aún no están en ese
+ * elenco: no llevan etiqueta de ranking hasta que se activen como silla.
+ * Carlos Silva (Y-3), Buffett, Rams y el resto de inactivos tampoco.
+ */
+export const CONSEJO_RANKING = Object.freeze([
+  'Steve Jobs',
+  'Steve Wozniak',
+  'Walt Disney',
+  'George Lucas',
+  'Elon Musk',
+  'Jensen Huang',
+]);
+export const CONSEJO_RANKING_TOTAL = CONSEJO_RANKING.length;
+export const enRanking = (persona) => CONSEJO_RANKING.includes(persona);
+
 export const MESA = Object.freeze({
   leyendas: [
     { persona: 'Steve Jobs', rol: 'CEO' },
@@ -252,10 +272,98 @@ export function ultimoDe(entrada, items, ahoraS) {
   return done;
 }
 
-export function asientoPublico(def, { latidos, bandejas, ahoraS }) {
+const FMT_DIA_MAD = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' });
+const FMT_HMS_MAD = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+});
+
+/** Día civil en Europe/Madrid, YYYY-MM-DD. */
+export function diaMadrid(ahoraMs = Date.now()) {
+  return FMT_DIA_MAD.format(new Date(ahoraMs));
+}
+
+/** Unix (s) de las 00:00 Europe/Madrid del día civil de `ahoraMs`. */
+export function inicioDiaMadridS(ahoraMs = Date.now()) {
+  const day = diaMadrid(ahoraMs);
+  const [y, m, d] = day.split('-').map(Number);
+  for (const offMin of [60, 120, 0]) {
+    const t = Date.UTC(y, m - 1, d) - offMin * 60 * 1000;
+    const p = Object.fromEntries(FMT_HMS_MAD.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+    if (`${p.year}-${p.month}-${p.day}` === day && p.hour === '00' && p.minute === '00' && p.second === '00') {
+      return Math.floor(t / 1000);
+    }
+  }
+  let lo = Date.UTC(y, m - 1, d) - 36 * 3600 * 1000;
+  let hi = Date.UTC(y, m - 1, d) + 36 * 3600 * 1000;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (diaMadrid(mid) < day) lo = mid + 1;
+    else hi = mid;
+  }
+  return Math.floor(lo / 1000);
+}
+
+/**
+ * Encargos done cerrados hoy (00:00 Europe/Madrid … ahora).
+ * items === null → no se puede atribuir (la bandeja no respondió).
+ * Cancelled, pending e in_progress no cuentan.
+ */
+export function hechosHoy(items, { desdeS, hastaS }) {
+  if (items == null) return { n: null, ultimo: 0 };
+  const list = Array.isArray(items) ? items : [];
+  let n = 0, ultimo = 0;
+  for (const x of list) {
+    if (String(x && x.status) !== 'done') continue;
+    const t = seg(x.done_at) || seg(x.closed_at) || 0;
+    if (!t || t < desdeS || t > hastaS) continue;
+    n += 1;
+    if (t > ultimo) ultimo = t;
+  }
+  return { n, ultimo };
+}
+
+export function etiquetaRanking(n, puesto, total = CONSEJO_RANKING_TOTAL) {
+  if (n == null) return '—';
+  if (!puesto) return n + ' hoy';
+  return n + ' hoy · ' + puesto + '/' + total;
+}
+
+/**
+ * Puesto 1 = quien más misiones done tiene hoy.
+ * Empate en recuento: gana el que cerró el último done más tarde.
+ * Si recuento y hora coinciden, comparten puesto (1, 2, 2, 4).
+ * n === null (sin atribuir) no entra en el ranking.
+ */
+export function puestosHoy(filas) {
+  const rankable = (filas || []).filter((f) => f && f.n != null);
+  rankable.sort((a, b) => (b.n - a.n) || (b.ultimo - a.ultimo));
+  const puestoDe = new Map();
+  let i = 0;
+  while (i < rankable.length) {
+    let j = i + 1;
+    while (j < rankable.length && rankable[j].n === rankable[i].n && rankable[j].ultimo === rankable[i].ultimo) j += 1;
+    const puesto = i + 1;
+    for (let k = i; k < j; k++) puestoDe.set(rankable[k].persona, puesto);
+    i = j;
+  }
+  return puestoDe;
+}
+
+function itemsDeBandeja(bandejas, bot) {
+  if (!bot) return null;
+  if (!bandejas || !Object.prototype.hasOwnProperty.call(bandejas, bot)) return [];
+  return bandejas[bot];
+}
+
+function hoyVacio() {
+  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null };
+}
+
+export function asientoPublico(def, { latidos, bandejas, ahoraS, desdeS }) {
   const bot = botDe(def.persona);
   const entrada = bot && latidos && latidos[bot] ? latidos[bot] : null;
-  const items = bot && bandejas ? bandejas[bot] : null;
+  const items = itemsDeBandeja(bandejas, bot);
   const estado = clasificar({ persona: def.persona, entrada, ahoraS });
   const en_curso = estado === 'trabajando' ? cursoDesdeLatido(entrada) : null;
   const ultimo = estado === 'libre' ? ultimoDe(entrada, items, ahoraS) : null;
@@ -266,16 +374,52 @@ export function asientoPublico(def, { latidos, bandejas, ahoraS }) {
     estado,
     en_curso,
     ultimo,
+    hoy: hoyVacio(),
   };
+  if (enRanking(def.persona)) {
+    const inicio = Number.isFinite(desdeS) ? desdeS : inicioDiaMadridS(ahoraS * 1000);
+    const h = hechosHoy(items, { desdeS: inicio, hastaS: ahoraS });
+    s.hoy = { n: h.n, ultimo: h.ultimo, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null };
+  }
   s.texto = textoGlobo(s, ahoraS * 1000);
   return s;
 }
 
+function aplicarRanking(mesa) {
+  const filas = [];
+  for (const gen of Object.values(mesa)) {
+    for (const s of gen) {
+      if (s && enRanking(s.persona)) filas.push({ persona: s.persona, n: s.hoy && s.hoy.n, ultimo: s.hoy && s.hoy.ultimo });
+    }
+  }
+  const puestos = puestosHoy(filas);
+  for (const gen of Object.values(mesa)) {
+    for (const s of gen) {
+      if (!s || !s.hoy || !enRanking(s.persona)) continue;
+      s.hoy.puesto = s.hoy.n == null ? null : (puestos.get(s.persona) || null);
+      s.hoy.etiqueta = etiquetaRanking(s.hoy.n, s.hoy.puesto);
+    }
+  }
+}
+
 export function armarMesa({ latidos, bandejas, ahoraMs }) {
   const ahoraS = Math.floor((ahoraMs || Date.now()) / 1000);
+  const desdeS = inicioDiaMadridS(ahoraMs || ahoraS * 1000);
   const mesa = {};
   for (const [gen, defs] of Object.entries(MESA)) {
-    mesa[gen] = defs.map((d) => asientoPublico(d, { latidos: latidos || {}, bandejas: bandejas || {}, ahoraS }));
+    mesa[gen] = defs.map((d) => asientoPublico(d, { latidos: latidos || {}, bandejas: bandejas || {}, ahoraS, desdeS }));
   }
-  return { ok: true, generado: ahoraS, cache_s: CACHE_SEG, mesa };
+  aplicarRanking(mesa);
+  return {
+    ok: true,
+    generado: ahoraS,
+    cache_s: CACHE_SEG,
+    mesa,
+    ranking: {
+      dia: diaMadrid(ahoraMs || ahoraS * 1000),
+      total: CONSEJO_RANKING_TOTAL,
+      sillas: CONSEJO_RANKING.slice(),
+      fuente: 'bandeja pública (bot.yokup.com/api/public/inbox?persona=), status=done, done_at desde 00:00 Europe/Madrid',
+    },
+  };
 }

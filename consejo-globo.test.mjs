@@ -5,6 +5,8 @@ import {
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
   CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
   esActivo, llevaFlecha, llevaHalo, nuncaFlecha,
+  CONSEJO_RANKING, CONSEJO_RANKING_TOTAL, enRanking,
+  diaMadrid, inicioDiaMadridS, hechosHoy, etiquetaRanking, puestosHoy,
 } from './consejo-globo-lib.mjs';
 
 const AHORA = Date.UTC(2026, 10, 11, 16, 50, 0); // 17:50 Madrid (UTC+1)
@@ -253,4 +255,131 @@ test('flecha y papeles de un consejero leen el mismo mapa de estado', () => {
   // Misma instantánea: el folio de Woz y su flecha no pueden divergir.
   assert.equal(estadoDe('Steve Wozniak', mapa), d.mesa.leyendas.find((s) => s.persona === 'Steve Wozniak').estado);
   assert.equal(clavePersona('Mira Murati'), 'miramurati');
+});
+
+
+test('el ranking de hoy es entre las 6 sillas oficiales, no Ive ni Lasseter', () => {
+  assert.equal(CONSEJO_RANKING_TOTAL, 6);
+  assert.deepEqual(CONSEJO_RANKING, [
+    'Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas', 'Elon Musk', 'Jensen Huang',
+  ]);
+  for (const n of CONSEJO_RANKING) assert.equal(enRanking(n), true, n);
+  for (const n of ['Jony Ive', 'John Lasseter', 'Carlos Silva', 'Warren Buffett', 'Dieter Rams', 'Mira Murati']) {
+    assert.equal(enRanking(n), false, n);
+  }
+});
+
+test('inicio del día es 00:00 Europe/Madrid (CET en noviembre, CEST en julio)', () => {
+  const nov = Date.UTC(2026, 10, 11, 16, 50, 0);
+  assert.equal(diaMadrid(nov), '2026-11-11');
+  assert.equal(inicioDiaMadridS(nov), Date.UTC(2026, 10, 10, 23, 0, 0) / 1000); // 00:00 CET = 23:00 UTC
+  const justAfter = Date.UTC(2026, 10, 10, 23, 0, 1);
+  assert.equal(diaMadrid(justAfter), '2026-11-11');
+  assert.equal(inicioDiaMadridS(justAfter), Date.UTC(2026, 10, 10, 23, 0, 0) / 1000);
+  const justBefore = Date.UTC(2026, 10, 10, 22, 59, 59);
+  assert.equal(diaMadrid(justBefore), '2026-11-10');
+  const jul = Date.UTC(2026, 6, 15, 10, 0, 0);
+  assert.equal(diaMadrid(jul), '2026-07-15');
+  assert.equal(inicioDiaMadridS(jul), Date.UTC(2026, 6, 14, 22, 0, 0) / 1000); // 00:00 CEST = 22:00 UTC
+});
+
+test('hechosHoy cuenta done de hoy y ignora cancelled, pending y los de ayer', () => {
+  const desde = inicioDiaMadridS(AHORA);
+  const items = [
+    { id: 1, status: 'done', done_at: desde + 3600 },
+    { id: 2, status: 'done', done_at: desde + 7200 },
+    { id: 3, status: 'cancelled', done_at: desde + 8000 },
+    { id: 4, status: 'pending', ts: desde + 9000 },
+    { id: 5, status: 'done', done_at: desde - 10 },
+    { id: 6, status: 'done', done_at: S + 10 }, // futuro respecto a ahoraS: no cuenta
+  ];
+  const h = hechosHoy(items, { desdeS: desde, hastaS: S });
+  assert.equal(h.n, 2);
+  assert.equal(h.ultimo, desde + 7200);
+  assert.deepEqual(hechosHoy(null, { desdeS: desde, hastaS: S }), { n: null, ultimo: 0 });
+  assert.deepEqual(hechosHoy([], { desdeS: desde, hastaS: S }), { n: 0, ultimo: 0 });
+});
+
+test('puestosHoy: más dones es 1/6; empate se desempata por el último done; si empatan del todo, comparten', () => {
+  const p = puestosHoy([
+    { persona: 'Steve Jobs', n: 10, ultimo: 100 },
+    { persona: 'Walt Disney', n: 8, ultimo: 90 },
+    { persona: 'Elon Musk', n: 5, ultimo: 80 },
+    { persona: 'Steve Wozniak', n: 0, ultimo: 0 },
+    { persona: 'George Lucas', n: 0, ultimo: 0 },
+    { persona: 'Jensen Huang', n: 0, ultimo: 0 },
+  ]);
+  assert.equal(p.get('Steve Jobs'), 1);
+  assert.equal(p.get('Walt Disney'), 2);
+  assert.equal(p.get('Elon Musk'), 3);
+  assert.equal(p.get('Steve Wozniak'), 4);
+  assert.equal(p.get('George Lucas'), 4);
+  assert.equal(p.get('Jensen Huang'), 4);
+  const empate = puestosHoy([
+    { persona: 'A', n: 3, ultimo: 50 },
+    { persona: 'B', n: 3, ultimo: 80 },
+    { persona: 'C', n: 1, ultimo: 90 },
+  ]);
+  assert.equal(empate.get('B'), 1, 'mismo recuento, gana el done más reciente');
+  assert.equal(empate.get('A'), 2);
+  assert.equal(empate.get('C'), 3);
+  assert.equal(etiquetaRanking(10, 1), '10 hoy · 1/6');
+  assert.equal(etiquetaRanking(0, 4), '0 hoy · 4/6');
+  assert.equal(etiquetaRanking(null, null), '—');
+});
+
+test('armarMesa pone en cada silla del 6 la etiqueta de hoy; inactivos e Ive/Lasseter no', () => {
+  const desde = inicioDiaMadridS(AHORA);
+  const d = armarMesa({
+    latidos: { Wozniak: { modo: 'trabajando', mision: 'ranking', at: S - 10, hasta: S + 100 } },
+    bandejas: {
+      Jobs: [
+        { id: 10, status: 'done', text: 'a', done_at: desde + 100 },
+        { id: 11, status: 'done', text: 'b', done_at: desde + 200 },
+        { id: 12, status: 'cancelled', text: 'no', done_at: desde + 300 },
+      ],
+      Disney: [
+        { id: 20, status: 'done', text: 'c', done_at: desde + 150 },
+      ],
+      Musk: [
+        { id: 30, status: 'done', text: 'd', done_at: desde + 50 },
+      ],
+      Wozniak: [],
+      Lucas: [],
+      Huang: null, // bandeja no respondió
+      Ive: [{ id: 99, status: 'done', text: 'fuera del 6', done_at: desde + 400 }],
+      Lasseter: [],
+    },
+    ahoraMs: AHORA,
+  });
+  assert.equal(d.ranking.total, 6);
+  assert.equal(d.ranking.dia, '2026-11-11');
+  const por = Object.fromEntries([...d.mesa.leyendas, ...d.mesa.coetaneos].map((s) => [s.persona, s]));
+  assert.equal(por['Steve Jobs'].hoy.n, 2);
+  assert.equal(por['Steve Jobs'].hoy.puesto, 1);
+  assert.equal(por['Steve Jobs'].hoy.etiqueta, '2 hoy · 1/6');
+  assert.equal(por['Walt Disney'].hoy.n, 1);
+  assert.equal(por['Walt Disney'].hoy.puesto, 2);
+  assert.equal(por['Walt Disney'].hoy.etiqueta, '1 hoy · 2/6');
+  assert.equal(por['Elon Musk'].hoy.n, 1);
+  assert.equal(por['Elon Musk'].hoy.puesto, 3, 'empate a 1 con Disney: Musk cerró antes, queda 3');
+  assert.equal(por['Elon Musk'].hoy.etiqueta, '1 hoy · 3/6');
+  assert.equal(por['Steve Wozniak'].hoy.n, 0);
+  assert.equal(por['Steve Wozniak'].hoy.puesto, 4);
+  assert.equal(por['Steve Wozniak'].hoy.etiqueta, '0 hoy · 4/6');
+  assert.equal(por['George Lucas'].hoy.n, 0);
+  assert.equal(por['George Lucas'].hoy.puesto, 4);
+  assert.equal(por['Jensen Huang'].hoy.n, null);
+  assert.equal(por['Jensen Huang'].hoy.puesto, null);
+  assert.equal(por['Jensen Huang'].hoy.etiqueta, '—');
+  assert.equal(por['Jony Ive'].hoy.etiqueta, null, 'Ive no está en el 6: sin etiqueta');
+  assert.equal(por['John Lasseter'].hoy.etiqueta, null);
+  assert.equal(por['Warren Buffett'].hoy.etiqueta, null);
+  assert.equal(por['Tim Cook'].hoy.etiqueta, null);
+  assert.equal(por['Mira Murati'].hoy.etiqueta, null);
+  // Misma instantánea: flecha, papeles y etiqueta leen el mismo asiento.
+  const mapa = mapaEstados(d.mesa);
+  assert.equal(estadoDe('Steve Wozniak', mapa), por['Steve Wozniak'].estado);
+  assert.equal(por['Steve Wozniak'].estado, 'trabajando');
+  assert.equal(por['Steve Jobs'].hoy.etiqueta, por['Steve Jobs'].hoy.etiqueta);
 });

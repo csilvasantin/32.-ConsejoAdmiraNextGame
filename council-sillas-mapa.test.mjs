@@ -157,7 +157,9 @@ test('el estado del globo de Disney sale del latido, nunca «desconocido» por u
     { latidos: { Disney: entrada }, bandejas: {}, ahoraS: S },
   );
   assert.equal(trab.estado, 'trabajando');
-  assert.match(trab.texto, /En curso: prueba estado mesa \(#7416\)/);
+  assert.match(trab.texto, /Misión actual: prueba estado mesa \(#7416\)\nInicio /);
+  assert.match(trab.texto, /Fin: en curso/);
+  assert.doesNotMatch(trab.texto, /Libre|Ocupado|desconocido/);
 
   // Schultz no tiene bot: si se le atribuyera la silla, el cartel diría «desconocido».
   const sch = asientoPublico(

@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  clasificar, textoGlobo, latidoVigente, tituloCorto, horaMadrid,
+  clasificar, textoGlobo, lineasGlobo, latidoVigente, tituloCorto, horaMadrid,
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
+  encargadosHoy, etiquetaMisiones,
   CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
   esActivo, llevaFlecha, llevaHalo, nuncaFlecha,
   CONSEJO_RANKING, CONSEJO_RANKING_TOTAL, enRanking,
@@ -31,7 +32,11 @@ test('latido trabajando fresco (con # y título) → trabajando; caducado a los 
   assert.equal(clasificar({ persona: 'Steve Wozniak', entrada, ahoraS: S }), 'trabajando');
   const vivo = asientoPublico({ persona: 'Steve Wozniak', rol: 'CTO' }, { latidos: { Wozniak: entrada }, bandejas: {}, ahoraS: S });
   assert.equal(vivo.estado, 'trabajando');
-  assert.equal(vivo.texto, 'En curso: Cabecera por usuario (#7546)');
+  assert.match(vivo.texto, /^Misión actual: Cabecera por usuario \(#7546\)\nInicio /);
+  assert.match(vivo.texto, /Fin: en curso$/);
+  assert.equal(vivo.globo.mision, 'Misión actual: Cabecera por usuario (#7546)');
+  assert.match(vivo.globo.horas, /^Inicio \d{2}:\d{2} · Fin: en curso$/);
+  assert.doesNotMatch(vivo.texto, /Libre|Ocupado/);
 });
 
 test('título del latido que ya trae el # no se duplica si solo hay misión', () => {
@@ -39,7 +44,8 @@ test('título del latido que ya trae el # no se duplica si solo hay misión', ()
     estado: 'trabajando',
     en_curso: { numero: 7546, titulo: 'Cabecera por usuario y wake Hola Admira' },
   };
-  assert.equal(textoGlobo(s, AHORA), 'En curso: Cabecera por usuario y wake Hola Admira (#7546)');
+  assert.equal(textoGlobo(s, AHORA), 'Misión actual: Cabecera por usuario y wake Hola Admira (#7546)\nInicio — · Fin: en curso');
+  assert.doesNotMatch(textoGlobo(s, AHORA), /Libre|Ocupado/);
 });
 
 test('hace más de 30 min sin nuevo latido, aunque `hasta` siga abierto, pasa a libre con último', () => {
@@ -47,7 +53,8 @@ test('hace más de 30 min sin nuevo latido, aunque `hasta` siga abierto, pasa a 
   assert.equal(latidoVigente(entrada, S), false);
   const s = asientoPublico({ persona: 'Steve Jobs', rol: 'CEO' }, { latidos: { Jobs: entrada }, bandejas: { Jobs: [] }, ahoraS: S });
   assert.equal(s.estado, 'libre');
-  assert.match(s.texto, /Libre\. Último: mesa del Consejo \(#7600\) a las /);
+  assert.match(s.texto, /^Última misión: mesa del Consejo \(#7600\)\nInicio — · Fin /);
+  assert.doesNotMatch(s.texto, /Libre|Ocupado/);
   assert.equal(s.ultimo.cuando, S - CADUCIDAD_SEG - 1);
 });
 
@@ -63,7 +70,10 @@ test('consejero con bot y sin latido es libre, nunca desconocido', () => {
   assert.equal(clasificar({ persona: 'Jony Ive', entrada: null, ahoraS: S }), 'libre');
   const s = asientoPublico({ persona: 'Jony Ive', rol: 'CDO' }, { latidos: {}, bandejas: {}, ahoraS: S });
   assert.equal(s.estado, 'libre');
-  assert.equal(s.texto, 'Libre');
+  assert.equal(s.texto, '');
+  assert.equal(s.globo.mision, '');
+  assert.equal(s.globo.misiones, 'Misiones: 0/0');
+  assert.doesNotMatch(JSON.stringify(s.globo), /Libre|Ocupado/);
 });
 
 test('asiento sin bot → desconocido / amarillo', () => {
@@ -90,7 +100,12 @@ test('último hecho sale de encargos done con hora de Madrid; pending no entra',
     { latidos: { Jobs: { modo: 'reposo', at: S - 100, mision: null, encargo: null } }, bandejas: { Jobs: items }, ahoraS: S },
   );
   assert.equal(s.estado, 'libre');
-  assert.equal(s.texto, 'Libre. Último: hilo compartido admira.live (#7533) a las 14:35');
+  // El fixture no trae ts: el inicio no se inventa.
+  assert.equal(s.texto, 'Última misión: hilo compartido admira.live (#7533)\nInicio — · Fin 14:35');
+  assert.equal(s.ultimo.fin, Date.UTC(2026, 10, 11, 13, 35, 11) / 1000);
+  assert.equal(s.ultimo.inicio, 0);
+  assert.equal(s.globo.misiones, 'Misiones: 1/2');
+  assert.doesNotMatch(s.texto, /Libre|Ocupado|14:35 hoy|encargos/);
 });
 
 test('misión de un latido caducado gana al done más viejo', () => {
@@ -405,4 +420,51 @@ test('armarMesa recuenta por mesa de 6; la etiqueta es solo el número; PRs y Yo
   const mapa = mapaEstados(d.mesa);
   assert.equal(estadoDe('Steve Wozniak', mapa), por['Steve Wozniak'].estado);
   assert.equal(por['Steve Wozniak'].estado, 'trabajando');
+});
+
+test('encargadosHoy cuenta cualquier estado recibido hoy y no inventa si la bandeja falla', () => {
+  const items = [
+    { id: 1, status: 'pending', ts: S - 60 },
+    { id: 2, status: 'in_progress', ts: S - 120 },
+    { id: 3, status: 'done', ts: S - 200, done_at: S - 80 },
+    { id: 4, status: 'blocked', ts: S - 300 },
+    { id: 5, status: 'cancelled', ts: S - 400 },
+    { id: 6, status: 'done', ts: S - 50 * 3600, done_at: S - 40 * 3600 },
+    { id: 7, status: 'pending' },
+  ];
+  const desdeS = inicioDiaMadridS(AHORA);
+  assert.equal(encargadosHoy(items, { desdeS, hastaS: S }).n, 5);
+  assert.equal(encargadosHoy(null, { desdeS, hastaS: S }).n, null);
+  assert.equal(encargadosHoy([], { desdeS, hastaS: S }).n, 0);
+  assert.equal(etiquetaMisiones(10, 12), '10/12');
+  assert.equal(etiquetaMisiones(null, null), '—/—');
+  assert.equal(etiquetaMisiones(20, 1), '20/1');
+});
+
+test('globo: Inicio y Fin salen de ts y done_at; si falta uno, «—»', () => {
+  const ts = Date.UTC(2026, 10, 11, 15, 12, 0) / 1000;   // 16:12 Madrid (antes de AHORA 17:50)
+  const done = Date.UTC(2026, 10, 11, 15, 40, 0) / 1000; // 16:40 Madrid
+  const items = [{ id: 80, status: 'done', text: 'Estrategia presentación', ts, done_at: done }];
+  const s = asientoPublico(
+    { persona: 'Steve Jobs', rol: 'CEO' },
+    { latidos: { Jobs: { modo: 'reposo', at: S - 100 } }, bandejas: { Jobs: items }, ahoraS: S },
+  );
+  assert.equal(s.globo.mision, 'Última misión: Estrategia presentación (#80)');
+  assert.equal(s.globo.horas, 'Inicio 16:12 · Fin 16:40');
+  assert.equal(s.globo.misiones, 'Misiones: 1/1');
+  assert.doesNotMatch(s.texto, /Libre|Ocupado|hoy|encargos/);
+});
+
+test('globo en curso: Misión actual, inicio del latido y Fin: en curso', () => {
+  const desde = Date.UTC(2026, 10, 11, 16, 39, 0) / 1000; // 17:39 Madrid
+  const entrada = { modo: 'trabajando', mision: 'Caja de misiones', encargo: null, desde, at: desde, hasta: S + 600 };
+  const s = asientoPublico(
+    { persona: 'Steve Wozniak', rol: 'CTO' },
+    { latidos: { Wozniak: entrada }, bandejas: { Wozniak: [{ id: 7546, status: 'in_progress', text: 'otra', ts: S - 8000 }] }, ahoraS: S },
+  );
+  assert.equal(s.estado, 'trabajando');
+  assert.equal(s.globo.mision, 'Misión actual: Caja de misiones');
+  assert.equal(s.globo.horas, 'Inicio 17:39 · Fin: en curso');
+  assert.equal(s.globo.misiones, 'Misiones: 0/1');
+  assert.doesNotMatch(s.texto, /Libre|Ocupado|^En curso/);
 });

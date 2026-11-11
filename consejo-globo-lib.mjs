@@ -218,25 +218,89 @@ function refEncargo(numero, etiqueta, titulo) {
   return ref;
 }
 
-export function textoGlobo(s, ahoraMs) {
-  if (!s || s.estado === 'desconocido') return 'desconocido';
+/** Hora HH:MM (o fecha si es otro día). Si falta el dato, «—»; no se inventa. */
+export function etiquetaHora(unixS, ahoraMs) {
+  return horaMadrid(unixS, ahoraMs) || '—';
+}
+
+/**
+ * Encargos que el consejero recibió hoy, de cualquier estado, según la
+ * bandeja real (ts / created_at). pending, in_progress, done, blocked,
+ * cancelled, etc. cuentan si llegaron hoy. No incluye PRs ni Yokup (esas
+ * fuentes no exponen el censo de «recibidos hoy» en todos los estados).
+ * items === null → no se puede atribuir (la bandeja no respondió).
+ */
+export function encargadosHoy(items, { desdeS, hastaS } = {}) {
+  if (items == null) return { n: null };
+  let n = 0;
+  for (const x of (Array.isArray(items) ? items : [])) {
+    const t = seg(x && (x.ts || x.created_at || x.created));
+    if (!t || (desdeS && t < desdeS) || (hastaS && t > hastaS)) continue;
+    n += 1;
+  }
+  return { n };
+}
+
+export function etiquetaMisiones(conseguidas, encargados) {
+  const a = (conseguidas == null) ? '—' : String(conseguidas);
+  const b = (encargados == null) ? '—' : String(encargados);
+  return a + '/' + b;
+}
+
+function horasDeItem(x) {
+  if (!x) return { inicio: 0, fin: 0 };
+  const inicio = seg(x.ts) || seg(x.created_at) || seg(x.created) || seg(x.started_at) || 0;
+  const fin = seg(x.done_at) || seg(x.closed_at) || 0;
+  return { inicio, fin };
+}
+
+function lineaHoras({ inicio, fin, enCurso }, ahoraMs) {
+  const ini = inicio ? etiquetaHora(inicio, ahoraMs) : '—';
+  if (enCurso) return 'Inicio ' + ini + ' · Fin: en curso';
+  const f = fin ? etiquetaHora(fin, ahoraMs) : '—';
+  return 'Inicio ' + ini + ' · Fin ' + f;
+}
+
+function tituloMision(prefijo, obj) {
+  if (!obj) return prefijo + '—';
+  const t = obj.titulo || (obj.numero ? 'encargo' : '');
+  if (!t && !obj.numero) return prefijo + '—';
+  const ref = refEncargo(obj.numero, obj.etiqueta, t);
+  return prefijo + (t || 'encargo') + (ref ? ' (' + ref + ')' : '');
+}
+
+/**
+ * Líneas del globo de estado (sin «Libre»/«Ocupado»: eso lo dice la flecha).
+ * { mision, horas, misiones }. Si no hay misión, mision y horas van vacíos.
+ */
+export function lineasGlobo(s, ahoraMs) {
+  const misiones = 'Misiones: ' + etiquetaMisiones(s && s.hoy && s.hoy.n, s && s.hoy && s.hoy.encargados);
+  if (!s || s.estado === 'desconocido') {
+    return { mision: 'desconocido', horas: '', misiones };
+  }
   if (s.estado === 'trabajando') {
-    const e = s.en_curso;
-    if (e && (e.titulo || e.numero)) {
-      const t = e.titulo || 'encargo';
-      const ref = refEncargo(e.numero, e.etiqueta, e.titulo);
-      return ref ? `En curso: ${t} (${ref})` : `En curso: ${t}`;
-    }
-    return 'En curso';
+    const e = s.en_curso || {};
+    return {
+      mision: tituloMision('Misión actual: ', e),
+      horas: lineaHoras({ inicio: e.inicio, fin: 0, enCurso: true }, ahoraMs),
+      misiones,
+    };
   }
   const u = s.ultimo;
-  if (u && (u.titulo || u.numero) && u.cuando) {
-    const t = u.titulo || 'encargo';
-    const ref = refEncargo(u.numero, u.etiqueta, u.titulo);
-    return `Libre. Último: ${t}${ref ? ' (' + ref + ')' : ''} a las ${horaMadrid(u.cuando, ahoraMs)}`;
+  if (u && (u.titulo || u.numero || u.inicio || u.fin || u.cuando)) {
+    return {
+      mision: tituloMision('Última misión: ', u),
+      horas: lineaHoras({ inicio: u.inicio, fin: u.fin || 0, enCurso: false }, ahoraMs),
+      misiones,
+    };
   }
-  if (u && u.cuando) return `Libre. Último a las ${horaMadrid(u.cuando, ahoraMs)}`;
-  return 'Libre';
+  return { mision: '', horas: '', misiones };
+}
+
+export function textoGlobo(s, ahoraMs) {
+  const L = lineasGlobo(s, ahoraMs);
+  if (!s || s.estado === 'desconocido') return 'desconocido';
+  return [L.mision, L.horas].filter(Boolean).join('\n');
 }
 
 /** Último encargo done (nunca pending, ack, in_progress ni cancelled). */
@@ -244,12 +308,18 @@ export function ultimoHecho(items, ahoraS) {
   const list = Array.isArray(items) ? items : [];
   const dones = list
     .filter((x) => String(x && x.status) === 'done')
-    .map((x) => ({
-      numero: Number(x.id) || null,
-      etiqueta: x.etiqueta || null,
-      titulo: tituloCorto(x.text),
-      cuando: seg(x.done_at) || seg(x.closed_at) || 0,
-    }))
+    .map((x) => {
+      const h = horasDeItem(x);
+      const cuando = h.fin || h.inicio || 0;
+      return {
+        numero: Number(x.id) || null,
+        etiqueta: x.etiqueta || null,
+        titulo: tituloCorto(x.text),
+        cuando,
+        inicio: h.inicio,
+        fin: h.fin,
+      };
+    })
     .filter((x) => x.cuando && x.cuando <= ahoraS)
     .sort((a, b) => b.cuando - a.cuando);
   return dones[0] || null;
@@ -260,7 +330,8 @@ function cursoDesdeLatido(entrada) {
   const numero = entrada.encargo ? Number(entrada.encargo) : null;
   const titulo = tituloCorto(entrada.mision);
   if (!numero && !titulo) return null;
-  return { numero: numero || null, titulo: titulo || (numero ? 'encargo' : null) };
+  const inicio = seg(entrada.desde) || seg(entrada.at) || 0;
+  return { numero: numero || null, titulo: titulo || (numero ? 'encargo' : null), inicio, fin: 0 };
 }
 
 /**
@@ -270,10 +341,29 @@ function cursoDesdeLatido(entrada) {
 export function ultimoDe(entrada, items, ahoraS) {
   const done = ultimoHecho(items, ahoraS);
   const at = entrada ? (seg(entrada.at) || seg(entrada.desde)) : 0;
-  const deLatido = (!latidoVigente(entrada, ahoraS) && at && (entrada.mision || entrada.encargo))
-    ? { numero: entrada.encargo ? Number(entrada.encargo) : null, titulo: tituloCorto(entrada.mision) || (entrada.encargo ? 'encargo' : null), cuando: at }
+  const desde = entrada ? (seg(entrada.desde) || 0) : 0;
+  const deLatido = (!latidoVigente(entrada, ahoraS) && (at || desde) && (entrada.mision || entrada.encargo))
+    ? {
+        numero: entrada.encargo ? Number(entrada.encargo) : null,
+        titulo: tituloCorto(entrada.mision) || (entrada.encargo ? 'encargo' : null),
+        cuando: at || desde,
+        inicio: desde || 0,
+        // `at` solo es fin si es posterior a `desde`; si son iguales no se duplica.
+        // `hasta` es caducidad del latido, no la hora real de cierre: no se usa.
+        fin: (at && desde && at > desde) ? at : 0,
+      }
     : null;
-  if (deLatido && (!done || deLatido.cuando >= done.cuando)) return deLatido;
+  if (deLatido && (!done || deLatido.cuando >= done.cuando)) {
+    if ((!deLatido.inicio || !deLatido.fin) && deLatido.numero && Array.isArray(items)) {
+      const item = items.find((x) => Number(x && x.id) === deLatido.numero);
+      if (item) {
+        const h = horasDeItem(item);
+        if (!deLatido.inicio && h.inicio) deLatido.inicio = h.inicio;
+        if (!deLatido.fin && h.fin) deLatido.fin = h.fin;
+      }
+    }
+    return deLatido;
+  }
   return done;
 }
 
@@ -360,7 +450,7 @@ function itemsDeBandeja(bandejas, bot) {
 }
 
 function hoyVacio() {
-  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null, misiones: [], por_fuente: { inbox: 0, yokup: 0, pr: 0, latido: 0 }, desglose: desgloseHoy({ inbox: 0, yokup: 0, pr: 0, latido: 0 }) };
+  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null, misiones: [], por_fuente: { inbox: 0, yokup: 0, pr: 0, latido: 0 }, desglose: desgloseHoy({ inbox: 0, yokup: 0, pr: 0, latido: 0 }), encargados: null };
 }
 
 export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtros, prs, yokup, ahoraS, desdeS, dia, usarSemilla } = {}) {
@@ -379,8 +469,9 @@ export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtr
     ultimo,
     hoy: hoyVacio(),
   };
+  const inicio = Number.isFinite(desdeS) ? desdeS : inicioDiaMadridS(ahoraS * 1000);
+  const rec = encargadosHoy(items, { desdeS: inicio, hastaS: ahoraS });
   if (enRanking(def.persona)) {
-    const inicio = Number.isFinite(desdeS) ? desdeS : inicioDiaMadridS(ahoraS * 1000);
     const u = unirMisionesHoy({
       persona: def.persona,
       bot,
@@ -403,8 +494,12 @@ export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtr
       misiones: u.misiones,
       por_fuente: u.por_fuente,
       desglose: u.desglose,
+      encargados: rec.n,
     };
+  } else {
+    s.hoy.encargados = rec.n;
   }
+  s.globo = lineasGlobo(s, ahoraS * 1000);
   s.texto = textoGlobo(s, ahoraS * 1000);
   return s;
 }

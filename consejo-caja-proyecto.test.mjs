@@ -63,9 +63,18 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.equal(p.nombre, nombre);
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
-  assert.match(index, /council-globo\.js\?v=20261111-r155-caja-proyecto/);
+  assert.match(index, /council-globo\.js\?v=20261111-r155-caja-globo/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',
   ]);
+});
+
+test('el globo de estado no repite Libre/Ocupado ni el duplicado «hoy» / «encargos»', () => {
+  assert.match(src, /gp-mision/);
+  assert.match(src, /gp-horas/);
+  assert.match(src, /gp-misiones/);
+  assert.match(src, /G\.misiones/);
+  assert.doesNotMatch(src, /etiqueta \+ ' hoy'/);
+  assert.doesNotMatch(src, /s\.hoy\.desglose\)/);
 });

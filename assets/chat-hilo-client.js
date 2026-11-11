@@ -100,6 +100,13 @@
   }
   function personaDe(nombre) { return Object.prototype.hasOwnProperty.call(PERSONAS, nombre) ? PERSONAS[nombre] : null; }
   function nuevoId() { return "live-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
+  // Cabecera por cuenta (#7546). Mismo mapa que el servidor (chat-hilo-lib.mjs) y hola-intent.js.
+  var CABECERA_POR_EMAIL = { "csilva@admira.com": "Steve Jobs", "csilvasantin@gmail.com": "Elon Musk" };
+  var CABECERA_DEFECTO = "Steve Jobs";
+  function cabeceraDe(email) {
+    var e = String(email || "").trim().toLowerCase();
+    return CABECERA_POR_EMAIL[e] || CABECERA_DEFECTO;
+  }
 
   // ── Credencial (ID token de Google, el mismo client_id del login de admira.live) ──
   function almacen() { try { return root.sessionStorage || null; } catch (e) { return null; } }
@@ -207,7 +214,7 @@
     CLIENT_ID: CLIENT_ID, CLAVE: CLAVE, ORIGEN: ORIGEN, ESTADO: ESTADO, PERSONAS: PERSONAS,
     esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado, origenTurno: origenTurno, horaMadrid: horaMadrid, metaTurno: metaTurno,
     fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
-    credencial: credencial, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion,
+    credencial: credencial, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion, avisoSesion: avisoSesion, cabeceraDe: cabeceraDe, CABECERA_DEFECTO: CABECERA_DEFECTO,
     leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
   };
   if (root.document && root.fetch && root.location && /admira\.live$|pages\.dev$|localhost$/.test(root.location.hostname || "")) restaurarSesion();

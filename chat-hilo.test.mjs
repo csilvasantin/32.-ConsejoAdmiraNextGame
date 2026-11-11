@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizarTurno, anadirTurno, salud, emailGoogle, MAX_TURNOS, GOOGLE_CLIENT_ID, normalizarPersona, PERSONAS, PERSONA_INBOX, NOMBRES } from "./chat-hilo-lib.mjs";
+import { normalizarTurno, anadirTurno, salud, emailGoogle, MAX_TURNOS, GOOGLE_CLIENT_ID, normalizarPersona, PERSONAS, PERSONA_INBOX, NOMBRES, cabeceraDe, CABECERA_DEFECTO } from "./chat-hilo-lib.mjs";
 import * as hilo from "./functions/api/chat/hilo.js";
 import * as saludApi from "./functions/api/chat/salud.js";
 
@@ -247,4 +247,15 @@ test("cliente compartido: turnosDeVisita — la home solo enseña lo enviado en 
   assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, t0).map((t) => t.id), ["live-1", "resp"]);
   assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, NaN), []);
   assert.deepEqual(C.turnosDeVisita([null, { id: "r", rol: "persona", ts: "x" }], {}, t0), []);
+});
+
+test("cabeceraDe: Jobs para csilva@admira.com, Musk para gmail, Jobs por defecto", () => {
+  assert.deepEqual(cabeceraDe("csilva@admira.com"), { clave: "jobs", persona: "Steve Jobs" });
+  assert.deepEqual(cabeceraDe("csilvasantin@gmail.com"), { clave: "musk", persona: "Elon Musk" });
+  assert.deepEqual(cabeceraDe(""), { clave: CABECERA_DEFECTO, persona: "Steve Jobs" });
+  assert.deepEqual(cabeceraDe("otro@admira.com"), { clave: "jobs", persona: "Steve Jobs" });
+  const C = cliente();
+  assert.equal(C.cabeceraDe("csilva@admira.com"), "Steve Jobs");
+  assert.equal(C.cabeceraDe("csilvasantin@gmail.com"), "Elon Musk");
+  assert.equal(C.cabeceraDe(null), "Steve Jobs");
 });

@@ -4,6 +4,7 @@
  *   consejero(texto)   → persona o null  («quiero hablar con Jobs», «pásame a Elon»…)
  *   cambio(texto)      → persona o null  («cambia a Woz», «ahora con Disney»)
  *   despedida(texto)   → true si «gracias», «adiós», «hasta luego», «nada más»…
+ *   cabeceraDe(email) → persona  csilva@admira.com→Jobs, csilvasantin@gmail.com→Musk, si no→Jobs
  *   interpretar(estado, texto) → { accion, persona?, texto? }  máquina de estados
  */
 (function (root) {
@@ -133,8 +134,22 @@
   var ADIOS = /\b(gracias|muchas gracias|adios|hasta luego|hasta pronto|nada mas|eso es todo|terminar|termina|para ya|duermete|a dormir|chao|ciao|bye)\b/;
   function despedida(texto) { return ADIOS.test(norm(texto)); }
 
-  // Máquina de estados. estado: { fase: "dormido"|"eligiendo"|"conversando", persona }
+  // Consejero de cabecera por cuenta (#7546). Mismo mapa que chat-hilo-lib.mjs.
+  // Sin email o email no listado: Steve Jobs (el primero del Consejo).
+  var CABECERA_POR_EMAIL = { "csilva@admira.com": "Steve Jobs", "csilvasantin@gmail.com": "Elon Musk" };
+  var CABECERA_DEFECTO = "Steve Jobs";
+  function cabeceraDe(email) {
+    var e = String(email || "").trim().toLowerCase();
+    return CABECERA_POR_EMAIL[e] || CABECERA_DEFECTO;
+  }
+  function cabeceraDeEstado(estado) {
+    if (estado && estado.cabecera) return estado.cabecera;
+    return cabeceraDe(estado && estado.email);
+  }
+
+  // Máquina de estados. estado: { fase, persona, email?, cabecera? }
   // «conectar» puede traer «pregunta»: lo que se dijo detrás del nombre, para enviarlo ya.
+  // «Hola Admira» sin nombre (o una frase sin consejero) conecta con la cabecera.
   function conectar(m) { var r = { accion: "conectar", persona: m.persona }; if (m.resto) r.pregunta = m.resto; return r; }
   // Recupera del texto original (con tildes y mayúsculas) las últimas palabras que ocupan «resto».
   function original(texto, resto) {
@@ -151,17 +166,24 @@
     var fase = (estado && estado.fase) || "dormido", t = norm(texto);
     if (!t) return { accion: "nada" };
     var actual = estado && estado.persona;
+    var cabecera = cabeceraDeEstado(estado);
     if (fase === "dormido") {
       var d = despertar(t);
-      if (d.ok) { var p = d.resto ? consejeroCon(d.resto) : null; return p ? conectar(p) : { accion: "despierta" }; }
+      if (d.ok) {
+        var p = d.resto ? consejeroCon(d.resto) : null;
+        if (p) return conectar(p);
+        return conectar({ persona: cabecera, resto: d.resto ? limpiaResto(d.resto) : "" });
+      }
       var sn = saludoNombre(t);
       return sn ? conectar(sn) : { accion: "nada" };
     }
     if (fase === "eligiendo") {
       if (despedida(t) && t.split(" ").length <= 6) return { accion: "dormir" };
-      var w = despertar(t); if (w.ok) t = norm(w.resto) || t;
+      var w = despertar(t);
+      if (w.ok) t = norm(w.resto) || "";
+      if (!t) return conectar({ persona: cabecera, resto: "" });
       var q = saludoNombre(t) || consejeroCon(t);
-      return q ? conectar(q) : { accion: "no-entiendo", texto: t };
+      return q ? conectar(q) : conectar({ persona: cabecera, resto: limpiaResto(t) });
     }
     // conversando
     var c = cambioCon(t);
@@ -196,7 +218,7 @@
     return { texto: hablar, imagenes: imgs };
   }
 
-  var api = { norm: norm, ALIAS: ALIAS, despertar: despertar, consejero: consejero, consejeroCon: consejeroCon, saludoNombre: saludoNombre, extraerMedios: extraerMedios, cambio: cambio, despedida: despedida, interpretar: interpretar, lev: lev };
+  var api = { norm: norm, ALIAS: ALIAS, despertar: despertar, consejero: consejero, consejeroCon: consejeroCon, saludoNombre: saludoNombre, extraerMedios: extraerMedios, cambio: cambio, despedida: despedida, interpretar: interpretar, lev: lev, cabeceraDe: cabeceraDe, CABECERA_DEFECTO: CABECERA_DEFECTO, CABECERA_POR_EMAIL: CABECERA_POR_EMAIL };
   root.HolaIntent = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

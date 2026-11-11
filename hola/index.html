@@ -90,7 +90,7 @@
 
   <details>
     <summary>Cómo funciona y límites</summary>
-    <p>1) En Android, pulsa 🎤 una vez: queda escuchando. En iPhone, mantén pulsado 🎤 para hablar. 2) Di «Hola Admira». 3) «Quiero hablar con Lasseter» (o Jobs, Elon, Woz, Disney, Lucas, Jensen, Ive…). Atajo: «Hola Steve, dibuja una bandera de Canadá» despierta, elige y pregunta de una vez. Acceso directo a Lasseter: pulsa ▶ Lasseter o abre /hola/?con=lasseter. 4) Pregunta; contesta con su voz (y si manda una imagen, se ve en grande). «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
+    <p>1) En Android, pulsa 🎤 una vez: queda escuchando. En iPhone, mantén pulsado 🎤 para hablar. 2) Di «Hola Admira»: entra con tu consejero de cabecera (Jobs si eres csilva@admira.com, Elon si eres csilvasantin@gmail.com; sin sesión, Jobs). 3) «Quiero hablar con Lasseter» (o Jobs, Elon, Woz, Disney, Lucas, Jensen, Ive…). Atajo: «Hola Steve, dibuja una bandera de Canadá» despierta, elige y pregunta de una vez. Acceso directo a Lasseter: pulsa ▶ Lasseter o abre /hola/?con=lasseter. 4) Pregunta; contesta con su voz (y si manda una imagen, se ve en grande). «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
     <p>Las respuestas son reales: tu pregunta entra en el hilo de ese consejero en admira.live. Los 16 consejeros tienen línea directa desde aquí. Tarda lo que tarde su bot, de segundos a minutos.</p>
     <p>Mientras el consejero habla, el micrófono se pausa para no oírse a sí mismo. Chrome en Android escucha de forma continua; si deja de oírte verás «No te escucho». En iPhone, mantén pulsado para hablar; si se para, tócalo para reiniciar. Si no hay micrófono (a veces ocurre al abrirla desde el icono de inicio), ábrela en Safari. Firefox no tiene reconocimiento de voz: usa el cuadro de texto.</p>
     <p><a href="/voces/" style="color:var(--amber)">🎙️ Personalizar las voces</a></p>
@@ -152,6 +152,8 @@
     });
   }
   function linea(persona){ return !!(C && C.personaDe(persona)); }
+  function emailSesion(){ var a=C && C.avisoSesion && C.avisoSesion(); return (a && a.email) || ""; }
+  function cabeceraActual(){ return (H && H.cabeceraDe && H.cabeceraDe(emailSesion())) || "Steve Jobs"; }
 
   // ── Sonido ──
   var actx=null;
@@ -301,14 +303,14 @@
   // ── Fases ──
   function dormir(silencioso){
     S.fase="dormido"; S.persona=null; pintar(null);
-    fase('Escuchando… di <b>«Hola Admira»</b> o <b>«Hola Steve…»</b>');
+    fase('Escuchando… di <b>«Hola Admira»</b> (te pongo con <b>'+esc(cabeceraActual())+'</b>) o nombra a un consejero');
     $("resp").style.display="none"; $("media").style.display="none";
     if(!silencioso) chime(false);
   }
   function despertar(){
-    S.fase="eligiendo"; S.persona=null; pintar(null); chime(true);
-    fase('Te escucho · di <b>«quiero hablar con Lasseter»</b>, <b>Jobs</b> o <b>Elon</b>');
-    decir(null, "Te escucho. ¿Con quién quieres hablar?");
+    // «Hola Admira» sin nombre: la máquina de estados ya conecta con la cabecera.
+    // Si aún llega «despierta», hacemos lo mismo (no preguntamos con quién).
+    conectar(cabeceraActual());
   }
   function conectar(persona, pregunta){
     var c=V.casting(persona); if(!c) return;
@@ -331,7 +333,7 @@
   function manejar(texto){
     var t=String(texto||"").trim(); if(!t) return;
     S.ultimo=Date.now();
-    var r=H.interpretar({ fase: S.fase==="apagado"?"dormido":S.fase, persona:S.persona }, t);
+    var r=H.interpretar({ fase: S.fase==="apagado"?"dormido":S.fase, persona:S.persona, email:emailSesion(), cabecera:cabeceraActual() }, t);
     if (r.accion==="despierta") despertar();
     else if (r.accion==="conectar") conectar(r.persona, r.pregunta);
     else if (r.accion==="dormir"){ var p=S.persona; if(p) decir(p, "Hasta pronto.", function(){ dormir(); }); else { decir(null,"Hasta luego."); dormir(); } }
@@ -478,7 +480,7 @@
     e.preventDefault(); desbloquearAudio();
     var t=$("texto").value.trim(); if(!t) return; $("texto").value=""; $("oido").innerHTML="«"+esc(t)+"»";
     // escrito: no hace falta «Hola Admira»
-    if (S.fase==="dormido"||S.fase==="apagado"){ var r=H.interpretar({fase:"eligiendo"}, t); if(r.accion==="conectar"){ conectar(r.persona); return; } if(H.despertar(t).ok){ manejar(t); return; } S.fase="eligiendo"; }
+    if (S.fase==="dormido"||S.fase==="apagado"){ var r=H.interpretar({fase:"eligiendo", email:emailSesion(), cabecera:cabeceraActual()}, t); if(r.accion==="conectar"){ conectar(r.persona, r.pregunta); return; } if(H.despertar(t).ok){ manejar(t); return; } S.fase="eligiendo"; }
     manejar(t);
   });
   $("loginBtn").addEventListener("click", function(){
@@ -491,7 +493,7 @@
   if (!Rec) avisoSinReconocimiento();
   else if(isIOS) fase('En iPhone, mantén pulsado 🎤 y di <b>«Hola Admira»</b>');
   V.onVoices(function(){ if(S.persona) pintar(S.persona); });
-  if (C) C.restaurarSesion().then(function(ok){ if(!ok && !sesion()) $("login").style.display="flex"; });
+  if (C) C.restaurarSesion().then(function(ok){ if(!ok && !sesion()) $("login").style.display="flex"; if(S.fase==="apagado"||S.fase==="dormido") fase('Pulsa el micrófono y di <b>«Hola Admira»</b> · cabecera: <b>'+esc(cabeceraActual())+'</b>'); });
   window.__hola = { S:S, manejar:manejar };
 })();
 </script>

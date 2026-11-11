@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <script src="/admira-bar.js?v=20260918-r38"></script>
+  <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voces del Consejo · Personalización · admira.live</title>
+  <meta name="admiranext-version" content="AdmiraNeXT v.11.11.2026.r1.12:00" />
+  <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0a0a14;--ink:#e7e7ef;--muted:#9aa0b4;--wood:#2a1a08;--wood-line:#8b5a14;--amber:#ffdd66;--amber-soft:#f0c040;--red:#e74c3c;--blue:#3498db}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Press Start 2P',monospace;background:radial-gradient(1200px 600px at 50% -10%,#181d3a 0%,transparent 60%),linear-gradient(180deg,#0a0a14,#0a0a14 60%,#070710);color:var(--ink);min-height:100vh;padding:14px;-webkit-font-smoothing:none}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1180px;margin:0 auto}
+    .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+    .pill,.btn{background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);font:inherit;font-size:.46rem;line-height:1.5;padding:.55rem .7rem;box-shadow:2px 2px 0 #000;cursor:pointer}
+    .pill:hover,.btn:hover{background:var(--wood-line);border-color:var(--amber-soft);color:#fff}
+    .btn.go{background:#1c5e34;border-color:#5fd08a;color:#fff}
+    .btn.stop{background:#5e1c20;border-color:#e0623c;color:#fff}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .flat{cursor:default}.sp{flex:1 1 auto}
+    h1{font-size:.95rem;color:#fff;text-shadow:3px 3px 0 #000;margin:6px 0 8px}
+    .sub{font-size:.48rem;color:var(--amber-soft);line-height:1.9;margin-bottom:12px;max-width:900px}
+    .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border:2px solid var(--wood-line);background:#0c0f22;box-shadow:4px 4px 0 #000;padding:10px;margin-bottom:14px}
+    .tools label{font-size:.44rem;color:var(--ink);display:flex;gap:6px;align-items:center;line-height:1.6}
+    .msg{font-size:.42rem;color:#7CFFb0;line-height:1.7}
+    .msg.err{color:#ff9b8a}
+    .warn{font-size:.44rem;line-height:1.9;color:#ffb3b3;border:2px solid var(--red);background:#1a0a0a;padding:10px;margin-bottom:14px;display:none}
+    .gen{font-size:.6rem;color:var(--amber);margin:18px 0 10px;letter-spacing:1px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+    .card{border:2px solid #2a3057;background:#0c0f22;box-shadow:4px 4px 0 #000;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .card.racional{border-top:4px solid var(--red)}.card.creativo{border-top:4px solid var(--blue)}
+    .card.talking{border-color:var(--amber-soft);box-shadow:0 0 0 2px var(--amber-soft),4px 4px 0 #000}
+    .hd{display:flex;gap:10px;align-items:center}
+    .face{width:56px;height:56px;flex:0 0 56px;border:2px solid #000;outline:2px solid var(--wood-line);outline-offset:-4px;background:#05060d center/cover no-repeat;image-rendering:pixelated}
+    .card.talking .face{animation:hab .25s steps(2) infinite}
+    @keyframes hab{50%{transform:translateY(-2px)}}
+    .nm{font-size:.56rem;color:#fff;line-height:1.4}
+    .rl{font-size:.4rem;color:var(--muted);margin-top:4px}
+    .tb{font-size:.42rem;line-height:1.8;color:#d7dcf0;min-height:3.6em}
+    .vz{font-size:.4rem;line-height:1.7;color:var(--amber-soft)}
+    .vz b{color:#fff;font-weight:normal}
+    .vz .via{color:var(--muted)}
+    select,input[type=range]{width:100%}
+    select{background:#080a18;border:2px solid var(--wood-line);color:var(--ink);font:inherit;font-size:.4rem;padding:.4rem}
+    .sl{display:grid;grid-template-columns:52px 1fr 34px;gap:6px;align-items:center;font-size:.4rem;color:var(--muted)}
+    .sl output{color:#fff;text-align:right}
+    .acts{display:flex;gap:6px;flex-wrap:wrap}
+    .acts .btn{font-size:.42rem;padding:.5rem .6rem}
+    .mod{font-size:.38rem;color:#7CFFb0}
+    textarea{width:100%;min-height:52px;background:#080a18;border:2px solid var(--wood-line);color:var(--ink);font:inherit;font-size:.44rem;line-height:1.7;padding:.5rem}
+    .foot{text-align:center;color:var(--muted);font-size:.4rem;line-height:2;margin:22px 0 6px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <a class="pill" href="/">◀ Consejo</a>
+    <a class="pill" href="/reunion.html">🤝 Reunión</a>
+    <span class="sp"></span>
+    <span class="pill flat">🎙️ Personalización · Voces</span>
+  </div>
+  <h1>🎙️ Voces del Consejo</h1>
+  <p class="sub">Cada consejero tiene su voz propia y estable. Son voces de serie del sistema con su tono y su ritmo; no imitan ni clonan la voz real de nadie.
+    Pulsa <b>Escuchar</b> para oírlas. Si cambias una, se guarda en este navegador. Con <b>Guardar para todo el equipo</b>, ese reparto pasa a ser el de todos.
+    Se usan en la Reunión, en la ficha de cada consejero y, si lo activas, en los bocadillos de la portada.</p>
+  <div class="warn" id="warn"></div>
+  <div class="tools">
+    <label><input type="checkbox" id="portada"> Locutar en la portada las respuestas de los consejeros</label>
+    <span class="sp"></span>
+    <button class="btn" id="todos">▶ Escuchar la mesa</button>
+    <button class="btn stop" id="parar">■ Parar</button>
+    <button class="btn" id="reset">↺ Volver al casting</button>
+    <button class="btn go" id="compartir">💾 Guardar para todo el equipo</button>
+  </div>
+  <div class="tools">
+    <label style="flex:1 1 100%">Frase de prueba (vacía = su frase de presentación)</label>
+    <textarea id="frase" placeholder="Escribe aquí una frase y pulsa Escuchar en cualquier consejero…"></textarea>
+  </div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+  <div id="mesa"></div>
+  <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live · Personalización de voces</div>
+</div>
+<script src="/consejeros-voces.js?v=20261111-voces1"></script>
+<script>
+(function(){
+  "use strict";
+  var V = window.AdmiraVoces, $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s == null ? "" : s).replace(/[<>&"]/g, function(x){ return {"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[x]; }); };
+  var IMG = { leyendas:"/assets/council-leyendas.jpg", coetaneos:"/assets/council-coetaneos.jpg" };
+  var CROP = { CEO:{l:7,t:44,w:7,h:17}, CTO:{l:18,t:36,w:8,h:21}, COO:{l:31,t:30,w:8,h:24}, CFO:{l:43,t:27,w:8,h:26},
+    CCO:{l:55,t:27,w:8,h:26}, CDO:{l:66,t:31,w:7,h:23}, CXO:{l:77,t:34,w:8,h:21}, CSO:{l:88,t:41,w:9,h:17} };
+  var SIDE = { CEO:"racional", CTO:"racional", COO:"racional", CFO:"racional", CCO:"creativo", CDO:"creativo", CXO:"creativo", CSO:"creativo" };
+  var ROLE = { CEO:"Chief Executive Officer", CTO:"Chief Technology Officer", COO:"Chief Operations Officer", CFO:"Chief Financial Officer",
+    CCO:"Chief Creative Officer", CDO:"Chief Design Officer", CXO:"Chief Experience Officer", CSO:"Chief Storytelling Officer" };
+  function cropStyle(c){
+    var k = CROP[c.role], sx=(10000/k.w).toFixed(1), sy=(10000/k.h).toFixed(1),
+        px=(k.l/(100-k.w)*100).toFixed(2), py=(k.t/(100-k.h)*100).toFixed(2);
+    return "background-image:url('"+IMG[c.gen]+"');background-size:"+sx+"% "+sy+"%;background-position:"+px+"% "+py+"%;";
+  }
+  function msg(t, err){ var m=$("msg"); m.textContent=t||""; m.className="msg"+(err?" err":""); }
+  function viaTxt(p){
+    return { personalizada:"personalizada", casting:"del casting", respaldo:"de respaldo (no está la preferida)", "sin-voces":"voz por defecto del navegador" }[p.via] || p.via;
+  }
+  function voiceOptions(sel){
+    var es = V.spanish(), otras = V.available().filter(function(v){ return es.indexOf(v) < 0; });
+    var h = '<option value="">Automática (casting)</option>';
+    function grp(label, list){
+      if(!list.length) return "";
+      return '<optgroup label="'+esc(label)+'">' + list.map(function(v){
+        var id = v.voiceURI || v.name;
+        return '<option value="'+esc(id)+'"'+(id===sel||v.name===sel?" selected":"")+'>'+esc(v.name)+' · '+esc(v.lang)+(v.localService===false?" · en línea":"")+'</option>';
+      }).join("") + '</optgroup>';
+    }
+    return h + grp("Español", es) + grp("Otros idiomas", otras);
+  }
+  function card(c){
+    var p = V.profile(c.persona), own = V.localOverrides()[c.slug] || {};
+    var d = document.createElement("div");
+    d.className = "card " + SIDE[c.role];
+    d.dataset.slug = c.slug;
+    d.innerHTML =
+      '<div class="hd"><div class="face" style="'+cropStyle(c)+'"></div>' +
+      '<div><div class="nm">'+esc(c.persona)+'</div><div class="rl">'+esc(c.role)+' · '+esc(ROLE[c.role])+'</div></div></div>' +
+      '<div class="tb">'+esc(c.timbre)+'</div>' +
+      '<div class="vz">Suena con: <b class="vn">'+esc(p.voiceName || "la voz por defecto")+'</b> <span class="via">· '+esc(viaTxt(p))+'</span></div>' +
+      '<select class="vsel" aria-label="Voz de '+esc(c.persona)+'">'+voiceOptions(own.voice || "")+'</select>' +
+      '<div class="sl"><span>Ritmo</span><input type="range" class="rate" min="0.6" max="1.6" step="0.02" value="'+p.rate+'"><output class="ro">'+p.rate.toFixed(2)+'</output></div>' +
+      '<div class="sl"><span>Tono</span><input type="range" class="pitch" min="0.4" max="1.8" step="0.02" value="'+p.pitch+'"><output class="po">'+p.pitch.toFixed(2)+'</output></div>' +
+      '<div class="acts"><button class="btn go play" type="button">▶ Escuchar</button>' +
+      '<button class="btn undo" type="button" title="vuelve a su voz, ritmo y tono del casting">↺ Casting</button>' +
+      '<a class="btn" href="/consejero.html?p='+esc(c.slug)+'">Ficha</a></div>' +
+      '<div class="mod">'+(p.custom?"✎ personalizada":"")+'</div>';
+    var sel = d.querySelector(".vsel"), rate = d.querySelector(".rate"), pitch = d.querySelector(".pitch");
+    function save(){
+      var o = {};
+      if (sel.value) o.voice = sel.value;
+      if (Math.abs(+rate.value - c.rate) > 0.001) o.rate = +rate.value;
+      if (Math.abs(+pitch.value - c.pitch) > 0.001) o.pitch = +pitch.value;
+      V.setOverride(c.persona, o);
+      refresh(d, c);
+    }
+    sel.addEventListener("change", function(){ save(); play(); });
+    rate.addEventListener("input", function(){ d.querySelector(".ro").textContent = (+rate.value).toFixed(2); });
+    pitch.addEventListener("input", function(){ d.querySelector(".po").textContent = (+pitch.value).toFixed(2); });
+    rate.addEventListener("change", save); pitch.addEventListener("change", save);
+    function play(){
+      var t = $("frase").value.trim();
+      document.querySelectorAll(".card.talking").forEach(function(x){ x.classList.remove("talking"); });
+      var opts = { onstart:function(){ d.classList.add("talking"); }, onend:function(){ d.classList.remove("talking"); }, onerror:function(){ d.classList.remove("talking"); msg("El navegador no pudo locutar.", true); } };
+      var ok = t ? V.speak(c.persona, t, opts) : V.preview(c.persona, opts);
+      if (!ok) msg("Este navegador no tiene síntesis de voz.", true);
+    }
+    d.querySelector(".play").addEventListener("click", play);
+    d.querySelector(".undo").addEventListener("click", function(){ V.resetOverride(c.persona); var n = card(c); d.replaceWith(n); msg(c.persona+" vuelve a su voz del casting."); });
+    return d;
+  }
+  function refresh(d, c){
+    var p = V.profile(c.persona);
+    d.querySelector(".vn").textContent = p.voiceName || "la voz por defecto";
+    d.querySelector(".via").textContent = "· " + viaTxt(p);
+    d.querySelector(".mod").textContent = p.custom ? "✎ personalizada" : "";
+  }
+  function pintar(){
+    var m = $("mesa"); m.innerHTML = "";
+    [["leyendas","Leyendas"],["coetaneos","Coetáneos"]].forEach(function(g){
+      var h = document.createElement("div"); h.className="gen"; h.textContent = "▸ " + g[1]; m.appendChild(h);
+      var grid = document.createElement("div"); grid.className = "grid";
+      V.CASTING.filter(function(c){ return c.gen === g[0]; }).forEach(function(c){ grid.appendChild(card(c)); });
+      m.appendChild(grid);
+    });
+    var w = $("warn");
+    if (!V.supported()) { w.style.display="block"; w.textContent="Este navegador no tiene síntesis de voz (Web Speech API). Prueba con Chrome, Edge o Safari."; }
+    else if (!V.available().length) { w.style.display="block"; w.textContent="El navegador aún no ha dado su lista de voces; se usará la voz por defecto hasta que la tenga."; }
+    else if (!V.spanish().length) { w.style.display="block"; w.textContent="Este equipo no tiene voces en español instaladas; se usan las que hay, con su tono y ritmo."; }
+    else w.style.display="none";
+  }
+  $("portada").checked = V.portadaOn();
+  $("portada").addEventListener("change", function(e){ V.setPortada(e.target.checked); msg(e.target.checked ? "La portada locutará las respuestas (en este navegador)." : "La portada vuelve a ser muda."); });
+  $("parar").addEventListener("click", function(){ V.stop(); document.querySelectorAll(".card.talking").forEach(function(x){ x.classList.remove("talking"); }); });
+  $("todos").addEventListener("click", function(){
+    var list = V.CASTING.slice(), i = 0;
+    (function next(){
+      if (i >= list.length) return;
+      var c = list[i++], d = document.querySelector('.card[data-slug="'+c.slug+'"]');
+      var ok = V.preview(c.persona, { onstart:function(){ if(d){ d.classList.add("talking"); d.scrollIntoView({block:"nearest",behavior:"smooth"}); } },
+        onend:function(){ if(d) d.classList.remove("talking"); setTimeout(next, 250); } });
+      if (!ok) msg("Este navegador no tiene síntesis de voz.", true);
+    })();
+  });
+  $("reset").addEventListener("click", function(){
+    if (!confirm("¿Volver al casting de serie en este navegador? (Lo guardado para todo el equipo no se toca.)")) return;
+    V.CASTING.forEach(function(c){ V.resetOverride(c.persona); }); pintar(); msg("Casting de serie restaurado en este navegador.");
+  });
+  $("compartir").addEventListener("click", function(){
+    var b = $("compartir"); b.disabled = true; msg("Guardando para todo el equipo…");
+    var map = V.sharedOverrides(), local = V.localOverrides();
+    Object.keys(local).forEach(function(k){ map[k] = local[k]; });
+    V.saveShared(map).then(function(){
+      V.CASTING.forEach(function(c){ V.resetOverride(c.persona); });
+      pintar(); msg("Guardado para todo el equipo ✓");
+    }).catch(function(e){ msg("No se pudo guardar para el equipo: " + (e && e.message || e) + ". Sigue guardado en este navegador.", true); })
+      .then(function(){ b.disabled = false; });
+  });
+  pintar();
+  V.onVoices(pintar);
+  V.ready().then(pintar);
+})();
+</script>
+</body>
+</html>

@@ -223,7 +223,8 @@
     const NAMEPLATE_POS = {
         leyendas: [
             // Racional (left/red) — posiciones sobre la cabeza de cada personaje.
-            // En la foto actual no están Tim Cook ni Walt Disney: no llevan máscara ni placa.
+            // En la foto no están Tim Cook ni Howard Schultz.
+            // Disney ocupa la silla que era de Schultz (derecha, traje y bigote).
             { role: "CEO", persona: "Steve Jobs",      x: 10, y: 38, machineId: "admira-macbookair16",      body: { left: 7,  top: 44, width: 7,  height: 17 } },
             { role: "CTO", persona: "Steve Wozniak",   x: 20, y: 32, machineId: "admira-macbookpronegro14", body: { left: 18, top: 36, width: 8,  height: 21 } },
             { role: "CFO", persona: "Warren Buffett",  x: 33, y: 26, machineId: "admira-macmini",           body: { left: 27, top: 27, width: 11, height: 36 } },
@@ -231,7 +232,7 @@
             { role: "Y-3", persona: "Carlos Silva",    x: 50, y: 22, body: { left: 44, top: 23, width: 14, height: 31 } },
             // Creativo (right/blue)
             { role: "CDO", persona: "Dieter Rams",     x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
-            { role: "CXO", persona: "Howard Schultz",  x: 82, y: 32, machineId: "admira-pctwin",            body: { left: 77, top: 34, width: 8,  height: 21 } },
+            { role: "CCO", persona: "Walt Disney",     x: 82, y: 32, machineId: "admira-macbookairluna",    body: { left: 77, top: 34, width: 8,  height: 21 } },
             { role: "CSO", persona: "George Lucas",    x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
         ],
         coetaneos: [

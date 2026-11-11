@@ -99,6 +99,7 @@
 
 <script src="/consejeros-voces.js?v=20261111-hola1"></script>
 <script src="/hola-intent.js?v=20261111-hola1"></script>
+<script src="/hablar-cmd.js?v=20261111-hablar-2"></script>
 <script src="/assets/chat-hilo-client.js?v=20261111-hola1"></script>
 <script>
 (function(){
@@ -380,6 +381,19 @@
   $("form").addEventListener("submit", function(e){
     e.preventDefault(); desbloquearAudio();
     var t=$("texto").value.trim(); if(!t) return; $("texto").value=""; $("oido").innerHTML="«"+esc(t)+"»";
+    // /hablar [consejero] [mensaje]: nunca se manda el literal al consejero.
+    if (window.AdmiraHablarCmd && typeof AdmiraHablarCmd.parseLinea === "function") {
+      var linea=AdmiraHablarCmd.parseLinea(t, { persona: S.persona });
+      if (linea) {
+        if (linea.accion==="colgar") { estado("Has colgado."); dormir(); return; }
+        if (linea.accion==="ayuda") { estado(AdmiraHablarCmd.listaAyuda()); return; }
+        if (linea.accion==="estado") { estado(S.persona ? ("Hablas con "+S.persona) : "No hay conversación"); return; }
+        if (linea.accion==="error") { estado("No reconozco a ese consejero. Prueba Jobs, Woz, Disney, Lucas, Elon o Jensen.", true); return; }
+        if (linea.accion==="conectar") { conectar(linea.persona); if (linea.pregunta) preguntar(linea.persona, linea.pregunta); return; }
+        if (linea.accion==="preguntar") { preguntar(linea.persona, linea.texto); return; }
+        return;
+      }
+    }
     // escrito: no hace falta «Hola Admira»
     if (S.fase==="dormido"||S.fase==="apagado"){ var r=H.interpretar({fase:"eligiendo"}, t); if(r.accion==="conectar"){ conectar(r.persona); return; } if(H.despertar(t).ok){ manejar(t); return; } S.fase="eligiendo"; }
     manejar(t);

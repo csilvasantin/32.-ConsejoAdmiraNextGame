@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const speechSource = readFileSync(new URL('./council-speech.js', import.meta.url), 'utf8');
 const integrationSource = readFileSync(new URL('./council-integration.js', import.meta.url), 'utf8');
+const hablarCmdSource = readFileSync(new URL('./hablar-cmd.js', import.meta.url), 'utf8');
 
 // The actual speech controller runs with a deterministic frame clock. Only the
 // browser shell and network bridge are doubled: no connection or bot is used.
@@ -78,7 +79,7 @@ function harness({withComposer=false,send=()=>true}={}) {
   const originalGet=doc.getElementById;
   if(withComposer)doc.getElementById=id=>id==='action-input'?input:originalGet(id);
   let bridgeOptions, selected = null;
-  const personas = new Set(['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas']);
+  const personas = new Set(['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas', 'Elon Musk', 'Jensen Huang']);
   const bridge = {
     has: name => personas.has(name),
     select(name) { selected = personas.has(name) ? name : null; bridgeOptions.onSelect(selected); return true; },
@@ -107,6 +108,7 @@ function harness({withComposer=false,send=()=>true}={}) {
     context.CouncilComposer={mount(options){composerOptions=options;return {update(state){composerState=state;},focus(){}};}};
   }
   context.window = context;
+  vm.runInContext(hablarCmdSource, context);
   vm.runInContext(speechSource, context);
   const original = context.CouncilSpeech;
   context.CouncilSpeech = {
@@ -268,4 +270,48 @@ test('accepted preview send clears submitted draft but keeps next draft',async()
  h.api.select('Steve Jobs');h.composer.onInput('Enviar');const pending=h.composer.onSend('Enviar');
  h.composer.onInput('Siguiente');resolve(true);await pending;
  assert.equal(h.composerState.value,'Siguiente');assert.equal(h.composerState.pending,false);
+});
+
+test('el panel de chat intercepta /hablar Woz y no envía el literal a Jobs', async () => {
+  const sends = [];
+  const h = harness({ withComposer: true, send: (persona, text) => { sends.push({ persona, text }); return true; } });
+  h.api.select('Steve Jobs');
+  h.composer.onInput('/hablar Woz');
+  await h.composer.onSend('/hablar Woz');
+  assert.deepEqual(sends, [], 'el literal no se envía');
+  assert.equal(h.api.bridge.selected, 'Steve Wozniak');
+});
+
+test('/hablar Woz hola cambia al consejero y envía solo el texto', async () => {
+  const sends = [];
+  const h = harness({ withComposer: true, send: (persona, text) => { sends.push({ persona, text }); return true; } });
+  h.api.select('Steve Jobs');
+  await h.composer.onSend('/hablar Woz hola desde el panel');
+  assert.deepEqual(sends, [{ persona: 'Steve Wozniak', text: 'hola desde el panel' }]);
+  assert.equal(h.api.bridge.selected, 'Steve Wozniak');
+});
+
+test('/hablar a secas en Leyendas habla con Jobs; en Coetáneos, con Elon; off no envía', async () => {
+  const sends = [];
+  const h = harness({ withComposer: true, send: (persona, text) => { sends.push({ persona, text }); return true; } });
+  h.api.select('Steve Wozniak');
+  await h.composer.onSend('/hablar');
+  assert.deepEqual(sends, []);
+  assert.equal(h.api.bridge.selected, 'Steve Jobs');
+  h.api.setGeneration('coetaneos');
+  await h.api.send('Steve Jobs', '/hablar');
+  assert.deepEqual(sends, [], 'tampoco envía el literal por CouncilInterface.send');
+  assert.equal(h.api.bridge.selected, 'Elon Musk');
+  const before = h.api.bridge.selected;
+  await h.composer.onSend('/hablar off');
+  assert.deepEqual(sends, []);
+  assert.equal(h.api.bridge.selected, before, 'colgar no cambia de consejero, solo cierra el modo habla');
+});
+
+test('un mensaje normal sigue enviándose al consejero seleccionado', async () => {
+  const sends = [];
+  const h = harness({ withComposer: true, send: (persona, text) => { sends.push({ persona, text }); return true; } });
+  h.api.select('Steve Jobs');
+  await h.composer.onSend('Hola Jobs, ¿cómo vamos?');
+  assert.deepEqual(sends, [{ persona: 'Steve Jobs', text: 'Hola Jobs, ¿cómo vamos?' }]);
 });

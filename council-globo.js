@@ -80,6 +80,7 @@
 .consejo-globo.globo-proyectos .gp-firma{display:block;margin-top:2px;font:600 9px/1.2 system-ui,-apple-system,sans-serif;color:#9a8b6a;letter-spacing:.02em}
 .consejo-globo .gp-vacio{margin:0;color:#9a8b6a}
 .consejo-globo .consejero-ranking-globo{display:block;margin-top:4px;font:700 10px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:inherit;opacity:.95}
+.consejo-globo .consejero-desglose-globo{display:block;margin-top:3px;font:600 9px/1.25 system-ui,-apple-system,sans-serif;color:#f3e6c4;opacity:.92}
 .consejo-globo[data-estado=trabajando]{border-color:${COLORES.trabajando}}
 .consejo-globo[data-estado=libre]{border-color:${COLORES.libre}}
 .consejo-globo[data-estado=desconocido]{border-color:${COLORES.desconocido}}
@@ -90,6 +91,8 @@
 .mac-hoy-lista{position:absolute;inset:6% 8% 8%;z-index:8;display:flex;flex-direction:column;background:#0b0b08;color:#7cff6b;border:2px solid #3a3a2a;font:10px/1.35 "VT323","Press Start 2P",ui-monospace,Menlo,monospace;overflow:hidden;box-shadow:inset 0 0 12px rgba(0,0,0,.6)}
 .mac-hoy-lista header{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;background:#111;border-bottom:1px solid #3a3a2a;color:#c8ffb0;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .mac-hoy-lista header b{font:inherit}
+.mac-hoy-lista .desglose{padding:2px 6px 4px;color:#9fd88a;border-bottom:1px solid #3a3a2a}
+.mac-hoy-lista .fuente{color:#7aa36c;margin-left:4px;font-size:9px;text-transform:uppercase;letter-spacing:.04em}
 .mac-hoy-lista button.cerrar{appearance:none;background:#1a1a12;color:#7cff6b;border:1px solid #7cff6b;padding:2px 6px;font:inherit;cursor:pointer}
 .mac-hoy-lista ol{margin:0;padding:4px 6px 6px 22px;overflow:auto;flex:1;list-style:decimal}
 .mac-hoy-lista li{margin:0 0 4px}
@@ -445,10 +448,17 @@
       if (etiqueta) {
         const r = d.createElement('span');
         r.className = 'consejero-ranking-globo';
-        r.textContent = etiqueta;
+        r.textContent = etiqueta + ' hoy';
         globo.appendChild(r);
       }
-      globo.setAttribute('aria-label', persona + ': ' + texto + (etiqueta ? ' · ' + etiqueta : ''));
+      const desglose = s && s.hoy && s.hoy.desglose;
+      if (desglose) {
+        const g = d.createElement('span');
+        g.className = 'consejero-desglose-globo';
+        g.textContent = desglose;
+        globo.appendChild(g);
+      }
+      globo.setAttribute('aria-label', persona + ': ' + texto + (etiqueta ? ' · ' + etiqueta + ' hoy' : '') + (desglose ? ' · ' + desglose : ''));
     }
     colocarGlobo(anchor);
     abierto = { persona, anchor };
@@ -601,6 +611,12 @@
     btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); cerrarListaMac(); });
     head.append(b, btn);
     box.appendChild(head);
+    if (hoy.desglose) {
+      const dg = doc().createElement('div');
+      dg.className = 'desglose';
+      dg.textContent = hoy.desglose;
+      box.appendChild(dg);
+    }
     if (!items.length) {
       const p = doc().createElement('p');
       p.className = 'vacio';
@@ -625,6 +641,12 @@
           const span = doc().createElement('span');
           span.textContent = (m.titulo || 'misión') + (m.ref ? '  ' + m.ref : '');
           li.appendChild(span);
+        }
+        if (m.fuente) {
+          const fu = doc().createElement('span');
+          fu.className = 'fuente';
+          fu.textContent = ({ inbox: 'encargo', latido: 'misión', yokup: 'Yokup', pr: 'PR' }[m.fuente] || m.fuente);
+          li.appendChild(fu);
         }
         ol.appendChild(li);
       });

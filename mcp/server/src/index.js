@@ -35,7 +35,7 @@ import { sillaCanonica } from './sillas.js';
 import { crearEquipos } from './equipos.js';
 import { personaCanonica as personaFlota } from './flota.js';
 import { leerVelocidad } from './velocidad.js';
-import { latir, leerLatidos, vigentes, latidoPorEncargo, latidoPorActividad, MIN_DEFECTO, MIN_MAX } from './latido.js';
+import { latir, leerLatidos, vigentes, latidoPorEncargo, latidoPorActividad, leerDiarioHoy, misionesHoyPublicas, diaMadrid as diaMadridLatido, MIN_DEFECTO, MIN_MAX } from './latido.js';
 const NOMBRE = 'admira-live-mcp';
 
 const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -625,7 +625,15 @@ export async function manejar(request, env, deps = {}) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method !== 'GET') return json({ ok: false, error: 'solo GET' }, 405, cors);
     const ahoraS = Math.floor(Date.now() / 1000);
-    return json({ ok: true, now: ahoraS, consejeros: vigentes(await leerLatidos(env.ADMIRA_LIVE_DESDE), ahoraS) }, 200, cors);
+    const dia = diaMadridLatido(ahoraS * 1000);
+    const diario = await leerDiarioHoy(env.ADMIRA_LIVE_DESDE, dia, ahoraS);
+    return json({
+      ok: true,
+      now: ahoraS,
+      dia,
+      consejeros: vigentes(await leerLatidos(env.ADMIRA_LIVE_DESDE), ahoraS),
+      misiones_hoy: misionesHoyPublicas(diario),
+    }, 200, cors);
   }
 
   /* Mensajes entre consejeros, visibles en el chat. Solo lectura. Sin secretos. */

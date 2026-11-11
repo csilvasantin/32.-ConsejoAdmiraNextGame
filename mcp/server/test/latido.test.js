@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { latir, leerLatidos, vigentes, entradaLatido, latidoPorEncargo, CLAVE_LATIDO } from '../src/latido.js';
+import { latir, leerLatidos, vigentes, entradaLatido, latidoPorEncargo, CLAVE_LATIDO, CLAVE_LATIDO_HOY, leerDiarioHoy, registrarMisionHoy, misionesHoyPublicas, diaMadrid, claveUnicaHoy } from '../src/latido.js';
 import { manejar } from '../src/index.js';
 
 const kvFalso = () => { const m = new Map(); return { m, get: async (k, t) => (m.has(k) ? (t === 'json' ? JSON.parse(m.get(k)) : m.get(k)) : null), put: async (k, v) => { m.set(k, v); } }; };
@@ -43,6 +43,28 @@ test('GET /consejeros/latido es público y da el modo efectivo', async () => {
   const d = await r.json();
   assert.equal(d.consejeros.Wozniak.modo, 'trabajando');
   assert.ok(kv.m.has(CLAVE_LATIDO));
+  assert.equal(d.dia, diaMadrid());
+  assert.equal(d.misiones_hoy.Wozniak.length, 1);
+  assert.equal(d.misiones_hoy.Wozniak[0].mision, 'x');
+});
+
+test('el diario de hoy guarda misiones únicas y no duplica renovaciones ni actividad vacía', async () => {
+  const { latidoPorActividad } = await import('../src/latido.js');
+  const kv = kvFalso();
+  const t0 = 1_794_422_200;
+  await latir(kv, 'Lucas', { modo: 'trabajando', mision: 'prueba estado mesa', minutos: 5 }, t0);
+  await latir(kv, 'Lucas', { modo: 'trabajando', mision: 'prueba estado mesa', minutos: 5 }, t0 + 60);
+  await latir(kv, 'Lucas', { modo: 'trabajando', mision: '/hablar consejero en modo experto', minutos: 30 }, t0 + 120);
+  await latidoPorActividad(kv, { tipo: 'consejero', persona: 'Lucas' }, 'agente_encargar');
+  await latir(kv, 'Lucas', { modo: 'reposo' }, t0 + 200);
+  const dia = diaMadrid(t0 * 1000);
+  const diario = await leerDiarioHoy(kv, dia, t0);
+  const lista = misionesHoyPublicas(diario).Lucas;
+  assert.equal(lista.length, 2);
+  assert.equal(lista[0].mision, 'prueba estado mesa');
+  assert.equal(lista[1].mision, '/hablar consejero en modo experto');
+  assert.ok(kv.m.has(CLAVE_LATIDO_HOY + dia));
+  assert.equal(claveUnicaHoy(lista[0]), 'mision:prueba estado mesa');
 });
 
 test('actividad de un consejero (encargar, mensaje, consumo) lo marca trabajando tras un reposo; agentes no', async () => {

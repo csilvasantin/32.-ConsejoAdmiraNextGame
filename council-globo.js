@@ -90,6 +90,9 @@
 .consejo-globo .gp-vacio{margin:0;color:#9a8b6a}
 .consejo-globo .consejero-ranking-globo{display:block;margin-top:4px;font:700 10px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:inherit;opacity:.95}
 .consejo-globo .consejero-desglose-globo{display:block;margin-top:3px;font:600 9px/1.25 system-ui,-apple-system,sans-serif;color:#f3e6c4;opacity:.92}
+.consejo-globo .gp-mision{margin:0;word-break:break-word}
+.consejo-globo .gp-horas{margin:2px 0 0;color:#f3e6c4}
+.consejo-globo .gp-misiones{display:block;margin-top:5px;font:700 10px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:inherit;opacity:.95}
 .consejo-globo[data-estado=trabajando]{border-color:${COLORES.trabajando}}
 .consejo-globo[data-estado=libre]{border-color:${COLORES.libre}}
 .consejo-globo[data-estado=desconocido]{border-color:${COLORES.desconocido}}
@@ -498,23 +501,33 @@
     if (carlos) {
       pintarProyectosCarlos(globo);
     } else {
-      const p = d.createElement('p'); p.textContent = texto;
-      globo.appendChild(p);
-      const etiqueta = s && s.hoy && s.hoy.etiqueta;
-      if (etiqueta) {
-        const r = d.createElement('span');
-        r.className = 'consejero-ranking-globo';
-        r.textContent = etiqueta + ' hoy';
-        globo.appendChild(r);
+      const G = (s && s.globo) || null;
+      if (G && (G.mision || G.horas || G.misiones)) {
+        if (G.mision) {
+          const p = d.createElement('p');
+          p.className = 'gp-mision';
+          p.textContent = G.mision;
+          globo.appendChild(p);
+        }
+        if (G.horas) {
+          const h = d.createElement('p');
+          h.className = 'gp-horas';
+          h.textContent = G.horas;
+          globo.appendChild(h);
+        }
+        if (G.misiones) {
+          const m = d.createElement('span');
+          m.className = 'gp-misiones';
+          m.textContent = G.misiones;
+          globo.appendChild(m);
+        }
+        const aria = [persona, G.mision, G.horas, G.misiones].filter(Boolean).join(' · ');
+        globo.setAttribute('aria-label', aria);
+      } else {
+        const p = d.createElement('p'); p.textContent = texto;
+        globo.appendChild(p);
+        globo.setAttribute('aria-label', persona + ': ' + texto);
       }
-      const desglose = s && s.hoy && s.hoy.desglose;
-      if (desglose) {
-        const g = d.createElement('span');
-        g.className = 'consejero-desglose-globo';
-        g.textContent = desglose;
-        globo.appendChild(g);
-      }
-      globo.setAttribute('aria-label', persona + ': ' + texto + (etiqueta ? ' · ' + etiqueta + ' hoy' : '') + (desglose ? ' · ' + desglose : ''));
     }
     colocarGlobo(anchor);
     abierto = { persona, anchor };

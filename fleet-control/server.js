@@ -1458,10 +1458,11 @@ const server = http.createServer(async (req, res) => {
     if (!m) return;
     const pasos = [];
     const plat = platOf(m);
-    // 1) ¿responde ya? → sólo despertar la pantalla.
+    // 1) ¿responde ya? → sólo despertar la pantalla. macOS: sin pmset (su «touch» exige root y fallaba);
+    //    caffeinate -u -d -t 180 la mantiene 3 min encendida (probado en el Mac Mini, 11-nov-2026).
     const vivo = await run(m, plat === 'windows' ? 'echo ONLINE' : 'echo ONLINE', plat === 'windows' ? 9000 : 5000);
     if (vivo.rc === 0 && /ONLINE/.test(vivo.stdout)) {
-      const despierta = plat === 'macos' ? 'caffeinate -u -t 5 >/dev/null 2>&1 & /usr/bin/pmset touch >/dev/null 2>&1; echo pantalla despierta'
+      const despierta = plat === 'macos' ? '(nohup caffeinate -u -d -t 180 >/dev/null 2>&1 &); echo pantalla despierta'
         : plat === 'linux' ? LGUI + '(xset dpms force on 2>/dev/null; xset s reset 2>/dev/null; echo pantalla despierta) || (swaymsg "output * dpms on" 2>/dev/null && echo pantalla despierta)'
         : 'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = [System.Windows.Forms.Cursor]::Position; "pantalla despierta"';
       const r = await run(m, despierta, 8000);

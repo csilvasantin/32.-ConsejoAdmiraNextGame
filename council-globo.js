@@ -20,10 +20,10 @@
       'Steve Jobs': { activo: true, sobre: 'papel', puntos: [[18.162, 75.391], [21.397, 76.432], [25.588, 76.302], [27.5, 72.396], [29.559, 72.005], [30.147, 69.141], [25.662, 68.49], [25.588, 67.708], [24.338, 67.708], [23.971, 68.49], [21.324, 72.005], [20.074, 71.615]], flecha: { x: 10.368, y: 39.583 }, x: 24.154, y: 72.07, w: 11.985, h: 8.724 },
       'Steve Wozniak': { activo: true, sobre: 'papel', puntos: [[26.912, 61.458], [28.309, 62.5], [31.25, 62.5], [32.941, 60.156], [33.824, 59.115], [32.868, 58.594], [31.176, 58.724], [29.412, 58.464], [28.309, 58.333]], flecha: { x: 21.471, y: 31.51 }, x: 30.368, y: 60.416, w: 6.912, h: 4.167 },
       'Tim Cook': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
-      'Warren Buffett': { activo: true, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
+      'Warren Buffett': { activo: false, sobre: 'papel', puntos: [[30, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50], [31.471, 50.521]], flecha: { x: 33.088, y: 24.479 }, x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
       'Carlos Silva': { activo: true, nuncaFlecha: true, sobre: 'ninguno', puntos: [], flecha: { x: 50, y: 23.958 }, x: 0, y: 0, w: 0, h: 0 },
       'Walt Disney': { activo: true, sobre: 'papel', puntos: [[73.382, 63.932], [73.382, 64.714], [75.882, 64.714], [75.882, 65.234], [78.529, 65.234], [78.529, 64.062], [78.088, 63.021], [77.059, 62.24], [73.676, 63.411]], flecha: { x: 80, y: 32.292 }, x: 75.956, y: 63.737, w: 5.147, h: 2.994 },
-      'Dieter Rams': { activo: true, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
+      'Dieter Rams': { activo: false, sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], flecha: { x: 70.074, y: 23.958 }, x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
       'Howard Schultz': { activo: false, sobre: 'ninguno', puntos: [], flecha: null, x: 0, y: 0, w: 0, h: 0 },
       'George Lucas': { activo: true, sobre: 'papel', puntos: [[72.279, 70.443], [75.588, 69.922], [77.059, 69.661], [78.235, 69.661], [79.265, 71.094], [81.25, 71.224], [82.5, 72.526], [79.118, 73.698], [73.529, 73.568], [72.279, 72.656]], flecha: { x: 90.735, y: 39.583 }, x: 77.389, y: 71.679, w: 10.221, h: 4.037 }
     },
@@ -62,8 +62,10 @@
 @media (prefers-reduced-motion:reduce){.papel-halo,.consejero-flecha{animation:none!important}}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
-.consejo-globo.globo-proyectos{max-width:280px;min-width:210px;padding:8px 10px 10px;pointer-events:auto;z-index:24}
+.consejo-globo.globo-proyectos{max-width:280px;min-width:210px;padding:8px 10px 10px;pointer-events:auto;z-index:24;text-align:center}
 .consejo-globo b{display:block;margin:0 0 3px;font:bold 9px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.3px}
+.consejo-globo.globo-proyectos b{text-align:center;letter-spacing:0;white-space:nowrap;width:100%}
+.consejo-globo.globo-proyectos ol.gp-abc,.consejo-globo.globo-proyectos .gp-vacio{text-align:left}
 .consejo-globo p{margin:0;word-break:break-word}
 .consejo-globo .gp-nav{display:flex;align-items:center;gap:6px;margin:2px 0 7px}
 .consejo-globo .gp-nav button{appearance:none;flex:0 0 auto;width:28px;height:28px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:16px/1 sans-serif;cursor:pointer}
@@ -75,6 +77,7 @@
 .consejo-globo ol.gp-abc .letra{color:#ffd75e;font:bold 10px/1.35 "Press Start 2P",monospace}
 .consejo-globo ol.gp-abc .txt{color:#f3e6c4;word-break:break-word}
 .consejo-globo ol.gp-abc .txt.vacio{color:#9a8b6a;font-style:italic}
+.consejo-globo.globo-proyectos .gp-firma{display:block;margin-top:2px;font:600 9px/1.2 system-ui,-apple-system,sans-serif;color:#9a8b6a;letter-spacing:.02em}
 .consejo-globo .gp-vacio{margin:0;color:#9a8b6a}
 .consejo-globo .consejero-ranking-globo{display:block;margin-top:4px;font:700 10px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:inherit;opacity:.95}
 .consejo-globo[data-estado=trabajando]{border-color:${COLORES.trabajando}}
@@ -122,8 +125,27 @@
   }
   function esCarlos(persona) { return key(persona) === 'carlossilva'; }
   function textoAbc(v) {
-    const t = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+    const crudo = (v && typeof v === 'object') ? (v.texto ?? v.valor ?? '') : v;
+    const t = String(crudo == null ? '' : crudo).replace(/\s+/g, ' ').trim();
     return t || '— sin definir —';
+  }
+  function horaFirma(ts) {
+    if (!ts) return '';
+    try {
+      const d = new Date(Number(ts));
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return ''; }
+  }
+  function firmaAbc(proy, letra) {
+    const f = proy && proy.firmas && proy.firmas[letra];
+    const obj = proy && proy.objetivos && proy.objetivos[letra];
+    const autor = (f && f.autor) || (obj && typeof obj === 'object' && (obj.autor || obj.quien)) || '';
+    const ts = (f && f.actualizado) || (obj && typeof obj === 'object' && (obj.actualizado || obj.ts)) || 0;
+    if (!autor && !ts) return '';
+    const hora = horaFirma(ts);
+    if (autor && hora) return autor + ' · ' + hora;
+    return autor || hora;
   }
   function proyectosCarlos() {
     const lista = objetivosAbc && Array.isArray(objetivosAbc.proyectos) ? objetivosAbc.proyectos : [];
@@ -476,7 +498,7 @@
     tit.textContent = proy.nombre;
     const pos = d.createElement('span');
     pos.className = 'gp-pos';
-    pos.textContent = (carlosIdx + 1) + ' / ' + n;
+    pos.textContent = (carlosIdx + 1) + ' / ' + n + (proy.titular ? ' · ' + proy.titular : '');
     nombre.append(tit, pos);
     const paso = (dir) => (e) => {
       if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -499,11 +521,19 @@
       const valor = textoAbc(objs[letra]);
       txt.className = 'txt' + (valor === '— sin definir —' ? ' vacio' : '');
       txt.textContent = valor;
+      const firma = firmaAbc(proy, letra);
+      if (firma) {
+        const f = d.createElement('span');
+        f.className = 'gp-firma';
+        f.textContent = firma;
+        txt.appendChild(f);
+      }
       li.append(lab, txt);
       ol.appendChild(li);
     });
     host.appendChild(ol);
-    host.setAttribute('aria-label', 'Carlos Silva: ' + proy.nombre + ' (' + (carlosIdx + 1) + ' de ' + n + ')');
+    const titular = proy.titular ? (' · ' + proy.titular) : '';
+    host.setAttribute('aria-label', 'Carlos Silva: ' + proy.nombre + titular + ' (' + (carlosIdx + 1) + ' de ' + n + ')');
   }
   function mostrar(el) {
     if (!el) return;

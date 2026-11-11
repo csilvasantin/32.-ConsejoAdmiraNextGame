@@ -197,12 +197,14 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
 
 test('solo los consejeros activos llevan flecha y halo; Carlos nunca', () => {
   const L = PAPEL_POS.leyendas;
-  // Las 6 de la mesa de leyendas llevan flecha. Carlos (Y-3) nunca. Cook y Schultz no están en la foto.
+  // Jobs, Woz, Disney y Lucas llevan flecha. Buffett y Rams no están activados
+  // (Carlos lo pidió antes; reaparecieron al abrir el ranking de 6). Carlos (Y-3) nunca.
+  // Cook y Schultz no están en la foto.
   assert.deepEqual(
     Object.keys(L).filter((n) => llevaFlecha(n)),
-    ['Steve Jobs', 'Steve Wozniak', 'Warren Buffett', 'Walt Disney', 'Dieter Rams', 'George Lucas'],
+    ['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas'],
   );
-  for (const n of ['Steve Jobs', 'Steve Wozniak', 'Warren Buffett', 'Walt Disney', 'Dieter Rams', 'George Lucas']) {
+  for (const n of ['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas']) {
     assert.equal(esActivo(n), true, n);
     assert.equal(llevaFlecha(n), true, n);
     assert.equal(llevaHalo(n), true, n);
@@ -210,10 +212,13 @@ test('solo los consejeros activos llevan flecha y halo; Carlos nunca', () => {
   assert.equal(esActivo('Carlos Silva'), true);
   assert.equal(nuncaFlecha('Carlos Silva'), true);
   assert.equal(llevaFlecha('Carlos Silva'), false);
-  for (const n of ['Howard Schultz', 'Tim Cook']) {
+  for (const n of ['Warren Buffett', 'Dieter Rams', 'Howard Schultz', 'Tim Cook']) {
     assert.equal(esActivo(n), false, n);
     assert.equal(llevaFlecha(n), false, n);
     assert.equal(llevaHalo(n), false, n);
+    if (n === 'Warren Buffett' || n === 'Dieter Rams') {
+      assert.ok(L[n].flecha || (L[n].puntos && L[n].puntos.length >= 4), 'coords guardadas para reactivar ' + n);
+    }
   }
 
   const C = PAPEL_POS.coetaneos;

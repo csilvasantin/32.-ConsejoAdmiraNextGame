@@ -322,6 +322,9 @@
   .abc-aviso.ok{color:var(--good)}
   .abc-aviso.ko{color:var(--bad)}
   .abc-vacio{margin:0;color:var(--mut);font-size:13px}
+  .abc-titular{color:var(--brand);font:700 11px/1.3 var(--mono)}
+  .abc-firma{display:block;margin:2px 0 0 1.6em;color:var(--mut);font:600 10px/1.3 var(--mono)}
+
 
 </style>
 </head>
@@ -344,7 +347,7 @@
 
   <section class="abc-box" id="objetivos-abc" aria-label="Objetivos a, b y c de los proyectos de Carlos">
     <h2>Proyectos de Carlos · a, b y c</h2>
-    <p class="abc-help">Esto es lo que aparece en el hover de Carlos Silva (la figura Y-3 del fondo) en la mesa de leyendas: un proyecto cada vez, con sus tres objetivos. El orden lo marcas aquí, y las flechas ◀ ▶ del cartel recorren la lista en círculo. Un campo vacío se muestra «— sin definir —»; no se inventa texto. No es el listado de ideas Yokup de abajo: es un almacén propio (<code>GET/POST /api/consejo/objetivos-abc</code>, KV). Para guardar hace falta el token del Consejo.</p>
+    <p class="abc-help">Esto es lo que aparece en el hover de Carlos Silva (la figura Y-3 del fondo) en la mesa de leyendas: un proyecto cada vez, con sus tres mejoras a., b. y c. El carrusel tiene 4 paneles: <b>PortAventuraNeXT</b> (Jobs), <b>AdmiraNeXT</b> (Lucas), <b>Alsea</b> (Walt) y <b>Día a día</b> (Woz). Cada noche a las 00:00 Europe/Madrid, cada titular escribe las suyas con <code>POST /api/consejo/objetivos-abc</code> (token del Consejo, el mismo de /api/consejo/foco). Tú puedes editarlas aquí; una edición tuya no se pisa si el titular vuelve a escribir, salvo que use <code>forzar: true</code>. Un campo vacío se muestra «— sin definir —». La vía completa está en <code>docs/objetivos-abc-consejeros.md</code> del repo.</p>
     <span class="abc-estado"></span>
     <div class="abc-lista"></div>
     <div class="abc-actions">

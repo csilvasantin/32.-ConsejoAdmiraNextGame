@@ -1,16 +1,18 @@
 /**
- * /api/consejo/objetivos-abc — proyectos activos de Carlos con 3 objetivos a/b/c.
- * GET  → { ok, proyectos, fuente, actualizado } (público; si KV está vacío, plantilla
- *        con nombres y objetivos en blanco, nunca textos inventados).
- * POST { proyectos: [...] }  o  { id, nombre, activo, orden, objetivos:{a,b,c} }
- *      o { borrar: id }  con X-Council-Token (mismo que /api/consejo/foco).
- * KV: CONSUMOS_KV || RECORTE_KV, clave consejo:objetivos-abc:v1.
+ * /api/consejo/objetivos-abc — carrusel de Carlos (a/b/c por proyecto).
+ * GET  → público, cache: no-store. El hover de la mesa lo lee en vivo.
+ * POST autenticado (X-Council-Token o Authorization: Bearer), el mismo token
+ *      que /api/consejo/foco: CONSUMOS_LECTURAS_TOKEN o COUNCIL_MACHINE_TOKEN.
  *
- * Fuente nueva (t1214u): no había a/b/c en /objetivos (ideas Yokup) ni en el censo
- * /projects. El editor vive en la pestaña Objetivos; el hover de la mesa lee este GET.
+ * Titulares: PortAventuraNeXT → Jobs, AdmiraNeXT → Lucas, Alsea → Walt,
+ * Día a día → Woz. Cada uno escribe las 3 mejoras de SU proyecto (autor en el
+ * cuerpo). Carlos edita desde /objetivos (autor: "carlos"); esa edición no se
+ * pisa si el titular vuelve a escribir, salvo forzar:true.
+ *
+ * KV: CONSUMOS_KV || RECORTE_KV, clave consejo:objetivos-abc:v1.
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { KEY_OBJETIVOS_ABC, normalizarDocumento, aplicarCambio, proyectosActivos } from "../../../consejo-objetivos-abc-lib.mjs";
+import { KEY_OBJETIVOS_ABC, normalizarDocumento, aplicarPeticion, proyectosActivos } from "../../../consejo-objetivos-abc-lib.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 function headers(origin) {
@@ -37,7 +39,7 @@ export async function leerDocumento(store) {
   }
 }
 
-function publico(doc) {
+function publico(doc, extra) {
   const activos = proyectosActivos(doc);
   return {
     ok: true,
@@ -46,6 +48,7 @@ function publico(doc) {
     fuente: doc.fuente,
     actualizado: doc.actualizado || null,
     vacio: !activos.length,
+    ...(extra || {}),
   };
 }
 
@@ -68,9 +71,15 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch (e) { return json({ ok: false, error: "JSON inválido" }, 400, origin); }
   const actual = await leerDocumento(store);
-  const siguiente = aplicarCambio(actual, body);
+  const r = aplicarPeticion(actual, body, Date.now());
+  const siguiente = r.doc;
   siguiente.actualizado = Date.now();
   siguiente.fuente = "kv";
   await store.put(KEY_OBJETIVOS_ABC, JSON.stringify(siguiente));
-  return json(publico(siguiente), 200, origin);
+  return json(publico(siguiente, {
+    escritos: r.escritos || [],
+    conservados: r.conservados || [],
+    conflictos: r.conflictos || [],
+    rechazados: r.rechazados || [],
+  }), 200, origin);
 }

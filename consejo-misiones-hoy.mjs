@@ -1,7 +1,11 @@
 /**
  * Recuento real de misiones de hoy (00:00 Europe/Madrid).
- * Une encargos done del inbox, misiones Yokup resueltas y PRs fusionados,
- * sin duplicar. No inventa atribuciones.
+ * Une, sin duplicar y sin inventar:
+ *  1. encargos done de la bandeja (a su nombre o firmados/cerrados por él);
+ *  2. misiones únicas de consejero_latido (modo trabajando) de hoy;
+ *  3. misiones Yokup resueltas/cerradas hoy (si la API responde);
+ *  4. PRs fusionados hoy con marca de autor clara.
+ * Si una fuente cae, las demás siguen contando.
  *
  * Regla de autor de un PR (en este orden):
  *  1. Prefijo de rama: woz/, jobs/, disney|walt/, lucas/, musk|elon/,
@@ -100,9 +104,15 @@ export function atribuirPr(pr) {
 export function claveMision(item) {
   if (!item) return '';
   if (item.fuente === 'pr' && item.repo && item.numero) return 'pr:' + normalizarRepo(item.repo) + '#' + item.numero;
-  if (item.fuente === 'inbox' && item.numero) return 'inbox:' + item.numero;
+  if ((item.fuente === 'inbox' || item.fuente === 'firmado') && item.numero) return 'inbox:' + item.numero;
   if (item.fuente === 'yokup' && item.id) return 'yokup:' + item.id;
+  if (item.fuente === 'latido' && item.numero) return 'inbox:' + item.numero;
+  if (item.fuente === 'latido' && item.titulo) return 'latido:' + normaTitulo(item.titulo);
   return item.clave || '';
+}
+
+export function normaTitulo(s) {
+  return String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 function tituloDe(texto, max = 80) {
@@ -146,6 +156,133 @@ export function misionesInboxHoy(items, { desdeS, hastaS } = {}) {
     });
   }
   return { ok: true, lista };
+}
+
+/** Encargos done que el consejero cerró o firmó para otra persona (from_name). */
+export function fromNameEs(persona, bot, raw) {
+  const s = String(raw || '').replace(/GrokBot/gi, ' ').replace(/status-web/gi, ' ');
+  const botK = String(bot || '').toLowerCase();
+  const perK = String(persona || '').toLowerCase();
+  const apellidos = [];
+  if (botK) apellidos.push(botK);
+  if (perK) {
+    const parts = perK.split(/\s+/).filter(Boolean);
+    if (parts.length) apellidos.push(parts[parts.length - 1]);
+  }
+  const ids = apellidos.filter(Boolean).map((x) => x.replace(/[^a-z]/g, '')).filter((x) => x.length >= 3);
+  if (!ids.length) return false;
+  const re = new RegExp('(?:^|[^a-z])(?:' + ids.join('|') + ')(?:[^a-z]|$)', 'i');
+  try { return re.test(s); } catch (_) { return false; }
+}
+
+export function misionesInboxFirmadosHoy(items, { persona, bot, desdeS, hastaS } = {}) {
+  if (items == null) return { ok: false, lista: [] };
+  const lista = [];
+  for (const x of (Array.isArray(items) ? items : [])) {
+    if (String(x && x.status) !== 'done') continue;
+    const t = seg(x.done_at) || seg(x.closed_at) || 0;
+    if (!t || (desdeS && t < desdeS) || (hastaS && t > hastaS)) continue;
+    const target = String(x.target_persona || x.persona || '');
+    const botK = String(bot || '').toLowerCase();
+    if (botK && target.toLowerCase() === botK) continue;
+    if (persona && target && normaTitulo(target) === normaTitulo(persona)) continue;
+    if (!fromNameEs(persona, bot, x.from_name || x.firmado || x.closed_by || x.autor || '')) continue;
+    const numero = Number(x.id) || null;
+    lista.push({
+      fuente: 'inbox',
+      para_otro: true,
+      cuando: t,
+      titulo: tituloDe(x.text) || ('encargo' + (numero ? ' #' + numero : '')),
+      ref: numero ? '#' + numero : (x.etiqueta || null),
+      url: null,
+      numero,
+      id: numero ? String(numero) : null,
+    });
+  }
+  return { ok: true, lista };
+}
+
+/**
+ * Semilla de latidos de hoy que ya se perdieron (el KV solo guardaba el último).
+ * Solo aplica el 2026-11-11. A partir de esa noche el diario KV los conserva.
+ */
+export const SEMILLA_LATIDOS = Object.freeze({
+  '2026-11-11': Object.freeze({
+    Lucas: Object.freeze([
+      { mision: 'prueba estado mesa', cuando: 1794422220, origen: 'semilla-20261111' },
+      { mision: '/hablar consejero en modo experto', cuando: 1794423300, origen: 'semilla-20261111' },
+      { mision: '/hablar en el chat de admira.live + Jobs/Elon por defecto', cuando: 1794424800, origen: 'semilla-20261111' },
+      { mision: 'Etiqueta Schultz sobre Disney en mesa Leyendas', cuando: 1794426480, origen: 'semilla-20261111' },
+      { mision: 'Silueta hover Walt Disney + alta misiones del día', cuando: 1794429900, origen: 'semilla-20261111' },
+    ]),
+  }),
+});
+
+export function misionesLatidoHoy(items, { desdeS, hastaS } = {}) {
+  if (items == null) return { ok: false, lista: [] };
+  const lista = [];
+  const vistos = new Set();
+  for (const x of (Array.isArray(items) ? items : [])) {
+    const titulo = tituloDe(x.mision || x.titulo || '') || (x.encargo ? ('encargo #' + x.encargo) : '');
+    if (!titulo) continue;
+    const t = seg(x.cuando) || seg(x.at) || seg(x.desde) || 0;
+    if (t && ((desdeS && t < desdeS) || (hastaS && t > hastaS))) continue;
+    const numero = x.encargo ? Number(x.encargo) : null;
+    const item = {
+      fuente: 'latido',
+      cuando: t || desdeS || 0,
+      titulo,
+      ref: numero ? '#' + numero : 'latido',
+      url: null,
+      numero,
+      id: numero ? String(numero) : ('latido:' + normaTitulo(titulo)),
+    };
+    const k = claveMision(item);
+    if (!k || vistos.has(k)) continue;
+    vistos.add(k);
+    lista.push(item);
+  }
+  return { ok: true, lista };
+}
+
+/**
+ * Junta el diario público (misiones_hoy), el latido vigente si es de hoy
+ * y la semilla del día, sin duplicar.
+ */
+export function latidosDePayload(payload, { bot, persona, desdeS, hastaS, dia, usarSemilla } = {}) {
+  const srcHoy = payload && payload.misiones_hoy;
+  const hayDiario = !!(srcHoy && bot && Array.isArray(srcHoy[bot]));
+  const actual = payload && payload.consejeros && bot ? payload.consejeros[bot] : null;
+  const tActual = actual && (actual.mision || actual.encargo) ? (seg(actual.at) || seg(actual.desde) || 0) : 0;
+  const hayActual = !!(actual && (actual.mision || actual.encargo) && tActual && (!desdeS || tActual >= desdeS) && (!hastaS || tActual <= hastaS));
+  const semilla = (usarSemilla && dia && SEMILLA_LATIDOS[dia] && bot && SEMILLA_LATIDOS[dia][bot]) || [];
+  if (!hayDiario && !hayActual && !semilla.length) return { ok: false, lista: [] };
+  const lista = [];
+  if (hayDiario) lista.push(...srcHoy[bot]);
+  if (hayActual) {
+    lista.push({
+      mision: actual.mision,
+      encargo: actual.encargo,
+      cuando: tActual,
+      origen: actual.origen || 'consejero_latido',
+    });
+  }
+  lista.push(...semilla);
+  return misionesLatidoHoy(lista, { desdeS, hastaS });
+}
+
+export function desgloseHoy(por = {}) {
+  const encargos = Number(por.inbox || 0);
+  const misiones = Number(por.latido || 0);
+  const yokup = Number(por.yokup || 0);
+  const prs = Number(por.pr || 0);
+  const partes = [
+    encargos + (encargos === 1 ? ' encargo' : ' encargos'),
+    misiones + (misiones === 1 ? ' misión' : ' misiones'),
+  ];
+  if (yokup) partes.push(yokup === 1 ? '1 Yokup' : yokup + ' Yokup');
+  if (prs) partes.push(prs === 1 ? '1 PR' : prs + ' PRs');
+  return partes.join(' · ');
 }
 
 const YOKUP_OK = new Set(['resolved', 'done', 'completed', 'closed']);
@@ -280,6 +417,8 @@ function esDuplicado(candidato, aceptadas) {
       const r = refsCruzadas((a.titulo || '') + ' ' + (a.ref || ''));
       if (r.prs.includes('#' + candidato.numero) || (candidato.repo && r.prs.includes(candidato.repo + '#' + candidato.numero))) return true;
     }
+    if ((candidato.fuente === 'latido' || a.fuente === 'latido') && normaTitulo(candidato.titulo) && normaTitulo(candidato.titulo) === normaTitulo(a.titulo)) return true;
+    if (candidato.fuente === 'latido' && a.fuente === 'inbox' && candidato.numero && a.numero && candidato.numero === a.numero) return true;
   }
   return false;
 }
@@ -288,33 +427,40 @@ function esDuplicado(candidato, aceptadas) {
  * Unión sin duplicar. n es null solo si ninguna fuente pudo leerse.
  * Un inbox vacío (ok) cuenta 0, no «—».
  */
-export function unirMisionesHoy({ persona, bot, inbox, yokup, prs, desdeS, hastaS, dia }) {
+export function unirMisionesHoy({ persona, bot, inbox, inboxOtros, yokup, prs, latidos, latidoPayload, desdeS, hastaS, dia, usarSemilla } = {}) {
+  const firmados = misionesInboxFirmadosHoy(inboxOtros === undefined ? inbox : inboxOtros, { persona, bot, desdeS, hastaS });
+  const propios = misionesInboxHoy(inbox, { desdeS, hastaS });
+  const inboxUnido = {
+    ok: propios.ok || firmados.ok,
+    lista: [...(propios.ok ? propios.lista : []), ...(firmados.ok ? firmados.lista : [])],
+  };
+  const lat = latidos != null
+    ? misionesLatidoHoy(latidos, { desdeS, hastaS })
+    : latidosDePayload(latidoPayload, { bot, persona, desdeS, hastaS, dia, usarSemilla });
   const fuentes = {
-    inbox: misionesInboxHoy(inbox, { desdeS, hastaS }),
+    inbox: inboxUnido,
     yokup: misionesYokupHoy(yokup, { persona, bot, desdeS, hastaS }),
     pr: misionesPrHoy(prs, { bot, desdeS, hastaS }),
+    latido: lat,
   };
-  // Filtrar yokup por display_day si el caller no lo hizo.
-  if (fuentes.yokup.ok && dia) {
-    // ya filtrado por timestamp en misionesYokupHoy cuando hay t;
-    // display_day distinto se deja si no hay t — el caller debería pasar solo hoy.
-  }
   const leidas = Object.values(fuentes).filter((f) => f.ok).length;
-  const porFuente = { inbox: 0, yokup: 0, pr: 0 };
-  if (!leidas) return { n: null, ultimo: 0, misiones: [], por_fuente: porFuente, fuentes_ok: fuentes };
+  const porFuente = { inbox: 0, yokup: 0, pr: 0, latido: 0 };
+  if (!leidas) return { n: null, ultimo: 0, misiones: [], por_fuente: porFuente, desglose: desgloseHoy(porFuente), fuentes_ok: fuentes };
 
-  // Orden de dedup: primero PRs e inbox (más atribuibles), luego yokup.
-  const orden = [...fuentes.pr.lista, ...fuentes.inbox.lista, ...fuentes.yokup.lista];
+  // Orden de dedup: PRs e inbox primero (más atribuibles), luego latidos, luego yokup.
+  const orden = [...fuentes.pr.lista, ...fuentes.inbox.lista, ...fuentes.latido.lista, ...fuentes.yokup.lista];
   const aceptadas = [];
   for (const item of orden) {
     if (esDuplicado(item, aceptadas)) continue;
     aceptadas.push(item);
-    porFuente[item.fuente] = (porFuente[item.fuente] || 0) + 1;
+    const bucket = item.fuente === 'firmado' ? 'inbox' : item.fuente;
+    porFuente[bucket] = (porFuente[bucket] || 0) + 1;
   }
   aceptadas.sort((a, b) => b.cuando - a.cuando);
   const ultimo = aceptadas.reduce((m, x) => Math.max(m, x.cuando || 0), 0);
-  return { n: aceptadas.length, ultimo, misiones: aceptadas, por_fuente: porFuente, fuentes_ok: fuentes };
+  return { n: aceptadas.length, ultimo, misiones: aceptadas, por_fuente: porFuente, desglose: desgloseHoy(porFuente), fuentes_ok: fuentes };
 }
+
 
 export function etiquetaHoy(n) {
   if (n == null) return '—';

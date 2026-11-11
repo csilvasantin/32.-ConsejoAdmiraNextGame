@@ -1,13 +1,14 @@
 /**
  * GET /api/consejo/estado — público, solo #, título corto y hora.
- * Junta el latido de los consejeros (mcp.admira.live/consejeros/latido) con
- * los done de la bandeja pública, las misiones Yokup resueltas (por ?agent=)
- * y los PRs fusionados de hoy (00:00 Europe/Madrid). Ranking por mesa de 6,
- * sin «/6». Sin textos privados. Caché corta. No escribe el latido.
- *
+ * Junta el latido de los consejeros (mcp.admira.live/consejeros/latido, con
+ * el diario de misiones únicas de hoy) con los done de la bandeja pública
+ * (propios o firmados por el consejero), las misiones Yokup resueltas (por
+ * ?agent=) y los PRs fusionados de hoy (00:00 Europe/Madrid).
  * GitHub: User-Agent admira-live-consejo + Accept application/vnd.github+json;
  * GITHUB_TOKEN opcional; resultado en KV 8 min. Si el Worker sigue recibiendo
  * 403/404, se usa el snapshot de tools/consejo-prs-hoy.mjs.
+ * Ranking por mesa de 6, sin «/6». Si Yokup cae, no se rompe el recuento.
+ * Sin textos privados. Caché corta. No escribe el latido.
  */
 import { armarMesa, CACHE_SEG, botDe, MESA } from "../../../consejo-globo-lib.mjs";
 import { obtenerPrs, REPOS_PR } from "../../../consejo-prs-lib.mjs";
@@ -33,10 +34,11 @@ export async function construir({ fetchImpl, ahoraMs, env, waitUntil, kv } = {})
   const ahora = ahoraMs || Date.now();
   const personas = [...new Set(Object.values(MESA).flat().map((d) => botDe(d.persona)).filter(Boolean))];
   const errores = {};
-  const [latido, prsInfo, yokupInfo, ...listas] = await Promise.all([
+  const [latido, prsInfo, yokupInfo, bandejaGlobal, ...listas] = await Promise.all([
     leerJson(f, LATIDO).catch((e) => { errores.latido = String(e.message || e); return null; }),
     obtenerPrs({ fetchImpl: f, env, ahoraMs: ahora, waitUntil, kv }),
     leerYokup(f, errores),
+    leerJson(f, BANDEJA + "?limit=200").then((d) => (d && d.items) || []).catch((e) => { errores.bandeja_global = String(e.message || e); return null; }),
     ...personas.map((p) => leerJson(f, BANDEJA + "?persona=" + encodeURIComponent(p))
       .then((d) => (d && d.items) || [])
       .catch((e) => { errores["bandeja_" + p] = String(e.message || e); return null; })),
@@ -46,7 +48,16 @@ export async function construir({ fetchImpl, ahoraMs, env, waitUntil, kv } = {})
   if (prsInfo && prsInfo.errores) Object.assign(errores, prsInfo.errores);
   const prs = prsInfo ? prsInfo.prs : null;
   const yokup = yokupInfo ? yokupInfo.misiones : null;
-  const cuerpo = armarMesa({ latidos, bandejas, prs, yokup, ahoraMs: ahora });
+  const cuerpo = armarMesa({
+    latidos,
+    latidoPayload: latido,
+    bandejas,
+    inboxOtros: bandejaGlobal,
+    prs,
+    yokup,
+    ahoraMs: ahora,
+    usarSemilla: true,
+  });
   cuerpo.fuentes = {
     latido: LATIDO,
     bandeja: BANDEJA,

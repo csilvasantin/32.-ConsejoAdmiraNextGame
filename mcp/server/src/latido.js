@@ -11,6 +11,8 @@
  * sin secretos, en GET /consejeros/latido → admira.live/api/flota/trabajando lo pinta verde al instante.
  */
 export const CLAVE_LATIDO = 'consejero-latido:v1';
+/** Registro diario ligero de misiones únicas (modo trabajando) por consejero. */
+export const CLAVE_LATIDO_HOY = 'consejero-latido-hoy:v1:';
 export const MIN_DEFECTO = 10;
 export const MIN_MAX = 60;
 
@@ -56,6 +58,19 @@ export async function latir(kv, persona, args = {}, ahoraS = Math.floor(Date.now
   const e = entradaLatido(args, todos[persona] || null, ahoraS);
   todos[persona] = e;
   await kv.put(CLAVE_LATIDO, JSON.stringify({ consejeros: todos }));
+  // Solo misiones nombradas de forma explícita (no renovaciones ni actividad vacía).
+  const explicita = texto(args.mision, 160);
+  if (e.modo === 'trabajando' && explicita) {
+    try {
+      await registrarMisionHoy(kv, persona, {
+        mision: explicita,
+        encargo: e.encargo,
+        proyecto: e.proyecto,
+        cuando: ahoraS,
+        origen: e.origen,
+      }, ahoraS);
+    } catch (_) { /* el latido vigente no debe fallar por el diario */ }
+  }
   return { ok: true, persona, ...e, quedaS: e.hasta - ahoraS, ver: 'https://www.admira.live/consumos' };
 }
 
@@ -82,4 +97,83 @@ export async function latidoPorActividad(kv, identidad, que = '') {
     return await latir(kv, identidad.persona, { modo: 'trabajando', mision: '', origen: 'actividad ' + texto(que, 40) }, undefined);
   } catch (_) {}
   return null;
+}
+
+
+/** Día civil en Europe/Madrid (YYYY-MM-DD). */
+export function diaMadrid(ms = Date.now()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+export function claveHoy(dia) {
+  return CLAVE_LATIDO_HOY + String(dia || diaMadrid());
+}
+
+export function normaMision(s) {
+  return String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+export function claveUnicaHoy(item) {
+  if (!item) return '';
+  if (item.encargo) return 'encargo:' + Number(item.encargo);
+  return 'mision:' + normaMision(item.mision);
+}
+
+export async function leerDiarioHoy(kv, dia, ahoraS = Math.floor(Date.now() / 1000)) {
+  const d = dia || diaMadrid((ahoraS || Math.floor(Date.now() / 1000)) * 1000);
+  if (!kv || typeof kv.get !== 'function') return { dia: d, consejeros: {} };
+  try {
+    const raw = await kv.get(claveHoy(d), 'json');
+    if (raw && typeof raw === 'object') {
+      return { dia: d, consejeros: raw.consejeros && typeof raw.consejeros === 'object' ? raw.consejeros : {} };
+    }
+  } catch (_) {}
+  return { dia: d, consejeros: {} };
+}
+
+/**
+ * Añade una misión única al diario de hoy. Renovar la misma no duplica.
+ * Devuelve la lista de esa persona.
+ */
+export async function registrarMisionHoy(kv, persona, item = {}, ahoraS = Math.floor(Date.now() / 1000)) {
+  if (!kv || typeof kv.put !== 'function' || !persona) return [];
+  const d = diaMadrid(ahoraS * 1000);
+  const diario = await leerDiarioHoy(kv, d, ahoraS);
+  const lista = Array.isArray(diario.consejeros[persona]) ? diario.consejeros[persona].slice() : [];
+  const entrada = {
+    mision: texto(item.mision, 160) || null,
+    encargo: item.encargo ? Number(item.encargo) : null,
+    proyecto: texto(item.proyecto, 60) || null,
+    cuando: Number(item.cuando) || ahoraS,
+    origen: texto(item.origen, 60) || 'consejero_latido',
+  };
+  if (!entrada.mision && !entrada.encargo) return lista;
+  const clave = claveUnicaHoy(entrada);
+  if (lista.some((x) => claveUnicaHoy(x) === clave)) return lista;
+  lista.push(entrada);
+  diario.consejeros[persona] = lista;
+  diario.dia = d;
+  diario.actualizado = ahoraS;
+  await kv.put(claveHoy(d), JSON.stringify(diario));
+  return lista;
+}
+
+/** Vista pública: { Lucas: [ { mision, cuando, ... } ], ... } */
+export function misionesHoyPublicas(diario) {
+  const out = {};
+  const src = (diario && diario.consejeros) || {};
+  for (const [p, lista] of Object.entries(src)) {
+    const arr = (Array.isArray(lista) ? lista : []).filter((x) => x && (x.mision || x.encargo));
+    if (arr.length) out[p] = arr.map((x) => ({
+      mision: x.mision || null,
+      encargo: x.encargo || null,
+      proyecto: x.proyecto || null,
+      cuando: Number(x.cuando) || 0,
+      origen: x.origen || null,
+    }));
+  }
+  return out;
 }

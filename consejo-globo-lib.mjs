@@ -1,9 +1,9 @@
 import {
-  RANKING_GRUPOS, grupoDe, enRankingGrupo, unirMisionesHoy, etiquetaHoy,
+  RANKING_GRUPOS, grupoDe, enRankingGrupo, unirMisionesHoy, etiquetaHoy, desgloseHoy,
   PERSONA_A_BOT,
 } from './consejo-misiones-hoy.mjs';
 
-export { RANKING_GRUPOS, grupoDe, enRankingGrupo, unirMisionesHoy, etiquetaHoy };
+export { RANKING_GRUPOS, grupoDe, enRankingGrupo, unirMisionesHoy, etiquetaHoy, desgloseHoy };
 
 /**
  * Estado público de la mesa del Consejo (globo + halo de papeles).
@@ -355,10 +355,10 @@ function itemsDeBandeja(bandejas, bot) {
 }
 
 function hoyVacio() {
-  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null, misiones: [], por_fuente: { inbox: 0, yokup: 0, pr: 0 } };
+  return { n: null, ultimo: 0, puesto: null, total: CONSEJO_RANKING_TOTAL, etiqueta: null, misiones: [], por_fuente: { inbox: 0, yokup: 0, pr: 0, latido: 0 }, desglose: desgloseHoy({ inbox: 0, yokup: 0, pr: 0, latido: 0 }) };
 }
 
-export function asientoPublico(def, { latidos, bandejas, prs, yokup, ahoraS, desdeS }) {
+export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtros, prs, yokup, ahoraS, desdeS, dia, usarSemilla } = {}) {
   const bot = botDe(def.persona);
   const entrada = bot && latidos && latidos[bot] ? latidos[bot] : null;
   const items = itemsDeBandeja(bandejas, bot);
@@ -380,10 +380,14 @@ export function asientoPublico(def, { latidos, bandejas, prs, yokup, ahoraS, des
       persona: def.persona,
       bot,
       inbox: items,
+      inboxOtros: inboxOtros,
       yokup: yokup == null ? null : yokup,
       prs: prs == null ? null : prs,
+      latidoPayload: latidoPayload || (latidos ? { consejeros: latidos } : null),
       desdeS: inicio,
       hastaS: ahoraS,
+      dia,
+      usarSemilla,
     });
     s.hoy = {
       n: u.n,
@@ -393,6 +397,7 @@ export function asientoPublico(def, { latidos, bandejas, prs, yokup, ahoraS, des
       etiqueta: null,
       misiones: u.misiones,
       por_fuente: u.por_fuente,
+      desglose: u.desglose,
     };
   }
   s.texto = textoGlobo(s, ahoraS * 1000);
@@ -414,18 +419,22 @@ function aplicarRanking(mesa) {
   }
 }
 
-export function armarMesa({ latidos, bandejas, prs, yokup, ahoraMs }) {
+export function armarMesa({ latidos, latidoPayload, bandejas, inboxOtros, prs, yokup, ahoraMs, usarSemilla } = {}) {
   const ahoraS = Math.floor((ahoraMs || Date.now()) / 1000);
   const desdeS = inicioDiaMadridS(ahoraMs || ahoraS * 1000);
   const mesa = {};
   for (const [gen, defs] of Object.entries(MESA)) {
     mesa[gen] = defs.map((d) => asientoPublico(d, {
-      latidos: latidos || {},
+      latidos: latidos || (latidoPayload && latidoPayload.consejeros) || {},
+      latidoPayload: latidoPayload || (latidos ? { consejeros: latidos } : null),
       bandejas: bandejas || {},
+      inboxOtros,
       prs: prs == null ? null : prs,
       yokup: yokup,
       ahoraS,
       desdeS,
+      dia: diaMadrid(ahoraMs || ahoraS * 1000),
+      usarSemilla,
     }));
   }
   aplicarRanking(mesa);
@@ -441,7 +450,7 @@ export function armarMesa({ latidos, bandejas, prs, yokup, ahoraMs }) {
         leyendas: RANKING_GRUPOS.leyendas.slice(),
         coetaneos: RANKING_GRUPOS.coetaneos.slice(),
       },
-      fuente: 'inbox done + misiones Yokup resolved + PRs fusionados (rama woz/* = Wozniak; atribución expresa t1212u para anw #396 y #398), desde 00:00 Europe/Madrid, sin duplicar',
+      fuente: 'inbox done (propios o firmados) + latidos trabajando únicos + misiones Yokup resolved + PRs fusionados (rama woz/* = Wozniak; atribución expresa t1212u para anw #396 y #398), desde 00:00 Europe/Madrid, sin duplicar',
     },
   };
 }

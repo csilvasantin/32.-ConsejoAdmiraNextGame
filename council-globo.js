@@ -277,8 +277,18 @@
       escena() && escena().appendChild(globo);
     }
     const s = sillaDe(persona);
-    const estado = (s && s.estado) || (datos ? 'desconocido' : 'desconocido');
-    const texto = s ? s.texto : (enVuelo ? 'mirando…' : 'desconocido');
+    let estado, texto;
+    if (s) {
+      estado = s.estado || 'desconocido';
+      texto = s.texto;
+    } else if (key(persona) === 'carlossilva') {
+      /* La figura Y-3 no tiene silla en /api/consejo/estado; siempre está disponible. */
+      estado = 'libre';
+      texto = 'Siempre disponible';
+    } else {
+      estado = 'desconocido';
+      texto = enVuelo ? 'mirando…' : 'desconocido';
+    }
     globo.hidden = false;
     globo.dataset.estado = estado;
     globo.dataset.persona = persona;

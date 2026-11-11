@@ -232,12 +232,12 @@
 .estado-pill.working{color:${COLORES.working}}.estado-pill.ack{color:${COLORES.ack}}.estado-pill.blocked{color:${COLORES.blocked}}.estado-pill.idle{color:${COLORES.idle}}.estado-pill.nodata{color:${COLORES.nodata}}
 #body-hotspots .body-hotspot[data-estado-color=working]{--estado-c:${COLORES.working}}#body-hotspots .body-hotspot[data-estado-color=ack]{--estado-c:${COLORES.ack}}#body-hotspots .body-hotspot[data-estado-color=blocked]{--estado-c:${COLORES.blocked}}#body-hotspots .body-hotspot[data-estado-color=idle]{--estado-c:${COLORES.idle}}#body-hotspots .body-hotspot[data-estado-color=nodata]{--estado-c:${COLORES.nodata}}
 #body-hotspots .body-hotspot[data-role=CEO],#body-hotspots .body-hotspot[data-role=CTO],#body-hotspots .body-hotspot[data-role=COO],#body-hotspots .body-hotspot[data-role=CFO]{--silla-c:#e74c3c}#body-hotspots .body-hotspot[data-role=CCO],#body-hotspots .body-hotspot[data-role=CDO],#body-hotspots .body-hotspot[data-role=CXO],#body-hotspots .body-hotspot[data-role=CSO]{--silla-c:#3498db}
-#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected,#body-hotspots path.body-hotspot[data-estado-color].selected:hover,#body-hotspots path.body-hotspot.silla-brillo{fill:transparent;stroke:color-mix(in srgb,var(--silla-c,#c9a27a) 42%,transparent);stroke-width:1.5;filter:drop-shadow(0 0 3px var(--silla-c,#c9a27a)) drop-shadow(0 0 12px color-mix(in srgb,var(--silla-c,#c9a27a) 62%,transparent))}
-#body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:transparent;outline:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--silla-c,#c9a27a) 35%,transparent),0 0 14px var(--silla-c,#c9a27a)}
-@keyframes estado-parpadeo{0%,100%{fill:transparent;stroke:transparent;filter:none}45%,60%{fill:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 10px var(--estado-c,#fff))}}
-@keyframes estado-parpadeo-caja{0%,100%{background:transparent;outline:2px solid transparent;box-shadow:none}45%,60%{background:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);outline:2px solid var(--estado-c,#fff);box-shadow:0 0 12px var(--estado-c,#fff)}}
-@keyframes estado-destello{0%,100%{fill:transparent;stroke:transparent;filter:none}30%{fill:color-mix(in srgb,var(--estado-c,#fff) 24%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 5px var(--estado-c,#fff))}}
-@keyframes estado-destello-caja{0%,100%{background:transparent;outline:2px solid transparent;box-shadow:none}30%{background:color-mix(in srgb,var(--estado-c,#fff) 24%,transparent);outline:2px solid var(--estado-c,#fff);box-shadow:0 0 6px var(--estado-c,#fff)}}
+#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected,#body-hotspots path.body-hotspot[data-estado-color].selected:hover,#body-hotspots path.body-hotspot.silla-brillo{fill:transparent;stroke:transparent;filter:none}
+#body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:transparent;outline:none;box-shadow:none}
+@keyframes estado-parpadeo{0%,100%,45%,60%{fill:transparent;stroke:transparent;filter:none}}
+@keyframes estado-parpadeo-caja{0%,100%,45%,60%{background:transparent;outline:none;box-shadow:none}}
+@keyframes estado-destello{0%,100%,30%{fill:transparent;stroke:transparent;filter:none}}
+@keyframes estado-destello-caja{0%,100%,30%{background:transparent;outline:none;box-shadow:none}}
 #body-hotspots path.body-hotspot.estado-parpadeo{animation:estado-parpadeo 1s ease-in-out 3}
 #body-hotspots div.body-hotspot.estado-parpadeo{animation:estado-parpadeo-caja 1s ease-in-out 3}
 @media (prefers-reduced-motion:reduce){#body-hotspots path.body-hotspot.estado-parpadeo{animation:estado-destello 1.6s ease-out 1}#body-hotspots div.body-hotspot.estado-parpadeo{animation:estado-destello-caja 1.6s ease-out 1}}
@@ -515,8 +515,8 @@
       c._estadoWired = true;
       c.addEventListener('mouseover', e => {
         pintarContornos(doc);
-        // #5109 (Carlos, 04-10-2026): el hover ya NO abre la ficha; solo queda
-        // el recorte con contorno/brillo. La ficha sigue disponible por otras vías.
+        // #5109 (Carlos, 04-10-2026): el hover ya no abre la ficha.
+        // 11-11-2026: el recorte es máscara invisible; el cartel lo pinta council-globo.
       });
       c.addEventListener('mouseout', e => {
         const el = e.target.closest('[data-persona]');

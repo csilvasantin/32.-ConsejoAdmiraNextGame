@@ -10,7 +10,7 @@ test("consejeros: el suyo > latido > Musk por defecto > Training", () => {
   assert.deepEqual(Object.keys(FOCO_DEFECTO), ["Musk"]);
   const m = focoDe({ agente: "Musk", consejero: true, via: "Merovingio", proyecto: "admira.tv" }, null, A);
   assert.deepEqual([m.proyecto, m.deepagent, m.defecto], ["admira.live", "Morfeo", true], "vía Merovingio: el proyecto de Merovingio no es el de Musk");
-  for (const n of ["Huang", "Jobs", "Wozniak", "Lucas", "Shotwell"]) {
+  for (const n of ["Huang", "Jobs", "Wozniak", "Lucas", "Murati"]) {
     const f = focoDe({ agente: n, consejero: true }, null, A);
     assert.equal(f.proyecto, TRAINING, n); assert.equal(f.defecto, false); assert.equal(f.deepagent, null);
   }

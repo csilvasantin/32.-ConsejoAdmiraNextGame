@@ -15,7 +15,7 @@ export const GENERACIONES = ['leyendas', 'coetaneos'];
 export const CONSEJEROS = [
   { rol: 'CEO', cargo: 'Chief Executive Officer', lado: 'racional', leyendas: 'Steve Jobs', coetaneos: 'Elon Musk' },
   { rol: 'CTO', cargo: 'Chief Technology Officer', lado: 'racional', leyendas: 'Steve Wozniak', coetaneos: 'Jensen Huang' },
-  { rol: 'COO', cargo: 'Chief Operations Officer', lado: 'racional', leyendas: 'Tim Cook', coetaneos: 'Gwynne Shotwell' },
+  { rol: 'COO', cargo: 'Chief Operations Officer', lado: 'racional', leyendas: 'Tim Cook', coetaneos: 'Mira Murati' },
   { rol: 'CFO', cargo: 'Chief Financial Officer', lado: 'racional', leyendas: 'Warren Buffett', coetaneos: 'Ruth Porat' },
   { rol: 'CCO', cargo: 'Chief Creative Officer', lado: 'creativo', leyendas: 'Walt Disney', coetaneos: 'John Lasseter' },
   { rol: 'CDO', cargo: 'Chief Design Officer', lado: 'creativo', leyendas: 'Dieter Rams', coetaneos: 'Jony Ive' },

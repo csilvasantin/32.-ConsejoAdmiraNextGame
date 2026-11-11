@@ -27,7 +27,7 @@
     "George Lucas":    ["george lucas", "lucas", "yorch lucas", "jorge lucas", "george"],
     "Elon Musk":       ["elon musk", "elon", "ilon", "elon mask", "musk", "mask", "ilon mask", "elon mus", "helon", "eelon", "elo musk"],
     "Jensen Huang":    ["jensen huang", "jensen", "huang", "yensen", "jenson", "juang", "wang", "jensen juan"],
-    "Gwynne Shotwell": ["gwynne shotwell", "shotwell", "gwynne", "gwen", "guin", "guyn", "shotgüel", "shotuel", "gwen shotwell"],
+    "Mira Murati": ["mira murati", "murati", "mira", "muratti", "mira muratti", "miramurati", "shotwell", "gwynne", "gwynne shotwell"],
     "Ruth Porat":      ["ruth porat", "porat", "ruth", "rut porat", "rut"],
     "John Lasseter":   ["john lasseter", "lasseter", "laseter", "lasetter", "yon lasseter", "jon lasseter", "john"],
     "Jony Ive":        ["jony ive", "jony", "johnny ive", "yoni ive", "jony aiv", "ive", "aiv", "yony"],

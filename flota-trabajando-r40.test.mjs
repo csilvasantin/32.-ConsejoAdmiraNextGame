@@ -244,9 +244,10 @@ import vm from "node:vm";
 
 test("r43 · consejeros = los 16 del Consejo (mcp/server/src/consejo.js) por apellido; los agentes no", () => {
   assert.equal(APELLIDOS_CONSEJO.length, CONSEJO_MCP.length * 2);
-  for (const n of ["Jobs", "Disney", "Wozniak", "Lucas", "Huang", "Musk", "Shotwell", "Porat", "Lasseter", "Ive", "Ratti", "Reynolds", "Gwynne Shotwell", "Steve Jobs"]) assert.equal(esConsejero(n), true, n);
+  for (const n of ["Jobs", "Disney", "Wozniak", "Lucas", "Huang", "Musk", "Murati", "Shotwell", "Porat", "Lasseter", "Ive", "Ratti", "Reynolds", "Mira Murati", "Steve Jobs"]) assert.equal(esConsejero(n), true, n);
   for (const n of ["Morfeo", "Neo", "Trinity", "Oráculo", "Smith", "Merovingio", "Niobe", "Cypher", "Elon / Merovingio", "Grok Bot (Consejo)", "Mouse", "Link"]) assert.equal(esConsejero(n), false, n);
-  assert.equal(canonico("Gwynne Shotwell"), "Shotwell");
+  assert.equal(canonico("Mira Murati"), "Murati");
+  assert.equal(canonico("Shotwell"), "Murati");
   assert.equal(canonico("Jony Ive"), "Ive");
 });
 

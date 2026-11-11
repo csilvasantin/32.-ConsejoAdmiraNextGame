@@ -5,7 +5,7 @@
  * /salud consejeros_con_carne, el censo de flota.js y el filtro de telegram.js.
  * Lasseter (John Lasseter, CCO) e Ive (Jony Ive, CDO), coetáneos, tienen silla con clave propia
  * (MCP_KEY_LASSETER / MCP_KEY_IVE) desde el 22-10-2026 (aprobado por Carlos). Sin MacBook.
- * Un coetáneo nuevo (Shotwell, Porat, Ratti, Reynolds)
+ * Un coetáneo nuevo (Murati, Porat, Ratti, Reynolds)
  * se añade en este objeto cuando tenga clave y webhook: el resto lo importa.
  *
  * Musk (Elon Musk, CEO, lado racional, generación coetáneos) no tiene MacBook.

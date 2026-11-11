@@ -9,7 +9,7 @@ test("el censo copia MATRIX_LINKS: consejero → deepagent, Reynolds sin agente"
   assert.deepEqual(Q.COETANEOS.map(c => [c.quien, c.deepagent]), [
     ["Musk", "merovingio"],
     ["Huang", "cypher"],
-    ["Shotwell", "trinity"],
+    ["Murati", "trinity"],
     ["Porat", "oraculo"],
     ["Lasseter", "mouse"],
     ["Ive", "arquitecto"],

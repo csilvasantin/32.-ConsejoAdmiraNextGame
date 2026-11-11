@@ -1,7 +1,7 @@
 'use strict';
 
 // Chat de coetáneos → encargo MCP de admira.live (Elon Musk → Merovingio,
-// Jensen Huang → Cypher, Gwynne Shotwell → Trinity). No cambia el usuario de GrokBot.
+// Jensen Huang → Cypher, Mira Murati → Trinity). No cambia el usuario de GrokBot.
 //
 // Marca común de los encargos de chat (acordada con Jensen, 01-10-2026):
 //   [chat-coetaneos] <remitente> → <consejero>
@@ -35,9 +35,9 @@ const MCP_URL = 'https://mcp.admira.live/mcp';
 const TARGETS = Object.freeze({
   Musk: Object.freeze({ persona: 'Merovingio', maquina: 'MacMini', etiqueta: 'Merovingio · MacMini' }),
   Huang: Object.freeze({ persona: 'Cypher', maquina: 'GrokBotBox', etiqueta: 'Cypher · GrokBotBox' }),
-  Shotwell: Object.freeze({ persona: 'Trinity', maquina: 'GrokBotBox', etiqueta: 'Trinity · GrokBotBox' }),
+  Murati: Object.freeze({ persona: 'Trinity', maquina: 'GrokBotBox', etiqueta: 'Trinity · GrokBotBox' }),
 });
-const ROL = Object.freeze({ Musk: 'CEO', Huang: 'CTO', Shotwell: 'COO' });
+const ROL = Object.freeze({ Musk: 'CEO', Huang: 'CTO', Murati: 'COO' });
 const MARCA = '[chat-coetaneos]';
 const MAX_TEXTO = 3900;            // el bot-inbox acepta 4000
 const MAX_CONTEXTO = 1600;
@@ -353,7 +353,7 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
 }
 
 // Enruta por persona:
-//  · Musk/Huang/Shotwell → encargo MCP (Merovingio en el Mac Mini; Cypher/Trinity en GrokBotBox)
+//  · Musk/Huang/Murati → encargo MCP (Merovingio en el Mac Mini; Cypher/Trinity en GrokBotBox)
 //  · Jobs/Wozniak/Disney/Lucas → bot-inbox con marca [chat-coetaneos] (sin Ágora ni Telegram)
 //  · el resto → proveedor base (escritorio AX). Sin deepagent no se inventa silla.
 const LEYENDAS_INBOX = Object.freeze(new Set(['Jobs', 'Wozniak', 'Disney', 'Lucas']));

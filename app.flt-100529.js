@@ -155,12 +155,12 @@
         // ── Racional ── Coetáneos ── (sillas rojas, izquierda)
         { name: "CEO", role: "Chief Executive Officer",   persona: "Elon Musk",       side: "racional", gen: "coetaneos", icon: "🏛️", machineId: "admira-macbookair16",      machine: "MacBook Air 16",       member: "Carlos",         pair: "CSO", pairPersona: "Ryan Reynolds",    territory: "Innovacion radical y vision de futuro" },
         { name: "CTO", role: "Chief Technology Officer",  persona: "Jensen Huang",    side: "racional", gen: "coetaneos", icon: "⚙️", machineId: "admira-macbookpronegro14", machine: "MacBook Pro Negro 14", member: "Carlos Silva",   pair: "CCO", pairPersona: "John Lasseter",    territory: "IA, GPUs y plataformas de computo" },
-        { name: "COO", role: "Chief Operations Officer",  persona: "Gwynne Shotwell", side: "racional", gen: "coetaneos", icon: "📋", machineId: "admira-macbookairplata",   machine: "MacBook Air Plata",    member: "Nines",          pair: "CXO", pairPersona: "Carlos Ratti",     territory: "Ejecucion a escala y logistica" },
+        { name: "COO", role: "Chief Operations Officer",  persona: "Mira Murati", side: "racional", gen: "coetaneos", icon: "📋", machineId: "admira-macbookairplata",   machine: "MacBook Air Plata",    member: "Nines",          pair: "CXO", pairPersona: "Carlos Ratti",     territory: "Ejecucion a escala y logistica" },
         { name: "CFO", role: "Chief Financial Officer",   persona: "Ruth Porat",      side: "racional", gen: "coetaneos", icon: "💰", machineId: "admira-macmini",           machine: "Mac Mini",             member: "Braulio Blanco", pair: "CDO", pairPersona: "Jony Ive",          territory: "Gestion financiera y crecimiento sostenible" },
         // ── Creativo ── Coetáneos ── (sillas azules, derecha)
         { name: "CCO", role: "Chief Creative Officer",    persona: "John Lasseter",   side: "creativo", gen: "coetaneos", icon: "💡", machineId: "admira-macbookairluna",   machine: "MacBook Air Luna",   member: "Cesar",          pair: "CTO", pairPersona: "Jensen Huang",     territory: "Animacion, storytelling y creatividad" },
         { name: "CDO", role: "Chief Design Officer",      persona: "Jony Ive",        side: "creativo", gen: "coetaneos", icon: "🎨", machineId: "admira-macbookairazul",    machine: "MacBook Air Azul",     member: "Consejero",      pair: "CFO", pairPersona: "Ruth Porat",        territory: "Diseno industrial y simplicidad" },
-        { name: "CXO", role: "Chief Experience Officer",  persona: "Carlos Ratti",    side: "creativo", gen: "coetaneos", icon: "🧭", machineId: "admira-pctwin",            machine: "AdmiraTwin (PC)",      member: "Laboratorio",    pair: "COO", pairPersona: "Gwynne Shotwell",  territory: "Ciudades inteligentes y experiencia urbana" },
+        { name: "CXO", role: "Chief Experience Officer",  persona: "Carlos Ratti",    side: "creativo", gen: "coetaneos", icon: "🧭", machineId: "admira-pctwin",            machine: "AdmiraTwin (PC)",      member: "Laboratorio",    pair: "COO", pairPersona: "Mira Murati",  territory: "Ciudades inteligentes y experiencia urbana" },
         { name: "CSO", role: "Chief Storytelling Officer", persona: "Ryan Reynolds",   side: "creativo", gen: "coetaneos", icon: "📖", machineId: "admira-macbookaircrema",   machine: "MacBook Air Crema",    member: "Carla Rosa",     pair: "CEO", pairPersona: "Elon Musk",         territory: "Marketing viral y narrativa de marca" },
     ];
 
@@ -176,7 +176,7 @@
         "George Lucas":    "Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?",
         "Elon Musk":       "Pensemos desde los primeros principios. ¿Qué límite rompemos?",
         "Jensen Huang":    "Cuanto más cómputo, más adelante vamos. ¿Qué escalamos?",
-        "Gwynne Shotwell": "Ejecutar a escala es un arte. Dame el plan y lo hago volar.",
+        "Mira Murati": "La inteligencia se construye con rigor. ¿Qué vamos a entrenar y hasta dónde?",
         "Ruth Porat":      "Crecer con cabeza. ¿Qué números sostienen esta idea?",
         "John Lasseter":   "El arte humaniza la tecnología. ¿Qué vamos a emocionar?",
         "Jony Ive":        "El cuidado se nota en lo que no se ve. ¿Qué hacemos inevitable?",
@@ -196,7 +196,7 @@
         coetaneos: {
             "Elon Musk":       { alias: "Merovingio", channel: "Merovingio" },
             "Jensen Huang":    { alias: "Cypher",     channel: "Cypher" },
-            "Gwynne Shotwell": { alias: "Trinity",    channel: "Trinity" },
+            "Mira Murati": { alias: "Trinity",    channel: "Trinity" },
             "Ruth Porat":      { alias: "Oráculo",    channel: "Oraculo" },
             "John Lasseter":   { alias: "Mouse",      channel: "Mouse" },
             "Jony Ive":        { alias: "Arquitecto", channel: "Arquitecto" },
@@ -237,7 +237,7 @@
             // Racional (left/red) — same physical seats, different personas
             { role: "CEO", persona: "Elon Musk",       x: 11, y: 44, machineId: "admira-macbookair16",      body: { left: 3,  top: 46, width: 18, height: 42 } },
             { role: "CTO", persona: "Jensen Huang",    x: 22, y: 44, machineId: "admira-macbookpronegro14", body: { left: 16, top: 46, width: 17, height: 40 } },
-            { role: "COO", persona: "Gwynne Shotwell", x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
+            { role: "COO", persona: "Mira Murati", x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
             // Creativo (right/blue)
             { role: "CCO", persona: "John Lasseter",   x: 78, y: 28, machineId: "admira-macbookairluna",  body: { left: 70, top: 33, width: 16, height: 41 } },
             { role: "CDO", persona: "Jony Ive",        x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
@@ -259,7 +259,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20261111-7520";
+    const COUNCIL_IMAGE_VERSION = "20261111-flechas";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",
@@ -6619,7 +6619,7 @@
   // Personas Matrix ligadas a los coetáneos del Consejo (espejo de MATRIX_LINKS).
   var COETANEOS = [
     {name:"Elon Musk",persona:"Merovingio"},{name:"Jensen Huang",persona:"Cypher"},
-    {name:"Gwynne Shotwell",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
+    {name:"Mira Murati",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
     {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
     {name:"Carlos Ratti",persona:"Link"}
   ];

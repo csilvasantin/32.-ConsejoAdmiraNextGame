@@ -37,15 +37,16 @@ export const CONSEJEROS_GROK = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "H
 /**
  * r43 (Carlos, 12:59): la franja separa AGENTES de CONSEJEROS. Fuente de verdad del Consejo: los 16 de
  * mcp/server/src/consejo.js (leyendas y coetáneos: Jobs, Wozniak, Cook, Buffett, Disney, Rams, Schultz, Lucas, Musk,
- * Huang, Shotwell, Porat, Lasseter, Ive, Ratti, Reynolds), por apellido. Merovingio, Cypher, Trinity… son agentes aunque
+ * Huang, Murati, Porat, Lasseter, Ive, Ratti, Reynolds), por apellido. Merovingio, Cypher, Trinity… son agentes aunque
  * un consejero dependa de ellos.
  */
 export const APELLIDOS_CONSEJO = [...new Set(CONSEJO.flatMap((c) => GENERACIONES.map((g) => String(c[g] || "").trim().split(/\s+/).pop())).filter(Boolean))];
 const CLAVES_CONSEJO = new Set([...APELLIDOS_CONSEJO, ...CONSEJEROS_GROK].map((n) => String(n).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()));
-/** ¿Es un consejero (leyenda o coetáneo)? Acepta «Jobs», «Steve Jobs», «Gwynne Shotwell», «Ive»… */
+/** ¿Es un consejero (leyenda o coetáneo)? Acepta «Jobs», «Steve Jobs», «Mira Murati», «Ive»… */
 export function esConsejero(nombre) {
   const k = String(nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   if (!k || /merovingio/.test(k)) return false;
+  if (/^(gwynne|shotwell)( shotwell)?$/.test(k) || k === "gwynneshotwell") return true;
   return CLAVES_CONSEJO.has(k) || CLAVES_CONSEJO.has(k.split(/\s+/).pop());
 }
 /** Grupo de una tarjeta: «consejeros» | «agentes». */
@@ -281,7 +282,8 @@ export function canonico(persona) {
   }
   if (/^(walt|walt disney)$/.test(base)) return "Disney";
   if (/^jensen/.test(base)) return "Huang";
-  // r43: «Gwynne Shotwell», «Jony Ive»… → apellido del Consejo (mcp/server/src/consejo.js).
+  if (/^(gwynne|shotwell|gwynne shotwell)$/.test(base)) return "Murati";
+  // r43: «Mira Murati», «Jony Ive»… → apellido del Consejo (mcp/server/src/consejo.js).
   const ap = base.split(/\s+/).pop();
   const c = APELLIDOS_CONSEJO.find((x) => sinTilde(x) === ap);
   if (c && base.includes(" ")) return c;

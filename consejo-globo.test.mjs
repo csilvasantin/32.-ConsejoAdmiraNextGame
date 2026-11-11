@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   clasificar, textoGlobo, latidoVigente, tituloCorto, horaMadrid,
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
-  CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES,
+  CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
 } from './consejo-globo-lib.mjs';
 
 const AHORA = Date.UTC(2026, 10, 11, 16, 50, 0); // 17:50 Madrid (UTC+1)
@@ -65,7 +65,7 @@ test('consejero con bot y sin latido es libre, nunca desconocido', () => {
 
 test('asiento sin bot → desconocido / amarillo', () => {
   assert.equal(tieneBot('Tim Cook'), false);
-  assert.equal(tieneBot('Gwynne Shotwell'), false);
+  assert.equal(tieneBot('Mira Murati'), false);
   assert.equal(clasificar({ persona: 'Tim Cook', entrada: null, ahoraS: S }), 'desconocido');
   const s = asientoPublico({ persona: 'Tim Cook', rol: 'COO' }, { latidos: {}, bandejas: {}, ahoraS: S });
   assert.equal(s.estado, 'desconocido');
@@ -121,7 +121,7 @@ test('armarMesa cubre las dos generaciones y todos los papeles tienen posición'
     for (const s of MESA[gen]) {
       const p = PAPEL_POS[gen][s.persona];
       assert.ok(p, 'falta posición de ' + s.persona);
-      assert.ok(['papel', 'placa', 'cuerpo', 'ninguno'].includes(p.sobre), 'sobre inválido de ' + s.persona);
+      assert.ok(['papel', 'placa', 'ninguno'].includes(p.sobre), 'sobre inválido de ' + s.persona);
       if (p.sobre !== 'ninguno') {
         assert.ok(p.w > 0 && p.h > 0, 'caja vacía de ' + s.persona);
         assert.ok(Array.isArray(p.puntos) && p.puntos.length >= 4, 'polígono corto de ' + s.persona);
@@ -136,31 +136,68 @@ test('armarMesa cubre las dos generaciones y todos los papeles tienen posición'
   assert.equal(COLORES.desconocido, '#ffd60a');
 });
 
-test('halos: folio o placa con polígono real; nada en el asiento de Disney', () => {
+test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta', () => {
   const L = PAPEL_POS.leyendas;
+  assert.equal(L['Steve Jobs'].sobre, 'papel');
   assert.equal(L['Steve Wozniak'].sobre, 'papel');
-  assert.equal(L['Tim Cook'].sobre, 'papel');
+  assert.equal(L['Tim Cook'].sobre, 'ninguno');
   assert.equal(L['Dieter Rams'].sobre, 'papel');
   assert.equal(L['Howard Schultz'].sobre, 'papel');
   assert.equal(L['George Lucas'].sobre, 'papel');
-  assert.equal(L['Steve Jobs'].sobre, 'cuerpo');
   assert.equal(L['Warren Buffett'].sobre, 'papel');
   assert.equal(L['Walt Disney'].sobre, 'ninguno');
-  // El fallo de r134/r136: óvalo genérico (o halo en madera vacía / en Y).
-  // Disney (Y en ese asiento) no lleva halo. Buffett ilumina sus folios, no el cuerpo de Y.
+  for (const gen of Object.keys(PAPEL_POS)) {
+    for (const [nombre, p] of Object.entries(PAPEL_POS[gen])) {
+      assert.ok(['papel', 'placa', 'ninguno'].includes(p.sobre), 'sobre inválido de ' + nombre);
+      assert.ok(!('estado' in p), 'el estado no debe vivir en PAPEL_POS (' + nombre + ')');
+    }
+  }
+  // Asignación r137 era incorrecta: el fajo del frente izquierdo está junto al
+  // codo de Jobs; el folio con clip lo toca Woz. Cook no está en la foto.
   const jobs = L['Steve Jobs'];
-  assert.ok(jobs.x < 16, 'Jobs no debe usurpar los folios de Woz');
+  assert.ok(jobs.y > 68 && jobs.x > 18 && jobs.x < 28, 'Jobs ilumina el fajo del frente, no su silueta');
+  assert.ok(jobs.flecha && jobs.flecha.y < 42 && jobs.flecha.x < 14, 'flecha de Jobs sobre su cabeza');
+  const woz = L['Steve Wozniak'];
+  assert.ok(woz.y < 65 && woz.w < 10, 'Woz ilumina el folio de sus manos, no el fajo del frente');
+  assert.ok(woz.flecha && woz.flecha.y < 34 && woz.flecha.x > 18 && woz.flecha.x < 25, 'flecha de Woz sobre su cabeza');
   const cook = L['Tim Cook'];
-  assert.ok(cook.w < 10 && cook.h < 8, 'Cook ya no cubre tres pilas y madera vacía');
+  assert.equal(cook.flecha, null, 'Cook no está en la foto: sin flecha');
+  assert.equal(cook.puntos.length, 0);
   const buffett = L['Warren Buffett'];
   assert.ok(buffett.x < 45 && buffett.y > 48, 'Buffett en sus folios, no en el cuerpo de Y');
+  assert.ok(L['Walt Disney'].flecha && L['Walt Disney'].flecha.x > 47 && L['Walt Disney'].flecha.x < 53, 'flecha sobre Y (asiento de Disney)');
   const C = PAPEL_POS.coetaneos;
   assert.equal(Object.keys(C).length, 6);
   assert.ok(!C['Ruth Porat'] && !C['Carlos Ratti'], 'Porat y Ratti ya no tienen asiento (#7520)');
-  for (const k of ['Elon Musk', 'Jensen Huang', 'Gwynne Shotwell', 'Jony Ive', 'John Lasseter', 'Ryan Reynolds']) {
+  assert.ok(!C['Gwynne Shotwell'], 'Shotwell sale; entra Murati');
+  for (const k of ['Elon Musk', 'Jensen Huang', 'Mira Murati', 'Jony Ive', 'John Lasseter', 'Ryan Reynolds']) {
     assert.equal(C[k].sobre, 'placa', k);
     assert.ok(C[k].puntos.length >= 4, k);
+    assert.ok(C[k].flecha && Number.isFinite(C[k].flecha.x), 'flecha de ' + k);
   }
   // Lasseter está en la silla que era de Ratti; su placa no es la antigua (~56, 60).
   assert.ok(C['John Lasseter'].y > 74 && C['John Lasseter'].x > 68);
+  assert.ok(C['Mira Murati'].y < 75 && C['Mira Murati'].x < 40, 'Murati hereda la placa que era de Shotwell, delante de esa figura');
+  assert.ok(C['Jensen Huang'].y > 76, 'la placa de Huang sigue delante de Huang, no en el asiento de atrás');
+});
+
+test('flecha y papeles de un consejero leen el mismo mapa de estado', () => {
+  const d = armarMesa({
+    latidos: {
+      Wozniak: { modo: 'trabajando', mision: 'flechas', encargo: 1, at: S - 10, hasta: S + 100 },
+      Lucas: { modo: 'trabajando', mision: 'flechas', encargo: 2, at: S - 10, hasta: S + 100 },
+      Jobs: { modo: 'reposo', at: S - 10 },
+    },
+    bandejas: {},
+    ahoraMs: AHORA,
+  });
+  const mapa = mapaEstados(d.mesa);
+  assert.equal(estadoDe('Steve Wozniak', mapa), 'trabajando');
+  assert.equal(estadoDe('George Lucas', mapa), 'trabajando');
+  assert.equal(estadoDe('Steve Jobs', mapa), 'libre');
+  assert.equal(estadoDe('Mira Murati', mapa), 'desconocido');
+  assert.equal(estadoDe('Steve Wozniak', mapa), estadoDe('steve wozniak', mapa));
+  // Misma instantánea: el folio de Woz y su flecha no pueden divergir.
+  assert.equal(estadoDe('Steve Wozniak', mapa), d.mesa.leyendas.find((s) => s.persona === 'Steve Wozniak').estado);
+  assert.equal(clavePersona('Mira Murati'), 'miramurati');
 });

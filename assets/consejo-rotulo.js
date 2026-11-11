@@ -18,7 +18,7 @@
     "George Lucas": "Chief Storytelling Officer",
     "Elon Musk": "Chief Executive Officer",
     "Jensen Huang": "Chief Technology Officer",
-    "Gwynne Shotwell": "Chief Operations Officer",
+    "Mira Murati": "Chief Operations Officer",
     "Ruth Porat": "Chief Financial Officer",
     "John Lasseter": "Chief Creative Officer",
     "Jony Ive": "Chief Design Officer",

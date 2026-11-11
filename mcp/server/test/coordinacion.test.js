@@ -25,7 +25,7 @@ const PRESENCIA = [
 ];
 const SALUD_VIEJA = { ok: true, bots: [
   { id: 'Smith', label: 'Smith · CEO', persona: 'Elon Musk', role: 'CEO', online: true, host: 'MacBook-Pro-16.local', lastSeen: AHORA - 1000, presenceSource: 'heartbeat', lastTask: { id: 'task-086', title: 'SmithMacMini · hub', status: 'done', at: '2026-09-20T07:54:14.601Z' } },
-  { id: 'Trinity', label: 'Trinity · COO', persona: 'Gwynne Shotwell', role: 'COO', online: false, lastSeen: null, lastTask: null },
+  { id: 'Trinity', label: 'Trinity · COO', persona: 'Mira Murati', role: 'COO', online: false, lastSeen: null, lastTask: null },
   { id: 'Smith', label: 'Smith · Soporte', persona: 'Agent Smith', role: 'Soporte', online: true, host: 'MacBook-Pro-16.local', lastSeen: AHORA - 1000, presenceSource: 'heartbeat', lastTask: null },
 ] };
 

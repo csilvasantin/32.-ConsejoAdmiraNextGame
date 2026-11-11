@@ -28,8 +28,9 @@ test('verified council aliases are the GrokBot seats; no arbitrary target or rol
   assert.equal(canonicalPersona('Elon Musk'),'Musk');
   assert.equal(canonicalPersona('Jensen Huang'),'Huang');
   assert.equal(canonicalPersona('Huang'),'Huang');
-  assert.equal(canonicalPersona('Gwynne Shotwell'),'Shotwell');
-  assert.equal(canonicalPersona('Shotwell'),'Shotwell');
+  assert.equal(canonicalPersona('Mira Murati'),'Murati');
+  assert.equal(canonicalPersona('Murati'),'Murati');
+  assert.equal(canonicalPersona('Shotwell'),'Murati');
   assert.equal(canonicalPersona('CEO'),null);
   assert.equal(canonicalPersona('JobsMacMini'),null);
 });

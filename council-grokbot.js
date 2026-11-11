@@ -27,7 +27,7 @@
     'Walt Disney': 'Disney', 'George Lucas': 'Lucas',
     'Elon Musk': 'Musk',
     'Jensen Huang': 'Huang',
-    'Gwynne Shotwell': 'Shotwell'
+    'Mira Murati': 'Murati'
   });
   const FULL = Object.fromEntries(Object.entries(PEOPLE).map(([name, alias]) => [alias, name]));
   const LABELS = Object.freeze({pending:'Enviado · esperando al bot',in_progress:'El bot está trabajando',ack:'Recibido por el bot',done:'Respuesta recibida',blocked:'El bot necesita atención',failed:'No se pudo completar',unknown:'Envío sin confirmar · consulta el historial antes de repetir'});

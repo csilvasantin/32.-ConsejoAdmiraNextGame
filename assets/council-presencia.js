@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   var KEY = 'admira:consejo-presencia';
-  var ASSET_V = '20261111-7520';
+  var ASSET_V = '20261111-flechas';
   var GENS = {
     leyendas: [
       ['Steve Jobs', 'CEO', 'racional', ['jobs', 'steve jobs', 'steve-jobs']],
@@ -20,7 +20,7 @@
     coetaneos: [
       ['Elon Musk', 'CEO', 'racional', ['musk', 'elon', 'elon musk', 'elon-musk']],
       ['Jensen Huang', 'CTO', 'racional', ['jensen', 'huang', 'jensen huang', 'jensen-huang']],
-      ['Gwynne Shotwell', 'COO', 'racional', ['shotwell', 'gwynne', 'gwynne shotwell', 'gwynne-shotwell']],
+      ['Mira Murati', 'COO', 'racional', ['murati', 'mira', 'mira murati', 'mira-murati', 'shotwell', 'gwynne', 'gwynne shotwell', 'gwynne-shotwell']],
       ['Ruth Porat', 'CFO', 'racional', ['porat', 'ruth', 'ruth porat', 'ruth-porat']],
       ['John Lasseter', 'CCO', 'creativo', ['lasseter', 'john', 'john lasseter', 'john-lasseter']],
       ['Jony Ive', 'CDO', 'creativo', ['ive', 'jony', 'jony ive', 'jony-ive']],

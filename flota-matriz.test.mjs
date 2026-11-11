@@ -75,7 +75,7 @@ test("r6: modelo de pago fuera de las 6 → en rojo; el pool de Grok Bot va bajo
 
 test("r6 · 13:01: solo Musk, Huang, Jobs y Wozniak en Grok Bot de pago; el resto del Consejo, Nemotron Ultra gratis por defecto", () => {
   const { filas, resumen } = matriz({ presencia, carga, ahoraS: T });
-  for (const n of ["Shotwell", "Porat", "Lasseter", "Ive", "Ratti", "Reynolds", "Lucas", "Disney", "Cook"]) {
+  for (const n of ["Murati", "Porat", "Lasseter", "Ive", "Ratti", "Reynolds", "Lucas", "Disney", "Cook"]) {
     const f = filas.find((x) => x.persona === n);
     assert.ok(f, n); assert.equal(f.coste, "gratis", n); assert.equal(f.porDefecto, true, n);
   }
@@ -86,5 +86,6 @@ test("r6 · 13:01: solo Musk, Huang, Jobs y Wozniak en Grok Bot de pago; el rest
   const r = matriz({ presencia: lucasGrok, carga, ahoraS: T });
   assert.equal(r.filas.find((f) => f.persona === "Lucas").fuera, true, "Lucas con Grok de pago → rojo");
   assert.equal(r.filas.find((f) => f.persona === "Jobs").fuera, false);
-  assert.equal(persona("Gwynne Shotwell"), "Shotwell");
+  assert.equal(persona("Mira Murati"), "Murati");
+  assert.equal(persona("Shotwell"), "Murati");
 });

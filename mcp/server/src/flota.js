@@ -68,16 +68,19 @@ export const CASA_AGENTE = { Morfeo: 'macmini', Smith: 'macbookpro16', Oraculo: 
 
 export const esConsejero = (persona) => CONSEJEROS.includes(personaCanonica(persona));
 // CONSEJEROS NO PRINCIPALES (orden de Carlos, encargo 5674): solo Musk, Huang, Jobs y Wozniak despiertan su Grok Bot
-// de pago. Un encargo a cualquiera de los otros doce (Shotwell, Porat, Lasseter, Ive, Ratti, Reynolds, Lucas,
+// de pago. Un encargo a cualquiera de los otros doce (Murati, Porat, Lasseter, Ive, Ratti, Reynolds, Lucas,
 // Disney, Cook, Buffett, Rams, Schultz) lo contesta Cypher en la GrokBotBox con Nemotron 3 Ultra gratis, firmando
 // como ese consejero: el bot-inbox hace el desvío, aquí solo se le reconoce y se dice la verdad en la nota.
 export const CONSEJEROS_PRINCIPALES = ['Musk', 'Huang', 'Jobs', 'Wozniak'];
 export const CONSEJEROS_NEMOTRON = CONSEJO_16.flatMap((c) => ['leyendas', 'coetaneos'].map((gen) => ({ nombre: c[gen], apellido: c[gen].split(' ').pop(), rol: c.rol, gen })))
   .filter((c) => !CONSEJEROS_PRINCIPALES.includes(c.apellido));
-/** «Shotwell», «Gwynne Shotwell», «gwynne», «Walt» → el consejero no principal; null si es principal o no es consejero. */
+/** «Murati», «Mira Murati», «Shotwell», «Walt» → el consejero no principal; null si es principal o no es consejero. */
+const ALIAS_NEMOTRON = { shotwell: 'Murati', gwynne: 'Murati', gwynneshotwell: 'Murati' };
 export function consejeroNemotron(nombre) {
   const n = norm(nombre);
   if (n.length < 3) return null;
+  const alias = ALIAS_NEMOTRON[n];
+  if (alias) return CONSEJEROS_NEMOTRON.find((c) => c.apellido === alias) || null;
   return CONSEJEROS_NEMOTRON.find((c) => n === norm(c.apellido) || n === norm(c.nombre) || n === norm(c.nombre.split(' ')[0])) || null;
 }
 

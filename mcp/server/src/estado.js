@@ -45,7 +45,7 @@ export const MESA = {
   coetaneos: [
     { persona: 'Elon Musk', rol: 'CEO', fuentes: [deep('Musk', SILLAS.Musk), silla('Musk')] },
     { persona: 'Jensen Huang', rol: 'CTO', fuentes: [deep('Huang', SILLAS.Huang), silla('Huang')] },
-    { persona: 'Gwynne Shotwell', rol: 'COO', fuentes: [agente('Trinity')] },
+    { persona: 'Mira Murati', rol: 'COO', fuentes: [agente('Trinity')] },
     { persona: 'Ruth Porat', rol: 'CFO', fuentes: [agente('Oraculo')] },
     { persona: 'John Lasseter', rol: 'CCO', fuentes: [agente('Mouse')] },
     { persona: 'Jony Ive', rol: 'CDO', fuentes: [agente('Arquitecto', { excluir_maquina: 'CursorCloud' })] },

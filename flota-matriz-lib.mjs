@@ -41,7 +41,7 @@ export const MAPA = {
 /** Asistentes de Grok Bot de csilvasantin: su consumo se enseña bajo Merovingio (un solo pool, no son líneas de pago). */
 export const POOL_MEROVINGIO = ["Musk", "Huang", "Grok Bot (Consejo)", "Grok Bot"];
 /** r6 (Carlos, 13:01): solo 2 consejeros principales por cuenta van en Grok Bot de pago: Musk + Huang (csilvasantin,
- *  pool de Merovingio) y Jobs + Wozniak (csilva@admira.com, Grok de Smith). TODOS los demás del Consejo (Shotwell,
+ *  pool de Merovingio) y Jobs + Wozniak (csilva@admira.com, Grok de Smith). TODOS los demás del Consejo (Murati,
  *  Porat, Lasseter, Ive, Ratti, Reynolds, Cook, Buffett, Disney, Rams, Schultz, Lucas… y cualquiera nuevo en
  *  mcp/server/src/consejo.js) van por defecto en Nemotron 3 Ultra GRATIS; si consumen Grok Bot de pago, en rojo. */
 export const CONSEJEROS_PRINCIPALES = ["Musk", "Huang", "Jobs", "Wozniak"];
@@ -83,8 +83,9 @@ export function persona(n) {
   if (/merovingio/.test(k)) return "Merovingio";
   if (/^elon/.test(k)) return "Musk";
   if (/^jensen/.test(k)) return "Huang";
+  if (/^(gwynne|shotwell|gwynneshotwell)$/.test(k)) return "Murati";
   const todas = [...PERSONAS, ...PERSONAS_EXTRA()];
-  // «Gwynne Shotwell», «Ryan Reynolds» → apellido del Consejo.
+  // «Mira Murati», «Ryan Reynolds» → apellido del Consejo.
   const ap = llave(apellido(n));
   return todas.find((p) => k === llave(p)) || (ap && String(n).trim().includes(" ") && todas.find((p) => llave(p) === ap)) || todas.find((p) => k.startsWith(llave(p))) || String(n).trim();
 }

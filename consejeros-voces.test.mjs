@@ -30,7 +30,7 @@ test('casting: los 16 consejeros del Consejo, una entrada cada uno', () => {
     assert.ok(c.pitch >= 0.7 && c.pitch <= 1.35, c.persona);
     assert.ok(c.prefer.length >= 3 && c.timbre && c.frase, c.persona);
   }
-  assert.equal(V.casting('Gwynne Shotwell').genero, 'f');
+  assert.equal(V.casting('Mira Murati').genero, 'f');
   assert.equal(V.casting('ruth-porat').genero, 'f');
 });
 
@@ -47,12 +47,12 @@ test('en un Mac con las voces de serie, cada consejero suena con una de sus voce
   assert.equal(new Set(perf.map(p => p.voiceName)).size, 9);
   assert.equal(V.profile('Walt Disney').voiceName, 'Grandpa (Español (España))');
   assert.equal(V.profile('George Lucas').voiceName, 'Rocko (Español (España))');
-  assert.equal(V.profile('Gwynne Shotwell').voiceName, 'Mónica');
+  assert.equal(V.profile('Mira Murati').voiceName, 'Mónica');
   assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
   const usos = {}; for (const p of perf) usos[p.voiceName] = (usos[p.voiceName] || 0) + 1;
   assert.ok(Math.max(...Object.values(usos)) <= 3, JSON.stringify(usos));
   // las mujeres nunca caen en voz masculina conocida
-  for (const n of ['Gwynne Shotwell', 'Ruth Porat']) assert.equal(V.generoDe(V.profile(n).voice), 'f', n);
+  for (const n of ['Mira Murati', 'Ruth Porat']) assert.equal(V.generoDe(V.profile(n).voice), 'f', n);
   // nunca una voz que no sea española si hay españolas
   for (const p of perf) assert.match(p.lang, /^es/);
 });

@@ -12,14 +12,24 @@
   var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };
   var ESTADO = { enviando: "enviando…", entregado: "entregado", error: "error", sin_confirmar: "sin confirmar" };
   // Consejeros con hilo compartido (nombre visible → persona de la API).
-  // Los seis que el servidor ya acepta. El resto de sillas no tiene hilo.
+  // Los 16 del Consejo: el servidor acepta las mismas claves (#7546).
   var PERSONAS = {
     "Steve Jobs": "jobs",
     "Steve Wozniak": "wozniak",
+    "Tim Cook": "cook",
+    "Warren Buffett": "buffett",
     "Walt Disney": "disney",
+    "Dieter Rams": "rams",
+    "Howard Schultz": "schultz",
     "George Lucas": "lucas",
     "Elon Musk": "musk",
-    "Jensen Huang": "huang"
+    "Jensen Huang": "huang",
+    "Gwynne Shotwell": "shotwell",
+    "Ruth Porat": "porat",
+    "John Lasseter": "lasseter",
+    "Jony Ive": "ive",
+    "Carlos Ratti": "ratti",
+    "Ryan Reynolds": "reynolds"
   };
 
   // ── Lógica pura ──────────────────────────────────────────────────────────

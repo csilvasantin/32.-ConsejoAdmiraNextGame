@@ -62,12 +62,24 @@ test('máquina de estados de /hola', () => {
 test('/hola: carga sus módulos, manifiesto instalable y enlace en la barra', () => {
   const leer = f => readFileSync(new URL('./' + f, import.meta.url), 'utf8');
   const html = leer('hola/index.html');
-  for (const m of ['consejeros-voces.js', 'hola-intent.js', 'assets/chat-hilo-client.js', 'rel="manifest"', 'apple-touch-icon', 'apple-mobile-web-app-capable'])
+  for (const m of ['consejeros-voces.js', 'hola-intent.js', 'assets/chat-hilo-client.js', 'rel="manifest"', 'apple-touch-icon', 'apple-mobile-web-app-capable', 'apple-mobile-web-app-title" content="Admira Live', 'serviceWorker', '/hola/sw.js', 'getUserMedia', 'John Lasseter', 'con=lasseter'])
     assert.ok(html.includes(m), m);
-  assert.match(html, /r\.lang="es-ES"; r\.continuous=true; r\.interimResults=true/);
+  assert.match(html, /r\.lang="es-ES"; r\.continuous=!isIOS; r\.interimResults=true/);
   assert.match(html, /C\.enviarTurno\(clave, texto, id\)/, 'las respuestas van por el hilo real, no inventadas');
+  assert.match(html, /mantén pulsado|Mantén pulsado/);
+  assert.match(html, /No te escucho/);
   const man = JSON.parse(leer('hola/manifest.webmanifest'));
-  assert.equal(man.start_url, '/hola/'); assert.equal(man.display, 'standalone');
+  assert.equal(man.id, '/hola/');
+  assert.equal(man.name, 'Admira Live');
+  assert.equal(man.short_name, 'Admira Live');
+  assert.equal(man.start_url, '/hola/');
+  assert.equal(man.scope, '/hola/');
+  assert.equal(man.display, 'standalone');
+  assert.ok(man.icons.some(i => i.sizes === '192x192' && i.purpose === 'any'));
+  assert.ok(man.icons.some(i => i.sizes === '512x512' && i.purpose === 'maskable'));
+  const sw = leer('hola/sw.js');
+  assert.match(sw, /addEventListener\("fetch"/);
+  assert.doesNotMatch(sw, /caches\.|CacheStorage/);
   assert.match(leer('admira-bar.js'), /h: "https:\/\/www\.admira\.live\/hola\/"/);
 });
 

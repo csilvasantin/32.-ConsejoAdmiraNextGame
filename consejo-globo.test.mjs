@@ -122,8 +122,13 @@ test('armarMesa cubre las dos generaciones y todos los papeles tienen posición'
       const p = PAPEL_POS[gen][s.persona];
       assert.ok(p, 'falta posición de ' + s.persona);
       assert.ok(['papel', 'placa', 'cuerpo', 'ninguno'].includes(p.sobre), 'sobre inválido de ' + s.persona);
-      if (p.sobre !== 'ninguno') assert.ok(p.w > 0 && p.h > 0, 'caja vacía de ' + s.persona);
-      else assert.ok(p.w === 0 && p.h === 0, 'ninguno debe ir sin caja ' + s.persona);
+      if (p.sobre !== 'ninguno') {
+        assert.ok(p.w > 0 && p.h > 0, 'caja vacía de ' + s.persona);
+        assert.ok(Array.isArray(p.puntos) && p.puntos.length >= 4, 'polígono corto de ' + s.persona);
+      } else {
+        assert.ok(p.w === 0 && p.h === 0, 'ninguno debe ir sin caja ' + s.persona);
+        assert.equal(p.puntos.length, 0, 'ninguno no lleva puntos ' + s.persona);
+      }
     }
   }
   assert.equal(COLORES.trabajando, '#e23d3d');
@@ -131,7 +136,7 @@ test('armarMesa cubre las dos generaciones y todos los papeles tienen posición'
   assert.equal(COLORES.desconocido, '#ffd60a');
 });
 
-test('halos: folio real o placa/cuerpo; nada en el centro vacío de la mesa de leyendas', () => {
+test('halos: folio o placa con polígono real; nada en el asiento de Disney', () => {
   const L = PAPEL_POS.leyendas;
   assert.equal(L['Steve Wozniak'].sobre, 'papel');
   assert.equal(L['Tim Cook'].sobre, 'papel');
@@ -139,17 +144,22 @@ test('halos: folio real o placa/cuerpo; nada en el centro vacío de la mesa de l
   assert.equal(L['Howard Schultz'].sobre, 'papel');
   assert.equal(L['George Lucas'].sobre, 'papel');
   assert.equal(L['Steve Jobs'].sobre, 'cuerpo');
-  assert.equal(L['Warren Buffett'].sobre, 'cuerpo');
+  assert.equal(L['Warren Buffett'].sobre, 'papel');
   assert.equal(L['Walt Disney'].sobre, 'ninguno');
-  // El fallo de r134: halo verde en (54,58), madera vacía delante de Carlos.
-  // En carlos10 el asiento de Disney no tiene folio ni figura: no se pinta.
+  // El fallo de r134/r136: óvalo genérico (o halo en madera vacía / en Y).
+  // Disney (Y en ese asiento) no lleva halo. Buffett ilumina sus folios, no el cuerpo de Y.
   const jobs = L['Steve Jobs'];
   assert.ok(jobs.x < 16, 'Jobs no debe usurpar los folios de Woz');
+  const cook = L['Tim Cook'];
+  assert.ok(cook.w < 10 && cook.h < 8, 'Cook ya no cubre tres pilas y madera vacía');
+  const buffett = L['Warren Buffett'];
+  assert.ok(buffett.x < 45 && buffett.y > 48, 'Buffett en sus folios, no en el cuerpo de Y');
   const C = PAPEL_POS.coetaneos;
   assert.equal(Object.keys(C).length, 6);
   assert.ok(!C['Ruth Porat'] && !C['Carlos Ratti'], 'Porat y Ratti ya no tienen asiento (#7520)');
   for (const k of ['Elon Musk', 'Jensen Huang', 'Gwynne Shotwell', 'Jony Ive', 'John Lasseter', 'Ryan Reynolds']) {
     assert.equal(C[k].sobre, 'placa', k);
+    assert.ok(C[k].puntos.length >= 4, k);
   }
   // Lasseter está en la silla que era de Ratti; su placa no es la antigua (~56, 60).
   assert.ok(C['John Lasseter'].y > 74 && C['John Lasseter'].x > 68);

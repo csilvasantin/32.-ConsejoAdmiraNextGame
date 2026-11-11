@@ -47,32 +47,35 @@ export const MESA = Object.freeze({
 });
 
 /**
- * Caja del halo, en % del arte (centro x,y + ancho/alto), medida sobre
- * council-leyendas.jpg (carlos10) y council-coetaneos.jpg de origin/main (#7520: Lasseter en la silla de Ratti, sin Porat ni Ratti).
+ * Perfil del halo, en % del arte. `puntos` es el polígono (4 o más vértices)
+ * del contorno real del folio o de la placa, medido en píxeles sobre
+ * council-leyendas.jpg (1360×768) y council-coetaneos.jpg (1280×720).
+ * x,y,w,h es la caja envolvente (centro + tamaño), por compatibilidad.
  * sobre=papel: el folio o portapapeles real más cercano al asiento.
- * sobre=placa: no hay folio; el halo rodea la placa dorada.
- * sobre=cuerpo: no hay folio ni placa; el halo rodea el torso del consejero.
- * sobre=ninguno: en la foto no hay folio, placa ni cuerpo en ese asiento; no se pinta (evita un halo en madera o cielo vacíos).
+ * sobre=placa: no hay folio; el halo sigue la placa dorada.
+ * sobre=cuerpo: no hay folio ni placa; el halo sigue el perfil del consejero.
+ * sobre=ninguno: no se pinta (Disney: Y ocupa el asiento y no lleva halo).
+ * #7520: Lasseter en la silla de Ratti, sin Porat ni Ratti.
  */
 export const PAPEL_POS = Object.freeze({
   leyendas: {
-    'Steve Jobs': { x: 11.5, y: 57.0, w: 11.0, h: 20.0, sobre: 'cuerpo' },
-    'Steve Wozniak': { x: 24.5, y: 72.0, w: 12.0, h: 9.0, sobre: 'papel' },
-    'Tim Cook': { x: 34.5, y: 56.25, w: 14.0, h: 11.5, sobre: 'papel' },
-    'Warren Buffett': { x: 50.5, y: 41.0, w: 12.0, h: 16.0, sobre: 'cuerpo' },
-    'Walt Disney': { x: 0, y: 0, w: 0, h: 0, sobre: 'ninguno' },  // en carlos10 no hay folio, placa ni cuerpo en ese asiento
-    'Dieter Rams': { x: 70.0, y: 59.75, w: 7.0, h: 5.5, sobre: 'papel' },
-    'Howard Schultz': { x: 76.75, y: 63.85, w: 7.0, h: 4.5, sobre: 'papel' },
-    'George Lucas': { x: 76.25, y: 71.15, w: 10.5, h: 5.3, sobre: 'papel' },
+    'Steve Jobs': { sobre: 'cuerpo', puntos: [[10.662, 44.401], [9.191, 44.922], [8.235, 45.833], [7.353, 47.917], [7.5, 52.083], [8.456, 54.427], [9.412, 56.25], [4.265, 59.245], [3.676, 63.802], [3.897, 67.708], [4.853, 71.615], [6.618, 72.656], [8.088, 74.87], [10.294, 76.823], [12.868, 76.823], [14.338, 74.87], [16.324, 71.354], [17.059, 67.708], [16.912, 63.542], [16.176, 58.333], [14.118, 55.729], [13.235, 53.646], [13.824, 48.438], [13.382, 45.573], [12.353, 44.661]], x: 10.367, y: 60.612, w: 13.383, h: 32.422 },
+    'Steve Wozniak': { sobre: 'papel', puntos: [[18.162, 75.391], [21.397, 76.432], [25.588, 76.302], [27.5, 72.396], [29.559, 72.005], [30.147, 69.141], [25.662, 68.49], [25.588, 67.708], [24.338, 67.708], [23.971, 68.49], [21.324, 72.005], [20.074, 71.615]], x: 24.154, y: 72.07, w: 11.985, h: 8.724 },
+    'Tim Cook': { sobre: 'papel', puntos: [[26.912, 61.458], [28.309, 62.5], [31.25, 62.5], [32.941, 60.156], [33.824, 59.115], [32.868, 58.594], [31.176, 58.724], [29.412, 58.464], [28.309, 58.333]], x: 30.368, y: 60.416, w: 6.912, h: 4.167 },
+    'Warren Buffett': { sobre: 'papel', puntos: [[30.0, 51.823], [30.294, 52.734], [31.618, 52.344], [33.676, 52.344], [35.147, 53.125], [39.118, 54.427], [40.441, 53.125], [41.176, 51.823], [40.882, 50.651], [40.294, 50.391], [38.088, 50.391], [36.765, 51.042], [33.824, 50.0], [31.471, 50.521]], x: 35.588, y: 52.213, w: 11.176, h: 4.427 },
+    'Walt Disney': { sobre: 'ninguno', puntos: [], x: 0, y: 0, w: 0, h: 0 },
+    'Dieter Rams': { sobre: 'papel', puntos: [[66.618, 59.375], [66.912, 58.854], [68.971, 58.594], [69.706, 58.464], [71.176, 58.203], [72.5, 58.203], [72.721, 61.849], [68.382, 62.37], [68.088, 61.458], [66.765, 60.547]], x: 69.669, y: 60.287, w: 6.103, h: 4.167 },
+    'Howard Schultz': { sobre: 'papel', puntos: [[73.382, 63.932], [73.382, 64.714], [75.882, 64.714], [75.882, 65.234], [78.529, 65.234], [78.529, 64.062], [78.088, 63.021], [77.059, 62.24], [73.676, 63.411]], x: 75.956, y: 63.737, w: 5.147, h: 2.994 },
+    'George Lucas': { sobre: 'papel', puntos: [[72.279, 70.443], [75.588, 69.922], [77.059, 69.661], [78.235, 69.661], [79.265, 71.094], [81.25, 71.224], [82.5, 72.526], [79.118, 73.698], [73.529, 73.568], [72.279, 72.656]], x: 77.389, y: 71.679, w: 10.221, h: 4.037 }
   },
   coetaneos: {
-    'Elon Musk': { x: 22.4, y: 89.6, w: 12.2, h: 6.0, sobre: 'placa' },
-    'Jensen Huang': { x: 28.65, y: 80.35, w: 11.3, h: 6.1, sobre: 'placa' },
-    'Gwynne Shotwell': { x: 35.4, y: 71.2, w: 11.2, h: 5.2, sobre: 'placa' },
-    'Jony Ive': { x: 62.65, y: 65.0, w: 8.7, h: 4.4, sobre: 'placa' },
-    'John Lasseter': { x: 72.4, y: 78.0, w: 10.8, h: 5.6, sobre: 'placa' },
-    'Ryan Reynolds': { x: 79.35, y: 89.6, w: 12.3, h: 6.0, sobre: 'placa' },
-  },
+    'Elon Musk': { sobre: 'placa', puntos: [[16.25, 85.833], [27.734, 85.833], [28.047, 86.25], [28.203, 87.222], [28.203, 91.111], [27.891, 92.361], [16.406, 92.361], [16.094, 91.806], [16.094, 86.389]], x: 22.148, y: 89.097, w: 12.109, h: 6.528 },
+    'Jensen Huang': { sobre: 'placa', puntos: [[22.891, 77.222], [33.516, 77.222], [33.828, 77.639], [33.984, 78.75], [33.984, 82.361], [33.672, 83.194], [22.891, 83.333], [22.656, 82.778], [22.656, 77.778]], x: 28.32, y: 80.278, w: 11.328, h: 6.111 },
+    'Gwynne Shotwell': { sobre: 'placa', puntos: [[29.844, 68.611], [39.453, 68.472], [39.688, 68.889], [39.766, 70.139], [39.766, 73.056], [39.453, 73.889], [29.844, 73.889], [29.609, 73.333], [29.609, 69.167]], x: 34.688, y: 71.18, w: 10.157, h: 5.417 },
+    'Jony Ive': { sobre: 'placa', puntos: [[58.281, 62.778], [65.703, 62.639], [65.938, 63.056], [66.016, 64.167], [66.016, 66.389], [65.781, 67.083], [58.359, 67.083], [58.125, 66.667], [58.125, 63.194]], x: 62.071, y: 64.861, w: 7.891, h: 4.444 },
+    'John Lasseter': { sobre: 'placa', puntos: [[66.953, 74.861], [77.188, 74.861], [77.5, 75.278], [77.578, 76.389], [77.578, 80.139], [77.266, 80.972], [67.031, 80.972], [66.797, 80.417], [66.797, 75.417]], x: 72.188, y: 77.916, w: 10.781, h: 6.111 },
+    'Ryan Reynolds': { sobre: 'placa', puntos: [[73.359, 85.972], [84.844, 85.972], [85.078, 86.389], [85.078, 91.806], [84.844, 92.5], [73.359, 92.5], [73.047, 91.944], [72.812, 90.972], [72.812, 88.056], [73.047, 86.389]], x: 78.945, y: 89.236, w: 12.266, h: 6.528 }
+  }
 });
 
 export const tieneBot = (persona) => Object.prototype.hasOwnProperty.call(BOT_POR_PERSONA, persona);

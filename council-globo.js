@@ -100,15 +100,26 @@
 .mac-hoy-lista a{color:#b8ff9a;text-decoration:underline}
 .mac-hoy-lista .hora{color:#9fd88a;margin-right:4px}
 .mac-hoy-lista .vacio{padding:10px 8px;opacity:.85}
-.mac-hoy-prop.has-lista .mac-hoy-glass > :not(.mac-hoy-lista),
-.mac-hoy-front-stage.has-lista .mac-hoy-crt-front > :not(.mac-hoy-lista),
-.mac-hoy-front.has-lista #mac-hoy-pantalla > :not(.mac-hoy-lista){visibility:hidden}
-.mac-hoy-front.on.has-lista .mac-hoy-front-stage .mac-hoy-crt-front,
-.mac-hoy-front.on.has-lista #mac-hoy-pantalla{visibility:visible!important;z-index:9}
-.mac-hoy-front.on.has-lista #mac-hoy-pantalla{position:absolute;inset:11% 16% 18%;z-index:10;display:block;background:#0b0b08}
-.mac-hoy-front .mac-hoy-lista{inset:0;font-size:16px;line-height:1.4;z-index:11}
-.mac-hoy-front .mac-hoy-lista header{font-size:15px}
-.mac-hoy-front .mac-hoy-lista ol{font-size:15px}
+.mac-hoy-prop.has-lista .mac-hoy-glass > :not(.mac-hoy-lista){visibility:hidden}
+/* La lista frontal vive en #mac-hoy-lista-crt, el mismo plano 512×342
+   proyectado y recortado al cristal. No se toca left/top/transform/clip-path. */
+.mac-hoy-lista-crt{display:none;overflow:hidden;pointer-events:auto;background:#030806;z-index:8}
+.mac-hoy-front.on.has-lista .mac-hoy-lista-crt{display:block}
+.mac-hoy-front.on.has-lista #mac-hoy-pantalla,
+.mac-hoy-front.on.has-lista .mac-hoy-logo-front,
+.mac-hoy-front.on.has-lista .mac-hoy-front-shade{visibility:hidden}
+.mac-hoy-front.on.has-lista .mac-hoy-front-stage .mac-hoy-crt-front{visibility:hidden}
+#mac-hoy-lista-crt .mac-hoy-lista{position:absolute;inset:22px 28px 20px 30px;z-index:1;display:flex;flex-direction:column;overflow:hidden;background:transparent;border:0;box-shadow:none;color:#7cff6b;font:26px/1.35 VT323,"Press Start 2P",ui-monospace,Menlo,monospace;text-shadow:0 0 6px rgba(126,255,166,.9),0 0 16px rgba(70,240,132,.45)}
+#mac-hoy-lista-crt .mac-hoy-lista header{flex:0 0 auto;align-items:flex-start;font:24px/1.35 VT323,"Press Start 2P",ui-monospace,Menlo,monospace;background:transparent;border-bottom:1px solid #3a5a3a;color:#c8ffd0;padding:2px 4px 8px}
+#mac-hoy-lista-crt .mac-hoy-lista header b{flex:1;min-width:0}
+#mac-hoy-lista-crt .mac-hoy-lista .desglose{flex:0 0 auto;font-size:22px;padding:4px 4px 6px;border-bottom:1px solid #3a5a3a}
+#mac-hoy-lista-crt .mac-hoy-lista ol{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;font-size:24px;padding:6px 8px 10px 36px;scrollbar-color:#7cff6b #111}
+#mac-hoy-lista-crt .mac-hoy-lista li{margin:0 0 6px}
+#mac-hoy-lista-crt .mac-hoy-lista .fuente{font-size:18px}
+#mac-hoy-lista-crt .mac-hoy-lista button.cerrar{flex:0 0 auto;font-size:20px;padding:2px 8px}
+@media (max-width:640px){
+  .mac-hoy-front.on.has-lista .mac-hoy-front-stage{width:min(94vw,520px)}
+}
 `;
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
@@ -604,12 +615,24 @@
     return box;
   }
   let listaAbierta = null;
+  function hostListaCrt() {
+    const d = doc(); if (!d) return null;
+    let el = d.getElementById('mac-hoy-lista-crt');
+    if (el) return el;
+    const stage = d.querySelector('#mac-hoy-front .mac-hoy-front-stage');
+    if (!stage) return null;
+    el = d.createElement('div');
+    el.id = 'mac-hoy-lista-crt';
+    el.className = 'mac-hoy-lista-crt';
+    const shade = stage.querySelector('.mac-hoy-front-shade');
+    stage.insertBefore(el, shade || null);
+    return el;
+  }
   function pantallasMac() {
     const d = doc(); if (!d) return [];
     return [
       d.querySelector('#mac-hoy-glass'),
-      d.querySelector('#mac-hoy-crt-front, .mac-hoy-crt-front'),
-      d.querySelector('#mac-hoy-pantalla'),
+      hostListaCrt(),
     ].filter(Boolean);
   }
   function pintarListas(persona) {
@@ -617,8 +640,12 @@
     pantallasMac().forEach((h) => pintarListaEn(h, persona, silla));
     const front = doc().getElementById('mac-hoy-front');
     if (front) front.classList.add('has-lista');
-    const stage = doc().querySelector('.mac-hoy-front-stage');
+    const stage = doc().querySelector('#mac-hoy-front .mac-hoy-front-stage');
     if (stage) stage.classList.add('has-lista');
+    const mac = root.MacHoy;
+    if (mac && typeof mac.fitScreen === 'function') {
+      try { mac.fitScreen(); } catch (e) {}
+    }
   }
   function mostrarListaMac(persona) {
     const pantallas = pantallasMac();
@@ -629,7 +656,7 @@
       try { if (typeof mac.setVisible === 'function') mac.setVisible(true); } catch (e) {}
       try { if (typeof mac.openFront === 'function') mac.openFront(); } catch (e) {}
     }
-    /* openFront pinta el mosaico en #mac-hoy-pantalla; la lista va después. */
+    /* openFront pinta el mosaico en #mac-hoy-pantalla; la lista va al cristal, en otra capa. */
     pintarListas(persona);
   }
   function cerrarListaMac() {

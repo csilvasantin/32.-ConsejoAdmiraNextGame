@@ -30,7 +30,7 @@
     @keyframes habla{50%{transform:translateY(-3px) scale(1.01)}}
     .nombre{font-size:1.05rem;color:#fff;text-shadow:3px 3px 0 #000;text-align:center;line-height:1.4}
     .cargo{font-size:.48rem;color:var(--c);text-align:center;line-height:1.8}
-    .voz{font-size:.4rem;color:var(--muted);text-align:center;line-height:1.7}
+    .voz{font:600 .72rem/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);text-align:center;-webkit-font-smoothing:auto}
     .mic{align-self:center;width:min(42vw,170px);aspect-ratio:1;border-radius:50%;border:4px solid var(--c);background:radial-gradient(circle,#1b2040,#0a0d1e);color:var(--c);font:inherit;font-size:2.6rem;cursor:pointer;box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent),4px 4px 0 #000;transition:.2s}
     .mic.on{animation:pulso 1.8s infinite}
     .mic.oye{background:radial-gradient(circle,color-mix(in srgb,var(--c) 45%,#1b2040),#0a0d1e)}
@@ -38,6 +38,9 @@
     .oido{min-height:3.4em;font-size:.5rem;line-height:1.8;color:#fff;text-align:center;word-break:break-word}
     .oido i{color:var(--muted);font-style:normal}
     .resp{font-size:.5rem;line-height:1.9;color:#d7dcf0;border-left:4px solid var(--c);background:#0a0d1e;padding:10px 12px;white-space:pre-wrap;display:none;max-height:38vh;overflow:auto}
+    .media{display:none;flex-direction:column;gap:8px}
+    .media img{width:100%;max-height:62vh;object-fit:contain;background:#fff;border:3px solid var(--c);box-shadow:4px 4px 0 #000;image-rendering:auto}
+    .media a{font-size:.38rem;color:var(--muted);text-align:center}
     .estado{font-size:.42rem;line-height:1.8;color:var(--amber);text-align:center;min-height:1.8em}
     .estado.err{color:#ff9b8a}
     .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
@@ -68,6 +71,7 @@
   <button class="mic" id="mic" type="button" aria-label="Activar el micrófono">🎤</button>
   <div class="oido" id="oido" aria-live="polite"></div>
   <div class="estado" id="estado" role="status" aria-live="polite"></div>
+  <div class="media" id="media"></div>
   <div class="resp" id="resp"></div>
 
   <div class="login" id="login">
@@ -85,7 +89,7 @@
 
   <details>
     <summary>Cómo funciona y límites</summary>
-    <p>1) Pulsa 🎤 una vez: queda escuchando. 2) Di «Hola Admira». 3) «Quiero hablar con Jobs» (o Elon, Woz, Disney, Lucas, Jensen…). 4) Pregunta; contesta con su voz. «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
+    <p>1) Pulsa 🎤 una vez: queda escuchando. 2) Di «Hola Admira». 3) «Quiero hablar con Jobs» (o Elon, Woz, Disney, Lucas, Jensen…). Atajo: «Hola Steve, dibuja una bandera de Canadá» despierta, elige y pregunta de una vez. 4) Pregunta; contesta con su voz (y si manda una imagen, se ve en grande). «Cambia a Elon» cambia de consejero; «gracias» o «adiós» vuelve a dormir. Tras 90 s sin hablar, también duerme.</p>
     <p>Las respuestas son reales: tu pregunta entra en el hilo de ese consejero en admira.live y la contesta su bot de Grok Bot (Jobs, Woz, Disney y Lucas en la cuenta de leyendas; Elon y Jensen en la de coetáneos). Tarda lo que tarde su bot, de segundos a minutos. Los demás consejeros aún no tienen línea directa.</p>
     <p>Mientras el consejero habla, el micrófono se pausa para no oírse a sí mismo. Chrome (Mac y Android) escucha de forma continua. En Safari (Mac/iPhone) el reconocimiento usa Siri y puede cortarse: si se para, vuelve a pulsar 🎤. En iPhone, desde el icono de la pantalla de inicio puede no haber micrófono; usa Safari. Firefox no tiene reconocimiento de voz: usa el cuadro de texto.</p>
     <p><a href="/voces/" style="color:var(--amber)">🎙️ Personalizar las voces</a></p>
@@ -236,8 +240,8 @@
   // ── Fases ──
   function dormir(silencioso){
     S.fase="dormido"; S.persona=null; pintar(null);
-    fase('Escuchando… di <b>«Hola Admira»</b>');
-    $("resp").style.display="none";
+    fase('Escuchando… di <b>«Hola Admira»</b> o <b>«Hola Steve…»</b>');
+    $("resp").style.display="none"; $("media").style.display="none";
     if(!silencioso) chime(false);
   }
   function despertar(){
@@ -245,14 +249,20 @@
     fase('Te escucho · di <b>«quiero hablar con Jobs»</b> o <b>Elon</b>');
     decir(null, "Te escucho. ¿Con quién quieres hablar?");
   }
-  function conectar(persona){
+  function conectar(persona, pregunta){
     var c=V.casting(persona); if(!c) return;
     S.fase="conversando"; S.persona=c.persona; S.ultimo=Date.now(); pintar(c.persona); chime(true);
-    $("resp").style.display="none"; if(!S.esperando) estado("");
+    $("resp").style.display="none"; $("media").style.display="none"; if(!S.esperando) estado("");
     fase('Hablas con <b>'+esc(c.persona)+'</b> · «cambia a …» · «gracias» para terminar');
     if (!linea(c.persona)){
       decir(c.persona, c.frase, function(){ decir(null, c.persona.split(" ")[0]+" aún no tiene línea directa desde aquí. Puedo pasarte con Jobs, Wozniak, Disney, Lucas, Elon o Jensen."); });
       S.fase="eligiendo"; return;
+    }
+    if (pregunta){
+      // Lo dicho tras el nombre («hola Steve, dibuja…») va ya como primera pregunta: sin saludo largo.
+      decir(c.persona, "Te escucho.");
+      preguntar(c.persona, pregunta);
+      return;
     }
     decir(c.persona, c.frase);
     prepararHilo(c.persona);
@@ -262,7 +272,7 @@
     S.ultimo=Date.now();
     var r=H.interpretar({ fase: S.fase==="apagado"?"dormido":S.fase, persona:S.persona }, t);
     if (r.accion==="despierta") despertar();
-    else if (r.accion==="conectar") conectar(r.persona);
+    else if (r.accion==="conectar") conectar(r.persona, r.pregunta);
     else if (r.accion==="dormir"){ var p=S.persona; if(p) decir(p, "Hasta pronto.", function(){ dormir(); }); else { decir(null,"Hasta luego."); dormir(); } }
     else if (r.accion==="no-entiendo") decir(null, "No te he entendido. Di, por ejemplo: quiero hablar con Jobs, o con Elon.");
     else if (r.accion==="preguntar") preguntar(r.persona, r.texto);
@@ -296,38 +306,71 @@
       var t=r.turno||{};
       if (t.entrega==="entregado"){
         estado("✓ Enviado a "+persona+" · encargo #"+t.encargo+" · esperando su respuesta…");
-        S.esperando=Date.now(); esperar(persona, clave);
+        esperar(persona, clave);
       } else if (t.entrega==="sin_confirmar"){
         estado("Enviado sin confirmar (el buzón no respondió). Te leo la respuesta si llega.", true);
-        S.esperando=Date.now(); esperar(persona, clave);
+        esperar(persona, clave);
       } else { estado("No se pudo entregar a "+persona+(t.entrega?" ("+t.entrega+")":"")+".", true); decir(null,"No he podido entregarle la pregunta."); }
     }).catch(function(){ estado("Sin conexión con admira.live.", true); });
   }
+  // Sondeo del hilo por consejero. Sigue mientras haya preguntas sin contestar y un
+  // rato de gracia tras la última respuesta (los bots a veces contestan en dos turnos):
+  // antes paraba en la primera respuesta y se perdía la siguiente (la de la bandera).
+  var GRACIA_MS = 90000, PEND = {};
+  function esperando(){ for (var k in PEND) return true; return false; }
   function esperar(persona, clave){
-    clearTimeout(S.sondeo);
+    var p = PEND[clave];
+    if (p){ p.n++; p.desde=Date.now(); return; }
+    p = PEND[clave] = { persona:persona, n:1, desde:Date.now(), ultimaResp:0 };
+    S.esperando=Date.now();
     (function tic(){
-      if (!S.esperando) return;
-      if (Date.now()-S.esperando > ESPERA_MAX_MS){ S.esperando=0; estado(persona+" no ha contestado aún; su respuesta quedará en su hilo (/chat/"+clave+"/).", true); return; }
+      var ahora=Date.now();
+      var agotado = ahora-p.desde > ESPERA_MAX_MS, gracia = p.n<=0 && p.ultimaResp && ahora-p.ultimaResp > GRACIA_MS;
+      if (agotado || gracia){
+        delete PEND[clave]; S.esperando=esperando()?S.esperando:0;
+        if (agotado && p.n>0) estado(persona+" no ha contestado aún; su respuesta quedará en su hilo (/chat/"+clave+"/).", true);
+        return;
+      }
       C.leerHilo(clave,{limite:20}).then(function(r){
         var nuevos=(r.turnos||[]).filter(function(x){ return x.rol===clave && (Date.parse(x.ts)||0) > (S.base[clave]||0) && String(x.texto||"").trim(); });
         if (nuevos.length){
           nuevos.forEach(function(x){ var ts=Date.parse(x.ts)||0; if(ts>S.base[clave]) S.base[clave]=ts; });
-          var texto=nuevos.map(function(x){ return x.texto; }).join("\n\n");
-          S.esperando=0; estado("💬 "+persona+" responde");
-          var r2=$("resp"); r2.style.display="block"; r2.textContent=texto; r2.scrollTop=0;
-          var hablado=texto.replace(/https?:\/\/\S+/g,"enlace").replace(/[#*_`>|]/g," ").slice(0,900);
-          if (S.persona===persona) decir(persona, hablado);
-          else decir(null, persona.split(" ")[0]+" te ha contestado. "+hablado.slice(0,300));
-          return;
+          p.n-=nuevos.length; p.ultimaResp=Date.now();
+          mostrarRespuesta(persona, nuevos.map(function(x){ return x.texto; }).join("\n\n"));
         }
-        S.sondeo=setTimeout(tic, SONDEO_MS);
-      }).catch(function(){ S.sondeo=setTimeout(tic, SONDEO_MS*2); });
+        setTimeout(tic, SONDEO_MS);
+      }).catch(function(){ setTimeout(tic, SONDEO_MS*2); });
     })();
+  }
+  // Muestra la respuesta: imágenes en grande (enlaces a imagen, ![](url) o <svg>) y lee solo el texto.
+  var colaVoz=[];
+  function mostrarRespuesta(persona, texto){
+    var m=H.extraerMedios(texto), caja=$("media");
+    estado("💬 "+persona+" responde"+(m.imagenes.length?" · 🖼️ "+m.imagenes.length+" imagen"+(m.imagenes.length>1?"es":""):""));
+    var r2=$("resp"); r2.style.display="block"; r2.textContent=m.texto||"(imagen)"; r2.scrollTop=0;
+    if (m.imagenes.length){
+      caja.innerHTML="";
+      m.imagenes.forEach(function(im){
+        var src = im.tipo==="svg" ? URL.createObjectURL(new Blob([im.src],{type:"image/svg+xml"})) : im.src;
+        var img=document.createElement("img"); img.alt="Imagen de "+persona; img.src=src; img.referrerPolicy="no-referrer";
+        img.onerror=function(){ img.replaceWith(Object.assign(document.createElement("a"),{href:im.tipo==="svg"?src:im.src,target:"_blank",rel:"noopener",textContent:"🖼️ abrir la imagen"})); };
+        caja.appendChild(img);
+        if (im.tipo!=="svg"){ var a=document.createElement("a"); a.href=im.src; a.target="_blank"; a.rel="noopener"; a.textContent=im.src.slice(0,90); caja.appendChild(a); }
+      });
+      caja.style.display="flex";
+    }
+    var hablado=(m.texto||"Te he dejado una imagen.").slice(0,900);
+    colaVoz.push(S.persona===persona ? [persona, hablado] : [null, persona.split(" ")[0]+" te ha contestado. "+hablado.slice(0,300)]);
+    soltarCola();
+  }
+  function soltarCola(){
+    if (S.hablando){ setTimeout(soltarCola, 400); return; }
+    var x=colaVoz.shift(); if(x) decir(x[0], x[1], soltarCola);
   }
 
   // Silencio: sin hablar 90 s (y sin esperar respuesta) → vuelve a dormir.
   setInterval(function(){
-    if ((S.fase==="eligiendo"||S.fase==="conversando") && !S.hablando && !S.esperando && Date.now()-S.ultimo > SILENCIO_MS){ estado("Silencio · vuelvo a dormir"); dormir(); }
+    if ((S.fase==="eligiendo"||S.fase==="conversando") && !S.hablando && !esperando() && Date.now()-S.ultimo > SILENCIO_MS){ estado("Silencio · vuelvo a dormir"); dormir(); }
   }, 5000);
 
   function esc(s){ return String(s==null?"":s).replace(/[<>&]/g,function(x){ return {"<":"&lt;",">":"&gt;","&":"&amp;"}[x]; }); }

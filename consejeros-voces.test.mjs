@@ -139,3 +139,19 @@ test('Jobs y Elon: contraste máximo y nunca la misma voz si hay otra en españo
   assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
   assert.equal(V.profile('Elon Musk').voiceName, 'Reed (Español (España))');
 });
+
+test('Chrome en Mac sin Jorge/Juan/Diego (solo Eddy, Rocko, Reed… en es-ES y es-MX): Jobs grave y nunca Eddy; Elon distinto', () => {
+  const nombres = ['Eddy', 'Flo', 'Grandma', 'Grandpa', 'Reed', 'Rocko', 'Sandy', 'Shelley'];
+  const CHROME = [...nombres.map(n => v(n + ' (español (España))', 'es-ES')), ...nombres.map(n => v(n + ' (español (México))', 'es-MX')),
+    v('Mónica', 'es-ES'), v('Paulina', 'es-MX'), v('Google español', 'es-ES'), v('Google español de Estados Unidos', 'es-US')];
+  V._setVoicesForTest(CHROME);
+  const jobs = V.profile('Steve Jobs'), elon = V.profile('Elon Musk');
+  assert.equal(jobs.voiceName, 'Rocko (español (España))');
+  assert.doesNotMatch(jobs.voiceName, /Eddy/);
+  assert.notEqual(elon.voiceName, jobs.voiceName);
+  assert.equal(elon.voiceName, 'Reed (español (España))');
+  assert.equal(jobs.rate, 0.88); assert.equal(jobs.pitch, 0.75);
+  // y con Jorge instalado, Jobs se queda Jorge
+  V._setVoicesForTest([v('Jorge', 'es-ES'), ...CHROME]);
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
+});

@@ -43,7 +43,7 @@
   var CASTING = [
     // ── Leyendas ──
     { persona: "Steve Jobs", role: "CEO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 0.88, pitch: 0.75,
-      prefer: ["Alvaro", "Jorge", "Rocko", "Pablo"],
+      prefer: ["Jorge", "Alvaro", "Diego", "Rocko", "Pablo", "Grandpa"], prioridad: 1,
       timbre: "Grave, lento y preciso. Frases cortas con pausa: el contrapunto de Elon.",
       frase: "Hola, soy Steve Jobs. Menos ruido y más foco: ¿qué vamos a crear hoy?" },
     { persona: "Steve Wozniak", role: "CTO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 1.06, pitch: 1.14,
@@ -76,7 +76,7 @@
       frase: "Soy George Lucas. Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?" },
     // ── Coetáneos ──
     { persona: "Elon Musk", role: "CEO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.2, pitch: 1.3,
-      prefer: ["Reed", "Gonzalo", "Eddy", "Diego", "Juan", "Tomas"], evita: ["steve-jobs"],
+      prefer: ["Reed", "Gonzalo", "Eddy", "Tomas", "Juan", "Diego"], prioridad: 2, evita: ["steve-jobs"],
       timbre: "Rápido y agudo, ideas que se atropellan: nunca suena como Jobs.",
       frase: "Soy Elon. Pensemos desde los primeros principios. ¿Qué límite rompemos?" },
     { persona: "Jensen Huang", role: "CTO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.1, pitch: 1.08,
@@ -177,6 +177,17 @@
     var used = {}, out = {};
     // Por RONDAS: primero la 1.ª preferencia de cada uno, luego la 2.ª… Así la voz
     // «de firma» de un consejero no se la lleva otro que la tenía de 3.ª opción.
+    // Jobs y Elon (los de /hola) eligen antes que nadie, cada uno su lista completa:
+    // así Jobs no acaba en una voz de reserva (p. ej. Eddy es-MX) porque otro se
+    // llevó su grave «de firma» en la 1.ª ronda.
+    CASTING.filter(function (c) { return c.prioridad; })
+      .sort(function (a, b) { return a.prioridad - b.prioridad; })
+      .forEach(function (c) {
+        for (var i = 0; i < c.prefer.length && !out[c.slug]; i++) {
+          var cand = findPreferred(pool, c.prefer[i], c.lang);
+          if (cand && !used[cand.voiceURI || cand.name]) { used[cand.voiceURI || cand.name] = 1; out[c.slug] = { voice: cand, via: "casting" }; }
+        }
+      });
     var rondas = Math.max.apply(null, CASTING.map(function (c) { return c.prefer.length; }));
     for (var r = 0; r < rondas; r++) {
       CASTING.forEach(function (c) {

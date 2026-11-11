@@ -1,0 +1,32 @@
+/* Tema retro amarronado del ⌘ Experto en admira.live (11-11-2026).
+ * Mismo look que el panel «GROKBOT · STEVE JOBS» y los botones del menú SCUMM.
+ * Funciona aunque el experto.css de admiranext.com aún no traiga el tema
+ * (el selector #ax-live-experto no depende de data-ax-tema). */
+#ax-live-experto.ax-experto,
+.ax-live-experto.ax-experto,
+html[data-ax-tema="retro"] .ax-experto,
+html[data-ax-pata="admira.live"] .ax-experto{
+  --ax-bg:#100b05;--ax-bg2:#201406;--ax-text:#f5e5a6;--ax-muted:#c9ba9c;
+  --ax-field:#110d08;--ax-output:#1c140c;--ax-engine-bg:#0c0906;
+  --ax-extra-bg:rgba(16,11,5,.72);--ax-placeholder:rgba(245,229,166,.45);
+  --ax-border:#9c7326;--ax-shadow:3px 3px #090603;
+  --ax-cyan:#ffdf73;--ax-green:#ffe776;--ax-err:#ffbc8c;
+  --ax-mono:"Press Start 2P",ui-monospace,Menlo,Consolas,monospace;
+  border-radius:0!important;border-width:2px!important;box-shadow:3px 3px #090603!important;
+  background:linear-gradient(180deg,#201406,#100b05)!important;
+  color:#f5e5a6!important;font-family:"Press Start 2P",ui-monospace,monospace!important
+}
+#ax-live-experto.ax-experto .ax-title,
+html[data-ax-tema="retro"] .ax-experto .ax-title{color:#ffdf73;letter-spacing:.08em}
+#ax-live-experto.ax-experto :is(.ax-cli-form,.ax-cli-out,.ax-engine,.ax-fold,.ax-extras-btn),
+html[data-ax-tema="retro"] .ax-experto :is(.ax-cli-form,.ax-cli-out,.ax-engine,.ax-fold,.ax-extras-btn){
+  border-radius:0!important;border-color:#9c7326
+}
+#ax-live-experto.ax-experto .ax-fold,
+#ax-live-experto.ax-experto .ax-extras-btn,
+html[data-ax-tema="retro"] .ax-experto .ax-fold,
+html[data-ax-tema="retro"] .ax-experto .ax-extras-btn{
+  background:#211405!important;color:#ffdf73!important;border:1px solid #9c7326!important;border-radius:0!important
+}
+#ax-live-experto.ax-experto .ax-cli-prompt,
+html[data-ax-tema="retro"] .ax-experto .ax-cli-prompt{color:#ffdf73!important;-webkit-text-fill-color:#ffdf73}

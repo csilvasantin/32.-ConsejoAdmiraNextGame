@@ -151,3 +151,16 @@ test('la home carga el parser antes del panel y la CLI lo registra', () => {
   const jobs = leer('chat/jobs/index.html');
   assert.match(jobs, /hablar-pagina\.js/);
 });
+
+test('la home carga el tema retro del Experto después de experto.css', () => {
+  const home = leer('index.html');
+  const cssAt = home.indexOf('suite/experto.css');
+  const retroAt = home.indexOf('experto-retro.css');
+  assert.ok(cssAt >= 0 && retroAt > cssAt, 'experto-retro.css debe ir después de experto.css');
+  const retro = leer('assets/experto-retro.css');
+  assert.match(retro, /#100b05/);
+  assert.match(retro, /#9c7326/);
+  assert.match(retro, /#ffdf73/);
+  assert.match(retro, /Press Start 2P/);
+  assert.match(retro, /#ax-live-experto/);
+});

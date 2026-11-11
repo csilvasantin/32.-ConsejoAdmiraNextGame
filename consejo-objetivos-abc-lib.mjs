@@ -7,11 +7,12 @@
  * GET /api/consejo/objetivos-abc en vivo. Un hueco vacío se muestra
  * «— sin definir —»; no se inventa texto.
  *
- * Titulares del carrusel (4 paneles):
- *   portaventura-next  PortAventuraNeXT  → Jobs
+ * Titulares del carrusel (4 paneles). Reparto de Carlos (t1219u),
+ * que sustituye al de Jobs:
+ *   portaventura-next  PortAventuraNeXT  → Walt / Disney
  *   admiranext         AdmiraNeXT        → Lucas
- *   alsea              Alsea             → Walt
- *   dia-a-dia          Día a día         → Woz
+ *   alsea              Alsea             → Woz
+ *   dia-a-dia          Día a día         → Jobs
  * Cada noche a las 00:00 Europe/Madrid, cada consejero escribe las 3 mejoras
  * de SU proyecto (POST autenticado). Carlos puede editarlas en /objetivos;
  * una edición suya no se pisa si el titular vuelve a escribir después.
@@ -20,10 +21,10 @@ export const KEY_OBJETIVOS_ABC = 'consejo:objetivos-abc:v1';
 export const TEXTO_SIN_DEFINIR = '— sin definir —';
 
 export const PLANTILLA_PROYECTOS = Object.freeze([
-  Object.freeze({ id: 'portaventura-next', nombre: 'PortAventuraNeXT', titular: 'Jobs', activo: true, orden: 1 }),
+  Object.freeze({ id: 'portaventura-next', nombre: 'PortAventuraNeXT', titular: 'Walt', activo: true, orden: 1 }),
   Object.freeze({ id: 'admiranext', nombre: 'AdmiraNeXT', titular: 'Lucas', activo: true, orden: 2 }),
-  Object.freeze({ id: 'alsea', nombre: 'Alsea', titular: 'Walt', activo: true, orden: 3 }),
-  Object.freeze({ id: 'dia-a-dia', nombre: 'Día a día', titular: 'Woz', activo: true, orden: 4 }),
+  Object.freeze({ id: 'alsea', nombre: 'Alsea', titular: 'Woz', activo: true, orden: 3 }),
+  Object.freeze({ id: 'dia-a-dia', nombre: 'Día a día', titular: 'Jobs', activo: true, orden: 4 }),
 ]);
 
 export const TITULARES = Object.freeze(Object.fromEntries(
@@ -120,7 +121,9 @@ function asegurarPaneles(proyectos) {
   for (const p of PLANTILLA_PROYECTOS) {
     if (!byId.has(p.id)) {
       out.push(normalizarProyecto({ ...p, objetivos: { a: '', b: '', c: '' } }, out.length));
-    } else if (!byId.get(p.id).titular) {
+    } else {
+      // El reparto oficial manda: un KV viejo (titular de Jobs) se actualiza
+      // sin tocar los textos a/b/c ni las firmas.
       byId.get(p.id).titular = p.titular;
     }
   }

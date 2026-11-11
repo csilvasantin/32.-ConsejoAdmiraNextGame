@@ -4,8 +4,9 @@
  * POST autenticado (X-Council-Token o Authorization: Bearer), el mismo token
  *      que /api/consejo/foco: CONSUMOS_LECTURAS_TOKEN o COUNCIL_MACHINE_TOKEN.
  *
- * Titulares: PortAventuraNeXT → Jobs, AdmiraNeXT → Lucas, Alsea → Walt,
- * Día a día → Woz. Cada uno escribe las 3 mejoras de SU proyecto (autor en el
+ * Titulares (reparto de Carlos, t1219u): PortAventuraNeXT → Walt,
+ * AdmiraNeXT → Lucas, Alsea → Woz, Día a día → Jobs. Cada uno escribe
+ * las 3 mejoras de SU proyecto (autor en el
  * cuerpo). Carlos edita desde /objetivos (autor: "carlos"); esa edición no se
  * pisa si el titular vuelve a escribir, salvo forzar:true.
  *

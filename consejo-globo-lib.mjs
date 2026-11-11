@@ -135,7 +135,11 @@ export function posDe(persona) {
   return null;
 }
 
-/** ¿Pintamos flecha y halo? Para reactivar a Buffett o Rams, pon `activo: true`. */
+/** t1219u (Carlos): sin brillo ni halo en los papeles; basta la flecha de color.
+ *  Las coordenadas del polígono se conservan por si se reactiva. */
+export const PINTAR_HALOS = false;
+
+/** ¿Pintamos flecha? Para reactivar a Buffett o Rams, pon `activo: true`. */
 export function esActivo(persona) {
   const p = typeof persona === 'string' ? posDe(persona) : persona;
   return !!(p && p.activo !== false);
@@ -155,6 +159,7 @@ export function llevaFlecha(persona) {
 }
 
 export function llevaHalo(persona) {
+  if (!PINTAR_HALOS) return false;
   const p = typeof persona === 'string' ? posDe(persona) : persona;
   if (!p || p.activo === false) return false;
   if (p.sobre === 'ninguno' || p.sobre === 'cuerpo') return false;

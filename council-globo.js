@@ -1,7 +1,10 @@
-/* Globo de estado sobre cada consejero, flecha de color sobre la cabeza y halo con el perfil real del folio o placa.
+/* Globo de estado sobre cada consejero y flecha de color sobre la cabeza.
+ * Sin brillo ni halo en los papeles (t1219u): basta la flecha.
  * Datos: GET /api/consejo/estado (latido de consejero_latido + últimos done públicos).
- * Papeles/placas, flecha, etiqueta de hoy y globo leen un único mapa / instantánea por pintado.
- * Encima de la flecha, un rectángulo con las misiones de hoy; el puesto va dentro de la flecha (ranking por mesa de 6, sin «/6»).
+ * Flecha, caja de hoy y globo leen un único mapa / instantánea por pintado.
+ * Encima de la flecha, una caja centrada en su eje (cifra de hoy + proyecto
+ * principal). El puesto va dentro del triángulo (la punta), grande, no en el
+ * tallo ni en la caja. La flecha no pisa la caja.
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
  * Disney está en la silla que era de Schultz y sí lleva flecha (tiene bot).
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
@@ -39,27 +42,24 @@
   const CSS = `
 #papel-halos{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:visible}
 #papel-halos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:block}
-@keyframes papel-pulso{0%,100%{opacity:1}50%{opacity:.62}}
-.papel-halo[data-estado=trabajando]{animation:papel-pulso 1.8s ease-in-out infinite}
-#papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
-#papel-halos .consejero-flecha{width:clamp(30px,7.2%,56px);aspect-ratio:64/80;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor);position:relative}
+#papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;gap:10px;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
+#papel-halos .consejero-flecha{width:clamp(30px,7.2%,56px);aspect-ratio:64/80;line-height:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor);position:relative;flex:0 0 auto}
 #papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible}
-#papel-halos .consejero-flecha .puesto{font:800 11px/1 "Press Start 2P",system-ui,sans-serif;fill:#140e06}
-#papel-halos .consejero-ranking{margin:0 0 3px;padding:3px 7px;background:rgba(20,14,6,.9);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
+#papel-halos .consejero-flecha .puesto{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:800;fill:#140e06}
+#papel-halos .consejero-ranking{margin:0;padding:3px 8px 4px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
+#papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1}
+#papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:11em;overflow:hidden;text-overflow:ellipsis}
 #papel-halos .consejero-ranking:focus-visible{outline:2px dashed #ffd75e;outline-offset:2px}
-#papel-halos .consejero-marker[data-borde=izq] .consejero-ranking{align-self:flex-start}
-#papel-halos .consejero-marker[data-borde=der] .consejero-ranking{align-self:flex-end}
-#papel-halos .consejero-marker[data-cerca=izq] .consejero-ranking{transform:translateX(-22%)}
-#papel-halos .consejero-marker[data-cerca=der] .consejero-ranking{transform:translateX(22%)}
-@keyframes flecha-rebote{0%,100%{transform:translateY(0)}50%{transform:translateY(-26%)}}
-.consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite}
+@keyframes flecha-rebote{0%,100%{transform:translateY(0)}50%{transform:translateY(12%)}}
+.consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite;transform-origin:center bottom}
 @media (max-width:500px){
+  #papel-halos .consejero-marker{gap:8px}
   #papel-halos .consejero-flecha{width:clamp(26px,8.5%,44px)}
-  #papel-halos .consejero-ranking{font-size:11px;padding:2px 5px;margin-bottom:2px}
-  #papel-halos .consejero-marker[data-cerca=izq] .consejero-ranking{transform:translateX(-42%)}
-  #papel-halos .consejero-marker[data-cerca=der] .consejero-ranking{transform:translateX(42%)}
+  #papel-halos .consejero-ranking{padding:2px 6px 3px}
+  #papel-halos .consejero-ranking .ranking-n{font-size:12px}
+  #papel-halos .consejero-ranking .ranking-proy{font-size:8px}
 }
-@media (prefers-reduced-motion:reduce){.papel-halo,.consejero-flecha{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.consejero-flecha{animation:none!important}}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
 .consejo-globo.globo-proyectos{max-width:280px;min-width:210px;padding:8px 10px 10px;pointer-events:auto;z-index:24;text-align:center}
@@ -188,15 +188,23 @@
     const fl = p.flecha;
     return !!(fl && Number.isFinite(Number(fl.x)) && Number.isFinite(Number(fl.y)));
   }
-  function llevaHalo(p) {
-    if (!p || p.activo === false) return false;
-    if (!p || p.sobre === 'ninguno' || p.sobre === 'cuerpo') return false;
-    return puntosDe(p).length >= 3;
+  /* t1219u: reparto de Carlos, sustituye al de Jobs. Los coetáneos no tienen proyecto asignado. */
+  const PROYECTO_PRINCIPAL = {
+    'Steve Jobs': 'Día a día',
+    'Steve Wozniak': 'Alsea',
+    'Walt Disney': 'PortAventuraNeXT',
+    'George Lucas': 'AdmiraNeXT',
+  };
+  function proyectoDe(persona) {
+    return PROYECTO_PRINCIPAL[persona] || '';
   }
+  function llevaHalo() { return false; }
   function flechaSvg(puesto) {
     const n = (puesto && Number(puesto) >= 1) ? String(puesto) : '';
+    /* Punta (triángulo) de y=38 a y=76; el número va en su centro, no en el tallo (y≈26). */
+    const fs = n.length > 1 ? '20' : '26';
     const txt = n
-      ? '<text class="puesto" x="32" y="26" text-anchor="middle" font-size="' + (n.length > 1 ? '16' : '20') + '" font-weight="800" fill="#140e06">' + n + '</text>'
+      ? '<text class="puesto" x="32" y="54" text-anchor="middle" dominant-baseline="middle" font-size="' + fs + '" font-weight="800" fill="#140e06">' + n + '</text>'
       : '';
     return '<svg viewBox="0 0 64 80" focusable="false" aria-hidden="true"><path d="M32 76 L6 38 L22 38 L22 4 L42 4 L42 38 L58 38 Z" fill="currentColor" stroke="#140e06" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>' + txt + '</svg>';
   }
@@ -268,70 +276,7 @@
     const gen = genActual();
     const pos = PAPEL[gen] || {};
     c.replaceChildren();
-    const NS = 'http://www.w3.org/2000/svg';
-    const svg = d.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 100 100');
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.setAttribute('aria-hidden', 'true');
-    const defs = d.createElementNS(NS, 'defs');
-    Object.keys(COLORES).forEach((estado) => {
-      const filter = d.createElementNS(NS, 'filter');
-      filter.setAttribute('id', 'halo-brillo-' + estado);
-      filter.setAttribute('x', '-80%');
-      filter.setAttribute('y', '-80%');
-      filter.setAttribute('width', '260%');
-      filter.setAttribute('height', '260%');
-      filter.setAttribute('color-interpolation-filters', 'sRGB');
-      const morph = d.createElementNS(NS, 'feMorphology');
-      morph.setAttribute('in', 'SourceAlpha');
-      morph.setAttribute('operator', 'dilate');
-      morph.setAttribute('radius', '0.35');
-      morph.setAttribute('result', 'wide');
-      const blur = d.createElementNS(NS, 'feGaussianBlur');
-      blur.setAttribute('in', 'wide');
-      blur.setAttribute('stdDeviation', '0.55');
-      blur.setAttribute('result', 'blur');
-      const flood = d.createElementNS(NS, 'feFlood');
-      flood.setAttribute('flood-color', COLORES[estado]);
-      flood.setAttribute('result', 'col');
-      const comp = d.createElementNS(NS, 'feComposite');
-      comp.setAttribute('in', 'col');
-      comp.setAttribute('in2', 'blur');
-      comp.setAttribute('operator', 'in');
-      comp.setAttribute('result', 'glow');
-      const merge = d.createElementNS(NS, 'feMerge');
-      const n1 = d.createElementNS(NS, 'feMergeNode'); n1.setAttribute('in', 'glow');
-      const n2 = d.createElementNS(NS, 'feMergeNode'); n2.setAttribute('in', 'SourceGraphic');
-      merge.append(n1, n2);
-      filter.append(morph, blur, flood, comp, merge);
-      defs.appendChild(filter);
-    });
-    svg.appendChild(defs);
     const estados = mapaEstados();
-    Object.keys(pos).forEach((persona) => {
-      const p = pos[persona];
-      if (!llevaHalo(p)) return;
-      const pts = puntosDe(p);
-      const estado = estadoDe(persona, estados);
-      const sobre = p.sobre || 'papel';
-      const g = d.createElementNS(NS, 'g');
-      g.setAttribute('class', 'papel-halo');
-      g.setAttribute('data-persona', persona);
-      g.setAttribute('data-estado', estado);
-      g.setAttribute('data-sobre', sobre);
-      g.setAttribute('filter', 'url(#halo-brillo-' + estado + ')');
-      const poly = d.createElementNS(NS, 'polygon');
-      poly.setAttribute('points', pts.map((xy) => xy[0] + ',' + xy[1]).join(' '));
-      poly.setAttribute('fill', COLORES[estado] || COLORES.desconocido);
-      poly.setAttribute('fill-opacity', '0.14');
-      poly.setAttribute('stroke', COLORES[estado] || COLORES.desconocido);
-      poly.setAttribute('stroke-width', sobre === 'placa' ? '0.28' : '0.22');
-      poly.setAttribute('stroke-linejoin', 'round');
-      poly.setAttribute('stroke-linecap', 'round');
-      g.appendChild(poly);
-      svg.appendChild(g);
-    });
-    c.appendChild(svg);
     Object.keys(pos).forEach((persona) => {
       const p = pos[persona];
       if (!llevaFlecha(p)) return;
@@ -346,14 +291,21 @@
       wrap.style.left = fl.x + '%';
       wrap.style.top = fl.y + '%';
       wrap.style.color = COLORES[estado] || COLORES.desconocido;
-      const x = Number(fl.x);
-      if (x < 16) wrap.setAttribute('data-borde', 'izq');
-      else if (x > 84) wrap.setAttribute('data-borde', 'der');
       const hoy = silla && silla.hoy;
       if (hoy && (hoy.etiqueta || hoy.n != null)) {
         const lab = d.createElement('span');
         lab.className = 'consejero-ranking';
-        lab.textContent = hoy.etiqueta != null ? String(hoy.etiqueta) : (hoy.n == null ? '—' : String(hoy.n));
+        const cifra = d.createElement('span');
+        cifra.className = 'ranking-n';
+        cifra.textContent = hoy.etiqueta != null ? String(hoy.etiqueta) : (hoy.n == null ? '—' : String(hoy.n));
+        lab.appendChild(cifra);
+        const proy = proyectoDe(persona);
+        if (proy) {
+          const nom = d.createElement('span');
+          nom.className = 'ranking-proy';
+          nom.textContent = proy;
+          lab.appendChild(nom);
+        }
         lab.setAttribute('role', 'button');
         lab.setAttribute('tabindex', '0');
         lab.setAttribute('data-persona', persona);
@@ -371,7 +323,6 @@
       wrap.appendChild(el);
       c.appendChild(wrap);
     });
-    separarEtiquetas(c);
   }
 
   function textoEtiqueta(et) {
@@ -381,19 +332,6 @@
     return compacto ? t.replace(/\s*hoy\s*·\s*/, '·') : t;
   }
 
-  /* Musk y Huang (y cualquier par a menos de 14 % de ancho) no pueden pisarse. */
-  function separarEtiquetas(c) {
-    const items = [...c.querySelectorAll('.consejero-marker')].filter((el) => el.querySelector('.consejero-ranking'))
-      .map((el) => ({ el, x: parseFloat(el.style.left) }))
-      .filter((x) => Number.isFinite(x.x))
-      .sort((a, b) => a.x - b.x);
-    for (let i = 0; i < items.length - 1; i++) {
-      if (items[i + 1].x - items[i].x < 14) {
-        items[i].el.setAttribute('data-cerca', 'izq');
-        items[i + 1].el.setAttribute('data-cerca', 'der');
-      }
-    }
-  }
 
   function colocarGlobo(anchor) {
     if (!globo || !anchor) return;

@@ -1,0 +1,71 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { plantillaInicial, proyectoPrincipalDe } from './consejo-objetivos-abc-lib.mjs';
+
+const root = dirname(fileURLToPath(import.meta.url));
+const src = readFileSync(join(root, 'council-globo.js'), 'utf8');
+const index = readFileSync(join(root, 'index.html'), 'utf8');
+
+test('la caja pone el título arriba, el recuento debajo y flechas ◀ ▶ a los lados', () => {
+  assert.match(src, /\.ranking-proy/);
+  assert.match(src, /\.ranking-fila/);
+  assert.match(src, /\.ranking-nav/);
+  assert.match(src, /prev\.textContent = '◀'/);
+  assert.match(src, /next\.textContent = '▶'/);
+  // Título se añade antes que la fila del número.
+  const iProy = src.indexOf("nom.className = 'ranking-proy'");
+  const iFila = src.indexOf("fila.className = 'ranking-fila'");
+  const iCifra = src.indexOf("cifra.className = 'ranking-n'");
+  assert.ok(iProy > 0 && iFila > iProy, 'el título se construye antes que la fila del recuento');
+  assert.ok(iCifra > iProy, 'el número queda debajo del título');
+  // Mismo estilo que el carrusel de Carlos: fondo, color y borde dorados.
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*background:#1a140a/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*color:#ffd75e/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*border:1px solid #c9a227/);
+});
+
+test('clicar la flecha de proyecto no enciende el Mac; el resto de la caja sí', () => {
+  assert.match(src, /ranking-nav[\s\S]{0,400}stopPropagation/);
+  assert.match(src, /mostrarListaMac\(persona\)/);
+  assert.match(src, /e\.target\.closest\('\.ranking-nav'\)/);
+  // El paso del carrusel no llama a mostrarListaMac.
+  const paso = src.match(/function pasoProyecto\([\s\S]*?\n  \}/);
+  assert.ok(paso, 'existe pasoProyecto');
+  assert.doesNotMatch(paso[0], /mostrarListaMac/);
+});
+
+test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, sin «/6»', () => {
+  const m = src.match(/#papel-halos \.consejero-flecha \.puesto\{[^}]*font:800 (\d+)px/);
+  assert.ok(m, 'hay font-size del puesto');
+  assert.ok(Number(m[1]) <= 15, 'el puesto debe ser más pequeño que 20px (ahora ' + m[1] + 'px)');
+  const mob = src.match(/@media \(max-width:500px\)\{[\s\S]*?\.consejero-flecha \.puesto\{[^}]*font-size:(\d+)px/);
+  assert.ok(mob, 'hay tamaño móvil del puesto');
+  assert.ok(Number(mob[1]) <= 12, 'en móvil también más pequeño (ahora ' + mob[1] + 'px)');
+  const top = src.match(/#papel-halos \.consejero-flecha \.puesto\{[^}]*top:(\d+)%/);
+  const height = src.match(/#papel-halos \.consejero-flecha \.puesto\{[^}]*height:(\d+)%/);
+  assert.ok(top && height, 'el puesto tiene top y height porcentuales');
+  const bottom = Number(top[1]) + Number(height[1]);
+  assert.ok(bottom <= 88, 'el bloque del puesto no llega a la punta (bottom=' + bottom + '%)');
+  assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
+});
+
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r155', () => {
+  for (const [persona, nombre] of [
+    ['Steve Wozniak', 'Alsea'],
+    ['Walt Disney', 'PortAventuraNeXT'],
+    ['George Lucas', 'AdmiraNeXT'],
+    ['Steve Jobs', 'Día a día'],
+  ]) {
+    const p = proyectoPrincipalDe(persona);
+    assert.equal(p.nombre, nombre);
+    assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
+  }
+  assert.match(index, /council-globo\.js\?v=20261111-r155-caja-proyecto/);
+  const plantilla = plantillaInicial();
+  assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
+    'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',
+  ]);
+});

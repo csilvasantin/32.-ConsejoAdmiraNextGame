@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   TEXTO_SIN_DEFINIR, plantillaInicial, normalizarDocumento, textoObjetivo,
   proyectosActivos, indiceCircular, aplicarCambio, aplicarEscrituraTitular,
-  estaDefinido, autorDe, titularDe,
+  estaDefinido, autorDe, titularDe, proyectoPrincipalDe, proyectosDePersona,
+  recuentoDeProyecto,
 } from './consejo-objetivos-abc-lib.mjs';
 
 test('plantilla inicial: 4 paneles con titular y sin objetivos inventados', () => {
@@ -133,4 +134,40 @@ test('forzar:true sí permite al titular pisar a Carlos (escape documentado)', (
   const pan = r.doc.proyectos.find((p) => p.id === 'alsea');
   assert.equal(pan.objetivos.a, 'Woz con forzar');
   assert.equal(pan.firmas.a.autor, 'Woz');
+});
+
+test('proyecto principal y lista por consejero: leyendas sí, coetáneos no se inventan', () => {
+  assert.deepEqual(proyectoPrincipalDe('Steve Wozniak'), { id: 'alsea', nombre: 'Alsea' });
+  assert.deepEqual(proyectoPrincipalDe('Walt Disney'), { id: 'portaventura-next', nombre: 'PortAventuraNeXT' });
+  assert.deepEqual(proyectoPrincipalDe('George Lucas'), { id: 'admiranext', nombre: 'AdmiraNeXT' });
+  assert.deepEqual(proyectoPrincipalDe('Steve Jobs'), { id: 'dia-a-dia', nombre: 'Día a día' });
+  assert.equal(proyectoPrincipalDe('Jensen Huang'), null);
+  assert.equal(proyectoPrincipalDe('Elon Musk'), null);
+  assert.equal(proyectoPrincipalDe('Mira Murati'), null);
+  const plantilla = plantillaInicial();
+  const woz = proyectosDePersona('Steve Wozniak', plantilla);
+  assert.deepEqual(woz.map((p) => p.nombre), ['Alsea']);
+  const jobs = proyectosDePersona('Steve Jobs', plantilla);
+  assert.deepEqual(jobs.map((p) => p.nombre), ['Día a día']);
+  assert.deepEqual(proyectosDePersona('Jensen Huang', plantilla), []);
+  const extra = plantilla.concat([{ id: 'otro-woz', nombre: 'Otro de Woz', titular: 'Woz', activo: true }]);
+  assert.deepEqual(proyectosDePersona('woz', extra).map((p) => p.id), ['alsea', 'otro-woz']);
+  assert.deepEqual(proyectosDePersona('Jony Ive', extra), []);
+});
+
+test('recuentoDeProyecto: no parte el total si las misiones no traen proyecto; filtra si sí', () => {
+  const hoy = { n: 20, etiqueta: '20', misiones: [
+    { titulo: 'PR mesa', fuente: 'pr' },
+    { titulo: 'encargo', fuente: 'inbox' },
+    { titulo: 'latido viejo', fuente: 'latido' },
+  ] };
+  assert.equal(recuentoDeProyecto(hoy, { id: 'alsea', nombre: 'Alsea' }), '20');
+  assert.equal(recuentoDeProyecto({ n: null, etiqueta: null, misiones: [] }, { id: 'alsea', nombre: 'Alsea' }), '—');
+  const conCampo = { n: 3, etiqueta: '3', misiones: [
+    { titulo: 'A', fuente: 'pr', proyecto: 'alsea' },
+    { titulo: 'B', fuente: 'inbox', project: 'AdmiraNeXT' },
+    { titulo: 'C', fuente: 'pr', proyecto_id: 'alsea' },
+  ] };
+  assert.equal(recuentoDeProyecto(conCampo, { id: 'alsea', nombre: 'Alsea' }), '2');
+  assert.equal(recuentoDeProyecto(conCampo, { id: 'admiranext', nombre: 'AdmiraNeXT' }), '1');
 });

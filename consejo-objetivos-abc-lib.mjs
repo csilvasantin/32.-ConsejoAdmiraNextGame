@@ -57,6 +57,73 @@ export function titularDe(id, nombre) {
   return TITULARES[sid] || null;
 }
 
+/** Nombre canónico de la persona titular (Jobs → Steve Jobs, etc.). */
+export const PERSONA_DE_TITULAR = Object.freeze({
+  Jobs: 'Steve Jobs',
+  Woz: 'Steve Wozniak',
+  Walt: 'Walt Disney',
+  Lucas: 'George Lucas',
+});
+
+export function proyectoPrincipalDe(persona) {
+  const titular = autorDe(persona);
+  const p = PLANTILLA_PROYECTOS.find((x) => autorDe(x.titular) === titular);
+  return p ? { id: p.id, nombre: p.nombre } : null;
+}
+
+/**
+ * Proyectos de un consejero: el principal (si lo tiene) y, a continuación,
+ * cualquier otro de la lista en vivo del que sea titular. Sin inventar.
+ * Los coetáneos, hoy, no tienen proyecto asignado: la lista queda vacía
+ * salvo que los datos traigan uno con su titular.
+ */
+export function proyectosDePersona(persona, proyectos) {
+  const out = [];
+  const seen = new Set();
+  const add = (raw) => {
+    if (!raw) return;
+    const nombre = String(raw.nombre || raw.name || '').replace(/\s+/g, ' ').trim();
+    if (!nombre) return;
+    const id = slugProyecto(nombre, raw.id);
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push({ id, nombre });
+  };
+  add(proyectoPrincipalDe(persona));
+  const titular = autorDe(persona);
+  if (!titular) return out;
+  for (const p of (Array.isArray(proyectos) ? proyectos : [])) {
+    if (!p || p.activo === false) continue;
+    if (autorDe(p.titular) === titular) add(p);
+  }
+  return out;
+}
+
+/**
+ * Recuento mostrado en la caja. Si las misiones traen proyecto/project
+ * explícito, se filtran las de ese proyecto (sin inventar). Si no hay
+ * campo de proyecto, se muestra el recuento real del consejero (no se parte).
+ */
+export function recuentoDeProyecto(hoy, proyecto) {
+  if (!hoy) return '—';
+  const items = (Array.isArray(hoy.misiones) ? hoy.misiones : []).filter((m) => m && m.fuente !== 'latido');
+  const id = proyecto && (proyecto.id || '');
+  const nombre = proyecto && (proyecto.nombre || '');
+  const tieneCampo = items.some((m) => m && (m.proyecto || m.project || m.proyecto_id || m.project_id));
+  if (tieneCampo && (id || nombre)) {
+    const idK = String(id).toLowerCase();
+    const nomK = String(nombre).toLowerCase();
+    const n = items.filter((m) => {
+      const raw = String(m.proyecto || m.project || m.proyecto_id || m.project_id || '').toLowerCase();
+      return raw && (raw === idK || raw === nomK);
+    }).length;
+    return String(n);
+  }
+  if (hoy.etiqueta != null && hoy.etiqueta !== '') return String(hoy.etiqueta);
+  if (hoy.n == null) return '—';
+  return String(hoy.n);
+}
+
 export function textoObjetivo(valor) {
   const crudo = (valor && typeof valor === 'object') ? (valor.texto ?? valor.valor ?? '') : valor;
   const t = String(crudo == null ? '' : crudo).replace(/\s+/g, ' ').trim();

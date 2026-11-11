@@ -2,9 +2,12 @@
  * Sin brillo ni halo en los papeles (t1219u): basta la flecha.
  * Datos: GET /api/consejo/estado (latido de consejero_latido + últimos done públicos).
  * Flecha, caja de hoy y globo leen un único mapa / instantánea por pintado.
- * Encima de la flecha, una caja centrada en su eje (cifra de hoy + proyecto
- * principal). El puesto va dentro del triángulo (la punta), grande, no en el
- * tallo ni en la caja. La flecha no pisa la caja.
+ * Encima de la flecha, una caja centrada en su eje: título del proyecto
+ * arriba y, debajo, el recuento de hoy flanqueado por flechas ◀ ▶ (mismo
+ * estilo que el carrusel de Carlos Silva) para el proyecto anterior/siguiente
+ * del consejero. Clicar las flechas no enciende el Mac 1984; el resto de la
+ * caja sí. El puesto va dentro del triángulo, más pequeño para que quepa en
+ * la punta, en negro. Sin «/6». La flecha no pisa la caja.
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
  * Disney está en la silla que era de Schultz y sí lleva flecha (tiene bot).
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
@@ -45,20 +48,25 @@
 #papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;gap:10px;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
 #papel-halos .consejero-flecha{width:clamp(40px,9.2%,72px);aspect-ratio:80/88;line-height:normal;position:relative;flex:0 0 auto}
 #papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor)}
-#papel-halos .consejero-flecha .puesto{position:absolute;left:0;right:0;top:44%;height:50%;display:flex;align-items:center;justify-content:center;margin:0;padding:0;font:800 20px/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:#140e06;-webkit-text-stroke:0.4px rgba(243,230,196,.45);text-shadow:none;pointer-events:none;z-index:2}
-#papel-halos .consejero-ranking{margin:0;padding:3px 8px 4px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
-#papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1}
-#papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:11em;overflow:hidden;text-overflow:ellipsis}
+#papel-halos .consejero-flecha .puesto{position:absolute;left:0;right:0;top:47%;height:36%;display:flex;align-items:center;justify-content:center;margin:0;padding:0;font:800 13px/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:#140e06;-webkit-text-stroke:0.35px rgba(243,230,196,.45);text-shadow:none;pointer-events:none;z-index:2}
+#papel-halos .consejero-ranking{margin:0;padding:3px 7px 4px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
+#papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:12em;overflow:hidden;text-overflow:ellipsis}
+#papel-halos .consejero-ranking .ranking-fila{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px}
+#papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1;min-width:1.1em}
+#papel-halos .consejero-ranking .ranking-nav{appearance:none;flex:0 0 auto;width:20px;height:20px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:13px/1 sans-serif;cursor:pointer}
+#papel-halos .consejero-ranking .ranking-nav:disabled{opacity:.4;cursor:default}
+#papel-halos .consejero-ranking .ranking-nav:focus-visible{outline:2px dashed #ffd75e;outline-offset:1px}
 #papel-halos .consejero-ranking:focus-visible{outline:2px dashed #ffd75e;outline-offset:2px}
 @keyframes flecha-rebote{0%,100%{transform:translateY(0)}50%{transform:translateY(12%)}}
 .consejero-flecha{animation:flecha-rebote 1.2s ease-in-out infinite;transform-origin:center bottom}
 @media (max-width:500px){
   #papel-halos .consejero-marker{gap:8px}
   #papel-halos .consejero-flecha{width:clamp(34px,10%,56px)}
-  #papel-halos .consejero-flecha .puesto{font-size:16px}
-  #papel-halos .consejero-ranking{padding:2px 6px 3px}
+  #papel-halos .consejero-flecha .puesto{font-size:11px;top:48%;height:34%}
+  #papel-halos .consejero-ranking{padding:2px 5px 3px}
   #papel-halos .consejero-ranking .ranking-n{font-size:12px}
-  #papel-halos .consejero-ranking .ranking-proy{font-size:8px}
+  #papel-halos .consejero-ranking .ranking-proy{font-size:8px;max-width:11em}
+  #papel-halos .consejero-ranking .ranking-nav{width:18px;height:18px;font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){.consejero-flecha{animation:none!important}}
 
@@ -124,7 +132,7 @@
 `;
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
-  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false;
+  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false, proyIdx = Object.create(null);
 
   function doc() { return root.document; }
   function escena() { return doc() && doc().querySelector('.council-image'); }
@@ -217,6 +225,66 @@
   };
   function proyectoDe(persona) {
     return PROYECTO_PRINCIPAL[persona] || '';
+  }
+  function titularKey(v) {
+    return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]+/g, '');
+  }
+  const TITULAR_DE = { 'stevejobs': 'jobs', 'jobs': 'jobs', 'stevewozniak': 'woz', 'wozniak': 'woz', 'woz': 'woz', 'waltdisney': 'walt', 'disney': 'walt', 'walt': 'walt', 'georgelucas': 'lucas', 'lucas': 'lucas' };
+  function proyectosDe(persona) {
+    const out = [];
+    const seen = Object.create(null);
+    const add = (id, nombre) => {
+      const nom = String(nombre || '').replace(/\s+/g, ' ').trim();
+      if (!nom) return;
+      const pid = String(id || nom).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || nom;
+      if (seen[pid]) return;
+      seen[pid] = true;
+      out.push({ id: pid, nombre: nom });
+    };
+    const principal = proyectoDe(persona);
+    if (principal) add('', principal);
+    const yo = TITULAR_DE[titularKey(persona)] || titularKey(persona);
+    const lista = objetivosAbc && Array.isArray(objetivosAbc.proyectos) ? objetivosAbc.proyectos : [];
+    for (let i = 0; i < lista.length; i++) {
+      const p = lista[i];
+      if (!p || !p.nombre || p.activo === false) continue;
+      const tit = TITULAR_DE[titularKey(p.titular)] || titularKey(p.titular);
+      if (yo && tit && tit === yo) add(p.id, p.nombre);
+    }
+    return out;
+  }
+  function recuentoCaja(hoy, proyecto) {
+    if (!hoy) return '—';
+    const items = (Array.isArray(hoy.misiones) ? hoy.misiones : []).filter((m) => m && m.fuente !== 'latido');
+    const id = proyecto && proyecto.id;
+    const nombre = proyecto && proyecto.nombre;
+    let conCampo = false;
+    for (let i = 0; i < items.length; i++) {
+      const m = items[i];
+      if (m && (m.proyecto || m.project || m.proyecto_id || m.project_id)) { conCampo = true; break; }
+    }
+    if (conCampo && (id || nombre)) {
+      const idK = String(id || '').toLowerCase();
+      const nomK = String(nombre || '').toLowerCase();
+      let n = 0;
+      for (let i = 0; i < items.length; i++) {
+        const raw = String((items[i] && (items[i].proyecto || items[i].project || items[i].proyecto_id || items[i].project_id)) || '').toLowerCase();
+        if (raw && (raw === idK || raw === nomK)) n += 1;
+      }
+      return String(n);
+    }
+    if (hoy.etiqueta != null && hoy.etiqueta !== '') return String(hoy.etiqueta);
+    if (hoy.n == null) return '—';
+    return String(hoy.n);
+  }
+  function pasoProyecto(persona, dir, e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const lista = proyectosDe(persona);
+    if (lista.length < 2) return;
+    const n = lista.length;
+    const cur = ((Number(proyIdx[persona]) || 0) % n + n) % n;
+    proyIdx[persona] = (cur + dir + n) % n;
+    pintarHalos();
   }
   function llevaHalo() { return false; }
   function flechaSvg(puesto) {
@@ -314,23 +382,54 @@
       if (hoy && (hoy.etiqueta || hoy.n != null)) {
         const lab = d.createElement('span');
         lab.className = 'consejero-ranking';
-        const cifra = d.createElement('span');
-        cifra.className = 'ranking-n';
-        cifra.textContent = hoy.etiqueta != null ? String(hoy.etiqueta) : (hoy.n == null ? '—' : String(hoy.n));
-        lab.appendChild(cifra);
-        const proy = proyectoDe(persona);
-        if (proy) {
+        const listaProy = proyectosDe(persona);
+        const nProy = listaProy.length;
+        const idx = nProy ? (((Number(proyIdx[persona]) || 0) % nProy) + nProy) % nProy : 0;
+        const proy = nProy ? listaProy[idx] : null;
+        if (proy && proy.nombre) {
           const nom = d.createElement('span');
           nom.className = 'ranking-proy';
-          nom.textContent = proy;
+          nom.textContent = proy.nombre;
           lab.appendChild(nom);
         }
+        const fila = d.createElement('span');
+        fila.className = 'ranking-fila';
+        const prev = d.createElement('button');
+        prev.type = 'button';
+        prev.className = 'ranking-nav';
+        prev.setAttribute('aria-label', 'Proyecto anterior');
+        prev.textContent = '◀';
+        const cifra = d.createElement('span');
+        cifra.className = 'ranking-n';
+        cifra.textContent = recuentoCaja(hoy, proy);
+        const next = d.createElement('button');
+        next.type = 'button';
+        next.className = 'ranking-nav';
+        next.setAttribute('aria-label', 'Proyecto siguiente');
+        next.textContent = '▶';
+        if (nProy < 2) {
+          prev.disabled = true;
+          next.disabled = true;
+        } else {
+          prev.addEventListener('click', (e) => pasoProyecto(persona, -1, e));
+          next.addEventListener('click', (e) => pasoProyecto(persona, 1, e));
+          prev.addEventListener('keydown', (e) => { e.stopPropagation(); });
+          next.addEventListener('keydown', (e) => { e.stopPropagation(); });
+        }
+        fila.append(prev, cifra, next);
+        lab.appendChild(fila);
         lab.setAttribute('role', 'button');
         lab.setAttribute('tabindex', '0');
         lab.setAttribute('data-persona', persona);
-        lab.title = 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
-        lab.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona); });
+        const nomTit = proy && proy.nombre ? (proy.nombre + ' · ') : '';
+        lab.title = nomTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
+        lab.setAttribute('aria-label', nomTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
+        lab.addEventListener('click', (e) => {
+          if (e.target && e.target.closest && e.target.closest('.ranking-nav')) { e.preventDefault(); e.stopPropagation(); return; }
+          e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
+        });
         lab.addEventListener('keydown', (e) => {
+          if (e.target && e.target.closest && e.target.closest('.ranking-nav')) return;
           if (e.key !== 'Enter' && e.key !== ' ') return;
           e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
         });
@@ -780,9 +879,10 @@
     wire();
     prepararHotspots();
     cargar(true).then(pintarHalos, pintarHalos);
+    cargarObjetivos(false).then(pintarHalos, pintarHalos);
   }
   if (doc() && doc().readyState === 'loading') doc().addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
-  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe };
+  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, pasoProyecto };
 })(typeof window !== 'undefined' ? window : globalThis);

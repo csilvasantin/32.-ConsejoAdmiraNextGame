@@ -5,11 +5,14 @@
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
  * Disney está en la silla que era de Schultz y sí lleva flecha (tiene bot).
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
+ * Carlos Silva (Y-3): sin flecha. El globo muestra sus proyectos activos de uno
+ * en uno, con objetivos a/b/c leídos en vivo de GET /api/consejo/objetivos-abc.
  * prefers-reduced-motion: halo y flecha sin animación. */
 (function (root) {
   'use strict';
 
   const ENDPOINT = (root && root.ADMIRA_GLOBO_URL) || '/api/consejo/estado';
+  const OBJETIVOS_URL = (root && root.ADMIRA_OBJETIVOS_ABC_URL) || '/api/consejo/objetivos-abc';
   const REUSE_MS = 20000;
   const COLORES = { trabajando: '#e23d3d', libre: '#3ddc84', desconocido: '#ffd60a' };
   const PAPEL = {
@@ -59,8 +62,20 @@
 @media (prefers-reduced-motion:reduce){.papel-halo,.consejero-flecha{animation:none!important}}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
+.consejo-globo.globo-proyectos{max-width:280px;min-width:210px;padding:8px 10px 10px;pointer-events:auto;z-index:24}
 .consejo-globo b{display:block;margin:0 0 3px;font:bold 9px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.3px}
 .consejo-globo p{margin:0;word-break:break-word}
+.consejo-globo .gp-nav{display:flex;align-items:center;gap:6px;margin:2px 0 7px}
+.consejo-globo .gp-nav button{appearance:none;flex:0 0 auto;width:28px;height:28px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:16px/1 sans-serif;cursor:pointer}
+.consejo-globo .gp-nav button:focus-visible{outline:2px dashed #ffd75e;outline-offset:1px}
+.consejo-globo .gp-nav .gp-nombre{flex:1;text-align:center;font:700 12px/1.25 system-ui,-apple-system,sans-serif;color:#fff3d0}
+.consejo-globo .gp-nav .gp-pos{display:block;margin-top:2px;font:700 9px/1.2 system-ui,sans-serif;color:#c9a227}
+.consejo-globo ol.gp-abc{margin:0;padding:0;list-style:none}
+.consejo-globo ol.gp-abc li{margin:0 0 5px;padding:0;display:grid;grid-template-columns:1.3em 1fr;gap:4px;align-items:start}
+.consejo-globo ol.gp-abc .letra{color:#ffd75e;font:bold 10px/1.35 "Press Start 2P",monospace}
+.consejo-globo ol.gp-abc .txt{color:#f3e6c4;word-break:break-word}
+.consejo-globo ol.gp-abc .txt.vacio{color:#9a8b6a;font-style:italic}
+.consejo-globo .gp-vacio{margin:0;color:#9a8b6a}
 .consejo-globo .consejero-ranking-globo{display:block;margin-top:4px;font:700 10px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:inherit;opacity:.95}
 .consejo-globo[data-estado=trabajando]{border-color:${COLORES.trabajando}}
 .consejo-globo[data-estado=libre]{border-color:${COLORES.libre}}
@@ -83,6 +98,7 @@
 `;
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
+  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false;
 
   function doc() { return root.document; }
   function escena() { return doc() && doc().querySelector('.council-image'); }
@@ -103,6 +119,27 @@
       if (s) return s;
     }
     return null;
+  }
+  function esCarlos(persona) { return key(persona) === 'carlossilva'; }
+  function textoAbc(v) {
+    const t = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+    return t || '— sin definir —';
+  }
+  function proyectosCarlos() {
+    const lista = objetivosAbc && Array.isArray(objetivosAbc.proyectos) ? objetivosAbc.proyectos : [];
+    return lista.filter((p) => p && p.nombre && p.activo !== false);
+  }
+  function cargarObjetivos(force) {
+    if (!force && objetivosAbc && (Date.now() - objetivosAt) < REUSE_MS) return Promise.resolve(objetivosAbc);
+    return fetch(OBJETIVOS_URL, { cache: 'no-store', headers: { accept: 'application/json' } })
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then((d) => { objetivosAbc = d && typeof d === 'object' ? d : { ok: false, proyectos: [] }; objetivosAt = Date.now(); return objetivosAbc; })
+      .catch(() => {
+        if (objetivosAbc) return objetivosAbc;
+        objetivosAbc = { ok: false, proyectos: [], error: true };
+        objetivosAt = Date.now();
+        return objetivosAbc;
+      });
   }
 
   /* Un solo mapa por pintado: flecha y papel/placa del mismo consejero no pueden divergir. */
@@ -359,13 +396,13 @@
     }
     const s = sillaDe(persona);
     let estado, texto;
+    const carlos = esCarlos(persona);
     if (s) {
       estado = s.estado || 'desconocido';
       texto = s.texto;
-    } else if (key(persona) === 'carlossilva') {
-      /* La figura Y-3 no tiene silla en /api/consejo/estado; siempre está disponible. */
+    } else if (carlos) {
       estado = 'libre';
-      texto = 'Siempre disponible';
+      texto = '';
     } else {
       estado = 'desconocido';
       texto = enVuelo ? 'mirando…' : 'desconocido';
@@ -373,18 +410,24 @@
     globo.hidden = false;
     globo.dataset.estado = estado;
     globo.dataset.persona = persona;
+    globo.classList.toggle('globo-proyectos', carlos);
     globo.innerHTML = '';
     const b = d.createElement('b'); b.textContent = persona;
-    const p = d.createElement('p'); p.textContent = texto;
-    globo.append(b, p);
-    const etiqueta = s && s.hoy && s.hoy.etiqueta;
-    if (etiqueta) {
-      const r = d.createElement('span');
-      r.className = 'consejero-ranking-globo';
-      r.textContent = etiqueta;
-      globo.appendChild(r);
+    globo.appendChild(b);
+    if (carlos) {
+      pintarProyectosCarlos(globo);
+    } else {
+      const p = d.createElement('p'); p.textContent = texto;
+      globo.appendChild(p);
+      const etiqueta = s && s.hoy && s.hoy.etiqueta;
+      if (etiqueta) {
+        const r = d.createElement('span');
+        r.className = 'consejero-ranking-globo';
+        r.textContent = etiqueta;
+        globo.appendChild(r);
+      }
+      globo.setAttribute('aria-label', persona + ': ' + texto + (etiqueta ? ' · ' + etiqueta : ''));
     }
-    globo.setAttribute('aria-label', persona + ': ' + texto + (etiqueta ? ' · ' + etiqueta : ''));
     colocarGlobo(anchor);
     abierto = { persona, anchor };
     const hot = d.getElementById('body-hotspots');
@@ -395,21 +438,95 @@
       });
     }
   }
+  function pintarProyectosCarlos(host) {
+    const d = doc(); if (!d || !host) return;
+    const lista = proyectosCarlos();
+    const n = lista.length;
+    if (objetivosAbc && objetivosAbc.error && !n) {
+      const p = d.createElement('p');
+      p.className = 'gp-vacio';
+      p.textContent = 'No hay datos de proyectos.';
+      host.appendChild(p);
+      host.setAttribute('aria-label', 'Carlos Silva: no hay datos de proyectos');
+      return;
+    }
+    if (!n) {
+      const p = d.createElement('p');
+      p.className = 'gp-vacio';
+      p.textContent = 'Sin proyectos activos.';
+      host.appendChild(p);
+      host.setAttribute('aria-label', 'Carlos Silva: sin proyectos activos');
+      return;
+    }
+    carlosIdx = ((carlosIdx % n) + n) % n;
+    const proy = lista[carlosIdx];
+    const nav = d.createElement('div');
+    nav.className = 'gp-nav';
+    const prev = d.createElement('button');
+    prev.type = 'button';
+    prev.setAttribute('aria-label', 'Proyecto anterior');
+    prev.textContent = '◀';
+    const next = d.createElement('button');
+    next.type = 'button';
+    next.setAttribute('aria-label', 'Proyecto siguiente');
+    next.textContent = '▶';
+    const nombre = d.createElement('div');
+    nombre.className = 'gp-nombre';
+    const tit = d.createElement('span');
+    tit.textContent = proy.nombre;
+    const pos = d.createElement('span');
+    pos.className = 'gp-pos';
+    pos.textContent = (carlosIdx + 1) + ' / ' + n;
+    nombre.append(tit, pos);
+    const paso = (dir) => (e) => {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      carlosIdx = ((carlosIdx + dir) % n + n) % n;
+      if (abierto) pintarGlobo(abierto.persona, abierto.anchor);
+    };
+    prev.addEventListener('click', paso(-1));
+    next.addEventListener('click', paso(1));
+    nav.append(prev, nombre, next);
+    host.appendChild(nav);
+    const ol = d.createElement('ol');
+    ol.className = 'gp-abc';
+    const objs = (proy.objetivos && typeof proy.objetivos === 'object') ? proy.objetivos : {};
+    ['a', 'b', 'c'].forEach((letra) => {
+      const li = d.createElement('li');
+      const lab = d.createElement('span');
+      lab.className = 'letra';
+      lab.textContent = letra + '.';
+      const txt = d.createElement('span');
+      const valor = textoAbc(objs[letra]);
+      txt.className = 'txt' + (valor === '— sin definir —' ? ' vacio' : '');
+      txt.textContent = valor;
+      li.append(lab, txt);
+      ol.appendChild(li);
+    });
+    host.appendChild(ol);
+    host.setAttribute('aria-label', 'Carlos Silva: ' + proy.nombre + ' (' + (carlosIdx + 1) + ' de ' + n + ')');
+  }
   function mostrar(el) {
     if (!el) return;
     const persona = el.getAttribute('data-persona'); if (!persona) return;
     clearTimeout(hideT);
+    if (esCarlos(persona) && esTactil()) carlosFijado = true;
     pintarGlobo(persona, el);
-    cargar(false).then(() => pintarGlobo(persona, el), () => pintarGlobo(persona, el));
+    const after = () => { if (abierto && abierto.persona === persona) pintarGlobo(persona, el); };
+    cargar(false).then(after, after);
+    if (esCarlos(persona)) cargarObjetivos(false).then(after, after);
   }
-  function ocultar() {
+  function ocultar(forzar) {
+    if (!forzar && (sobreGlobo || carlosFijado)) return;
     clearTimeout(hideT);
     hideT = setTimeout(() => {
+      if (!forzar && (sobreGlobo || carlosFijado)) return;
       if (globo) globo.hidden = true;
       abierto = null;
+      carlosFijado = false;
+      sobreGlobo = false;
       const d = doc();
       if (d) d.querySelectorAll('#body-hotspots [aria-describedby="consejo-globo"]').forEach((el) => el.removeAttribute('aria-describedby'));
-    }, 80);
+    }, 160);
   }
   function esTactil() {
     return !!(root.matchMedia && root.matchMedia('(hover: none), (pointer: coarse)').matches);
@@ -538,7 +655,11 @@
         if (!esTactil()) return;
         const el = e.target.closest && e.target.closest('[data-persona]');
         if (!el) return;
-        if (abierto && abierto.persona === el.getAttribute('data-persona') && globo && !globo.hidden) { ocultar(); return; }
+        const persona = el.getAttribute('data-persona');
+        if (abierto && abierto.persona === persona && globo && !globo.hidden) {
+          if (esCarlos(persona) && carlosFijado) { carlosFijado = false; ocultar(true); return; }
+          ocultar(true); return;
+        }
         mostrar(el);
       });
       c.addEventListener('focusin', (e) => {
@@ -564,9 +685,22 @@
     d.addEventListener('click', (e) => {
       if (!esTactil()) return;
       if (e.target.closest && e.target.closest('#body-hotspots [data-persona]')) return;
-      if (abierto) ocultar();
+      if (e.target.closest && e.target.closest('#consejo-globo')) return;
+      if (abierto) { carlosFijado = false; ocultar(true); }
     }, true);
-    d.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (listaAbierta) { cerrarListaMac(); return; } if (abierto) ocultar(); } });
+    d.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (listaAbierta) { cerrarListaMac(); return; } if (abierto) { carlosFijado = false; ocultar(true); } } });
+    d.addEventListener('mouseover', (e) => {
+      if (e.target.closest && e.target.closest('#consejo-globo.globo-proyectos')) {
+        sobreGlobo = true; clearTimeout(hideT);
+      }
+    });
+    d.addEventListener('mouseout', (e) => {
+      const g = e.target.closest && e.target.closest('#consejo-globo.globo-proyectos');
+      if (!g) return;
+      if (e.relatedTarget && g.contains(e.relatedTarget)) return;
+      sobreGlobo = false;
+      if (!carlosFijado) ocultar();
+    });
     const stage = escena();
     if (stage && root.MutationObserver) {
       new root.MutationObserver(() => { prepararHotspots(); pintarHalos(); if (abierto) colocarGlobo(abierto.anchor); })

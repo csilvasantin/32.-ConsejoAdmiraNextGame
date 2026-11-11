@@ -298,6 +298,31 @@
   .objective-grid-detail .delib{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}.objective-grid-detail .delib>summary{list-style:none;display:flex;flex-wrap:wrap;gap:8px;cursor:pointer}.objective-grid-detail .delib>summary::-webkit-details-marker{display:none}.objective-grid-detail .delib .dh{font-weight:800}.objective-grid-detail .delib .dsum{color:var(--mut);font:600 10px var(--mono)}.objective-grid-detail .kit{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}.objective-grid-detail .kit .kh{margin-bottom:7px;font-weight:800}.objective-grid-detail .kit audio{width:100%;max-width:620px;height:34px}.objective-grid-detail .kit .klinks{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.objective-grid-detail .kit .klink{color:var(--brand);text-decoration:none;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font:700 10px/1 var(--mono)}
   .viewsel button{font-size:10px;letter-spacing:.03em}.viewsel button[data-v="grid"]:after{content:' Cómoda'}.viewsel button[data-v="list"]:after{content:' Compacta'}
   @media(max-width:560px){.objectives-grid-scroll{overflow:visible;border-radius:10px}.objectives-grid{min-width:0}.objective-grid-head{display:none}.objective-grid-row{display:block}.objective-grid-cell{display:grid;grid-template-columns:106px minmax(0,1fr);gap:9px;padding:10px 11px;border-left:0;border-top:1px solid var(--line)}.objective-grid-cell:first-child{border-top:0}.objective-grid-cell:before{content:attr(data-label);color:var(--brand);font:700 9px/1.35 var(--mono);letter-spacing:.07em;text-transform:uppercase}.objective-grid-detail{padding-inline:11px}.objective-detail-body{padding-left:0}.objective-actions{margin-top:-2px}.viewsel button[data-v="grid"]:after,.viewsel button[data-v="list"]:after{content:''}}
+
+  /* t1214u: objetivos a/b/c de Carlos (hover Y-3). Independiente del listado Yokup. */
+  .abc-box{margin:0 0 22px;padding:14px 16px 16px;border:1px solid var(--line);border-radius:12px;background:rgba(6,18,26,.45)}
+  .abc-box h2{margin:0 0 6px;font:800 15px/1.3 system-ui,sans-serif;color:var(--ink)}
+  .abc-box .abc-help{margin:0 0 12px;color:var(--dim);font-size:12.5px;line-height:1.5;max-width:82ch}
+  .abc-box .abc-help code{font:700 11px/1 var(--mono);color:var(--brand)}
+  .abc-estado{display:block;margin:0 0 10px;color:var(--mut);font:600 10px/1.4 var(--mono)}
+  .abc-lista{display:flex;flex-direction:column;gap:10px;margin:0 0 12px}
+  .abc-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#06121a}
+  .abc-card-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .abc-card label{display:flex;align-items:center;gap:6px;color:var(--dim);font:700 11px/1.3 var(--mono)}
+  .abc-card input[type=text],.abc-card input.abc-nombre,.abc-card input.abc-obj{flex:1;min-width:140px;background:#031016;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:600 13px/1.3 system-ui,sans-serif}
+  .abc-card label:not(.abc-activo){display:grid;grid-template-columns:1.6em 1fr;gap:8px;margin:4px 0;align-items:center}
+  .abc-card-head label{display:flex}
+  .abc-ord{color:var(--brand);font:700 10px var(--mono)}
+  .abc-card button{appearance:none;background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--dim);padding:4px 8px;cursor:pointer;font:700 11px var(--mono)}
+  .abc-card button:hover{color:var(--ink);border-color:var(--mut)}
+  .abc-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .abc-actions button{appearance:none;background:#0b2a33;border:1px solid var(--brand);color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer;font:700 12px system-ui,sans-serif}
+  .abc-actions .abc-add{background:transparent;border-color:var(--line);color:var(--dim)}
+  .abc-aviso{margin:10px 0 0;font:600 12px/1.4 system-ui,sans-serif}
+  .abc-aviso.ok{color:var(--good)}
+  .abc-aviso.ko{color:var(--bad)}
+  .abc-vacio{margin:0;color:var(--mut);font-size:13px}
+
 </style>
 </head>
 <body data-yk-title="OBJETIVOS" data-yk-zone="app">
@@ -315,6 +340,19 @@
       </div>
     </details>
   </div>
+
+
+  <section class="abc-box" id="objetivos-abc" aria-label="Objetivos a, b y c de los proyectos de Carlos">
+    <h2>Proyectos de Carlos · a, b y c</h2>
+    <p class="abc-help">Esto es lo que aparece en el hover de Carlos Silva (la figura Y-3 del fondo) en la mesa de leyendas: un proyecto cada vez, con sus tres objetivos. El orden lo marcas aquí, y las flechas ◀ ▶ del cartel recorren la lista en círculo. Un campo vacío se muestra «— sin definir —»; no se inventa texto. No es el listado de ideas Yokup de abajo: es un almacén propio (<code>GET/POST /api/consejo/objetivos-abc</code>, KV). Para guardar hace falta el token del Consejo.</p>
+    <span class="abc-estado"></span>
+    <div class="abc-lista"></div>
+    <div class="abc-actions">
+      <button type="button" class="abc-add">Añadir proyecto</button>
+      <button type="button" class="abc-save">Guardar</button>
+    </div>
+    <p class="abc-aviso" hidden></p>
+  </section>
 
   <form class="add" id="addForm" autocomplete="off" aria-label="Nuevo objetivo">
     <!-- La clasificación guía la captura: tipo, Consejero y proyecto se eligen
@@ -1049,6 +1087,7 @@ loadSaber();
 })();
 </script>
 
+<script src="/assets/objetivos-abc-editar.js?v=20261111-abc"></script>
 <script src="/yk-objetivos-grid.js?v=r1"></script>
 <script>YkObjetivosGrid.mount(document.getElementById("objectivesGrid"));</script>
 <script type="module" src="/avatar-widget.js?v=3"></script>

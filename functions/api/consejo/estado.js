@@ -1,8 +1,9 @@
 /**
  * GET /api/consejo/estado — público, solo #, título corto y hora.
  * Junta el latido de los consejeros (mcp.admira.live/consejeros/latido, el de
- * consejero_latido) con el último done de la bandeja pública. Sin textos
- * privados. Caché corta. No escribe: el POST/tool sigue siendo consejero_latido.
+ * consejero_latido) con los done de la bandeja pública (último y recuento de
+ * hoy desde las 00:00 Europe/Madrid, más el puesto 1/6). Sin textos privados.
+ * Caché corta. No escribe: el POST/tool sigue siendo consejero_latido.
  */
 import { armarMesa, CACHE_SEG, botDe, MESA } from "../../../consejo-globo-lib.mjs";
 

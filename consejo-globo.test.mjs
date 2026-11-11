@@ -143,10 +143,10 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
   assert.equal(L['Steve Wozniak'].sobre, 'papel');
   assert.equal(L['Tim Cook'].sobre, 'ninguno');
   assert.equal(L['Dieter Rams'].sobre, 'papel');
-  assert.equal(L['Howard Schultz'].sobre, 'papel');
+  assert.equal(L['Howard Schultz'].sobre, 'ninguno');
   assert.equal(L['George Lucas'].sobre, 'papel');
   assert.equal(L['Warren Buffett'].sobre, 'papel');
-  assert.equal(L['Walt Disney'].sobre, 'ninguno');
+  assert.equal(L['Walt Disney'].sobre, 'papel');
   for (const gen of Object.keys(PAPEL_POS)) {
     for (const [nombre, p] of Object.entries(PAPEL_POS[gen])) {
       assert.ok(['papel', 'placa', 'ninguno'].includes(p.sobre), 'sobre inválido de ' + nombre);
@@ -166,10 +166,17 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
   assert.equal(cook.puntos.length, 0);
   const buffett = L['Warren Buffett'];
   assert.ok(buffett.x < 45 && buffett.y > 48, 'Buffett en sus folios, no en el cuerpo de Y');
-  assert.equal(L['Walt Disney'].nuncaFlecha, true, 'la figura del asiento es Carlos Silva, nunca flecha');
-  assert.equal(L['Walt Disney'].figura, 'Carlos Silva');
-  assert.equal(llevaFlecha('Walt Disney'), false, 'Carlos/Y no lleva flecha');
-  assert.equal(llevaHalo('Walt Disney'), false);
+  assert.equal(L['Carlos Silva'].nuncaFlecha, true, 'Carlos Y-3, en el centro, nunca flecha');
+  assert.equal(llevaFlecha('Carlos Silva'), false, 'Carlos/Y no lleva flecha');
+  assert.equal(llevaHalo('Carlos Silva'), false);
+  assert.equal(L['Walt Disney'].sobre, 'papel');
+  assert.ok(!L['Walt Disney'].figura && !L['Walt Disney'].nuncaFlecha, 'Disney no es la figura de Carlos');
+  assert.ok(L['Walt Disney'].flecha && L['Walt Disney'].flecha.x > 75 && L['Walt Disney'].flecha.x < 85,
+    'flecha de Disney sobre su cabeza (silla que era de Schultz), no sobre Carlos');
+  assert.equal(llevaFlecha('Walt Disney'), true);
+  assert.equal(llevaHalo('Walt Disney'), true);
+  assert.equal(L['Howard Schultz'].flecha, null, 'Schultz no está en la foto: sin flecha');
+  assert.equal(L['Howard Schultz'].puntos.length, 0);
   const C = PAPEL_POS.coetaneos;
   assert.equal(Object.keys(C).length, 6);
   assert.ok(!C['Ruth Porat'] && !C['Carlos Ratti'], 'Porat y Ratti ya no tienen asiento (#7520)');
@@ -188,26 +195,25 @@ test('halos: folio o placa con polígono real; flecha en la cabeza; sin silueta'
 
 test('solo los consejeros activos llevan flecha y halo; Carlos nunca', () => {
   const L = PAPEL_POS.leyendas;
-  // Los 4 con bot/latido real en leyendas: Jobs, Woz, Lucas y Disney.
-  // Disney tiene bot, pero en la foto el asiento lo ocupa Carlos Silva (Y-3):
-  // siempre disponible, nunca flecha ni halo.
+  // Los 4 con bot/latido real en leyendas: Jobs, Woz, Disney y Lucas.
+  // Carlos Silva (Y-3) está en el centro: siempre disponible, nunca flecha ni halo.
   assert.deepEqual(
     Object.keys(L).filter((n) => llevaFlecha(n)),
-    ['Steve Jobs', 'Steve Wozniak', 'George Lucas'],
+    ['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas'],
   );
-  for (const n of ['Steve Jobs', 'Steve Wozniak', 'George Lucas']) {
+  for (const n of ['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas']) {
     assert.equal(esActivo(n), true, n);
     assert.equal(llevaFlecha(n), true, n);
     assert.equal(llevaHalo(n), true, n);
   }
-  assert.equal(esActivo('Walt Disney'), true);
-  assert.equal(nuncaFlecha('Walt Disney'), true);
-  assert.equal(llevaFlecha('Walt Disney'), false);
+  assert.equal(esActivo('Carlos Silva'), true);
+  assert.equal(nuncaFlecha('Carlos Silva'), true);
+  assert.equal(llevaFlecha('Carlos Silva'), false);
   for (const n of ['Warren Buffett', 'Dieter Rams', 'Howard Schultz', 'Tim Cook']) {
     assert.equal(esActivo(n), false, n);
     assert.equal(llevaFlecha(n), false, n);
     assert.equal(llevaHalo(n), false, n);
-    if (n !== 'Tim Cook') {
+    if (n !== 'Tim Cook' && n !== 'Howard Schultz') {
       assert.ok(L[n].flecha || (L[n].puntos && L[n].puntos.length >= 4), 'coords guardadas para reactivar ' + n);
     }
   }

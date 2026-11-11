@@ -11,12 +11,12 @@ const data = JSON.parse(m[1]);
 
 const LEY_OK = [
   'Steve Jobs', 'Steve Wozniak', 'Warren Buffett', 'Carlos Silva',
-  'Dieter Rams', 'Howard Schultz', 'George Lucas',
+  'Dieter Rams', 'Walt Disney', 'George Lucas',
 ];
 const paths = data.leyendas.paths;
 assert.deepEqual(Object.keys(paths), LEY_OK, 'leyendas: una máscara por figura visible, en orden');
 assert.equal('Tim Cook' in paths, false, 'Tim Cook no está en la foto de leyendas');
-assert.equal('Walt Disney' in paths, false, 'Walt Disney no está en la foto de leyendas');
+assert.equal('Howard Schultz' in paths, false, 'Howard Schultz no está en la foto de leyendas');
 
 function parsePath(s) {
   return s.replace(/Z/g, '').split(/L/).map((c) => {
@@ -40,6 +40,11 @@ assert.ok(boxes['Carlos Silva'].minX / W > 0.40 && boxes['Carlos Silva'].maxX / 
   `Carlos x ${boxes['Carlos Silva'].minX}-${boxes['Carlos Silva'].maxX}`);
 assert.ok(boxes['Warren Buffett'].maxX < boxes['Carlos Silva'].minX, 'Buffett y Carlos no se pisan');
 assert.ok(boxes['Carlos Silva'].maxX < boxes['Dieter Rams'].minX, 'Carlos y Rams no se pisan');
+// Disney está a la derecha, en la silla que era de Schultz (traje, entre Rams y Lucas).
+assert.ok(boxes['Walt Disney'].minX / W > 0.72 && boxes['Walt Disney'].maxX / W < 0.88,
+  `Disney x ${boxes['Walt Disney'].minX}-${boxes['Walt Disney'].maxX}`);
+assert.ok(boxes['Dieter Rams'].maxX <= boxes['Walt Disney'].minX, 'Rams y Disney no se pisan');
+assert.ok(boxes['Walt Disney'].maxX <= boxes['George Lucas'].minX, 'Disney y Lucas no se pisan');
 
 // Las cajas de figuras vecinas no se cruzan (L→R).
 for (let i = 0; i < LEY_OK.length - 1; i++) {

@@ -93,28 +93,29 @@ test('los oídos de Jobs y Musk no se pisan en el mismo navegador', () => {
   assert.equal(voces.pendientesDeLocutar('Jobs', jobsElon.concat(nuevo), ls).length, 0);
 });
 
-test('casting publicado: Jobs = Jorge grave/lento, Elon = Reed rápido/agudo (sin cambiar el resto)', () => {
+test('casting publicado: Jobs = Mónica (femenina provisional), Elon = Reed (sin cambiar el resto)', () => {
   const v = (name, lang) => ({ name, lang, voiceURI: name, localService: true });
   AdmiraVoces._setVoicesForTest([
-    v('Jorge', 'es-ES'), v('Reed (Español (España))', 'es-ES'),
+    v('Mónica', 'es-ES'), v('Reed (Español (España))', 'es-ES'),
     v('Pablo', 'es-ES'), v('Juan', 'es-ES'),
   ]);
   const J = AdmiraVoces.casting('Steve Jobs');
   const E = AdmiraVoces.casting('Elon Musk');
-  assert.equal(J.prefer[0], 'Jorge');
-  assert.equal(J.rate, 0.88);
-  assert.equal(J.pitch, 0.75);
+  assert.equal(J.prefer[0], 'Monica');
+  assert.equal(J.genero, 'f');
+  assert.equal(J.rate, 0.95);
+  assert.equal(J.pitch, 1.05);
   assert.equal(E.prefer[0], 'Reed');
   assert.equal(E.rate, 1.2);
   assert.equal(E.pitch, 1.3);
-  assert.equal(AdmiraVoces.profile('Steve Jobs').voiceName, 'Jorge');
+  assert.equal(AdmiraVoces.profile('Steve Jobs').voiceName, 'Mónica');
   assert.equal(AdmiraVoces.profile('Elon Musk').voiceName, 'Reed (Español (España))');
 });
 
 test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión de consejero-mensajes.js', () => {
   for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
-    assert.match(html, /consejeros-voces\.js\?v=20261112-voz-auto/);
+    assert.match(html, /consejeros-voces\.js\?v=20261112-jobs-femenina/);
     assert.match(html, /consejero-mensajes\.js\?v=20261112-voz-auto/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');

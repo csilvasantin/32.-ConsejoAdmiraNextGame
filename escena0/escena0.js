@@ -193,17 +193,12 @@ function mesaDeSafe(persona) {
 function hablar(persona, texto) {
   return new Promise((resolve) => {
     if (silencio || !texto) { resolve(); return; }
-    if (window.AdmiraVoces && AdmiraVoces.casting(persona)) {
-      AdmiraVoces.speak(persona, String(texto).slice(0, 600), { onend: resolve, onerror: resolve });
+    if (window.AdmiraVoces && typeof AdmiraVoces.speak === 'function') {
+      const ok = AdmiraVoces.speak(persona, String(texto).slice(0, 600), { onend: resolve, onerror: resolve });
+      if (!ok) resolve();
       return;
     }
-    try {
-      const u = new SpeechSynthesisUtterance(String(texto).slice(0, 600));
-      u.lang = 'es-ES';
-      u.onend = resolve; u.onerror = resolve;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    } catch (e) { resolve(); }
+    resolve();
   });
 }
 

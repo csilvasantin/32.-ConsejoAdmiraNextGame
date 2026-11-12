@@ -7,8 +7,9 @@ const spoken = [];
 let store = {};
 globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
 globalThis.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+let cancelled = 0;
 globalThis.speechSynthesis = {
-  getVoices: () => [], cancel() {},
+  getVoices: () => [], cancel() { cancelled++; },
   speak(u) { spoken.push(u); setTimeout(() => { u.onstart && u.onstart(); u.onend && u.onend(); }, 0); },
 };
 await import('./consejeros-voces.js');
@@ -59,13 +60,20 @@ test('en un Mac con las voces de serie, cada consejero suena con una de sus voce
   for (const p of perf) assert.match(p.lang, /^es/);
 });
 
-test('respaldo: con solo dos voces españolas, se reparten por género y no se queda nadie sin voz', () => {
-  V._setVoicesForTest([v('Google español', 'es-ES'), v('Spanish (Spain)', 'es'), v('Google US English', 'en-US')]);
-  for (const c of V.CASTING) assert.ok(V.profile(c.persona).voice, c.persona);
-  assert.equal(V.profile('Ruth Porat').voiceName, 'Google español');
+test('sin voz propia no se habla: nunca un respaldo genérico del sistema', () => {
+  V._setVoicesForTest([v('Samantha', 'en-US'), v('Daniel', 'en-GB'), v('Spanish (Spain)', 'es')]);
+  for (const c of V.CASTING) {
+    const p = V.profile(c.persona);
+    assert.equal(p.voice, null, c.persona);
+    assert.equal(p.via, 'sin-voces');
+    assert.equal(V.speak(c.persona, 'hola que tal'), false, c.persona);
+    assert.equal(V.puedeHablar(c.persona), false);
+  }
+  assert.equal(spoken.filter(u => u && u.text && u.text.trim() && u.volume !== 0).length, 0);
   V._setVoicesForTest([]);
   assert.equal(V.profile('Steve Jobs').voice, null);
   assert.equal(V.profile('Steve Jobs').lang, 'es-ES');
+  assert.equal(V.speak('Steve Jobs', 'hola'), false);
 });
 
 test('personalización local: pisa al casting y se puede deshacer', () => {
@@ -139,8 +147,14 @@ test('Jobs y Elon: Jobs voz femenina provisional, Elon Reed, nunca la misma voz 
   for (const lista of escenarios) {
     V._setVoicesForTest(lista);
     const a = V.profile('Steve Jobs'), b = V.profile('Elon Musk');
-    assert.ok(a.voice && b.voice);
-    assert.notEqual(a.voiceName, b.voiceName, lista.map(x => x.name).join(','));
+    // Solo hablan si está una voz de SU lista; nunca un respaldo genérico.
+    assert.notEqual(a.via, 'respaldo');
+    assert.notEqual(b.via, 'respaldo');
+    if (a.voice && b.voice) {
+      assert.notEqual(a.voiceName, b.voiceName, lista.map(x => x.name).join(','));
+    }
+    if (!a.voice) assert.equal(V.speak('Steve Jobs', 'hola'), false);
+    if (!b.voice) assert.equal(V.speak('Elon Musk', 'hola'), false);
   }
   V._setVoicesForTest(MAC);
   assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
@@ -184,4 +198,37 @@ test('Jobs provisional: un Jorge guardado en localStorage o en prefs compartidas
   await V.loadShared(fakeFetch);
   assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
   assert.equal(V.profile('Walt Disney').voiceName, 'Rocko (Español (España))');
+});
+
+test('al salir de la página se cancela la síntesis (pagehide, beforeunload, visibility)', () => {
+  V._setVoicesForTest(MAC);
+  const evs = {};
+  const doc = {
+    hidden: false,
+    visibilityState: 'visible',
+    addEventListener(type, fn) { (evs[type] = evs[type] || []).push(fn); },
+  };
+  const target = {
+    addEventListener(type, fn) { (evs[type] = evs[type] || []).push(fn); },
+    document: doc,
+  };
+  assert.equal(V._instalarParadaAlSalir(target), true);
+  cancelled = 0;
+  spoken.length = 0;
+  assert.equal(V.speak('Steve Jobs', 'un mensaje del consejero'), true);
+  assert.ok(spoken.length >= 1);
+  evs.pagehide.forEach(fn => fn({ type: 'pagehide' }));
+  assert.ok(cancelled >= 1, 'pagehide cancela');
+  assert.equal(V.speaking(), false);
+  cancelled = 0;
+  V.speak('Elon Musk', 'otro mensaje');
+  evs.beforeunload.forEach(fn => fn({ type: 'beforeunload' }));
+  assert.ok(cancelled >= 1, 'beforeunload cancela');
+  cancelled = 0;
+  V.speak('Steve Jobs', 'tercero');
+  doc.hidden = true;
+  doc.visibilityState = 'hidden';
+  evs.visibilitychange.forEach(fn => fn({ type: 'visibilitychange' }));
+  assert.ok(cancelled >= 1, 'visibility hidden cancela');
+  assert.equal(V.speaking(), false);
 });

@@ -9,7 +9,7 @@ const C = window.ChatHiloClient;
 
 let oidosListos = false;
 let hablando = false;
-let cola = [];
+let pendiente = null;
 let ultimoId = "";
 let avisoSesion = false;
 
@@ -27,7 +27,6 @@ function desbloquearAudio() {
       speechSynthesis.speak(u);
     }
   } catch (e) {}
-  soltarCola();
 }
 
 function gesto() {
@@ -49,24 +48,20 @@ function hablar(item) {
     const V = window.AdmiraVoces;
     const texto = String(item.texto || "").slice(0, 800);
     if (!texto) { resolve(); return; }
-    if (V && typeof V.speak === "function" && V.supported && V.supported()) {
+    // Solo la voz propia del consejero: si no está, no se habla (nunca la del sistema).
+    if (V && typeof V.speak === "function") {
       const ok = V.speak(item.persona, texto, { onend: resolve, onerror: resolve });
       if (!ok) resolve();
       return;
     }
-    try {
-      const u = new SpeechSynthesisUtterance(texto);
-      u.lang = "es-ES";
-      u.onend = resolve; u.onerror = resolve;
-      speechSynthesis.speak(u);
-    } catch (e) { resolve(); }
+    resolve();
   });
 }
 
-async function soltarCola() {
-  if (hablando || !cola.length) return;
-  const x = cola[0];
+async function locutarUno(x) {
+  if (hablando || !x) return;
   hablando = true;
+  pendiente = null;
   const T = turnoApi();
   let ticket = null;
   if (T && typeof T.aguardarTurno === "function") {
@@ -80,20 +75,23 @@ async function soltarCola() {
       onPerdido: callar,
     });
     if (!ticket || !ticket.concedido) {
-      cola.shift();
       hablando = false;
-      soltarCola();
       return;
     }
   }
-  cola.shift();
   mostrarHablante(x.de || x.nombre, true);
   await hablar(x);
   if (ticket && typeof ticket.liberar === "function") {
     try { await ticket.liberar(); } catch (e) {}
   }
   hablando = false;
-  soltarCola();
+  // No encadenar la siguiente lectura: el próximo mensaje espera a un sondeo nuevo.
+}
+
+function pararSala() {
+  pendiente = null;
+  hablando = false;
+  callar();
 }
 
 function mostrarHablante(de, forzar) {
@@ -151,8 +149,13 @@ function locutar(msgs) {
   }
   const nuevos = Sala.pendientesDeLocutar(consejo, msgs);
   if (!nuevos.length) return;
-  nuevos.forEach((n) => cola.push(n));
-  soltarCola();
+  // Un solo mensaje (el más reciente): no se encadena una cola de lecturas.
+  pendiente = nuevos[nuevos.length - 1];
+  if (!hablando && pendiente) {
+    const x = pendiente;
+    pendiente = null;
+    locutarUno(x);
+  }
 }
 
 async function leerBandeja() {
@@ -226,6 +229,11 @@ window.addEventListener("keydown", gesto, true);
 window.addEventListener("touchstart", gesto, true);
 // Un clic o tecla también pide pantalla completa (sin botón a la vista).
 window.addEventListener("pointerdown", pedirFullscreen, { once: true, capture: true });
+window.addEventListener("pagehide", pararSala, true);
+window.addEventListener("beforeunload", pararSala, true);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || document.visibilityState === "hidden") pararSala();
+}, true);
 
 if (!consejo) {
   $("elige").hidden = false;

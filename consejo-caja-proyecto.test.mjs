@@ -52,7 +52,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r155', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r157', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -63,7 +63,7 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.equal(p.nombre, nombre);
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
-  assert.match(index, /council-globo\.js\?v=20261111-r155-caja-globo/);
+  assert.match(index, /council-globo\.js\?v=20261112-r157-caja-fija/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',
@@ -77,4 +77,32 @@ test('el globo de estado no repite Libre/Ocupado ni el duplicado «hoy» / «enc
   assert.match(src, /G\.misiones/);
   assert.doesNotMatch(src, /etiqueta \+ ' hoy'/);
   assert.doesNotMatch(src, /s\.hoy\.desglose\)/);
+});
+
+test('la caja de Carlos tiene tamaño fijo y el listado a/b/c hace scroll interno', () => {
+  assert.match(src, /\.consejo-globo\.globo-proyectos\{[^}]*width:280px/);
+  assert.match(src, /\.consejo-globo\.globo-proyectos\{[^}]*height:220px/);
+  assert.match(src, /\.consejo-globo\.globo-proyectos\{[^}]*display:flex/);
+  assert.match(src, /\.consejo-globo\.globo-proyectos\{[^}]*overflow:hidden/);
+  assert.match(src, /\.consejo-globo\.globo-proyectos ol\.gp-abc[^}]*overflow:auto/);
+  // colocarGlobo no vuelca la caja de Carlos debajo de la cabeza.
+  const colocar = src.match(/function colocarGlobo\([\s\S]*?\n  \}/);
+  assert.ok(colocar, 'existe colocarGlobo');
+  assert.match(colocar[0], /globo-proyectos/);
+  assert.match(colocar[0], /ANCHO = 280/);
+  const carlosBranch = colocar[0].split("globo-proyectos")[1];
+  assert.ok(carlosBranch, 'hay rama para globo-proyectos');
+  assert.doesNotMatch(carlosBranch.split('return')[0], /r\.bottom/);
+});
+
+test('la firma no aparenta una aportación del titular si el texto lo puso otro', () => {
+  assert.match(src, /FIRMAS_PROVISIONALES_WOZ/);
+  assert.match(src, /'portaventura-next': 1794434955422/);
+  assert.match(src, /'admiranext': 1794434955817/);
+  assert.match(src, /provisional · /);
+  assert.match(src, /escrito_por/);
+  assert.match(src, /function esFirmaProvisional/);
+  // Alsea y Día a día no están en la excepción: esas firmas sí son reales.
+  assert.doesNotMatch(src, /FIRMAS_PROVISIONALES_WOZ = \{[\s\S]*alsea/);
+  assert.doesNotMatch(src, /FIRMAS_PROVISIONALES_WOZ = \{[\s\S]*dia-a-dia/);
 });

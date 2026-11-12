@@ -79,3 +79,26 @@ puede cambiar textos, orden y paneles cuando quiera.
 El almacén es KV (`CONSUMOS_KV` o `RECORTE_KV`, clave
 `consejo:objetivos-abc:v1`). No se inventan textos: un hueco vacío se pinta
 «— sin definir —».
+
+## Firma visible y rellenos provisionales
+
+El globo muestra `autor · hora` (Europe/Madrid) debajo de cada letra. Si el
+hueco se marcó como provisional (`firmas.{a|b|c}.provisional` o
+`escrito_por` / `via`), la firma pasa a `provisional · autor real · hora`,
+para que no parezca una aportación del titular cuando el texto lo escribió
+otro.
+
+El 11-nov-2026 a las 23:09, Woz rellenó los cuatro paneles que estaban
+vacíos y los firmó con el nombre de cada titular, a la espera de las
+definitivas de las 00:00. Alsea lo reescribió él mismo a las 00:12 del
+12-nov (definitivo). Día a día lo escribió Jobs a las 00:26 (rutina real).
+PortAventuraNeXT y AdmiraNeXT siguen con el relleno de las 23:09: las
+rutinas de Walt y de Lucas no pudieron escribir en el globo (Walt sin
+token en su entorno; Lucas con 401, «no autorizado»). Esos dos paneles se
+etiquetan en el globo como `provisional · Woz · 11 nov, 23:09` mientras el
+`actualizado` no cambie. No se reescriben sus paneles desde aquí.
+
+Para que mañana cuente como misión del titular hace falta que su rutina
+de las 00:00 (1) escriba en su propio panel con un token que el Worker
+acepte y (2) deje el encargo diario en `done` a su nombre, no desviado a
+Cypher (si Cypher lo bloquea o el titular lo anula, no suma).

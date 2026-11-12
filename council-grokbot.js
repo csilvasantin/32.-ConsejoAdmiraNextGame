@@ -40,7 +40,7 @@
   const inThisVisit = row => Math.max(timestamp(row?.createdAt), timestamp(row?.updatedAt)) >= visitAt - 5000;
   // encargo: Elon responde por su deepagent (encargo MCP de admira.live), no por el escritorio AX.
   // «admira.live · 09:13» / «Grok Bot · 09:14»: origen y hora de Madrid, el mismo formato en todos (24-10-2026).
-  const HORA_MADRID = new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false});
+  const HORA_MADRID = new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
   function metaOrigen(origen,ts){const n=timestamp(ts);return n>0?origen+' · '+HORA_MADRID.format(new Date(n)):origen;}
   function origenNodo(doc,origen,ts){const m=doc.createElement('span');m.className='council-chat__meta council-chat__origen';if(m.dataset)m.dataset.origen=origen==='admira.live'?'live':'grokbot';m.textContent=metaOrigen(origen,ts);return m;}
   const native = row => row.native === true && (row.source === 'desktop' || row.source === 'encargo' || row.source === 'inbox');
@@ -403,7 +403,7 @@
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
     const SCOPE_HILO=()=>'Aquí ves la transcripción de lo que se dicen los consejeros (p. ej. Jobs ↔ Elon), registrada y persistente. Lo que tú escribes en esta visita le llega a '+shortName(selected)+' y también queda en /chat/'+(sharedOf(selected)||'')+'/ («Histórico»). No se publica en el Ágora ni en Telegram.';
     const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). La transcripción entre consejeros no se borra con el chat limpio de esta visita. Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min).';
-    const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
+    const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
     const introHilo=name=>'Escribe a '+name+' y pulsa Enviar: le llega a '+shortName(name)+'. La transcripción entre consejeros queda arriba, registrada.';
@@ -601,9 +601,14 @@
             const m=it.m, item=doc.createElement('article');item.className='council-chat__turn council-chat__hilo council-chat__hilo--entre';
             const body=doc.createElement('p');body.className='council-chat__reply council-chat__entre-body';
             const who=doc.createElement('strong');who.textContent=(E&&E.etiqueta?E.etiqueta(m):((m.de||'')+' → '+(m.para||'')));body.append(who);
-            appendRich(body,' '+(E&&E.textoDe?E.textoDe(m):String(m.texto||m.resumen||'')));item.append(body);
+            const rawEntre=E&&E.textoDe?E.textoDe(m):String(m.texto||m.resumen||'');
+            const visibleEntre=E&&E.textoFraseVisible?E.textoFraseVisible(rawEntre):rawEntre;
+            appendRich(body,' '+visibleEntre);item.append(body);
             const meta=doc.createElement('span');meta.className='council-chat__meta';
-            const org=doc.createElement('span');org.className='council-chat__origen';org.textContent=m.hora?horaHilo.format(new Date(m.hora))+' · entre consejeros':'entre consejeros';
+            const org=doc.createElement('span');org.className='council-chat__origen';
+            const horaEntre=m.hora?horaHilo.format(new Date(m.hora)):'';
+            const directoEntre=E&&E.esFraseDirecto&&E.esFraseDirecto(rawEntre,m);
+            org.textContent=(horaEntre?horaEntre+' · ':'')+(directoEntre?'EN DIRECTO · ':'')+'entre consejeros';
             meta.append(org);item.append(meta);log.append(item);
             continue;
           }

@@ -119,7 +119,7 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(html, /auth-gate\.js/);
   assert.match(html, /consejeros-voces\.js/);
   assert.match(html, /chat-hilo-client\.js/);
-  assert.match(html, /sala-voz\.js\?v=20261112-pantalla-espera/);
+  assert.match(html, /sala-voz\.js\?v=20261112-hora-frase/);
   assert.match(css, /cursor:\s*none/);
   assert.doesNotMatch(js, /Activar voz/);
   assert.match(js, /Escape/);
@@ -129,9 +129,9 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(js, /AdmiraVozTurno/);
   assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
   assert.match(html, /id="karaoke"/);
-  assert.match(html, /sala-voz\.css\?v=20261112-pantalla-espera/);
+  assert.match(html, /sala-voz\.css\?v=20261112-hora-frase/);
   assert.match(html, /consejeros-voces\.js\?v=20261112-karaoke/);
-  assert.match(js, /sala-voz-lib\.mjs\?v=20261112-pantalla-espera/);
+  assert.match(js, /sala-voz-lib\.mjs\?v=20261112-hora-frase/);
   assert.match(js, /onboundary/);
   assert.match(js, /iniciarKaraokeVisual/);
   assert.match(css, /#karaoke/);
@@ -246,4 +246,41 @@ test("modo pantalla=1: espera a la izquierda, karaoke a la derecha, sin voz prop
   assert.match(foto, /box-shadow:\s*none/);
   // El modo pantalla no sustituye el arranque normal (sin ?pantalla=1 se sigue locutando).
   assert.match(js, /} else {\s*arrancar\(\);\s*}/);
+});
+
+test("horaMadrid es HH:MM:SS en hora de Madrid", () => {
+  assert.equal(Sala.horaMadrid(new Date("2026-11-12T13:14:15Z")), "14:14:15");
+  assert.equal(Sala.horaMadrid(Date.parse("2026-11-12T13:14:15Z")), "14:14:15");
+  assert.equal(Sala.horaMadrid(0), "");
+  assert.equal(Sala.horaMadrid("no-es-fecha"), "");
+  assert.match(Sala.horaMadrid(), /^\d{2}:\d{2}:\d{2}$/);
+  assert.equal(Sala.horaMadrid(new Date("2026-07-12T13:14:15Z")), "15:14:15");
+});
+
+test("textoFraseVisible es exactamente la frase, sin etiquetas; el directo va aparte", () => {
+  assert.equal(Sala.textoFraseVisible("Ya estamos en Chrome y a pantalla completa."), "Ya estamos en Chrome y a pantalla completa.");
+  assert.equal(Sala.textoFraseVisible("🔴 EN DIRECTO Ya estamos en Chrome y a pantalla completa."), "Ya estamos en Chrome y a pantalla completa.");
+  assert.equal(Sala.textoFraseVisible("EN DIRECTO: Una sola cosa, Elon."), "Una sola cosa, Elon.");
+  assert.equal(Sala.textoFraseVisible("🔴 EN DIRECTO: Hecho: la pulsera nos dice quién es."), "Hecho: la pulsera nos dice quién es.");
+  assert.equal(Sala.esFraseDirecto("🔴 EN DIRECTO Ya estamos."), true);
+  assert.equal(Sala.esFraseDirecto("Ya estamos."), false);
+  assert.equal(Sala.esFraseDirecto("Ya estamos.", { directo: true }), true);
+  assert.doesNotMatch(Sala.textoFraseVisible("🔴 EN DIRECTO Exacto. Y que cada pantalla trabaje."), /EN DIRECTO/);
+  assert.doesNotMatch(Sala.textoFraseVisible("🔴 EN DIRECTO Exacto."), /🔴/);
+});
+
+test("pantalla: hora 🔴 HH:MM:SS arriba a la derecha, 1.3vw, color del consejero", () => {
+  const html = readFileSync(new URL("./sala-voz/index.html", import.meta.url), "utf8");
+  const css = readFileSync(new URL("./sala-voz/sala-voz.css", import.meta.url), "utf8");
+  const js = readFileSync(new URL("./sala-voz/sala-voz.js", import.meta.url), "utf8");
+  assert.match(html, /id="hora-frase"/);
+  assert.match(css, /#hora-frase/);
+  assert.match(css, /1\.3vw/);
+  assert.match(css, /top:\s*1\.6vh/);
+  assert.match(css, /right:\s*2vw/);
+  assert.match(js, /mostrarHoraFrase/);
+  assert.match(js, /🔴 /);
+  assert.match(js, /textoFraseVisible/);
+  assert.match(js, /esFraseDirecto/);
+  assert.match(js, /directo-frase/);
 });

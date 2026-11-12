@@ -124,3 +124,37 @@ test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión
   assert.match(js, /Activar voz/);
   assert.match(js, /AdmiraVoces\.speak/);
 });
+
+test('etiqueta: Jobs → Elon y Elon → Jobs (no dice Musk)', () => {
+  assert.equal(voces.etiqueta({ de: 'Jobs', para: 'Musk' }), 'Jobs → Elon');
+  assert.equal(voces.etiqueta({ de: 'Musk', para: 'Jobs' }), 'Elon → Jobs');
+});
+
+test('portada: la transcripción locuta ambos sentidos y no relée lo ya visto', () => {
+  const ls = store();
+  const par = [
+    { id: 'cmmwdd8mdbfyqplc', de: 'Jobs', para: 'Musk', texto: 'Hola Elon', hora: '2026-11-12T09:49:00Z' },
+    { id: 'r2', de: 'Musk', para: 'Jobs', texto: 'Te oigo', hora: '2026-11-12T09:49:40Z' },
+  ];
+  voces.iniciarOidos('Jobs', par, ls);
+  assert.deepEqual(voces.pendientesTranscripcion('Jobs', par, ls), []);
+  const nuevo = { id: 'r3', de: 'Jobs', para: 'Musk', texto: 'Seguimos', hora: '2026-11-12T09:50:00Z' };
+  const pend = voces.pendientesTranscripcion('Jobs', par.concat(nuevo), ls);
+  assert.equal(pend.length, 1);
+  assert.equal(pend[0].persona, 'Steve Jobs');
+  assert.equal(pend[0].etiqueta, 'Jobs → Elon');
+  assert.deepEqual(voces.pendientesTranscripcion('Jobs', par.concat(nuevo), ls), []);
+});
+
+test('mergePorHora intercala por hora la transcripción y los turnos de esta visita', () => {
+  const hilos = [{ id: 'v1', rol: 'carlos', texto: 'Sigo aquí', ts: '2026-11-12T09:50:00Z' }];
+  const entres = [
+    { id: 'a', de: 'Jobs', para: 'Musk', texto: 'Hola', hora: '2026-11-12T09:49:00Z' },
+    { id: 'b', de: 'Musk', para: 'Jobs', texto: 'Te oigo', hora: '2026-11-12T09:51:00Z' },
+  ];
+  const mix = voces.mergePorHora(hilos, entres);
+  assert.deepEqual(mix.map((x) => x.tipo), ['entre', 'hilo', 'entre']);
+  assert.equal(mix[0].m.texto, 'Hola');
+  assert.equal(mix[1].t.texto, 'Sigo aquí');
+  assert.equal(mix[2].m.texto, 'Te oigo');
+});

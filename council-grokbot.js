@@ -80,7 +80,7 @@
        Los demás consejeros siguen por el puente de GrokBot sin cambios. */
     const hilo=options.sharedThread===false?null:(options.hilo||root.ChatHiloClient||null);
     const sharedOf=name=>hilo&&name?hilo.personaDe(name):null;
-    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1};
+    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1,entre:[],entreTimer:null,entreListos:false,vozOn:false,hablando:false,cola:[]};
     // «Histórico» → /chat/jobs/ (solo en el hilo compartido).
     const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
     $('.council-chat__toolbar')?.append(historico);
@@ -401,26 +401,107 @@
       return submitted;
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
-    const SCOPE_HILO=()=>'Esta visita empieza en blanco. Lo que escribes le llega a '+shortName(selected)+' y se guarda en la misma conversación que en GrokBot y en /chat/'+(sharedOf(selected)||'')+'/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
-    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Histórico».';
+    const SCOPE_HILO=()=>'Aquí ves la transcripción de lo que se dicen los consejeros (p. ej. Jobs ↔ Elon), registrada y persistente. Lo que tú escribes en esta visita le llega a '+shortName(selected)+' y también queda en /chat/'+(sharedOf(selected)||'')+'/ («Histórico»). No se publica en el Ágora ni en Telegram.';
+    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). La transcripción entre consejeros no se borra con el chat limpio de esta visita. Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min).';
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
-    const introHilo=name=>'Chat limpio. Escribe a '+name+' y pulsa Enviar: le llega a '+shortName(name)+' y se guarda en la misma conversación que en GrokBot.';
-    function stopShared(){if(sh.timer){clearTimeout(sh.timer);sh.timer=null;}if(sh.tic){clearInterval(sh.tic);sh.tic=null;}sh.again=false;}
+    const introHilo=name=>'Escribe a '+name+' y pulsa Enviar: le llega a '+shortName(name)+'. La transcripción entre consejeros queda arriba, registrada.';
+    function stopShared(){if(sh.timer){clearTimeout(sh.timer);sh.timer=null;}if(sh.tic){clearInterval(sh.tic);sh.tic=null;}if(sh.entreTimer){clearTimeout(sh.entreTimer);sh.entreTimer=null;}sh.again=false;}
     function visibles(){const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;const t=hilo.turnosDeVisita(m.turnos,sh.enviados,sh.desde);return {turnos:t,firma:t.map(x=>[x.id,x.entrega||'',x.encargo||'',x.encargo_estado||''].join(':')).join('|')};}
+    function vozDisponible(){
+      const V=root.AdmiraVoces;
+      return !!(V&&typeof V.speak==='function'&&V.supported&&V.supported());
+    }
+    function pintarVozBtn(){
+      if(!sh.vozBtn)return;
+      const ok=vozDisponible();
+      sh.vozBtn.hidden=!ok||sh.vozOn;
+      sh.vozBtn.textContent='Activar voz';
+    }
+    function soltarColaVoz(){
+      const V=root.AdmiraVoces, E=root.AdmiraEntreVoces;
+      if(sh.hablando||!sh.vozOn||!vozDisponible())return;
+      const x=sh.cola.shift();
+      if(!x)return;
+      sh.hablando=true;
+      const ok=V.speak(x.persona,x.texto,{
+        onend(){sh.hablando=false;soltarColaVoz();},
+        onerror(){sh.hablando=false;soltarColaVoz();}
+      });
+      if(!ok){sh.hablando=false;soltarColaVoz();}
+    }
+    function desbloquearVoz(){
+      sh.vozOn=true;
+      try{
+        if(root.speechSynthesis&&root.SpeechSynthesisUtterance){
+          const u=new root.SpeechSynthesisUtterance(' ');u.volume=0;root.speechSynthesis.speak(u);
+        }
+      }catch(e){}
+      pintarVozBtn();soltarColaVoz();
+    }
+    function locutarEntre(msgs,inicial){
+      const E=root.AdmiraEntreVoces;if(!E||!sharedOf(selected))return;
+      const silla=shortName(selected);
+      if(inicial||!sh.entreListos){E.iniciarOidos(silla,msgs);sh.entreListos=true;return;}
+      const nuevos=E.pendientesTranscripcion(silla,msgs);
+      if(!nuevos.length)return;
+      nuevos.forEach(n=>sh.cola.push(n));
+      if(sh.vozOn)soltarColaVoz();
+    }
     function sharedChrome(){
       for(const sel of ['[data-chat-attach]','[data-chat-routines]','[data-chat-stop]','[data-chat-screen]','.council-chat__native'])if($(sel))$(sel).hidden=true;
       historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;entre.href='/chat/'+sharedOf(selected)+'/#entre-consejeros';entre.hidden=false;
+      if(!sh.vozBtn){
+        const b=doc.createElement('button');b.type='button';b.className='council-chat__voz';b.textContent='Activar voz';
+        b.title='Un clic desbloquea el audio (hace falta en Firefox) y oirás la transcripción con la voz de cada consejero.';
+        b.addEventListener('click',desbloquearVoz);sh.vozBtn=b;
+        $('.council-chat__toolbar')?.append(b);
+      }
+      pintarVozBtn();
       const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO();
       const limits=$('.council-chat__limits');if(limits)limits.textContent=LIMITS_HILO;
-      const node=$('.council-chat__connection');node.textContent='· Misma conversación que en GrokBot';node.title='POST /api/chat/enviar · respuestas por GET /api/chat/hilo';
+      const node=$('.council-chat__connection');node.textContent='· Transcripción entre consejeros + esta visita';node.title='GET /api/chat/entre-consejeros · POST /api/chat/enviar · GET /api/chat/hilo';
     }
     function startShared(epoch){
-      // Sin red al seleccionar: la home no carga el histórico.
+      // El hilo Carlos↔consejero de visitas anteriores no se carga (vive en «Histórico»).
+      // La transcripción entre consejeros SÍ se carga y no la borra el chat limpio de esta visita.
       sh.epoch=epoch;sh.turnos=[];sh.locales=[];sh.enviados={};sh.desde=null;sh.primero=null;sh.firma='';sh.seen=new Set();
-      sharedChrome();render();say(''); // la intro ya va en el chat: no repetirla como estado
+      sh.entre=[];sh.entreListos=false;sh.cola=[];
+      sharedChrome();render();say('');
+      loadEntre(epoch);
       return Promise.resolve(true);
+    }
+    function entreFirma(list){return (list||[]).map(m=>String((m&&m.id)||'')+':'+(m&&m.hora||'')).join('|');}
+    function loadEntre(epoch){
+      const persona=sharedOf(selected);
+      if(!persona||destroyed||!current(epoch))return Promise.resolve();
+      const jwt=hilo.credencial&&hilo.credencial();
+      if(!jwt){
+        // Sin sesión: se ve el aviso; al entrar (chat-hilo-sesion) se vuelve a pedir.
+        if(current(epoch)&&!sh.entre.length)say('Entra con Google para ver la transcripción entre consejeros.');
+        scheduleEntre(epoch);
+        return Promise.resolve();
+      }
+      const url='/api/chat/entre-consejeros?con='+encodeURIComponent(persona)+'&limite=50';
+      return request(url,{cache:'no-store',headers:{Authorization:'Bearer '+jwt}}).then(r=>{
+        if(!current(epoch))return;
+        if(r.status===401){say('Entra con Google para ver la transcripción entre consejeros.');return;}
+        return r.json().then(d=>{
+          if(!current(epoch)||!d||d.ok===false)return;
+          const msgs=Array.isArray(d.mensajes)?d.mensajes:[];
+          const inicial=!sh.entreListos;
+          sh.entre=msgs;
+          locutarEntre(msgs,inicial);
+          render();
+        });
+      }).catch(()=>{if(current(epoch))say('No se pudo leer la transcripción entre consejeros. Se reintentará.');})
+      .finally(()=>{if(current(epoch))scheduleEntre(epoch);});
+    }
+    function scheduleEntre(epoch){
+      if(sh.entreTimer){clearTimeout(sh.entreTimer);sh.entreTimer=null;}
+      if(destroyed||!sharedOf(selected)||!current(epoch))return;
+      sh.entreTimer=setTimeout(()=>{sh.entreTimer=null;if(panelVisible())loadEntre(epoch);else scheduleEntre(epoch);},15000);
     }
     function askSignin(message){
       const box=signinBox();box.hidden=false;
@@ -459,16 +540,31 @@
       .finally(()=>{sh.busy=false;if(!current(epoch))return;if(sh.again){sh.again=false;sharedRefresh();}else sharedSchedule();});
     }
     function renderShared(follow,oldTop){
+      const E=root.AdmiraEntreVoces;
       const v=visibles();
+      const firma=v.firma+'#'+entreFirma(sh.entre);
       const typingText=hilo.textoEscribiendo(v.turnos,Date.now(),shortName(selected));
-      if(v.firma!==sh.firma||!log.childElementCount){
-        sh.firma=v.firma;log.replaceChildren();sh.typingNode=null;
-        if(!v.turnos.length){
+      if(firma!==sh.firma||!log.childElementCount){
+        sh.firma=firma;log.replaceChildren();sh.typingNode=null;
+        const mix=E&&E.mergePorHora?E.mergePorHora(v.turnos,sh.entre):v.turnos.map(t=>({tipo:'hilo',t}));
+        if(!mix.length){
           const p=doc.createElement('p');p.className='council-chat__intro';p.textContent=introHilo(selected);log.append(p);
-          const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='El histórico de vuestras conversaciones está en «Histórico».';log.append(p2);
+          const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='La transcripción entre consejeros aparecerá aquí (también queda en «Histórico» / Privados).';log.append(p2);
+        }else if(!v.turnos.length){
+          const p=doc.createElement('p');p.className='council-chat__intro';p.textContent='Transcripción entre consejeros (queda registrada; no la borra el chat limpio de esta visita).';log.append(p);
         }
-        for(const t of v.turnos){
-          const carlos=t.rol==='carlos';
+        for(const it of mix){
+          if(it.tipo==='entre'){
+            const m=it.m, item=doc.createElement('article');item.className='council-chat__turn council-chat__hilo council-chat__hilo--entre';
+            const body=doc.createElement('p');body.className='council-chat__reply council-chat__entre-body';
+            const who=doc.createElement('strong');who.textContent=(E&&E.etiqueta?E.etiqueta(m):((m.de||'')+' → '+(m.para||'')));body.append(who);
+            appendRich(body,' '+(E&&E.textoDe?E.textoDe(m):String(m.texto||m.resumen||'')));item.append(body);
+            const meta=doc.createElement('span');meta.className='council-chat__meta';
+            const org=doc.createElement('span');org.className='council-chat__origen';org.textContent=m.hora?horaHilo.format(new Date(m.hora))+' · entre consejeros':'entre consejeros';
+            meta.append(org);item.append(meta);log.append(item);
+            continue;
+          }
+          const t=it.t, carlos=t.rol==='carlos';
           const item=doc.createElement('article');item.className='council-chat__turn council-chat__hilo '+(carlos?'council-chat__hilo--carlos':'council-chat__hilo--persona');
           const body=doc.createElement('p');body.className=carlos?'council-chat__user':'council-chat__reply';
           const who=doc.createElement('strong');who.textContent=carlos?'Tú':selected;body.append(who);appendRich(body,String(t.texto||''));item.append(body);
@@ -559,6 +655,7 @@
       }).catch(()=>{sh.sending=false;syncPending();return false;});
     }
     doc.addEventListener?.('visibilitychange',()=>{if(!doc.hidden&&sharedOf(selected)&&sh.desde!==null&&!sh.busy)sharedRefresh();});
+    root.addEventListener?.('chat-hilo-sesion',()=>{if(sharedOf(selected))loadEntre(selectedEpoch);});
     function renderAttachments(){
       const node=$('.council-chat__attachments');if(!node)return;
       node.replaceChildren();const files=attachments.get(selected)||[];node.hidden=!files.length;

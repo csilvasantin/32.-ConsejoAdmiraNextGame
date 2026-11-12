@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   clasificar, textoGlobo, lineasGlobo, latidoVigente, tituloCorto, horaMadrid,
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
-  encargadosHoy, etiquetaMisiones,
+  encargadosHoy, empezadasHoy, etiquetaMisiones,
   CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
   esActivo, llevaFlecha, llevaHalo, nuncaFlecha,
   CONSEJO_RANKING, CONSEJO_RANKING_TOTAL, enRanking,
@@ -380,11 +380,15 @@ test('armarMesa recuenta por mesa de 6; la etiqueta es solo el número; PRs y Yo
   assert.equal(d.ranking.dia, '2026-11-11');
   const por = Object.fromEntries([...d.mesa.leyendas, ...d.mesa.coetaneos].map((s) => [s.persona, s]));
   assert.equal(por['Steve Wozniak'].hoy.n, 3, 'PR #343 + anw #396 expresa + Yokup resuelta; el latido no cuenta; in_progress no');
+  assert.equal(por['Steve Wozniak'].hoy.encargados, 3, 'empezadas >= acabadas aunque la bandeja de hoy esté vacía');
+  assert.equal(por['Steve Wozniak'].globo.misiones, 'Misiones: 3/3');
   assert.equal(por['Steve Wozniak'].hoy.puesto, 1);
   assert.equal(por['Steve Wozniak'].hoy.etiqueta, '3');
   assert.deepEqual(por['Steve Wozniak'].hoy.por_fuente, { inbox: 0, yokup: 1, pr: 2, latido: 0 });
   assert.ok(!(por['Steve Wozniak'].hoy.misiones || []).some((m) => m.fuente === 'latido'));
   assert.equal(por['Steve Jobs'].hoy.n, 2);
+  assert.equal(por['Steve Jobs'].hoy.encargados, 2);
+  assert.equal(por['Steve Jobs'].globo.misiones, 'Misiones: 2/2');
   assert.equal(por['Steve Jobs'].hoy.puesto, 2);
   assert.equal(por['Steve Jobs'].hoy.etiqueta, '2');
   assert.equal(por['Walt Disney'].hoy.n, 1);
@@ -438,7 +442,35 @@ test('encargadosHoy cuenta cualquier estado recibido hoy y no inventa si la band
   assert.equal(encargadosHoy([], { desdeS, hastaS: S }).n, 0);
   assert.equal(etiquetaMisiones(10, 12), '10/12');
   assert.equal(etiquetaMisiones(null, null), '—/—');
-  assert.equal(etiquetaMisiones(20, 1), '20/1');
+  assert.equal(etiquetaMisiones(20, 1), '20/1'); // el formateo no recorta; lo corrige empezadasHoy
+});
+
+test('empezadasHoy: acabadas nunca supera empezadas (Yokup/PR fuera de la bandeja)', () => {
+  assert.equal(empezadasHoy(null, null), null);
+  assert.equal(empezadasHoy({ n: null, misiones: [] }, null), null);
+  assert.equal(empezadasHoy({ n: 0, misiones: [] }, null), 0);
+  assert.equal(empezadasHoy({ n: 0, misiones: [] }, 0), 0);
+  // Como Woz en vivo (5/2): 2 dones de bandeja de hoy + 3 PRs → 5 empezadas, no 2.
+  const uWoz = {
+    n: 5,
+    misiones: [
+      { fuente: 'inbox' }, { fuente: 'inbox' },
+      { fuente: 'pr' }, { fuente: 'pr' }, { fuente: 'pr' },
+    ],
+  };
+  assert.equal(empezadasHoy(uWoz, 2), 5);
+  assert.equal(etiquetaMisiones(5, empezadasHoy(uWoz, 2)), '5/5');
+  // Jobs en vivo (2/1): dones de bandeja sin ts de hoy en encargadosHoy.
+  assert.equal(empezadasHoy({ n: 2, misiones: [{ fuente: 'inbox' }, { fuente: 'inbox' }] }, 1), 2);
+  // 3 PRs acabadas + 2 encargos de hoy aún abiertos → 3/5, no 3/2.
+  const uMix = {
+    n: 3,
+    misiones: [{ fuente: 'pr' }, { fuente: 'pr' }, { fuente: 'yokup' }],
+  };
+  assert.equal(empezadasHoy(uMix, 2), 5);
+  assert.equal(etiquetaMisiones(3, empezadasHoy(uMix, 2)), '3/5');
+  // Sin recibidas (bandeja fallida) pero hay dones de PRs: al menos n.
+  assert.equal(empezadasHoy(uMix, null), 3);
 });
 
 test('globo: Inicio y Fin salen de ts y done_at; si falta uno, «—»', () => {
@@ -467,4 +499,25 @@ test('globo en curso: Misión actual, inicio del latido y Fin: en curso', () => 
   assert.equal(s.globo.horas, 'Inicio 17:39 · Fin: en curso');
   assert.equal(s.globo.misiones, 'Misiones: 0/1');
   assert.doesNotMatch(s.texto, /Libre|Ocupado|^En curso/);
+});
+
+test('asientoPublico: 2 dones inbox + 3 PRs y 1 pending de hoy → 5/6, nunca 5/3', () => {
+  const desde = inicioDiaMadridS(AHORA);
+  const items = [
+    { id: 1, status: 'done', text: 'a', ts: desde + 100, done_at: desde + 200 },
+    { id: 2, status: 'done', text: 'b', ts: desde + 300, done_at: desde + 400 },
+    { id: 3, status: 'pending', text: 'abierta', ts: desde + 500 },
+  ];
+  const prs = [
+    { repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 401, title: 'uno', merged_at: desde + 600, rama: 'woz/uno' },
+    { repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 402, title: 'dos', merged_at: desde + 700, rama: 'woz/dos' },
+    { repo: 'csilvasantin/32.-ConsejoAdmiraNextGame', number: 403, title: 'tres', merged_at: desde + 800, rama: 'woz/tres' },
+  ];
+  const s = asientoPublico(
+    { persona: 'Steve Wozniak', rol: 'CTO' },
+    { latidos: { Wozniak: { modo: 'reposo', at: S - 100 } }, bandejas: { Wozniak: items }, prs, ahoraS: S },
+  );
+  assert.equal(s.hoy.n, 5);
+  assert.equal(s.hoy.encargados, 6);
+  assert.equal(s.globo.misiones, 'Misiones: 5/6');
 });

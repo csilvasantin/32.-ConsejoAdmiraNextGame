@@ -16,6 +16,7 @@
   var LS_HILO = "admira_hilo_oidos_v1";
   var LS_VOZ = "admira_entre_voz_v1";
   var MAX_OIDOS = 200;
+  var ENTRE_SONDEO_MS = 1000; // frase visible ~ a la vez que la voz (Carlos, 12-11-2026)
 
   function nombre(s) { return NOMBRE[s] || s; }
   function textoDe(m) {
@@ -222,7 +223,9 @@
   function cortoDe(s) { return CORTO[s] || String(s || ""); }
   function etiqueta(m) {
     if (!m) return "";
-    return cortoDe(m.de) + " → " + cortoDe(m.para);
+    var h = typeof hablanteDe === "function" ? hablanteDe(m) : (m.de || "");
+    var p = typeof interlocutorDe === "function" ? interlocutorDe(m) : (m.para || "");
+    return cortoDe(h || m.de) + " → " + cortoDe(p || m.para);
   }
   function tsDe(m) { return Date.parse((m && (m.hora || m.ts)) || 0) || 0; }
   // Portada: Carlos oye ambos sentidos (Jobs→Elon y Elon→Jobs), no solo los entrantes.
@@ -244,13 +247,95 @@
     return items;
   }
 
+
+  var COLOR_CONSEJERO = { Musk: "#39f", Jobs: "#f93", Huang: "#76b900", Wozniak: "#4ec3e0", Disney: "#e23d28", Lucas: "#f5c518", Cook: "#a2aaad", Buffett: "#c5a000", Rams: "#c65d3a", Schultz: "#00704a", Ive: "#8aa0b3", Shotwell: "#ee6524", Murati: "#9b7dff", Porat: "#3db8c5", Lasseter: "#ff8ec6", Ratti: "#5cc8ff", Reynolds: "#e23b4c", Y: "#e8e8e8" };
+  var SILLA_DE = { jobs: "Jobs", stevejobs: "Jobs", musk: "Musk", elonmusk: "Musk", elon: "Musk", huang: "Huang", jensenhuang: "Huang", jensen: "Huang", wozniak: "Wozniak", woz: "Wozniak", stevewozniak: "Wozniak", disney: "Disney", waltdisney: "Disney", walt: "Disney", lucas: "Lucas", georgelucas: "Lucas", george: "Lucas", cook: "Cook", timcook: "Cook", tim: "Cook", buffett: "Buffett", warrenbuffett: "Buffett", warren: "Buffett", rams: "Rams", dieterrams: "Rams", dieter: "Rams", schultz: "Schultz", howardschultz: "Schultz", howard: "Schultz", ive: "Ive", jonyive: "Ive", jony: "Ive", shotwell: "Shotwell", gwynneshotwell: "Shotwell", gwynne: "Shotwell", murati: "Murati", miramurati: "Murati", mira: "Murati", porat: "Porat", ruthporat: "Porat", ruth: "Porat", lasseter: "Lasseter", johnlasseter: "Lasseter", john: "Lasseter", ratti: "Ratti", carlosratti: "Ratti", reynolds: "Reynolds", ryanreynolds: "Reynolds", ryan: "Reynolds", y: "Y" };
+  function sillaDe(s) {
+    var raw = String(s || "").trim();
+    var k = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+    if (SILLA_DE[k]) return SILLA_DE[k];
+    if (NOMBRE[raw]) return raw;
+    return "";
+  }
+  function colorDe(s) { var k = sillaDe(s); return (k && COLOR_CONSEJERO[k]) || "#d0d0d0"; }
+  function detectarHablante(texto) {
+    var t = textoFraseVisible(texto);
+    if (!t) return "";
+    var soy = t.match(/\bsoy\s+([^.,;:!?]+)/i);
+    if (soy) { var a = sillaDe(soy[1].trim()); if (a) return a; }
+    var et = t.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+){0,3})\s*:\s/);
+    if (et) { var b = sillaDe(et[1].trim()); if (b) return b; }
+    return "";
+  }
+  function hablanteDe(m) { return detectarHablante(textoDe(m)) || sillaDe(m && m.de) || ""; }
+  function interlocutorDe(m) {
+    var h = hablanteDe(m), de = sillaDe(m && m.de), para = sillaDe(m && m.para);
+    if (para && para !== h) return para;
+    if (de && de !== h) return de;
+    return para || de || "";
+  }
+  function parClave(m) {
+    var s = [], seen = {};
+    [hablanteDe(m), sillaDe(m && m.de), sillaDe(m && m.para)].forEach(function (x) {
+      if (x && !seen[x] && (SILLA_DE[String(x).toLowerCase()] || NOMBRE[x] || COLOR_CONSEJERO[x])) { seen[x] = 1; s.push(x); }
+    });
+    s.sort();
+    return s.length >= 2 ? s[0] + "|" + s[1] : (s[0] || "");
+  }
+  function esDialogoConsejeros(m) {
+    if (!m || esAgente(m) || !textoFraseVisible(textoDe(m))) return false;
+    var n = 0, seen = {};
+    [hablanteDe(m), sillaDe(m.de), sillaDe(m.para)].forEach(function (x) {
+      if (x && !seen[x] && (NOMBRE[x] || COLOR_CONSEJERO[x] || SILLA_DE[String(x).toLowerCase()])) { seen[x] = 1; n++; }
+    });
+    return n >= 2;
+  }
+  function fraseVista(m) {
+    var h = hablanteDe(m);
+    return { id: m && m.id, hablante: h, nombre: nombre(h) || h, corto: cortoDe(h), color: colorDe(h), hora: horaMadrid(tsDe(m)), texto: textoFraseVisible(textoDe(m)), directo: esFraseDirecto(textoDe(m), m), para: interlocutorDe(m), mensaje: m };
+  }
+  function cerrarGrupo(g) {
+    if (!g) return g;
+    g.horaDesde = horaMadrid(g.desde); g.horaHasta = horaMadrid(g.hasta);
+    g.titulo = String(g.par || "").split("|").filter(Boolean).map(cortoDe).join(" ↔ ");
+    g.frases = (g.mensajes || []).map(fraseVista);
+    return g;
+  }
+  function agruparConversaciones(mensajes) {
+    var grupos = [];
+    (mensajes || []).forEach(function (m) {
+      if (!esDialogoConsejeros(m)) {
+        if (m) grupos.push({ tipo: "suelto", mensajes: [m], frases: [fraseVista(m)] });
+        return;
+      }
+      var par = parClave(m), last = grupos[grupos.length - 1], ts = tsDe(m);
+      if (last && last.tipo === "grupo" && last.par === par) {
+        last.mensajes.push(m); if (ts) last.hasta = ts;
+      } else grupos.push({ tipo: "grupo", par: par, mensajes: [m], desde: ts, hasta: ts });
+    });
+    return grupos.map(function (g) { return g.tipo === "grupo" ? cerrarGrupo(g) : g; });
+  }
+  function agruparMix(mix) {
+    var out = [];
+    (mix || []).forEach(function (it) {
+      if (!it || it.tipo !== "entre" || !esDialogoConsejeros(it.m)) { out.push(it); return; }
+      var par = parClave(it.m), last = out[out.length - 1], ts = (it.ts != null ? it.ts : tsDe(it.m)) || 0;
+      if (last && last.tipo === "grupo" && last.par === par) {
+        last.mensajes.push(it.m); if (ts) last.hasta = ts;
+      } else out.push({ tipo: "grupo", par: par, mensajes: [it.m], desde: ts, hasta: ts, ts: ts });
+    });
+    return out.map(function (it) { return it && it.tipo === "grupo" ? cerrarGrupo(it) : it; });
+  }
+
   var api = {
+    ENTRE_SONDEO_MS: ENTRE_SONDEO_MS,
     NOMBRE: NOMBRE, LS_OIDOS: LS_OIDOS, LS_HILO: LS_HILO, LS_VOZ: LS_VOZ, CORTO: CORTO,
     textoDe: textoDe, textoFraseVisible: textoFraseVisible, esFraseDirecto: esFraseDirecto, horaMadrid: horaMadrid, idDe: idDe, esAgente: esAgente, esEntrante: esEntrante,
     leerOidos: leerOidos, escribirOidos: escribirOidos, marcarOidos: marcarOidos,
     noOidos: noOidos, iniciarOidos: iniciarOidos, pendientesDeLocutar: pendientesDeLocutar,
     pendientesTranscripcion: pendientesTranscripcion, etiqueta: etiqueta,
     tsDe: tsDe, mergePorHora: mergePorHora, nombre: nombre, cortoDe: cortoDe,
+    sillaDe: sillaDe, colorDe: colorDe, colorConsejero: COLOR_CONSEJERO, detectarHablante: detectarHablante, hablanteDe: hablanteDe, interlocutorDe: interlocutorDe, parClave: parClave, esDialogoConsejeros: esDialogoConsejeros, fraseVista: fraseVista, agruparConversaciones: agruparConversaciones, agruparMix: agruparMix,
     leerVozOn: leerVozOn, escribirVozOn: escribirVozOn, idHilo: idHilo,
     textoHilo: textoHilo, esTurnoConsejero: esTurnoConsejero, esConsejero: esConsejero, claveConsejero: claveConsejero,
     iniciarOidosHilo: iniciarOidosHilo, pendientesHiloDeLocutar: pendientesHiloDeLocutar
@@ -265,7 +350,7 @@
   var silla = sec.getAttribute("data-silla") || "";
   var lista = doc.getElementById("entre-lista");
   var estilo = doc.createElement("style");
-  estilo.textContent = "#entre-consejeros .turno.otro{margin-right:auto;align-items:flex-start}#entre-consejeros .turno.otro .burbuja{background:#3a2a22;border-bottom-left-radius:5px}#entre-consejeros .turno.persona{margin-left:auto;align-items:flex-end}#entre-activar-voz,#entre-voz-aviso{font-size:12px;margin-left:8px}#entre-voz-aviso{color:var(--suave,#8b96a5)}";
+  estilo.textContent = "#entre-consejeros .turno.otro{margin-right:auto;align-items:flex-start}#entre-consejeros .turno.otro .burbuja{background:#3a2a22;border-bottom-left-radius:5px}#entre-consejeros .turno.persona{margin-left:auto;align-items:flex-end}#entre-activar-voz,#entre-voz-aviso{font-size:12px;margin-left:8px}#entre-voz-aviso{color:var(--suave,#8b96a5)}#entre-consejeros .entre-conv{border:2px solid #8b5a14;border-radius:16px;background:#16110a;padding:14px 16px;margin:12px 0;max-width:100%}#entre-consejeros .entre-conv-cab{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:650 14px/1.3 system-ui,sans-serif;color:#f0e2c0;font-variant-numeric:tabular-nums;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #8b5a14}#entre-consejeros .entre-conv-frase{display:grid;grid-template-columns:auto auto 1fr;gap:4px 12px;align-items:baseline;margin:10px 0}#entre-consejeros .entre-conv-hora{font:700 15px/1.35 system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap}#entre-consejeros .entre-conv-quien{font:700 14px/1.35 system-ui,sans-serif;white-space:nowrap}#entre-consejeros .entre-conv-texto{margin:0;color:#f3e6c0;font:15px/1.45 system-ui,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere}#entre-consejeros .entre-conv-directo{display:inline-block;margin-right:8px;font:700 10px/1.2 system-ui,sans-serif;letter-spacing:.06em;color:#3ee0c0}";
   doc.head.appendChild(estilo);
   // 19-10-2026: también mensajes con agentes de la flota; filtro Todos / Consejeros / Agentes.
   var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, hiloListos = false, vozOn = leerVozOn(), vozDesbloqueada = false, hablando = false, pendiente = null;
@@ -328,6 +413,8 @@
       // No encadenar otra lectura: el siguiente mensaje espera a un sondeo nuevo.
     };
     var decir = function () {
+      // Solo voces de consejeros (nunca la genérica del sistema).
+      if (typeof esConsejero === "function" && !esConsejero(x.persona) && !esConsejero(x.de)) { terminar(); return; }
       var ok = root.AdmiraVoces.speak(x.persona, x.texto, {
         onend: terminar,
         onerror: terminar
@@ -429,7 +516,45 @@
       lista.appendChild(v);
       return;
     }
-    msgs.forEach(function (m) {
+    agruparConversaciones(msgs).forEach(function (g) {
+      if (g.tipo === "grupo") {
+        var box = doc.createElement("article");
+        box.className = "entre-conv";
+        var cab = doc.createElement("header");
+        cab.className = "entre-conv-cab";
+        var par = doc.createElement("span");
+        par.textContent = g.titulo || "";
+        var rango = doc.createElement("span");
+        rango.textContent = (g.horaDesde || "") + (g.horaHasta ? " — " + g.horaHasta : "");
+        cab.append(par, rango);
+        box.appendChild(cab);
+        (g.frases || []).forEach(function (f) {
+          var fila = doc.createElement("div");
+          fila.className = "entre-conv-frase";
+          var horaEl = doc.createElement("span");
+          horaEl.className = "entre-conv-hora";
+          horaEl.textContent = f.hora || "";
+          try { if (f.color) { (horaEl.style || (horaEl.style = {})).color = f.color; } } catch (e) {}
+          var quien = doc.createElement("span");
+          quien.className = "entre-conv-quien";
+          quien.textContent = (f.corto || f.nombre || "") + (f.para ? " → " + cortoDe(f.para) : "");
+          try { if (f.color) { (quien.style || (quien.style = {})).color = f.color; } } catch (e) {}
+          var texto = doc.createElement("div");
+          texto.className = "entre-conv-texto";
+          if (f.directo) {
+            var d = doc.createElement("span");
+            d.className = "entre-conv-directo";
+            d.textContent = "EN DIRECTO";
+            texto.appendChild(d);
+          }
+          texto.appendChild(doc.createTextNode(f.texto || ""));
+          fila.append(horaEl, quien, texto);
+          box.appendChild(fila);
+        });
+        lista.appendChild(box);
+        return;
+      }
+      var m = (g.mensajes && g.mensajes[0]) || g;
       var art = doc.createElement("article");
       art.className = "turno " + (m.de === silla ? "persona" : "otro");
       var b = doc.createElement("div");
@@ -440,7 +565,15 @@
       var hora = m.hora ? horaMadrid(m.hora) : "";
       var directo = esFraseDirecto(textoDe(m), m) ? " · EN DIRECTO" : "";
       var acuse = m.leido ? (" · leído" + (m.leido_en ? " " + horaMadrid(m.leido_en) : "")) : " · pendiente";
-      meta.textContent = nombre(m.de) + (m.de_tipo === "agente" ? " (agente)" : "") + " → " + nombre(m.para) + (m.para_tipo === "agente" ? " (agente)" : "") + " · " + (m.maquina || "") + (hora ? " · " + hora : "") + directo + acuse;
+      var hab = hablanteDe(m);
+      meta.textContent = nombre(hab || m.de) + (m.de_tipo === "agente" ? " (agente)" : "") + " → " + nombre(interlocutorDe(m) || m.para) + (m.para_tipo === "agente" ? " (agente)" : "") + " · " + (m.maquina || "") + (hora ? " · " + hora : "") + directo + acuse;
+      if (hora) {
+        var horaEl2 = doc.createElement("span");
+        horaEl2.className = "entre-conv-hora";
+        horaEl2.textContent = hora;
+        try { (horaEl2.style || (horaEl2.style = {})).color = colorDe(hab || m.de); } catch (e) {}
+        art.append(horaEl2);
+      }
       art.append(b, meta);
       lista.appendChild(art);
     });
@@ -501,7 +634,7 @@
   }
   // r96: este script se carga antes que chat-hilo-client.js; la primera lectura espera a que exista.
   if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", cargar); else cargar();
-  setInterval(cargar, 15000);
+  setInterval(cargar, ENTRE_SONDEO_MS);
   root.addEventListener("chat-hilo-sesion", cargar); // r96: sesión larga restaurada en pestaña nueva
 
 })(typeof window !== "undefined" ? window : globalThis);

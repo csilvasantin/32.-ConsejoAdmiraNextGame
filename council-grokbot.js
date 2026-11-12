@@ -402,7 +402,7 @@
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
     const SCOPE_HILO=()=>'Aquí ves la transcripción de lo que se dicen los consejeros (p. ej. Jobs ↔ Elon), registrada y persistente. Lo que tú escribes en esta visita le llega a '+shortName(selected)+' y también queda en /chat/'+(sharedOf(selected)||'')+'/ («Histórico»). No se publica en el Ágora ni en Telegram.';
-    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). La transcripción entre consejeros no se borra con el chat limpio de esta visita. Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min).';
+    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). La transcripción entre consejeros no se borra con el chat limpio de esta visita. Mientras esperas respuesta se comprueba cada 1 s (hasta 3 min). La transcripción aparece a la vez que la voz.';
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
@@ -440,6 +440,11 @@
       const x=sh.cola.shift();
       if(!x)return;
       sh.hablando=true;
+      // Solo voces de consejeros (nunca la genérica del sistema). AdmiraVoces.speak
+      // ya rechaza si no hay voz propia del consejero; aquí no se habla si no lo es.
+      if(E&&typeof E.esConsejero==='function'&&!E.esConsejero(x.persona)&&!E.esConsejero(x.de)){
+        sh.hablando=false;soltarColaVoz();return;
+      }
       const ok=V.speak(x.persona,x.texto,{
         onend(){sh.hablando=false;soltarColaVoz();},
         onerror(){sh.hablando=false;soltarColaVoz();}
@@ -544,7 +549,7 @@
     function scheduleEntre(epoch){
       if(sh.entreTimer){clearTimeout(sh.entreTimer);sh.entreTimer=null;}
       if(destroyed||!sharedOf(selected)||!current(epoch))return;
-      sh.entreTimer=setTimeout(()=>{sh.entreTimer=null;if(panelVisible())loadEntre(epoch);else scheduleEntre(epoch);},15000);
+      sh.entreTimer=setTimeout(()=>{sh.entreTimer=null;if(panelVisible())loadEntre(epoch);else scheduleEntre(epoch);},(root.AdmiraEntreVoces&&root.AdmiraEntreVoces.ENTRE_SONDEO_MS)||1000);
     }
     function askSignin(message){
       const box=signinBox();box.hidden=false;
@@ -589,7 +594,8 @@
       const typingText=hilo.textoEscribiendo(v.turnos,Date.now(),shortName(selected));
       if(firma!==sh.firma||!log.childElementCount){
         sh.firma=firma;log.replaceChildren();sh.typingNode=null;
-        const mix=E&&E.mergePorHora?E.mergePorHora(v.turnos,sh.entre):v.turnos.map(t=>({tipo:'hilo',t}));
+        const mix0=E&&E.mergePorHora?E.mergePorHora(v.turnos,sh.entre):v.turnos.map(t=>({tipo:'hilo',t}));
+        const mix=E&&E.agruparMix?E.agruparMix(mix0):mix0;
         if(!mix.length){
           const p=doc.createElement('p');p.className='council-chat__intro';p.textContent=introHilo(selected);log.append(p);
           const p2=doc.createElement('p');p2.className='council-chat__intro';p2.textContent='La transcripción entre consejeros aparecerá aquí (también queda en «Histórico» / Privados).';log.append(p2);
@@ -597,18 +603,48 @@
           const p=doc.createElement('p');p.className='council-chat__intro';p.textContent='Transcripción entre consejeros (queda registrada; no la borra el chat limpio de esta visita).';log.append(p);
         }
         for(const it of mix){
+          if(it.tipo==='grupo'){
+            const box=doc.createElement('article');box.className='council-chat__turn council-chat__hilo council-chat__hilo--entre council-chat__conv';
+            const cab=doc.createElement('header');cab.className='council-chat__conv-cab';
+            const par=doc.createElement('span');par.className='council-chat__conv-par';par.textContent=it.titulo||'';
+            const rango=doc.createElement('span');rango.className='council-chat__conv-rango';
+            const hd=it.horaDesde||'', hh=it.horaHasta||'';
+            rango.textContent=hd&&hh?(hd+' — '+hh): (hd||hh);
+            cab.append(par,rango);box.append(cab);
+            (it.frases||[]).forEach(function(f){
+              const fila=doc.createElement('div');fila.className='council-chat__conv-frase';
+              const hora=doc.createElement('span');hora.className='council-chat__conv-hora';hora.textContent=f.hora||'';
+              try{if(f.color){(hora.style||(hora.style={})).color=f.color;}}catch(e){}
+              const quien=doc.createElement('span');quien.className='council-chat__conv-quien';
+              const paraTxt=f.para&&E&&E.cortoDe?E.cortoDe(f.para):(f.para||'');
+              quien.textContent=(f.corto||f.nombre||'')+(paraTxt?' → '+paraTxt:'');
+              try{if(f.color){(quien.style||(quien.style={})).color=f.color;}}catch(e){}
+              const texto=doc.createElement('div');texto.className='council-chat__conv-texto';
+              if(f.directo){const d=doc.createElement('span');d.className='council-chat__conv-directo';d.textContent='EN DIRECTO';texto.append(d,doc.createTextNode(' '));}
+              appendRich(texto,f.texto||'');
+              fila.append(hora,quien,texto);box.append(fila);
+            });
+            log.append(box);
+            continue;
+          }
           if(it.tipo==='entre'){
             const m=it.m, item=doc.createElement('article');item.className='council-chat__turn council-chat__hilo council-chat__hilo--entre';
             const body=doc.createElement('p');body.className='council-chat__reply council-chat__entre-body';
             const who=doc.createElement('strong');who.textContent=(E&&E.etiqueta?E.etiqueta(m):((m.de||'')+' → '+(m.para||'')));body.append(who);
             const rawEntre=E&&E.textoDe?E.textoDe(m):String(m.texto||m.resumen||'');
             const visibleEntre=E&&E.textoFraseVisible?E.textoFraseVisible(rawEntre):rawEntre;
+            const hab=E&&E.hablanteDe?E.hablanteDe(m):(m.de||'');
+            const horaFrase=E&&E.horaMadrid?E.horaMadrid(m.hora):(m.hora?horaHilo.format(new Date(m.hora)):'');
+            if(horaFrase){
+              const horaEl=doc.createElement('span');horaEl.className='council-chat__conv-hora';horaEl.textContent=horaFrase;
+              try{if(E&&E.colorDe){(horaEl.style||(horaEl.style={})).color=E.colorDe(hab);}}catch(e){}
+              body.prepend(horaEl);
+            }
             appendRich(body,' '+visibleEntre);item.append(body);
             const meta=doc.createElement('span');meta.className='council-chat__meta';
             const org=doc.createElement('span');org.className='council-chat__origen';
-            const horaEntre=m.hora?horaHilo.format(new Date(m.hora)):'';
             const directoEntre=E&&E.esFraseDirecto&&E.esFraseDirecto(rawEntre,m);
-            org.textContent=(horaEntre?horaEntre+' · ':'')+(directoEntre?'EN DIRECTO · ':'')+'entre consejeros';
+            org.textContent=(horaFrase?horaFrase+' · ':'')+(directoEntre?'EN DIRECTO · ':'')+'entre consejeros';
             meta.append(org);item.append(meta);log.append(item);
             continue;
           }

@@ -59,11 +59,10 @@ test('la frase de la misión vigente se pinta bajo el proyecto y el latido se re
   assert.ok(iAhora > 0 && iMision > iAhora && iFila > iMision);
 });
 
-test('clicar la flecha de proyecto no enciende el Mac; el resto de la caja sí', () => {
+test('t1294u: la caja no abre el Mac al clicarla; solo el botón Mac del detalle', () => {
   assert.match(src, /ranking-nav[\s\S]{0,400}stopPropagation/);
-  assert.match(src, /mostrarListaMac\(persona\)/);
-  assert.match(src, /e\.target\.closest\('\.ranking-nav'\)/);
-  // El paso del carrusel no llama a mostrarListaMac.
+  assert.match(src, /mac\.addEventListener\('click', \(e\) => \{ e\.preventDefault\(\); e\.stopPropagation\(\); mostrarListaMac\(persona\); \}\)/);
+  assert.match(src, /lab\.addEventListener\('click', \(e\) => \{ e\.stopPropagation\(\); \}\)/);
   const paso = src.match(/function pasoProyecto\([\s\S]*?\n  \}/);
   assert.ok(paso, 'existe pasoProyecto');
   assert.doesNotMatch(paso[0], /mostrarListaMac/);
@@ -84,7 +83,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r177-misiones', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r178-detalle', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -96,7 +95,7 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
   assert.match(index, /consejo-caja-prefs\.mjs\?v=20261112-r176-cajas-anchas/);
-  assert.match(index, /council-globo\.js\?v=20261112-r177-misiones/);
+  assert.match(index, /council-globo\.js\?v=20261112-r178-detalle/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',

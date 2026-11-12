@@ -30,6 +30,11 @@
  * (estilo píxel). El cierre y el tamaño se recuerdan en localStorage; se
  * reabren al clicar el personaje, al pasar de nuevo por su máscara o con
  * un + en la flecha. El redimensionado no mueve la caja de Carlos.
+ * t1294u: la caja enseña por defecto el resumen en vivo (sin flechas, sin
+ * hover, sin clic). Solo un clic deliberado sobre el consejero abre su
+ * detalle (Misión i de n con ◀ ▶ y botón Mac); otro clic o el × vuelven al
+ * resumen. El clic sigue llegando a Preguntar/Examinar. Atrezo en la mesa:
+ * Mickey (Disney), manzana Apple (Woz) y lámpara Pixar (Jobs).
  * prefers-reduced-motion: halo y flecha sin animación. */
 (function (root) {
   'use strict';
@@ -62,6 +67,8 @@
     }
   };
   const CSS = `
+#mesa-atrezo{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:visible}
+#mesa-atrezo .atrezo{position:absolute;width:auto;transform:translate(-50%,-100%);image-rendering:pixelated;pointer-events:none;user-select:none;filter:drop-shadow(2px 3px 0 rgba(0,0,0,.45))}
 #papel-halos{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:visible}
 #papel-halos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:block}
 #papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;gap:10px;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
@@ -73,6 +80,9 @@
 #papel-halos .consejero-ranking .ranking-ahora{font-weight:600;font-size:10px;line-height:1.25;letter-spacing:.01em;max-width:100%;width:100%;margin-top:2px;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;opacity:.9}
 #papel-halos .consejero-ranking .ranking-ahora.is-ultimo{opacity:.55}
 #papel-halos .consejero-ranking .ranking-mision{font-weight:600;font-size:9px;line-height:1.3;letter-spacing:.01em;max-width:100%;width:100%;margin-top:2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;opacity:.95}
+#papel-halos .consejero-ranking{cursor:default}
+#papel-halos .consejero-ranking.is-detalle{border-width:2px;box-shadow:3px 3px 0 #000,0 0 0 1px #ffd75e}
+#papel-halos .consejero-ranking .ranking-mac{width:auto;padding:0 5px;font:700 9px/18px "Press Start 2P",ui-monospace,monospace;margin-left:4px}
 #papel-halos .consejero-ranking .ranking-pos{font-weight:800;font-size:9px;line-height:1.2;letter-spacing:.04em;margin-top:3px;color:#ffd75e;text-transform:uppercase}
 #papel-halos .consejero-ranking.is-mision-elegida .ranking-mision{opacity:1}
 html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos .consejero-marker *,html.misiones-off .consejo-globo.globo-proyectos,html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;pointer-events:none!important}
@@ -174,7 +184,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
   let latidoPayload = null, latidoVuelo = null, latidoTimer = null;
-  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false, proyIdx = Object.create(null), misIdx = Object.create(null);
+  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false, proyIdx = Object.create(null), misIdx = Object.create(null), detalle = Object.create(null);
 
   function doc() { return root.document; }
   function escena() { return doc() && doc().querySelector('.council-image'); }
@@ -431,16 +441,28 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
     const items = (hoy && Array.isArray(hoy.misiones) ? hoy.misiones : []).filter((m) => m && m.fuente !== 'latido' && (m.titulo || m.ref));
     return items.slice().sort((a, b) => (Number(b.cuando) || 0) - (Number(a.cuando) || 0));
   }
+  /* t1294u: el detalle (Misión i de n) solo se abre con un clic deliberado
+   * sobre el consejero. Fuera del detalle la caja es el resumen en vivo, sin
+   * flechas y sin clic. Dentro, ◀ ▶ recorren las misiones 1..n. */
+  function enDetalle(persona) { return !!detalle[persona]; }
   function posMision(persona, n) {
-    const tot = n + 1;
-    return (((Number(misIdx[persona]) || 0) % tot) + tot) % tot;
+    if (!enDetalle(persona) || n < 1) return 0;
+    const v = Number(misIdx[persona]) || 1;
+    return ((((v - 1) % n) + n) % n) + 1;
+  }
+  function alternarDetalle(persona, on) {
+    if (!persona || esCarlos(persona)) return;
+    const nuevo = (on == null) ? !enDetalle(persona) : !!on;
+    if (nuevo) { detalle[persona] = true; misIdx[persona] = 1; }
+    else { delete detalle[persona]; delete misIdx[persona]; }
+    pintarHalos();
   }
   function pasoMision(persona, dir, e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (!enDetalle(persona)) return;
     const n = misionesDe(sillaDe(persona)).length;
     if (n < 1) return;
-    const tot = n + 1;
-    misIdx[persona] = (posMision(persona, n) + dir + tot) % tot;
+    misIdx[persona] = ((posMision(persona, n) - 1 + dir + n) % n) + 1;
     pintarHalos();
     const d = doc();
     const b = d && d.querySelector('#papel-halos .consejero-marker[data-persona="' + persona + '"] .ranking-nav[data-dir="' + (dir < 0 ? 'prev' : 'next') + '"]');
@@ -518,6 +540,45 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
     c.style.width = box.w + 'px';
     c.style.height = box.h + 'px';
   }
+  /* t1294u: atrezo sobre la mesa de Leyendas, como el Buzz Lightyear de
+   * Lasseter en Coetáneos: Mickey junto a Disney, la manzana de Apple de
+   * colores junto a Woz y la lámpara de Pixar (Luxo Jr.) junto a Jobs.
+   * Sprites pixel art en assets/atrezo/, colocados en % del arte (como las
+   * flechas), debajo de las cajas y sin capturar clics. */
+  const ATREZO = {
+    leyendas: [
+      { id: 'lampara', persona: 'Steve Jobs', src: 'assets/atrezo/lampara.png', cx: 19.5, base: 72, alto: 16, alt: 'Lámpara de Pixar (Luxo Jr.)' },
+      { id: 'manzana', persona: 'Steve Wozniak', src: 'assets/atrezo/manzana.png', cx: 26, base: 69, alto: 7, alt: 'Manzana de Apple de colores' },
+      { id: 'mickey', persona: 'Walt Disney', src: 'assets/atrezo/mickey.png', cx: 69, base: 70.5, alto: 13, alt: 'Mickey Mouse' },
+    ],
+  };
+  const ATREZO_V = '20261112-r178';
+  function pintarAtrezo() {
+    const d = doc(); const stage = escena(); if (!d || !stage) return;
+    let c = d.getElementById('mesa-atrezo');
+    if (!c) {
+      c = d.createElement('div'); c.id = 'mesa-atrezo'; c.setAttribute('aria-hidden', 'true');
+      const halos = d.getElementById('papel-halos');
+      stage.insertBefore(c, halos || null);
+    }
+    ajustarCapa(c);
+    const gen = genActual();
+    if (c.getAttribute('data-gen') === gen && c.childElementCount === (ATREZO[gen] || []).length) return;
+    c.setAttribute('data-gen', gen);
+    c.replaceChildren();
+    (ATREZO[gen] || []).forEach((a) => {
+      const img = d.createElement('img');
+      img.className = 'atrezo atrezo-' + a.id;
+      img.src = a.src + '?v=' + ATREZO_V;
+      img.alt = a.alt;
+      img.setAttribute('data-persona', a.persona);
+      img.draggable = false;
+      img.style.left = a.cx + '%';
+      img.style.top = a.base + '%';
+      img.style.height = a.alto + '%';
+      c.appendChild(img);
+    });
+  }
   function puntosDe(p) {
     return (p && Array.isArray(p.puntos) && p.puntos.length >= 3) ? p.puntos : [];
   }
@@ -527,6 +588,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
     estilos();
     const c = capaHalos(); if (!c) return;
     ajustarCapa(c);
+    try { pintarAtrezo(); } catch (e) {}
     const gen = genActual();
     const pos = PAPEL[gen] || {};
     c.replaceChildren();
@@ -571,7 +633,9 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
         const nMis = misiones.length;
         const pos = posMision(persona, nMis);
         const elegida = pos > 0 ? misiones[pos - 1] : null;
-        const frase = elegida ? textoMision(elegida) : fraseMisionDe(silla);
+        const det = enDetalle(persona);
+        if (det) lab.classList.add('is-detalle');
+        const frase = elegida ? textoMision(elegida) : (det ? 'Sin misiones hoy' : fraseMisionDe(silla));
         if (elegida) {
           lab.classList.add('is-mision-elegida');
           lab.setAttribute('data-mision-pos', String(pos));
@@ -618,25 +682,29 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
           prev.addEventListener('keydown', (e) => { e.stopPropagation(); });
           next.addEventListener('keydown', (e) => { e.stopPropagation(); });
         }
-        fila.append(prev, cifra, next);
+        if (det) {
+          fila.append(prev, cifra, next);
+          const mac = d.createElement('button');
+          mac.type = 'button';
+          mac.className = 'ranking-nav ranking-mac';
+          mac.textContent = 'Mac';
+          mac.title = 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
+          mac.setAttribute('aria-label', mac.title);
+          mac.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+          mac.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona); });
+          fila.append(mac);
+        } else {
+          fila.append(cifra);
+        }
         lab.appendChild(fila);
-        lab.setAttribute('role', 'button');
-        lab.setAttribute('tabindex', '0');
         lab.setAttribute('data-persona', persona);
         const nomTit = proy && proy.nombre ? (proy.nombre + ' · ') : '';
         const ahoraTit = (elegida ? ('Misión ' + pos + ' de ' + nMis) : actual.texto) + ' · ';
         const fraseTit = frase ? (frase + ' · ') : '';
-        lab.title = nomTit + ahoraTit + fraseTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
+        lab.title = det ? (nomTit + ahoraTit + fraseTit + 'Clic en ' + persona + ' o × para volver al resumen') : (nomTit + ahoraTit + fraseTit + 'Clic en ' + persona + ' para ver el detalle de sus misiones');
         lab.setAttribute('aria-label', nomTit + ahoraTit + fraseTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
-        lab.addEventListener('click', (e) => {
-          if (e.target && e.target.closest && e.target.closest('.ranking-nav')) { e.preventDefault(); e.stopPropagation(); return; }
-          e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
-        });
-        lab.addEventListener('keydown', (e) => {
-          if (e.target && e.target.closest && e.target.closest('.ranking-nav')) return;
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
-        });
+        /* t1294u: la caja no reacciona al clic (ni abre el Mac): solo sus botones. */
+        lab.addEventListener('click', (e) => { e.stopPropagation(); });
         cromarCaja(lab, persona);
         if (estaCerrada(persona)) lab.hidden = true;
         wrap.appendChild(lab);
@@ -751,7 +819,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
       x.className = 'caja-cerrar';
       x.setAttribute('aria-label', 'Cerrar caja de ' + persona);
       x.textContent = '×';
-      x.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); cerrarCaja(persona); });
+      x.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); if (enDetalle(persona)) { alternarDetalle(persona, false); return; } cerrarCaja(persona); });
       el.appendChild(x);
     }
     if (!el.querySelector(':scope > .caja-resize')) {
@@ -1320,14 +1388,8 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
     }
     const c = d.getElementById('body-hotspots');
     if (c) {
-      c.addEventListener('mouseover', (e) => {
-        if (esTactil()) return;
-        const el = e.target.closest && e.target.closest('[data-persona]');
-        if (!el) return;
-        const persona = el.getAttribute('data-persona');
-        if (estaCerrada(persona)) { intentarReabrir(persona); return; }
-        mostrar(el);
-      });
+      /* t1294u: pasar el ratón por encima ya no enseña nada (ni globo ni
+       * reapertura de cajas): la información solo sale con un clic. */
       c.addEventListener('mouseout', (e) => {
         if (esTactil()) return;
         const el = e.target.closest && e.target.closest('[data-persona]');
@@ -1342,22 +1404,26 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
         const el = e.target.closest && e.target.closest('[data-persona]');
         if (!el) return;
         const persona = el.getAttribute('data-persona');
+        /* t1294u: clic en el consejero = abrir/cerrar el detalle de su caja.
+         * No se para el evento: Preguntar / Examinar / ficha siguen igual. */
         if (estaCerrada(persona)) {
-          e.preventDefault(); e.stopPropagation();
           delete noHoverHastaSalir[key(persona)];
-          abrirCaja(persona);
+          guardarPrefCaja(persona, { closed: false });
+          if (esCarlos(persona)) { mostrarCarlosPersistente(); return; }
+          alternarDetalle(persona, true);
           return;
         }
-        if (!esTactil()) return;
-        if (abierto && abierto.persona === persona && globo && !globo.hidden) {
-          if (esCarlos(persona) && carlosFijado) return;
-          ocultar(true); return;
+        if (esCarlos(persona)) {
+          if (!esTactil()) return;
+          if (abierto && abierto.persona === persona && globo && !globo.hidden) {
+            if (carlosFijado) return;
+            ocultar(true); return;
+          }
+          mostrar(el);
+          return;
         }
-        mostrar(el);
-      });
-      c.addEventListener('focusin', (e) => {
-        const el = e.target.closest && e.target.closest('[data-persona]');
-        if (el) mostrar(el);
+        if (abierto && !esCarlos(abierto.persona)) ocultar(true);
+        alternarDetalle(persona);
       });
       c.addEventListener('focusout', (e) => {
         const el = e.target.closest && e.target.closest('[data-persona]');
@@ -1371,7 +1437,9 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
         const el = e.target.closest && e.target.closest('[data-persona]');
         if (!el) return;
         e.preventDefault();
-        if (abierto && abierto.persona === el.getAttribute('data-persona') && globo && !globo.hidden) ocultar();
+        const persona = el.getAttribute('data-persona');
+        if (!esCarlos(persona)) { alternarDetalle(persona); return; }
+        if (abierto && abierto.persona === persona && globo && !globo.hidden) ocultar();
         else mostrar(el);
       });
     }
@@ -1406,6 +1474,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
     }
     if (root.addEventListener) {
       root.addEventListener('resize', () => {
+        const at = doc().getElementById('mesa-atrezo'); if (at) ajustarCapa(at);
         const c = doc().getElementById('papel-halos');
         if (c) { ajustarCapa(c); repartirCajas(c); }
         if (abierto) colocarGlobo(abierto.anchor);
@@ -1415,6 +1484,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
     if (img && img.addEventListener) img.addEventListener('load', pintarHalos);
     if (root.ResizeObserver && escena()) {
       new root.ResizeObserver(() => {
+        const at = doc().getElementById('mesa-atrezo'); if (at) ajustarCapa(at);
         const c = doc().getElementById('papel-halos');
         if (c) { ajustarCapa(c); repartirCajas(c); }
         if (abierto) colocarGlobo(abierto.anchor);
@@ -1495,5 +1565,5 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
   if (doc() && doc().readyState === 'loading') doc().addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
-  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto, pasoMision, misionesDe, ponerMisiones, alternarMisiones, abrirCaja, cerrarCaja, repartirCajas, mostrarCarlosPersistente };
+  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto, pasoMision, alternarDetalle, misionesDe, ponerMisiones, alternarMisiones, abrirCaja, cerrarCaja, repartirCajas, mostrarCarlosPersistente };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -33,3 +33,17 @@ test('t1293u: la capa de cajas queda por encima de las siluetas clicables (las f
   assert.ok(m && Number(m[1]) > 3, 'z-index de #papel-halos > 3 (body-hotspots)');
   assert.match(src, /#papel-halos\{[^}]*pointer-events:none/);
 });
+
+test('t1294u: detalle solo con clic en el consejero; sin hover; × vuelve al resumen', () => {
+  assert.match(src, /function alternarDetalle\(/);
+  assert.match(src, /alternarDetalle\(persona\);\n      \}\);/);
+  assert.doesNotMatch(src, /c\.addEventListener\('mouseover'/);
+  assert.match(src, /if \(enDetalle\(persona\)\) \{ alternarDetalle\(persona, false\); return; \} cerrarCaja\(persona\);/);
+  const paso = src.match(/function pasoMision\([\s\S]*?\n  \}/);
+  assert.match(paso[0], /if \(!enDetalle\(persona\)\) return;/);
+});
+
+test('t1294u: atrezo de Leyendas (lámpara, manzana, Mickey) sin capturar clics', () => {
+  for (const id of ['lampara', 'manzana', 'mickey']) assert.match(src, new RegExp("id: '" + id + "'"));
+  assert.match(src, /#mesa-atrezo\{[^}]*pointer-events:none/);
+});

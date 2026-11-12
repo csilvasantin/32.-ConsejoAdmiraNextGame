@@ -84,7 +84,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r176-cajas-anchas', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r177-misiones', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -96,7 +96,7 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
   assert.match(index, /consejo-caja-prefs\.mjs\?v=20261112-r176-cajas-anchas/);
-  assert.match(index, /council-globo\.js\?v=20261112-r176-cajas-anchas/);
+  assert.match(index, /council-globo\.js\?v=20261112-r177-misiones/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',

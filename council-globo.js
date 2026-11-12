@@ -8,8 +8,10 @@
  * si está trabajando, la frase de su misión actual (la misma que en Grok Bot,
  * campo mision del latido); y bajo eso, el recuento de hoy flanqueado por
  * flechas ◀ ▶ (mismo
- * estilo que el carrusel de Carlos Silva) para el proyecto anterior/siguiente
- * del consejero. El latido se refresca cada 2 s, sin recargar la página. Clicar las flechas no enciende el Mac 1984; el resto de la
+ * estilo que el carrusel de Carlos Silva) para la misión anterior/siguiente
+ * de hoy del consejero (t1293u; antes pasaban de proyecto y casi siempre
+ * estaban apagadas). Botón «Misiones» en la barra de Previos: muestra u
+ * oculta todas las cajas (encendido por defecto, recordado en localStorage). El latido se refresca cada 2 s, sin recargar la página. Clicar las flechas no enciende el Mac 1984; el resto de la
  * caja sí. El puesto va dentro del triángulo, más pequeño para que quepa en
  * la punta, en negro. Sin «/6». La flecha no pisa la caja.
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
@@ -60,7 +62,7 @@
     }
   };
   const CSS = `
-#papel-halos{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:visible}
+#papel-halos{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:visible}
 #papel-halos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:block}
 #papel-halos .consejero-marker{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;gap:10px;transform:translate(-50%,-100%);pointer-events:none;color:inherit}
 #papel-halos .consejero-flecha{width:clamp(40px,9.2%,72px);aspect-ratio:80/88;line-height:normal;position:relative;flex:0 0 auto}
@@ -71,6 +73,9 @@
 #papel-halos .consejero-ranking .ranking-ahora{font-weight:600;font-size:10px;line-height:1.25;letter-spacing:.01em;max-width:100%;width:100%;margin-top:2px;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;opacity:.9}
 #papel-halos .consejero-ranking .ranking-ahora.is-ultimo{opacity:.55}
 #papel-halos .consejero-ranking .ranking-mision{font-weight:600;font-size:9px;line-height:1.3;letter-spacing:.01em;max-width:100%;width:100%;margin-top:2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;opacity:.95}
+#papel-halos .consejero-ranking .ranking-pos{font-weight:800;font-size:9px;line-height:1.2;letter-spacing:.04em;margin-top:3px;color:#ffd75e;text-transform:uppercase}
+#papel-halos .consejero-ranking.is-mision-elegida .ranking-mision{opacity:1}
+html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos .consejero-marker *,html.misiones-off .consejo-globo.globo-proyectos,html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;pointer-events:none!important}
 #papel-halos .consejero-ranking .ranking-fila{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:3px;white-space:nowrap;flex:0 0 auto}
 #papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1;min-width:1.1em}
 #papel-halos .consejero-ranking .ranking-nav{appearance:none;flex:0 0 auto;width:20px;height:20px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:13px/1 sans-serif;cursor:pointer}
@@ -169,7 +174,7 @@
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
   let latidoPayload = null, latidoVuelo = null, latidoTimer = null;
-  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false, proyIdx = Object.create(null);
+  let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false, proyIdx = Object.create(null), misIdx = Object.create(null);
 
   function doc() { return root.document; }
   function escena() { return doc() && doc().querySelector('.council-image'); }
@@ -297,8 +302,10 @@
       const nom = String(nombre || '').replace(/\s+/g, ' ').trim();
       if (!nom) return;
       const pid = String(id || nom).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || nom;
-      if (seen[pid]) return;
-      seen[pid] = true;
+      /* t1293u: mismo proyecto con o sin guiones (portaventuranext / portaventura-next) es uno solo. */
+      const sk = key(nom);
+      if (seen[pid] || seen['n:' + sk]) return;
+      seen[pid] = true; seen['n:' + sk] = true;
       out.push({ id: pid, nombre: nom });
     };
     const principal = proyectoDe(persona);
@@ -413,6 +420,37 @@
     const cur = ((Number(proyIdx[persona]) || 0) % n + n) % n;
     proyIdx[persona] = (cur + dir + n) % n;
     pintarHalos();
+  }
+  /* t1293u: las flechas ◀ ▶ de la caja pasan por las misiones de hoy del
+   * consejero (las mismas que cuenta el número), no por proyectos: casi todos
+   * tienen un solo proyecto y las flechas salían muertas. Posición 0 = «ahora»
+   * (latido en vivo); 1..n = misión n de hoy, de la más reciente a la más
+   * antigua. El repintado del latido (cada 2 s) respeta la posición elegida. */
+  function misionesDe(silla) {
+    const hoy = silla && silla.hoy;
+    const items = (hoy && Array.isArray(hoy.misiones) ? hoy.misiones : []).filter((m) => m && m.fuente !== 'latido' && (m.titulo || m.ref));
+    return items.slice().sort((a, b) => (Number(b.cuando) || 0) - (Number(a.cuando) || 0));
+  }
+  function posMision(persona, n) {
+    const tot = n + 1;
+    return (((Number(misIdx[persona]) || 0) % tot) + tot) % tot;
+  }
+  function pasoMision(persona, dir, e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const n = misionesDe(sillaDe(persona)).length;
+    if (n < 1) return;
+    const tot = n + 1;
+    misIdx[persona] = (posMision(persona, n) + dir + tot) % tot;
+    pintarHalos();
+    const d = doc();
+    const b = d && d.querySelector('#papel-halos .consejero-marker[data-persona="' + persona + '"] .ranking-nav[data-dir="' + (dir < 0 ? 'prev' : 'next') + '"]');
+    if (b && b.focus) { try { b.focus({ preventScroll: true }); } catch (err) {} }
+  }
+  function textoMision(m) {
+    const t = String((m && m.titulo) || '').replace(/\s+/g, ' ').trim();
+    const ref = String((m && m.ref) || '').trim();
+    const corto = ref && /#\d+/.test(ref) ? ref.match(/#\d+/)[0] : ref;
+    return (corto && t) ? (corto + ' · ' + t) : (t || corto);
   }
   function llevaHalo() { return false; }
   function flechaSvg(puesto) {
@@ -529,7 +567,19 @@
         ahora.textContent = actual.texto;
         if (!actual.vigente) ahora.classList.add('is-ultimo');
         lab.appendChild(ahora);
-        const frase = fraseMisionDe(silla);
+        const misiones = misionesDe(silla);
+        const nMis = misiones.length;
+        const pos = posMision(persona, nMis);
+        const elegida = pos > 0 ? misiones[pos - 1] : null;
+        const frase = elegida ? textoMision(elegida) : fraseMisionDe(silla);
+        if (elegida) {
+          lab.classList.add('is-mision-elegida');
+          lab.setAttribute('data-mision-pos', String(pos));
+          const posEl = d.createElement('span');
+          posEl.className = 'ranking-pos';
+          posEl.textContent = 'Misión ' + pos + ' de ' + nMis;
+          lab.appendChild(posEl);
+        }
         if (frase) {
           const mis = d.createElement('span');
           mis.className = 'ranking-mision';
@@ -542,7 +592,8 @@
         const prev = d.createElement('button');
         prev.type = 'button';
         prev.className = 'ranking-nav';
-        prev.setAttribute('aria-label', 'Proyecto anterior');
+        prev.setAttribute('aria-label', 'Misión anterior');
+        prev.setAttribute('data-dir', 'prev');
         prev.textContent = '◀';
         const cifra = d.createElement('span');
         cifra.className = 'ranking-n';
@@ -550,14 +601,20 @@
         const next = d.createElement('button');
         next.type = 'button';
         next.className = 'ranking-nav';
-        next.setAttribute('aria-label', 'Proyecto siguiente');
+        next.setAttribute('aria-label', 'Misión siguiente');
+        next.setAttribute('data-dir', 'next');
         next.textContent = '▶';
-        if (nProy < 2) {
+        if (nMis < 1) {
           prev.disabled = true;
           next.disabled = true;
+          prev.title = next.title = 'Sin misiones hoy';
         } else {
-          prev.addEventListener('click', (e) => pasoProyecto(persona, -1, e));
-          next.addEventListener('click', (e) => pasoProyecto(persona, 1, e));
+          prev.title = 'Misión anterior';
+          next.title = 'Misión siguiente';
+          prev.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+          next.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+          prev.addEventListener('click', (e) => pasoMision(persona, -1, e));
+          next.addEventListener('click', (e) => pasoMision(persona, 1, e));
           prev.addEventListener('keydown', (e) => { e.stopPropagation(); });
           next.addEventListener('keydown', (e) => { e.stopPropagation(); });
         }
@@ -567,7 +624,7 @@
         lab.setAttribute('tabindex', '0');
         lab.setAttribute('data-persona', persona);
         const nomTit = proy && proy.nombre ? (proy.nombre + ' · ') : '';
-        const ahoraTit = actual.texto + ' · ';
+        const ahoraTit = (elegida ? ('Misión ' + pos + ' de ' + nMis) : actual.texto) + ' · ';
         const fraseTit = frase ? (frase + ' · ') : '';
         lab.title = nomTit + ahoraTit + fraseTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
         lab.setAttribute('aria-label', nomTit + ahoraTit + fraseTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
@@ -1365,8 +1422,69 @@
     }
   }
 
+  /* t1293u: botón «Misiones» (a la izquierda de Conversación, en la barra de
+   * Previos). Encendido por defecto: se ven las cajas de misiones y sus
+   * flechas sobre todas las cabezas (también la caja fija de Carlos). Al
+   * pulsarlo se ocultan todas; al volver a pulsarlo reaparecen en su sitio.
+   * Solo CSS (html.misiones-off): no se repinta nada ni se mueve la caja de
+   * Carlos. El estado se recuerda en localStorage. */
+  const MISIONES_KEY = 'admira.live.misiones.visibles';
+  function misionesVisibles() {
+    try { return !(root.localStorage && root.localStorage.getItem(MISIONES_KEY) === '0'); } catch (e) { return true; }
+  }
+  function sincronizarBotonMisiones(on) {
+    const d = doc(); if (!d) return;
+    if (on == null) on = !d.documentElement.classList.contains('misiones-off');
+    d.querySelectorAll('[data-misiones-toggle]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(!!on));
+      b.title = on ? 'Misiones: ocultar las cajas de misiones de encima de las cabezas' : 'Misiones: mostrar las cajas de misiones encima de las cabezas';
+    });
+  }
+  function ponerMisiones(on, guardar) {
+    const d = doc(); if (!d) return;
+    d.documentElement.classList.toggle('misiones-off', !on);
+    if (guardar) { try { root.localStorage && root.localStorage.setItem(MISIONES_KEY, on ? '1' : '0'); } catch (e) {} }
+    sincronizarBotonMisiones(on);
+    if (on) { const c = d.getElementById('papel-halos'); if (c) { ajustarCapa(c); repartirCajas(c); } }
+  }
+  function alternarMisiones() { ponerMisiones(doc().documentElement.classList.contains('misiones-off'), true); }
+  function asegurarBotonMisiones() {
+    const d = doc(); if (!d) return;
+    d.querySelectorAll('.council-preview__views').forEach((v) => {
+      if (v.querySelector('[data-misiones-toggle]')) return;
+      const b = d.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-misiones-toggle', '');
+      b.textContent = 'Misiones';
+      const conv = v.querySelector('[data-view="conversation"]');
+      v.insertBefore(b, conv || v.firstChild);
+    });
+    sincronizarBotonMisiones();
+  }
+  function wireMisiones() {
+    const d = doc(); if (!d || d.__misionesWired) return;
+    d.__misionesWired = true;
+    ponerMisiones(misionesVisibles(), false);
+    d.addEventListener('click', (e) => {
+      const b = e.target && e.target.closest && e.target.closest('[data-misiones-toggle]');
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      alternarMisiones();
+    });
+    asegurarBotonMisiones();
+    if (root.MutationObserver && d.body) {
+      new root.MutationObserver(() => {
+        if (!d.querySelector('[data-misiones-toggle]') && d.querySelector('.council-preview__views')) { asegurarBotonMisiones(); return; }
+        const on = !d.documentElement.classList.contains('misiones-off');
+        if (d.querySelector('[data-misiones-toggle][aria-pressed="' + String(!on) + '"]')) sincronizarBotonMisiones(on);
+      })
+        .observe(d.body, { childList: true, subtree: true });
+    }
+  }
+
   function arrancar() {
     estilos();
+    wireMisiones();
     wire();
     prepararHotspots();
     cargar(true).then(pintarHalos, pintarHalos);
@@ -1377,5 +1495,5 @@
   if (doc() && doc().readyState === 'loading') doc().addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
-  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto, abrirCaja, cerrarCaja, repartirCajas, mostrarCarlosPersistente };
+  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto, pasoMision, misionesDe, ponerMisiones, alternarMisiones, abrirCaja, cerrarCaja, repartirCajas, mostrarCarlosPersistente };
 })(typeof window !== 'undefined' ? window : globalThis);

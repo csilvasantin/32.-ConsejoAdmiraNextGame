@@ -6,14 +6,36 @@ documentacion. La fuente canonica es la boveda Cloudflare `admira-vault`.
 ## Secreto
 
 - Nombre facil: `TOKEN_CONSEJO_SILICIO`
-- Nombre tecnico compatible: `COUNCIL_WRITE_TOKEN`
-- Boveda: `https://admira-vault.csilvasantin.workers.dev`
+- Boveda: `https://admira-vault.csilvasantin.workers.dev` (tambien `https://vault.yokup.com`)
 - Lectura: `GRID_KEY` local en `~/.agents-comms/.synckey`
+- Escritura: exige ademas `VAULT_ADMIN` (`vault-set.sh` de admira-vault) o
+  `wrangler kv key put` en el KV de la boveda con la cuenta de Cloudflare de Carlos.
+
+### Cambio del 12-nov-2026 (aprobado por Carlos)
+
+`TOKEN_CONSEJO_SILICIO` tiene ahora el mismo valor que el token que acepta el
+Worker de www.admira.live para escribir (`CONSUMOS_LECTURAS_TOKEN` /
+`COUNCIL_MACHINE_TOKEN`, el de `~/.config/admira/consumos-lecturas.token` en la
+caja). Antes daba 401 en `POST /api/consejo/objetivos-abc` y las rutinas de las
+00:00 de los consejeros no podian escribir sus a/b/c en el cartel.
+
+- `TOKEN_CONSEJO_SILICIO_ANTERIOR`: el valor de antes, guardado para quien lo use
+  en otra ruta (el prompt `Token del Consejo` del servidor Node, `src/server.js`).
+- `COUNCIL_WRITE_TOKEN` (boveda): NO se ha cambiado. Es el nombre de la variable
+  de entorno que valida `src/server.js` (token legado del servidor del Consejo) y
+  sigue con el valor anterior, igual que `TOKEN_CONSEJO_SILICIO_ANTERIOR`.
+
+Resumen de usos:
+
+| Para que | Entrada de la boveda |
+| --- | --- |
+| `GET/POST https://www.admira.live/api/consejo/objetivos-abc`, `/api/consejo/*` del Worker | `TOKEN_CONSEJO_SILICIO` |
+| Token legado del servidor Node del Consejo (`src/server.js`, prompt `Token del Consejo`) | `COUNCIL_WRITE_TOKEN` (= `TOKEN_CONSEJO_SILICIO_ANTERIOR`) |
 
 ## Recuperar desde una maquina agente
 
 ```bash
-python3 - <<'PY'
+python3 - <<'EOF'
 import json, pathlib, urllib.parse, urllib.request
 
 vault = "https://admira-vault.csilvasantin.workers.dev"
@@ -22,10 +44,11 @@ url = f"{vault}/secret/TOKEN_CONSEJO_SILICIO?" + urllib.parse.urlencode({"key": 
 req = urllib.request.Request(url, headers={"User-Agent": "AdmiraAgent"})
 
 with urllib.request.urlopen(req, timeout=20) as r:
-    token = json.loads(r.read().decode())["value"]
+    token = json.loads(r.read().decode())["value"].strip()
 
-print(token)
-PY
+# Usalo directamente como cabecera; no lo imprimas.
+headers = {"X-Council-Token": token, "Content-Type": "application/json"}
+EOF
 ```
 
 Usalo solo para rellenar el prompt `Token del Consejo` o para enviarlo como

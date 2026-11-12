@@ -16,7 +16,7 @@ test('Coetáneos: el Mac 1984 no se pinta en la mesa', () => {
 test('Coetáneos: Murati con figura nueva, máscara y recorte coherentes', () => {
   const meta = JSON.parse(rd('assets/consejo-vacio/meta.json'));
   const c = meta.coetaneos.cutouts['Mira Murati'];
-  assert.deepEqual(c, { src: 'coetaneos-mira-murati.webp', x: 347, y: 258, w: 180, h: 227 });
+  assert.deepEqual(c, { src: 'coetaneos-mira-murati.webp', x: 384, y: 266, w: 167, h: 211 });
   assert.ok(existsSync(new URL('./assets/consejo-vacio/coetaneos-mira-murati.webp', import.meta.url)));
   const sil = JSON.parse(rd('assets/council-silhouettes.js').match(/= (\{.*\});/s)[1]);
   const pts = sil.coetaneos.paths['Mira Murati'].replace(/Z/g, '').split('L').map((s) => s.replace('M', '').trim().split(/\s+/).map(Number));
@@ -24,5 +24,5 @@ test('Coetáneos: Murati con figura nueva, máscara y recorte coherentes', () =>
   assert.ok(Math.min(...xs) >= c.x && Math.max(...xs) <= c.x + c.w, 'máscara dentro del recorte (x)');
   assert.ok(Math.min(...ys) >= c.y && Math.max(...ys) <= c.y + c.h, 'máscara dentro del recorte (y)');
   // Los recortes manuales de KV anteriores a esta foto no pisan la máscara nueva.
-  assert.match(rd('assets/council-recorte.js'), /coetaneos: '2026-11-11T21:40:00Z'/);
+  assert.match(rd('assets/council-recorte.js'), /coetaneos: '2026-11-12T08:00:00Z'/);
 });

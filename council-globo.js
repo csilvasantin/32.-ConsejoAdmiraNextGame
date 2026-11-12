@@ -3,7 +3,9 @@
  * Datos: GET /api/consejo/estado (latido de consejero_latido + últimos done públicos).
  * Flecha, caja de hoy y globo leen un único mapa / instantánea por pintado.
  * Encima de la flecha, una caja centrada en su eje: título del proyecto
- * arriba y, debajo, el recuento de hoy flanqueado por flechas ◀ ▶ (mismo
+ * principal arriba; debajo, el proyecto en el que está ahora (latido
+ * vigente, o el último conocido atenuado, o «—» si no hay dato); y bajo
+ * eso, el recuento de hoy flanqueado por flechas ◀ ▶ (mismo
  * estilo que el carrusel de Carlos Silva) para el proyecto anterior/siguiente
  * del consejero. Clicar las flechas no enciende el Mac 1984; el resto de la
  * caja sí. El puesto va dentro del triángulo, más pequeño para que quepa en
@@ -54,6 +56,8 @@
 #papel-halos .consejero-flecha .puesto{position:absolute;left:0;right:0;top:47%;height:36%;display:flex;align-items:center;justify-content:center;margin:0;padding:0;font:800 13px/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:#140e06;-webkit-text-stroke:0.35px rgba(243,230,196,.45);text-shadow:none;pointer-events:none;z-index:2}
 #papel-halos .consejero-ranking{margin:0;padding:3px 7px 4px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
 #papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:12em;overflow:hidden;text-overflow:ellipsis}
+#papel-halos .consejero-ranking .ranking-ahora{font-weight:600;font-size:8px;line-height:1.2;letter-spacing:.01em;max-width:12em;margin-top:1px;overflow:hidden;text-overflow:ellipsis;opacity:.9}
+#papel-halos .consejero-ranking .ranking-ahora.is-ultimo{opacity:.55}
 #papel-halos .consejero-ranking .ranking-fila{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px}
 #papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1;min-width:1.1em}
 #papel-halos .consejero-ranking .ranking-nav{appearance:none;flex:0 0 auto;width:20px;height:20px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:13px/1 sans-serif;cursor:pointer}
@@ -69,6 +73,7 @@
   #papel-halos .consejero-ranking{padding:2px 5px 3px}
   #papel-halos .consejero-ranking .ranking-n{font-size:12px}
   #papel-halos .consejero-ranking .ranking-proy{font-size:8px;max-width:11em}
+  #papel-halos .consejero-ranking .ranking-ahora{font-size:7px;max-width:11em}
   #papel-halos .consejero-ranking .ranking-nav{width:18px;height:18px;font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){.consejero-flecha{animation:none!important}}
@@ -307,6 +312,11 @@
     if (hoy.n == null) return '—';
     return String(hoy.n);
   }
+  function proyectoActualDe(silla) {
+    const p = silla && silla.proyecto;
+    const nombre = p && String(p.nombre || '').replace(/\s+/g, ' ').trim();
+    return { texto: nombre || '—', vigente: !!(nombre && p.vigente) };
+  }
   function pasoProyecto(persona, dir, e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     const lista = proyectosDe(persona);
@@ -424,6 +434,12 @@
           nom.textContent = proy.nombre;
           lab.appendChild(nom);
         }
+        const actual = proyectoActualDe(silla);
+        const ahora = d.createElement('span');
+        ahora.className = 'ranking-ahora';
+        ahora.textContent = actual.texto;
+        if (!actual.vigente) ahora.classList.add('is-ultimo');
+        lab.appendChild(ahora);
         const fila = d.createElement('span');
         fila.className = 'ranking-fila';
         const prev = d.createElement('button');
@@ -454,8 +470,9 @@
         lab.setAttribute('tabindex', '0');
         lab.setAttribute('data-persona', persona);
         const nomTit = proy && proy.nombre ? (proy.nombre + ' · ') : '';
-        lab.title = nomTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
-        lab.setAttribute('aria-label', nomTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
+        const ahoraTit = actual.texto + ' · ';
+        lab.title = nomTit + ahoraTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
+        lab.setAttribute('aria-label', nomTit + ahoraTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
         lab.addEventListener('click', (e) => {
           if (e.target && e.target.closest && e.target.closest('.ranking-nav')) { e.preventDefault(); e.stopPropagation(); return; }
           e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
@@ -942,5 +959,5 @@
   if (doc() && doc().readyState === 'loading') doc().addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
-  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, pasoProyecto };
+  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, pasoProyecto };
 })(typeof window !== 'undefined' ? window : globalThis);

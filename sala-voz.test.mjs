@@ -119,7 +119,7 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(html, /auth-gate\.js/);
   assert.match(html, /consejeros-voces\.js/);
   assert.match(html, /chat-hilo-client\.js/);
-  assert.match(html, /sala-voz\.js\?v=20261112-karaoke/);
+  assert.match(html, /sala-voz\.js\?v=20261112-pantalla-espera/);
   assert.match(css, /cursor:\s*none/);
   assert.doesNotMatch(js, /Activar voz/);
   assert.match(js, /Escape/);
@@ -129,9 +129,9 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(js, /AdmiraVozTurno/);
   assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
   assert.match(html, /id="karaoke"/);
-  assert.match(html, /sala-voz\.css\?v=20261112-karaoke/);
+  assert.match(html, /sala-voz\.css\?v=20261112-pantalla-espera/);
   assert.match(html, /consejeros-voces\.js\?v=20261112-karaoke/);
-  assert.match(js, /sala-voz-lib\.mjs\?v=20261112-karaoke/);
+  assert.match(js, /sala-voz-lib\.mjs\?v=20261112-pantalla-espera/);
   assert.match(js, /onboundary/);
   assert.match(js, /iniciarKaraokeVisual/);
   assert.match(css, /#karaoke/);
@@ -203,3 +203,47 @@ test("elapsedDesdeTurno se sincroniza con el turno público o arranca al llegar"
   assert.equal(inferido.sincronizado, true);
 });
 
+
+test("modo pantalla=1: espera a la izquierda, karaoke a la derecha, sin voz propia", () => {
+  const html = readFileSync(new URL("./sala-voz/index.html", import.meta.url), "utf8");
+  const css = readFileSync(new URL("./sala-voz/sala-voz.css", import.meta.url), "utf8");
+  const js = readFileSync(new URL("./sala-voz/sala-voz.js", import.meta.url), "utf8");
+  assert.match(html, /id="espera"/);
+  assert.match(html, /id="espera-foto"/);
+  assert.match(html, /id="kOv"/);
+  assert.match(html, /coetaneos-elon-musk\.webp/);
+  assert.match(html, /leyendas-steve-jobs\.webp/);
+  assert.match(html, /Elon Musk/);
+  assert.match(html, /Steve Jobs/);
+  assert.match(html, /q\.get\("pantalla"\) !== "1"/);
+  assert.match(js, /q\.get\("pantalla"\) === "1"/);
+  assert.match(js, /function kdice\(/);
+  assert.match(js, /window\.__kdice = kdice/);
+  assert.match(js, /window\.__elonDice = \(t\) => kdice\(t, 2\.7, 1000\)/);
+  assert.match(js, /arrancarPantalla/);
+  assert.match(js, /if \(pantalla\) return;/);
+  assert.match(js, /elonKar/);
+  assert.match(css, /html\.pantalla #espera/);
+  assert.match(css, /width:\s*38vw/);
+  assert.match(css, /height:\s*62vh/);
+  assert.match(css, /left:\s*44vw/);
+  assert.match(css, /right:\s*5vw/);
+  assert.match(css, /font:\s*600 3vw\/1\.45/);
+  assert.match(css, /text-align:\s*left/);
+  assert.match(css, /#39f/);
+  assert.match(css, /#f93/);
+  assert.match(css, /#6cf/);
+  assert.match(css, /#fc6/);
+  assert.match(css, /html\.pantalla #karaoke/);
+  assert.match(css, /html\.pantalla #elonKar/);
+  assert.match(css, /html\.pantalla #transcripcion/);
+  assert.match(css, /html\.pantalla #mensajes/);
+  assert.match(css, /radial-gradient\(circle at 50% 35%, #0b2a3d, #02080d 70%\)/);
+  assert.match(css, /radial-gradient\(circle at 50% 35%, #3a2a12, #0d0904 70%\)/);
+  // Sin marco grueso en la foto de espera.
+  const foto = css.slice(css.indexOf("html.pantalla #espera-foto"), css.indexOf("html.pantalla #espera-nombre"));
+  assert.match(foto, /border:\s*none/);
+  assert.match(foto, /box-shadow:\s*none/);
+  // El modo pantalla no sustituye el arranque normal (sin ?pantalla=1 se sigue locutando).
+  assert.match(js, /} else {\s*arrancar\(\);\s*}/);
+});

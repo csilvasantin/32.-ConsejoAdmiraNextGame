@@ -1,11 +1,14 @@
 /* Sala de voz: transcripción entre consejeros en las dos pantallas Terminator.
    12-11-2026: un solo turno de voz en toda la sala (lock en /api/chat/turno-voz).
-   12-11-2026: subtítulos karaoke bajo el hablante, al ritmo de la voz (boundary o tiempo). */
-import * as Sala from "/sala-voz-lib.mjs?v=20261112-karaoke";
+   12-11-2026: subtítulos karaoke bajo el hablante, al ritmo de la voz (boundary o tiempo).
+   12-11-2026: ?pantalla=1 — espera persistente (foto a la izquierda, karaoke a la derecha);
+   voces Reed/Mónica llegan de fuera; la página no habla sola. */
+import * as Sala from "/sala-voz-lib.mjs?v=20261112-pantalla-espera";
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
 const consejo = Sala.parseConsejo(q.get("consejo") || q.get("mesa") || q.get("gen"));
+const pantalla = q.get("pantalla") === "1";
 const C = window.ChatHiloClient;
 
 let oidosListos = false;
@@ -26,6 +29,7 @@ function credencial() {
 }
 
 function desbloquearAudio() {
+  if (pantalla) return;
   try {
     if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
       const u = new SpeechSynthesisUtterance(" ");
@@ -168,6 +172,7 @@ function armarWatchdogBoundary(ctx) {
 
 function hablar(item, hooks) {
   return new Promise((resolve) => {
+    if (pantalla) { resolve({ hablado: false }); return; }
     let done = false;
     const fin = (r) => { if (!done) { done = true; resolve(r); } };
     const V = window.AdmiraVoces;
@@ -268,6 +273,7 @@ function pararSala() {
   pararKaraokeAnim();
   karaokeCtx = null;
   callar();
+  if (pantalla) kdiceParar();
 }
 
 function mostrarHablante(de, forzar) {
@@ -366,6 +372,97 @@ async function cargar() {
   estado(d.mensajes && d.mensajes.length ? "" : "Aún no hay mensajes entre consejeros.");
 }
 
+
+function protagonistaPantalla() {
+  if (consejo === "coetaneos") {
+    return {
+      foto: "/assets/consejo-vacio/coetaneos-elon-musk.webp",
+      nombre: "Elon Musk",
+      subtitulo: "Coetáneos",
+      color: "#39f",
+      claro: "#6cf",
+    };
+  }
+  return {
+    foto: "/assets/consejo-vacio/leyendas-steve-jobs.webp",
+    nombre: "Steve Jobs",
+    subtitulo: "Leyendas",
+    color: "#f93",
+    claro: "#fc6",
+  };
+}
+
+function montarEspera() {
+  const p = protagonistaPantalla();
+  document.documentElement.classList.add("pantalla", consejo);
+  document.body.classList.add("pantalla", consejo);
+  const img = $("espera-foto");
+  if (img) { img.src = p.foto; img.alt = p.nombre; }
+  if ($("espera-nombre")) $("espera-nombre").textContent = p.nombre;
+  if ($("espera-subtitulo")) $("espera-subtitulo").textContent = p.subtitulo;
+  if ($("espera")) $("espera").hidden = false;
+  ["karaoke", "elonKar", "transcripcion", "mensajes", "sala", "elige", "estado"].forEach((id) => {
+    const el = $(id);
+    if (el) el.hidden = true;
+  });
+  document.title = "Sala de voz · " + p.nombre;
+}
+
+let kDiceTimer = null;
+let kDiceHide = null;
+
+function kdiceParar() {
+  if (kDiceTimer) { clearInterval(kDiceTimer); kDiceTimer = null; }
+  if (kDiceHide) { clearTimeout(kDiceHide); kDiceHide = null; }
+}
+
+function kdice(texto, palabrasPorSegundo, retardoMs) {
+  kdiceParar();
+  const ov = $("kOv");
+  if (!ov) return;
+  const words = String(texto || "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  ov.replaceChildren();
+  words.forEach((w, i) => {
+    const sp = document.createElement("span");
+    sp.textContent = w;
+    ov.appendChild(sp);
+    if (i < words.length - 1) ov.appendChild(document.createTextNode(" "));
+  });
+  if (!words.length) { ov.hidden = true; return; }
+  ov.hidden = false;
+  const wps = Number(palabrasPorSegundo) > 0 ? Number(palabrasPorSegundo) : 2.7;
+  const delay = Math.max(0, Number(retardoMs) || 0);
+  const step = 1000 / wps;
+  let i = 0;
+  const spans = ov.querySelectorAll("span");
+  const arrancarIntervalo = () => {
+    kDiceTimer = setInterval(() => {
+      if (i < spans.length) {
+        spans[i].classList.add("d");
+        i++;
+      }
+      if (i >= spans.length) {
+        clearInterval(kDiceTimer);
+        kDiceTimer = null;
+        kDiceHide = setTimeout(() => {
+          ov.replaceChildren();
+          ov.hidden = true;
+          kDiceHide = null;
+        }, 700);
+      }
+    }, step);
+  };
+  if (delay) kDiceHide = setTimeout(() => { kDiceHide = null; arrancarIntervalo(); }, delay);
+  else arrancarIntervalo();
+}
+
+function arrancarPantalla() {
+  montarEspera();
+  window.__kdice = kdice;
+  window.__elonDice = (t) => kdice(t, 2.7, 1000);
+  window.AdmiraSalaVoz = { consejo, pantalla: true, cargar() {}, __kdice: kdice, __elonDice: window.__elonDice };
+}
+
 function pedirFullscreen() {
   const el = document.documentElement;
   const fn = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -412,11 +509,13 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden || document.visibilityState === "hidden") pararSala();
 }, true);
 
-if (!consejo) {
+if (pantalla && consejo) {
+  arrancarPantalla();
+} else if (!consejo) {
   $("elige").hidden = false;
   $("sala").hidden = true;
 } else {
   arrancar();
 }
 
-window.AdmiraSalaVoz = { consejo, cargar };
+if (!(pantalla && consejo)) window.AdmiraSalaVoz = { consejo, cargar };

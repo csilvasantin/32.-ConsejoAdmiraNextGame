@@ -7,9 +7,50 @@
   <meta name="referrer" content="no-referrer">
   <title>Sala de voz · Consejo AdmiraNeXT</title>
   <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
-  <link rel="stylesheet" href="/sala-voz/sala-voz.css?v=20261112-karaoke">
+  <script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.get("pantalla") !== "1") return;
+    document.documentElement.classList.add("pantalla");
+    var raw = (q.get("consejo") || q.get("mesa") || q.get("gen") || "");
+    var s = String(raw).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+    if (["coetaneos", "coetaneo", "peers", "contemporaries", "contemporaneos"].indexOf(s) !== -1)
+      document.documentElement.classList.add("coetaneos");
+    else if (["leyendas", "leyenda", "legends", "legend"].indexOf(s) !== -1)
+      document.documentElement.classList.add("leyendas");
+  })();
+  </script>
+  <link rel="stylesheet" href="/sala-voz/sala-voz.css?v=20261112-pantalla-espera">
 </head>
 <body>
+  <div id="espera" hidden>
+    <img id="espera-foto" alt="">
+    <h1 id="espera-nombre"></h1>
+    <p id="espera-subtitulo"></p>
+  </div>
+  <div id="kOv" hidden></div>
+  <script>
+  (function () {
+    if (!document.documentElement.classList.contains("pantalla")) return;
+    var coe = document.documentElement.classList.contains("coetaneos");
+    var ley = document.documentElement.classList.contains("leyendas");
+    if (!coe && !ley) return;
+    var foto = coe
+      ? "/assets/consejo-vacio/coetaneos-elon-musk.webp"
+      : "/assets/consejo-vacio/leyendas-steve-jobs.webp";
+    var nombre = coe ? "Elon Musk" : "Steve Jobs";
+    var sub = coe ? "Coetáneos" : "Leyendas";
+    var img = document.getElementById("espera-foto");
+    if (img) { img.src = foto; img.alt = nombre; }
+    var n = document.getElementById("espera-nombre");
+    if (n) n.textContent = nombre;
+    var s = document.getElementById("espera-subtitulo");
+    if (s) s.textContent = sub;
+    var e = document.getElementById("espera");
+    if (e) e.hidden = false;
+    document.body.classList.add("pantalla", coe ? "coetaneos" : "leyendas");
+  })();
+  </script>
   <div id="elige" hidden>
     <h1>Sala de voz</h1>
     <p>Dos pantallas, un solo diálogo. Hablan de uno en uno.</p>
@@ -32,6 +73,6 @@
   <script src="/consejeros-voces.js?v=20261112-karaoke"></script>
   <script src="/assets/chat-hilo-client.js?v=20261024-r96-sesion"></script>
   <script src="/assets/voz-turno-cliente.js?v=20261112-voz-propia"></script>
-  <script type="module" src="/sala-voz/sala-voz.js?v=20261112-karaoke"></script>
+  <script type="module" src="/sala-voz/sala-voz.js?v=20261112-pantalla-espera"></script>
 </body>
 </html>

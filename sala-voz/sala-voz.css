@@ -185,3 +185,128 @@ body.coetaneos #estado { color: #7cd8ff; }
   body.leyendas::after, body.coetaneos::after { background: none; }
   #karaoke .palabra { transition: none; opacity: 1; }
 }
+
+
+/* Modo pantalla gigante (?pantalla=1): consejero a la izquierda, karaoke a la derecha.
+   En espera, solo el consejero; el lado derecho queda vacío. Sin marco grueso. */
+html.pantalla,
+html.pantalla body {
+  cursor: none;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+html.pantalla.coetaneos,
+html.pantalla.coetaneos body,
+html.pantalla body.coetaneos {
+  background: radial-gradient(circle at 50% 35%, #0b2a3d, #02080d 70%);
+  color: #fff;
+}
+html.pantalla.leyendas,
+html.pantalla.leyendas body,
+html.pantalla body.leyendas {
+  background: radial-gradient(circle at 50% 35%, #3a2a12, #0d0904 70%);
+  color: #fff;
+}
+html.pantalla.coetaneos {
+  --pantalla-color: #39f;
+  --pantalla-claro: #6cf;
+}
+html.pantalla.leyendas {
+  --pantalla-color: #f93;
+  --pantalla-claro: #fc6;
+}
+html.pantalla body.coetaneos::before,
+html.pantalla body.coetaneos::after,
+html.pantalla body.leyendas::before,
+html.pantalla body.leyendas::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+html.pantalla #elige,
+html.pantalla #sala,
+html.pantalla #karaoke,
+html.pantalla #elonKar,
+html.pantalla #transcripcion,
+html.pantalla #mensajes,
+html.pantalla #estado {
+  display: none !important;
+}
+
+html.pantalla #espera,
+html.gate-locked.pantalla #espera {
+  display: flex !important;
+  visibility: visible;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38vw;
+  z-index: 5;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3vh 2vw;
+  box-sizing: border-box;
+  cursor: none;
+  background: transparent;
+}
+html.pantalla #espera[hidden] { display: none !important; }
+html.pantalla #espera:not([hidden]) { display: flex !important; }
+
+html.pantalla #espera-foto {
+  height: 62vh;
+  width: auto;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: top center;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+}
+html.pantalla #espera-nombre {
+  margin-top: 2.4vh;
+  font-weight: 700;
+  font-size: 4.2vw;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 0 0 18px var(--pantalla-color);
+  text-align: center;
+}
+html.pantalla #espera-subtitulo {
+  margin-top: .8vh;
+  font-size: 1.4vw;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  color: var(--pantalla-color);
+  text-align: center;
+}
+
+html.pantalla #kOv {
+  display: none;
+  position: fixed;
+  left: 44vw;
+  right: 5vw;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  font: 600 3vw/1.45 system-ui, sans-serif;
+  text-align: left;
+  cursor: none;
+  pointer-events: none;
+  visibility: visible;
+}
+html.pantalla #kOv:not([hidden]) { display: block; }
+html.pantalla #kOv span { color: rgba(255, 255, 255, .35); }
+html.pantalla #kOv span.d {
+  color: #fff;
+  text-shadow: 0 0 10px #fff, 0 0 22px var(--pantalla-claro), 0 0 40px var(--pantalla-color);
+  text-decoration: underline .08em var(--pantalla-color);
+  text-underline-offset: .22em;
+}

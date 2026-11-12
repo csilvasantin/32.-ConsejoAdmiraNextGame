@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Escena 0 · Consejo AdmiraNeXT</title>
+  <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
+  <link rel="stylesheet" href="/escena0/escena0.css?v=20261112-escena0">
+</head>
+<body>
+  <div id="elige" class="overlay" hidden>
+    <h1>Escena 0</h1>
+    <p class="mesa">Comunicación entre consejeros</p>
+    <p class="hint">Philips → Coetáneos · Pizarra Terminator → Leyendas. Cada URL abre esa mesa a pantalla completa.</p>
+    <div class="elige">
+      <a href="?mesa=coetaneos">Coetáneos · Philips</a>
+      <a href="?mesa=leyendas">Leyendas · Terminator</a>
+    </div>
+  </div>
+  <div id="gesto" class="overlay" hidden>
+    <h1>Escena 0</h1>
+    <p class="mesa" id="gesto-mesa"></p>
+    <p class="hint">Los navegadores piden un gesto para la voz y para el modo pantalla completa. Pulsa el botón (o la tecla F). En el MBP14 puedes abrir esta URL en kiosco (<code>--kiosk</code>).</p>
+    <button type="button" id="btn-gesto">Pantalla completa y empezar</button>
+  </div>
+  <div id="stage">
+    <img id="mesa-img" alt="Mesa del Consejo">
+    <div id="globo" hidden><b id="globo-nombre"></b><p id="globo-texto"></p></div>
+  </div>
+  <div id="barra-escucha" hidden></div>
+  <div id="hud" hidden>
+    <div class="meta" id="hud-mesa"></div>
+    <div class="estado" id="estado"></div>
+    <button type="button" id="btn-fs">Pantalla completa (F)</button>
+    <button type="button" id="btn-start" class="empezar">Empezar conversación</button>
+  </div>
+  <div id="sello"></div>
+  <script src="/consejeros-voces.js?v=20261111-hola1"></script>
+  <script type="module" src="/escena0/escena0.js?v=20261112-escena0"></script>
+</body>
+</html>

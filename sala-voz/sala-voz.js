@@ -1,4 +1,5 @@
-/* Sala de voz: transcripción entre consejeros en las dos pantallas Terminator. */
+/* Sala de voz: transcripción entre consejeros en las dos pantallas Terminator.
+   12-11-2026: un solo turno de voz en toda la sala (lock en /api/chat/turno-voz). */
 import * as Sala from "/sala-voz-lib.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -36,6 +37,13 @@ function gesto() {
   window.removeEventListener("touchstart", gesto, true);
 }
 
+function turnoApi() { return window.AdmiraVozTurno; }
+
+function callar() {
+  try { if (window.AdmiraVoces && typeof AdmiraVoces.stop === "function") AdmiraVoces.stop(); } catch (e) {}
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+}
+
 function hablar(item) {
   return new Promise((resolve) => {
     const V = window.AdmiraVoces;
@@ -57,10 +65,33 @@ function hablar(item) {
 
 async function soltarCola() {
   if (hablando || !cola.length) return;
-  const x = cola.shift();
+  const x = cola[0];
   hablando = true;
+  const T = turnoApi();
+  let ticket = null;
+  if (T && typeof T.aguardarTurno === "function") {
+    ticket = await T.aguardarTurno({
+      mensajeId: x.id,
+      texto: x.texto,
+      fuente: "sala-voz-" + consejo,
+      prioridad: "consejero",
+      consejo,
+      credencial: credencial(),
+      onPerdido: callar,
+    });
+    if (!ticket || !ticket.concedido) {
+      cola.shift();
+      hablando = false;
+      soltarCola();
+      return;
+    }
+  }
+  cola.shift();
   mostrarHablante(x.de || x.nombre, true);
   await hablar(x);
+  if (ticket && typeof ticket.liberar === "function") {
+    try { await ticket.liberar(); } catch (e) {}
+  }
   hablando = false;
   soltarCola();
 }
@@ -146,6 +177,10 @@ async function cargar() {
     return;
   }
   avisoSesion = false;
+  const T = turnoApi();
+  if (T && typeof T.presencia === "function") {
+    try { await T.presencia(consejo, credencial(), "sala-voz-" + consejo); } catch (e) {}
+  }
   pintar(d.mensajes || []);
   locutar(d.mensajes || []);
   estado(d.mensajes && d.mensajes.length ? "" : "Aún no hay mensajes entre consejeros.");

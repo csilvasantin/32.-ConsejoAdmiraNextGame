@@ -5,7 +5,10 @@
    12-11-2026 (Carlos): la voz va activa por defecto (si estás en la página, quieres oír).
    Queda un control pequeño para silenciar, recordado en localStorage. En Chrome se
    desbloquea el audio en el primer gesto (pointerdown/keydown/touchstart). También
-   locuta las respuestas NUEVAS del consejero en el hilo #hilo (nunca el histórico). */
+   locuta las respuestas NUEVAS del consejero en el hilo #hilo (nunca el histórico).
+   12-11-2026: un solo turno de voz en toda la sala (lock /api/chat/turno-voz).
+   Si /sala-voz está abierta, esta página se calla en los mensajes entre consejeros
+   (los dicen las pantallas) y respeta el mismo turno para el hilo. */
 (function (root) {
   "use strict";
   var NOMBRE = { Huang: "Jensen Huang", Musk: "Elon Musk", Lucas: "George Lucas", Jobs: "Steve Jobs", Wozniak: "Steve Wozniak", Disney: "Walt Disney", Y: "Y" };
@@ -150,7 +153,7 @@
     var vistos = noOidosEn(LS_HILO, silla, turnos, store, idHilo);
     marcarOidosEn(LS_HILO, silla, vistos, store, idHilo);
     return vistos.filter(esTurnoConsejero).map(function (t) {
-      return { id: idHilo(t), de: t.rol, persona: nombre(silla), texto: textoHilo(t) };
+      return { id: idHilo(t), de: t.rol, persona: nombre(silla), texto: textoHilo(t), fuente: "chat-hilo" };
     });
   }
   // Primera carga de una visita: todos los que ya están en la bandeja se marcan oídos y no se locutan.
@@ -165,7 +168,7 @@
     return vistos.filter(function (m) {
       return !esAgente(m) && esEntrante(m, silla) && textoDe(m);
     }).map(function (m) {
-      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m) };
+      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m), fuente: "chat-entre" };
     });
   }
   // Etiqueta corta pedida por Carlos: «Jobs → Elon», no «Musk».
@@ -259,16 +262,46 @@
     btnVoz.textContent = vozOn ? "Silenciar voz" : "Activar voz";
     avisoVoz.textContent = vozOn ? " Voz activa: los mensajes nuevos se oyen con la voz del remitente." : " Voz silenciada.";
   }
+  function callarVoz() {
+    try { if (root.AdmiraVoces && typeof root.AdmiraVoces.stop === "function") root.AdmiraVoces.stop(); } catch (e) {}
+    try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {}
+  }
+  function credencialTurno() {
+    try { return jwt(); } catch (e) { return ""; }
+  }
   function soltarCola() {
     if (hablando || !vozOn || !vozDisponible()) return;
-    var x = cola.shift();
+    var x = cola[0];
     if (!x) return;
     hablando = true;
-    var ok = root.AdmiraVoces.speak(x.persona, x.texto, {
-      onend: function () { hablando = false; soltarCola(); },
-      onerror: function () { hablando = false; soltarCola(); }
-    });
-    if (!ok) { hablando = false; soltarCola(); }
+    var T = root.AdmiraVozTurno;
+    var seguir = function () {
+      var ok = root.AdmiraVoces.speak(x.persona, x.texto, {
+        onend: function () { if (ticket && ticket.liberar) ticket.liberar(); hablando = false; soltarCola(); },
+        onerror: function () { if (ticket && ticket.liberar) ticket.liberar(); hablando = false; soltarCola(); }
+      });
+      if (!ok) { if (ticket && ticket.liberar) ticket.liberar(); hablando = false; soltarCola(); }
+    };
+    var ticket = null;
+    if (T && typeof T.aguardarTurno === "function") {
+      T.aguardarTurno({
+        mensajeId: x.id,
+        texto: x.texto,
+        fuente: x.fuente || "chat-entre",
+        prioridad: "consejero",
+        silencioSiSala: (x.fuente || "chat-entre") === "chat-entre",
+        credencial: credencialTurno(),
+        onPerdido: callarVoz
+      }).then(function (t) {
+        ticket = t;
+        if (!t || !t.concedido) { cola.shift(); hablando = false; soltarCola(); return; }
+        cola.shift();
+        seguir();
+      }).catch(function () { cola.shift(); hablando = false; soltarCola(); });
+      return;
+    }
+    cola.shift();
+    seguir();
   }
   function desbloquearAudio() {
     if (!vozOn) return;
@@ -291,7 +324,7 @@
     vozOn = escribirVozOn(false);
     hablando = false;
     cola = [];
-    try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {}
+    callarVoz();
     pintarVoz();
   }
   function alternarVoz() { if (vozOn) silenciarVoz(); else activarVoz(); }

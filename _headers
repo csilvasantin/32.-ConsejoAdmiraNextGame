@@ -46,3 +46,20 @@
 /escena0-lib.mjs
   Content-Type: text/javascript; charset=utf-8
   Cache-Control: public, max-age=300, must-revalidate
+
+# Sala de voz · pantallas Terminator (no cachear; locución en vivo)
+/sala-voz/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/sala-voz-lib.mjs
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+
+/voz-turno-lib.mjs
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+
+/api/chat/turno-voz
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow

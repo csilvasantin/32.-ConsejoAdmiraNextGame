@@ -11,20 +11,35 @@ const index = readFileSync(join(root, 'index.html'), 'utf8');
 
 test('la caja pone el título arriba, el recuento debajo y flechas ◀ ▶ a los lados', () => {
   assert.match(src, /\.ranking-proy/);
+  assert.match(src, /\.ranking-ahora/);
   assert.match(src, /\.ranking-fila/);
   assert.match(src, /\.ranking-nav/);
   assert.match(src, /prev\.textContent = '◀'/);
   assert.match(src, /next\.textContent = '▶'/);
-  // Título se añade antes que la fila del número.
+  // Título, proyecto actual y, debajo, la fila del número.
   const iProy = src.indexOf("nom.className = 'ranking-proy'");
+  const iAhora = src.indexOf("ahora.className = 'ranking-ahora'");
   const iFila = src.indexOf("fila.className = 'ranking-fila'");
   const iCifra = src.indexOf("cifra.className = 'ranking-n'");
-  assert.ok(iProy > 0 && iFila > iProy, 'el título se construye antes que la fila del recuento');
-  assert.ok(iCifra > iProy, 'el número queda debajo del título');
+  assert.ok(iProy > 0 && iAhora > iProy, 'el proyecto actual se construye debajo del título');
+  assert.ok(iFila > iAhora, 'la fila del recuento va debajo del proyecto actual');
+  assert.ok(iCifra > iAhora, 'el número queda debajo del proyecto actual');
   // Mismo estilo que el carrusel de Carlos: fondo, color y borde dorados.
   assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*background:#1a140a/);
   assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*color:#ffd75e/);
   assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*border:1px solid #c9a227/);
+});
+
+test('la línea del proyecto actual va entre el principal y el recuento, con «—» o atenuada', () => {
+  assert.match(src, /function proyectoActualDe\(/);
+  assert.match(src, /texto: nombre \|\| '—'/);
+  assert.match(src, /ahora\.classList\.add\('is-ultimo'\)/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-ahora\{[^}]*font-size:8px/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-ahora\.is-ultimo\{[^}]*opacity:\.55/);
+  const iProy = src.indexOf("nom.className = 'ranking-proy'");
+  const iAhora = src.indexOf("ahora.className = 'ranking-ahora'");
+  const iFila = src.indexOf("fila.className = 'ranking-fila'");
+  assert.ok(iProy > 0 && iAhora > iProy && iFila > iAhora);
 });
 
 test('clicar la flecha de proyecto no enciende el Mac; el resto de la caja sí', () => {
@@ -52,7 +67,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r157', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r173', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -63,7 +78,7 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.equal(p.nombre, nombre);
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
-  assert.match(index, /council-globo\.js\?v=20261112-r157-caja-fija/);
+  assert.match(index, /council-globo\.js\?v=20261112-r173-proyecto-actual/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',

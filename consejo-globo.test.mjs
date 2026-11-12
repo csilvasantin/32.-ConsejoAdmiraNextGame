@@ -4,6 +4,7 @@ import {
   clasificar, textoGlobo, lineasGlobo, latidoVigente, tituloCorto, horaMadrid,
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
   encargadosHoy, empezadasHoy, etiquetaMisiones,
+  nombreProyectoLatido, proyectoDeLatido,
   CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
   esActivo, llevaFlecha, llevaHalo, nuncaFlecha,
   CONSEJO_RANKING, CONSEJO_RANKING_TOTAL, enRanking,
@@ -521,3 +522,31 @@ test('asientoPublico: 2 dones inbox + 3 PRs y 1 pending de hoy → 5/6, nunca 5/
   assert.equal(s.hoy.encargados, 6);
   assert.equal(s.globo.misiones, 'Misiones: 5/6');
 });
+
+test('proyecto del latido vigente se publica; el caducado queda atenuado; sin dato es null', () => {
+  assert.equal(nombreProyectoLatido('  admira.live  '), 'admira.live');
+  assert.equal(nombreProyectoLatido(''), null);
+  assert.equal(nombreProyectoLatido(null), null);
+  assert.equal(nombreProyectoLatido('   '), null);
+  const largo = 'P'.repeat(80);
+  const rec = nombreProyectoLatido(largo);
+  assert.ok(rec.endsWith('…'));
+  assert.ok(rec.length <= 60);
+
+  const vivo = { modo: 'trabajando', proyecto: 'admira.live', mision: 'caja', at: S - 60, hasta: S + 600 };
+  assert.deepEqual(proyectoDeLatido(vivo, S), { nombre: 'admira.live', vigente: true });
+  const asientoVivo = asientoPublico({ persona: 'Steve Jobs', rol: 'CEO' }, { latidos: { Jobs: vivo }, bandejas: {}, ahoraS: S });
+  assert.deepEqual(asientoVivo.proyecto, { nombre: 'admira.live', vigente: true });
+
+  const caducado = { modo: 'reposo', proyecto: 'PortAventuraNeXT', mision: '3 mejoras', at: S - 4000, hasta: S - 3000 };
+  assert.deepEqual(proyectoDeLatido(caducado, S), { nombre: 'PortAventuraNeXT', vigente: false });
+  const asientoLibre = asientoPublico({ persona: 'Walt Disney', rol: 'CCO' }, { latidos: { Disney: caducado }, bandejas: {}, ahoraS: S });
+  assert.deepEqual(asientoLibre.proyecto, { nombre: 'PortAventuraNeXT', vigente: false });
+
+  const vacio = asientoPublico({ persona: 'George Lucas', rol: 'CSO' }, { latidos: { Lucas: { modo: 'reposo', at: S - 100 } }, bandejas: {}, ahoraS: S });
+  assert.deepEqual(vacio.proyecto, { nombre: null, vigente: false });
+
+  const sinBot = asientoPublico({ persona: 'Tim Cook', rol: 'COO' }, { latidos: {}, bandejas: {}, ahoraS: S });
+  assert.deepEqual(sinBot.proyecto, { nombre: null, vigente: false });
+});
+

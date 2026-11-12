@@ -191,6 +191,24 @@ export function horaMadrid(unixS, ahoraMs) {
   return d.toLocaleString('es-ES', opts);
 }
 
+/** Nombre de proyecto del latido (máx. 60). Vacío o ausente → null; no se inventa. */
+export function nombreProyectoLatido(valor) {
+  const t = String(valor == null ? '' : valor).replace(/\s+/g, ' ').trim();
+  if (!t) return null;
+  return t.length > 60 ? t.slice(0, 59).replace(/[\s·,;:.\-–—]+$/u, '') + '…' : t;
+}
+
+/**
+ * Proyecto en el que está ahora el consejero, según su latido.
+ * Si el latido está vigente, vigente=true. Si ya caducó, se devuelve el
+ * último proyecto conocido (vigente=false) para pintarlo atenuado. Sin dato: nombre=null.
+ */
+export function proyectoDeLatido(entrada, ahoraS) {
+  const nombre = nombreProyectoLatido(entrada && entrada.proyecto);
+  if (!nombre) return { nombre: null, vigente: false };
+  return { nombre, vigente: latidoVigente(entrada, ahoraS) };
+}
+
 /**
  * Un consejero está trabajando solo si su último latido dice «trabajando»
  * y no han pasado más de 30 min sin renovarlo (ni se ha cumplido `hasta`).
@@ -481,6 +499,7 @@ export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtr
     estado,
     en_curso,
     ultimo,
+    proyecto: proyectoDeLatido(entrada, ahoraS),
     hoy: hoyVacio(),
   };
   const inicio = Number.isFinite(desdeS) ? desdeS : inicioDiaMadridS(ahoraS * 1000);

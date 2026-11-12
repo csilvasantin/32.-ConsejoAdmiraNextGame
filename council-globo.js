@@ -393,6 +393,8 @@
     const gen = genActual();
     const pos = PAPEL[gen] || {};
     c.replaceChildren();
+    /* t518u: sin datos de /api/consejo/estado no hay flechas (antes salían amarillas). */
+    if (!datos || !datos.mesa) return;
     const estados = mapaEstados();
     Object.keys(pos).forEach((persona) => {
       const p = pos[persona];

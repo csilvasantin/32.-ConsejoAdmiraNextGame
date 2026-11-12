@@ -241,6 +241,20 @@ export function encargadosHoy(items, { desdeS, hastaS } = {}) {
   return { n };
 }
 
+/**
+ * Empezadas hoy = encargos recibidos hoy en la bandeja + misiones acabadas que
+ * no salen de esa bandeja (Yokup, PRs, encargos de días anteriores cerrados hoy).
+ * Toda misión acabada fue empezada: acabadas nunca supera empezadas (t518u).
+ */
+export function empezadasHoy(u, recibidas) {
+  const n = (u && u.n != null && Number.isFinite(Number(u.n))) ? Number(u.n) : null;
+  if (recibidas == null && n == null) return null;
+  const fuera = (u && Array.isArray(u.misiones) ? u.misiones : [])
+    .filter((m) => m && m.fuente && m.fuente !== 'inbox' && m.fuente !== 'latido').length;
+  const base = (recibidas == null ? 0 : Number(recibidas)) + fuera;
+  return Math.max(base, n == null ? 0 : n);
+}
+
 export function etiquetaMisiones(conseguidas, encargados) {
   const a = (conseguidas == null) ? '—' : String(conseguidas);
   const b = (encargados == null) ? '—' : String(encargados);
@@ -494,7 +508,7 @@ export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtr
       misiones: u.misiones,
       por_fuente: u.por_fuente,
       desglose: u.desglose,
-      encargados: rec.n,
+      encargados: empezadasHoy(u, rec.n),
     };
   } else {
     s.hoy.encargados = rec.n;

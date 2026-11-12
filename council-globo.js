@@ -13,6 +13,9 @@
  * Hover / foco teclado en escritorio; toque en móvil (se cierra tocando fuera).
  * Carlos Silva (Y-3): sin flecha. El globo muestra sus proyectos activos de uno
  * en uno, con objetivos a/b/c leídos en vivo de GET /api/consejo/objetivos-abc.
+ * t1224u: esa caja queda fija encima de su cabeza (tamaño fijo, scroll interno);
+ * al pasar de proyecto con ◀ ▶ no se desplaza ni cambia de tamaño. Si el texto
+ * lo escribió otro, la firma dice «provisional · autor real · hora».
  * prefers-reduced-motion: halo y flecha sin animación. */
 (function (root) {
   'use strict';
@@ -71,10 +74,11 @@
 @media (prefers-reduced-motion:reduce){.consejero-flecha{animation:none!important}}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
-.consejo-globo.globo-proyectos{max-width:280px;min-width:210px;padding:8px 10px 10px;pointer-events:auto;z-index:24;text-align:center}
+.consejo-globo.globo-proyectos{width:280px;min-width:280px;max-width:280px;height:220px;min-height:220px;max-height:220px;box-sizing:border-box;padding:8px 10px 10px;pointer-events:auto;z-index:24;text-align:center;display:flex;flex-direction:column;overflow:hidden}
 .consejo-globo b{display:block;margin:0 0 3px;font:bold 9px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.3px}
-.consejo-globo.globo-proyectos b{text-align:center;letter-spacing:0;white-space:nowrap;width:100%}
-.consejo-globo.globo-proyectos ol.gp-abc,.consejo-globo.globo-proyectos .gp-vacio{text-align:left}
+.consejo-globo.globo-proyectos b{flex:0 0 auto;text-align:center;letter-spacing:0;white-space:nowrap;width:100%}
+.consejo-globo.globo-proyectos .gp-nav{flex:0 0 auto}
+.consejo-globo.globo-proyectos ol.gp-abc,.consejo-globo.globo-proyectos .gp-vacio{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;text-align:left}
 .consejo-globo p{margin:0;word-break:break-word}
 .consejo-globo .gp-nav{display:flex;align-items:center;gap:6px;margin:2px 0 7px}
 .consejo-globo .gp-nav button{appearance:none;flex:0 0 auto;width:28px;height:28px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:16px/1 sans-serif;cursor:pointer}
@@ -171,6 +175,23 @@
       return d.toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     } catch (e) { return ''; }
   }
+  /* t1223u / t1224u: Woz rellenó los 4 paneles vacíos el 11-nov 23:09
+   * firmando con el nombre del titular. Alsea se reescribió a las 00:12
+   * (Woz, definitivo) y Día a día a las 00:26 (Jobs, rutina real).
+   * PortAventuraNeXT y AdmiraNeXT siguen con ese relleno: no es una
+   * aportación de Walt ni de Lucas. No reescribimos sus paneles; solo
+   * etiquetamos la firma. Cuando ellos escriban de verdad, el ts cambia
+   * y esta excepción deja de aplicar. */
+  const FIRMAS_PROVISIONALES_WOZ = {
+    'portaventura-next': 1794434955422,
+    'admiranext': 1794434955817,
+  };
+  function esFirmaProvisional(proy, f) {
+    if (f && (f.provisional === true || f.escrito_por || f.via)) return true;
+    const id = proy && proy.id;
+    const ts = f && Number(f.actualizado);
+    return !!(id && FIRMAS_PROVISIONALES_WOZ[id] && ts === FIRMAS_PROVISIONALES_WOZ[id]);
+  }
   function firmaAbc(proy, letra) {
     const f = proy && proy.firmas && proy.firmas[letra];
     const obj = proy && proy.objetivos && proy.objetivos[letra];
@@ -178,6 +199,12 @@
     const ts = (f && f.actualizado) || (obj && typeof obj === 'object' && (obj.actualizado || obj.ts)) || 0;
     if (!autor && !ts) return '';
     const hora = horaFirma(ts);
+    const via = (f && (f.escrito_por || f.via)) || (esFirmaProvisional(proy, f) ? 'Woz' : '');
+    if (esFirmaProvisional(proy, f)) {
+      const quien = via || 'Woz';
+      if (hora) return 'provisional · ' + quien + ' · ' + hora;
+      return 'provisional · ' + quien;
+    }
     if (autor && hora) return autor + ' · ' + hora;
     return autor || hora;
   }
@@ -459,6 +486,22 @@
     const stage = escena(); if (!stage) return;
     const sr = stage.getBoundingClientRect();
     const r = anchor.getBoundingClientRect();
+    /* t1224u: la caja de Carlos no se mueve al cambiar de proyecto.
+     * Tamaño fijo (ancho 280, alto según el hueco sobre la cabeza, igual
+     * en los 4 paneles) y siempre encima de la cabeza: no se vuelca abajo
+     * aunque el texto de a/b/c sea largo (el listado hace scroll). */
+    if (globo.classList.contains('globo-proyectos')) {
+      const ANCHO = 280, ALTO_MIN = 180, ALTO_MAX = 280;
+      const alto = Math.min(ALTO_MAX, Math.max(ALTO_MIN, Math.floor(r.top - 12)));
+      globo.style.width = ANCHO + 'px';
+      globo.style.height = alto + 'px';
+      let left = r.left + r.width / 2 - sr.left;
+      left = Math.max(ANCHO / 2 + 6, Math.min(sr.width - ANCHO / 2 - 6, left));
+      const top = r.top - sr.top - 10;
+      globo.style.left = left + 'px';
+      globo.style.top = top + 'px';
+      return;
+    }
     const w = globo.offsetWidth || 160;
     const h = globo.offsetHeight || 48;
     let left = r.left + r.width / 2 - sr.left;

@@ -163,14 +163,14 @@ function cliente() {
   return w.ChatHiloClient;
 }
 function sondeo() { return cliente(); }
-test("sondeo: 2 s mientras espera respuesta (hasta 3 min), 10 s en reposo", () => {
+test("sondeo: 1 s mientras espera respuesta (hasta 3 min), 10 s en reposo", () => {
   const { intervaloSondeo } = sondeo();
   const t0 = Date.parse("2026-10-09T05:00:00Z");
   const carlos = { rol: "carlos", ts: new Date(t0).toISOString(), entrega: "entregado" };
   const jobs = { rol: "persona", ts: new Date(t0 + 5000).toISOString() };
   assert.equal(intervaloSondeo([], t0), 10000);
-  assert.equal(intervaloSondeo([carlos], t0 + 1000), 2000);
-  assert.equal(intervaloSondeo([carlos], t0 + 179000), 2000);
+  assert.equal(intervaloSondeo([carlos], t0 + 1000), 1000);
+  assert.equal(intervaloSondeo([carlos], t0 + 179000), 1000);
   assert.equal(intervaloSondeo([carlos], t0 + 181000), 10000);
   assert.equal(intervaloSondeo([carlos, jobs], t0 + 6000), 10000);
   assert.equal(intervaloSondeo([{ ...carlos, entrega: "error" }], t0 + 1000), 10000);

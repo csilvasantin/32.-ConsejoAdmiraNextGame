@@ -2,11 +2,11 @@
  * Una sola fuente para /chat/jobs/ y el panel «Conversación» de la home (council-grokbot.js):
  * GET /api/chat/hilo (privado: ID token de Google de una cuenta de Carlos), POST /api/chat/enviar
  * (turno de Carlos con origen live + encargo [chat-coetaneos] al bot-inbox), sondeo adaptativo
- * (2 s esperando respuesta hasta 3 min, 10 s en reposo) e indicador «escribiendo…».
+ * (1 s esperando respuesta hasta 3 min, 10 s en reposo) e indicador «escribiendo…».
  * Sin dependencias; funciona como script clásico (window.ChatHiloClient). */
 (function (root) {
   "use strict";
-  var RAPIDO_MS = 2000, REPOSO_MS = 10000, VENTANA_RAPIDA_MS = 180000, VENTANA_ESCRIBIENDO_MS = 1800000;
+  var RAPIDO_MS = 1000, REPOSO_MS = 10000, VENTANA_RAPIDA_MS = 180000, VENTANA_ESCRIBIENDO_MS = 1800000;
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
   var CLAVE = "chat-hilo-google";
   var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };

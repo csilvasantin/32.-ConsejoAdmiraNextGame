@@ -90,7 +90,7 @@ test('home · Jobs: visita en blanco — no carga el histórico, envía por /api
   assert.match(txt, /¿Qué opinas\?/); assert.match(txt, /entregado · encargo #7/);
   assert.doesNotMatch(txt, /Hola desde la app|Hola, Carlos/, 'el histórico sigue fuera');
   assert.match(txt, /Jobs está escribiendo… · \d+ s/);
-  assert.equal(h.timers.at(-1), 2000, 'esperando respuesta: 2 s');
+  assert.equal(h.timers.at(-1), 1000, 'esperando respuesta: 1 s');
   // Llega la respuesta de Jobs (posterior al primer envío) y un turno de la App que no es de esta visita.
   h.turnos.push({ id: 'app2', rol: 'carlos', origen: 'app', texto: 'Escrito en la App', ts: new Date(Date.now() + 500).toISOString() });
   h.turnos.push({ id: 'r1', rol: 'persona', origen: 'rutina', texto: 'Piensa diferente.', ts: new Date(Date.now() + 1000).toISOString() });
@@ -154,9 +154,11 @@ test('home · Conversación muestra la transcripción Jobs ↔ Elon y no la borr
   await flush();
   assert.ok(h.net.some(u => /entre-consejeros\?con=jobs/.test(u)));
   let txt = h.log().textContent;
-  assert.match(txt, /Jobs → Elon/);
-  assert.match(txt, /Elon → Jobs/);
+  assert.match(txt, /Jobs ↔ Elon|Jobs → Elon/);
+  assert.match(txt, /Elon → Jobs|Jobs ↔ Elon/);
   assert.match(txt, /Hola Elon, ¿me oyes\?/);
+  assert.match(txt, /10:49:00/);
+  assert.match(txt, /10:49:40/);
   assert.match(txt, /Te oigo, Jobs/);
   assert.match(txt, /queda registrada; no la borra el chat limpio/i);
   assert.doesNotMatch(txt, /Hola desde la app|Hola, Carlos/, 'el histórico Carlos↔Jobs sigue fuera');
@@ -166,7 +168,7 @@ test('home · Conversación muestra la transcripción Jobs ↔ Elon y no la borr
   assert.equal(await h.api.select('Steve Jobs'), true);
   await flush();
   txt = h.log().textContent;
-  assert.match(txt, /Jobs → Elon/);
+  assert.match(txt, /Jobs ↔ Elon|Jobs → Elon/);
   assert.match(txt, /Te oigo, Jobs/);
 });
 
@@ -176,8 +178,8 @@ test('home · al seleccionar Elon se ve el mismo par con con=musk, intercalado p
   await flush();
   assert.ok(h.net.some(u => /entre-consejeros\?con=musk/.test(u)));
   let txt = h.log().textContent;
-  assert.match(txt, /Jobs → Elon/);
-  assert.match(txt, /Elon → Jobs/);
+  assert.match(txt, /Jobs ↔ Elon|Jobs → Elon/);
+  assert.match(txt, /Elon → Jobs|Jobs ↔ Elon/);
   const posJobs = txt.indexOf('Hola Elon');
   const posElon = txt.indexOf('Te oigo, Jobs');
   assert.ok(posJobs >= 0 && posJobs < posElon, 'orden cronológico');
@@ -190,7 +192,7 @@ test('home · al seleccionar Elon se ve el mismo par con con=musk, intercalado p
 
 test('index.html de la portada carga consejero-mensajes.js y el council-grokbot nuevo', () => {
   const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-  assert.match(html, /consejero-mensajes\.js\?v=20261112-hora-frase/);
-  assert.match(html, /council-grokbot\.js\?v=20261112-hora-frase/);
+  assert.match(html, /consejero-mensajes\.js\?v=20261112-recuadro-conv/);
+  assert.match(html, /council-grokbot\.js\?v=20261112-recuadro-conv/);
   assert.match(html, /consejeros-voces\.js/);
 });

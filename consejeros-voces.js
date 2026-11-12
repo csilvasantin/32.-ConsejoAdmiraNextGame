@@ -133,11 +133,16 @@
   var synth = root.speechSynthesis || null;
   var voices = [];
   var listeners = [];
+  var voicesKnown = false;
   function loadVoices() {
+    if (voicesPinned) return voices;
     try { voices = synth ? (synth.getVoices() || []) : []; } catch (e) { voices = []; }
+    if (voices.length) voicesKnown = true;
     return voices;
   }
+  // Al cargar una versión nueva, corta cualquier cola en curso (voz del sistema incluida).
   if (synth) {
+    try { synth.cancel(); } catch (e) {}
     loadVoices();
     try {
       var prev = synth.onvoiceschanged;
@@ -149,7 +154,8 @@
     } catch (e) {}
   }
   function onVoices(fn) { listeners.push(fn); }
-  function setVoicesForTest(list) { voices = list || []; resolved = null; }
+  var voicesPinned = false;
+  function setVoicesForTest(list) { voices = list || []; resolved = null; voicesKnown = true; voicesPinned = true; }
   function spanish(list) { return list.filter(function (v) { return /^es([-_]|$)/i.test(v.lang || ""); }); }
   function findByName(list, name) {
     if (!name) return null;
@@ -202,34 +208,21 @@
         }
       });
     }
+    // 12-11-2026 11:36 Madrid (Carlos): solo las voces de su lista (preferidas + respaldos).
+    // Si ninguna está instalada, silencio. NUNCA la voz por defecto del sistema
+    // (Google español, Samantha, «Spanish (Spain)», etc. si no están en su lista).
     CASTING.forEach(function (c) {
       if (out[c.slug]) return;
-      var mismo = pool.filter(function (v) { return generoDe(v) === c.genero; });
-      var neutro = pool.filter(function (v) { return !generoDe(v); });
-      var cands = mismo.length ? mismo : (neutro.length ? neutro : pool);
-      // Sin voces libres de su género: antes que una al azar, su propia preferida
-      // (compartida); el ritmo y el tono del casting ya lo distinguen.
-      var libres = cands.filter(function (v) { return !used[v.voiceURI || v.name]; });
-      if (!libres.length) {
-        var mejor = null;
-        for (var i = 0; i < c.prefer.length; i++) {
-          var pref = findPreferred(cands, c.prefer[i], c.lang);
-          if (pref && (!mejor || (used[pref.voiceURI || pref.name] || 0) < (used[mejor.voiceURI || mejor.name] || 0))) mejor = pref;
+      for (var j = 0; j < c.prefer.length; j++) {
+        var compartida = findPreferred(pool, c.prefer[j], c.lang);
+        if (compartida) {
+          var ck = compartida.voiceURI || compartida.name;
+          used[ck] = (used[ck] || 0) + 1;
+          out[c.slug] = { voice: compartida, via: "casting" };
+          return;
         }
-        if (mejor) { var kp = mejor.voiceURI || mejor.name; used[kp] = (used[kp] || 0) + 1; out[c.slug] = { voice: mejor, via: "casting" }; return; }
       }
-      // la menos usada; a igualdad, la de la variante de idioma del casting
-      var best = null, bestScore = Infinity;
-      cands.forEach(function (v, idx) {
-        var k = v.voiceURI || v.name;
-        var s = (used[k] || 0) * 10 + (String(v.lang).toLowerCase().replace("_", "-") === c.lang.toLowerCase() ? 0 : 1) + idx * 0.001;
-        if (s < bestScore) { bestScore = s; best = v; }
-      });
-      if (best) {
-        var key = best.voiceURI || best.name;
-        used[key] = (used[key] || 0) + 1;
-        out[c.slug] = { voice: best, via: "respaldo" };
-      } else out[c.slug] = { voice: null, via: "sin-voces" };
+      out[c.slug] = { voice: null, via: "sin-voces" };
     });
     // «evita»: Elon nunca con la misma voz que Jobs mientras exista otra voz en español.
     CASTING.forEach(function (c) {
@@ -377,12 +370,8 @@
     current = null;
     try { if (synth) synth.cancel(); } catch (e) {}
   }
-  function speak(persona, text, opts) {
-    opts = opts || {};
-    var p = profile(persona);
-    if (!synth || !root.SpeechSynthesisUtterance) { if (opts.onerror) opts.onerror(new Error("sin síntesis de voz")); return false; }
-    var trozos = chunks(text, opts.max);
-    if (!p || !trozos.length) return false;
+  function speakWith(p, trozos, opts) {
+    if (!p || !p.voice || !trozos.length) return false;
     stop();
     var token = {}; current = token;
     var i = 0, started = false;
@@ -390,8 +379,9 @@
       if (current !== token) return;
       if (i >= trozos.length) { current = null; if (opts.onend) opts.onend(); return; }
       var u = new root.SpeechSynthesisUtterance(trozos[i++]);
-      if (p.voice) u.voice = p.voice;
-      u.lang = p.lang || "es-ES";
+      // Sin u.voice el navegador usa la voz del sistema: nunca locutar en ese caso.
+      u.voice = p.voice;
+      u.lang = p.voice.lang || p.lang || "es-ES";
       u.rate = p.rate; u.pitch = p.pitch;
       if (opts.volume != null) u.volume = opts.volume;
       u.onstart = function () { if (!started) { started = true; if (opts.onstart) opts.onstart(p); } };
@@ -404,6 +394,42 @@
       synth.speak(u);
     }
     next();
+    return true;
+  }
+  function speak(persona, text, opts) {
+    opts = opts || {};
+    if (!synth || !root.SpeechSynthesisUtterance) { if (opts.onerror) opts.onerror(new Error("sin síntesis de voz")); return false; }
+    if (!casting(persona)) { if (opts.onerror) opts.onerror(new Error("no es un consejero")); return false; }
+    var trozos = chunks(text, opts.max);
+    if (!trozos.length) return false;
+    loadVoices();
+    function attempt() {
+      var p = profile(persona);
+      if (!p || !p.voice) return false;
+      return speakWith(p, trozos, opts);
+    }
+    var ok = (voices.length || voicesKnown) ? attempt() : false;
+    if (ok) return true;
+    if (voicesKnown || voices.length) {
+      if (opts.onerror) opts.onerror(new Error("sin voz asignada"));
+      return false;
+    }
+    // Voces aún no listas (Chrome/Safari): esperar un momento; si no hay voz de su lista, silencio.
+    var token = {}; current = token;
+    var done = false;
+    function once() {
+      if (done || current !== token) return;
+      done = true;
+      voicesKnown = true;
+      loadVoices(); resolved = null;
+      if (current !== token) return;
+      if (!attempt()) {
+        current = null;
+        if (opts.onerror) opts.onerror(new Error("sin voz asignada"));
+      }
+    }
+    onVoices(once);
+    try { if (typeof root.setTimeout === "function") root.setTimeout(once, 1200); } catch (e) { once(); }
     return true;
   }
   function preview(persona, opts) {
@@ -424,7 +450,7 @@
     setOverride: setOverride, resetOverride: resetOverride, localOverrides: localOverrides,
     sharedOverrides: function () { return JSON.parse(JSON.stringify(shared)); },
     portadaOn: portadaOn, setPortada: setPortada, chunks: chunks, generoDe: generoDe,
-    _setVoicesForTest: setVoicesForTest, JOBS_SELLO: JOBS_SELLO,
+    _setVoicesForTest: setVoicesForTest, JOBS_SELLO: JOBS_SELLO, tieneVozAsignada: function (persona) { var p = profile(persona); return !!(p && p.voice); },
   };
   root.AdmiraVoces = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

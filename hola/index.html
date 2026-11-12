@@ -97,7 +97,7 @@
   <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live/hola</div>
 </div>
 
-<script src="/consejeros-voces.js?v=20261112-jobs-femenina"></script>
+<script src="/consejeros-voces.js?v=20261112-sin-voz-sistema"></script>
 <script src="/hola-intent.js?v=20261111-hola1"></script>
 <script src="/hablar-cmd.js?v=20261111-hablar-2"></script>
 <script src="/assets/chat-hilo-client.js?v=20261111-hola1"></script>
@@ -184,18 +184,14 @@
     S.hablando=true;
     var esc=$("escena");
     function acabar(){ S.hablando=false; esc.classList.remove("habla"); S.ultimo=Date.now(); reanudarOido(); if(fin) fin(); }
-    if (quien){
+    // 12-11-2026: solo consejeros con voz asignada. Textos de sistema (quien vacío) o
+    // sin voz de su lista: silencio. Nunca la narradora ni la voz por defecto del sistema.
+    if (quien && V && V.casting && V.casting(quien)){
       var ok=V.speak(quien, texto, { onstart:function(){ esc.classList.add("habla"); }, onend:acabar, onerror:acabar });
       if(!ok) acabar();
       return;
     }
-    try{
-      speechSynthesis.cancel();
-      var u=new SpeechSynthesisUtterance(texto), v=vozAdmira();
-      if(v){ u.voice=v; u.lang=v.lang; } else u.lang="es-ES";
-      u.rate=1.02; u.pitch=1.05; u.onend=acabar; u.onerror=acabar;
-      speechSynthesis.speak(u);
-    }catch(e){ acabar(); }
+    acabar();
   }
 
   // ── Reconocimiento ──

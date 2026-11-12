@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/failover.js"></script>
   <script src="/comic.js" defer></script>
-  <script src="/consejeros-voces.js?v=20261112-jobs-femenina"></script>
+  <script src="/consejeros-voces.js?v=20261112-sin-voz-sistema"></script>
   <title>La Mesa del Consejo · AdmiraNext Council</title>
   <meta name="admiranext-version" content="v.26.06.21.r11">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -257,21 +257,14 @@
       if(!VOICE_ON || !window.speechSynthesis || !text) return;
       // VOCES DEL CONSEJO (11-11-2026): voz propia de cada consejero (consejeros-voces.js,
       // personalizable en /voces). Si el módulo no carga, sigue el reparto anterior.
+      // 12-11-2026: solo la voz asignada del consejero; nunca la voz del sistema.
       if(window.AdmiraVoces && AdmiraVoces.casting(c.persona)){
         const off=()=>{ if(avEl) avEl.classList.remove("talking"); };
-        AdmiraVoces.speak(c.persona, String(text).slice(0,600), {
+        const ok=AdmiraVoces.speak(c.persona, String(text).slice(0,600), {
           onstart:()=>{ if(avEl) avEl.classList.add("talking"); }, onend:off, onerror:off });
+        if(!ok) off();
         return;
       }
-      try{
-        const u=new SpeechSynthesisUtterance(String(text).slice(0,600));
-        const v=pickVoice(c); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="es-ES";
-        const base=(c.side==="racional")?0.9:1.08, jit=((_hash(c.slug)%7)-3)*0.04;
-        u.pitch=Math.max(0.5,Math.min(1.6, base+jit));
-        u.rate =(c.side==="racional")?0.97:1.06;
-        if(avEl){ avEl.classList.add("talking"); const off=()=>avEl.classList.remove("talking"); u.onend=off; u.onerror=off; }
-        speechSynthesis.cancel(); speechSynthesis.speak(u);
-      }catch(_){}
     }
 
     function addTurn(c,text,thinking,mod){

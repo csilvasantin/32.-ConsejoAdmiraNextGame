@@ -30,6 +30,22 @@
   }
   function esAgente(m) { return !!(m && (m.de_tipo === "agente" || m.para_tipo === "agente")); }
   function esEntrante(m, silla) { return !!(m && silla && m.de !== silla); }
+  // 12-11-2026 11:36 Madrid: solo locutan consejeros reales, nunca sistema/Carlos/avisos.
+  var SILENCIO_ROLES = { carlos: 1, user: 1, sistema: 1, system: 1, status: 1, encargo: 1, aviso: 1, latido: 1 };
+  function claveConsejero(s) {
+    var k = String(s || "").trim();
+    if (!k || SILENCIO_ROLES[k.toLowerCase()]) return "";
+    if (NOMBRE[k]) return NOMBRE[k];
+    var keys = Object.keys(NOMBRE);
+    for (var i = 0; i < keys.length; i++) if (keys[i].toLowerCase() === k.toLowerCase()) return NOMBRE[keys[i]];
+    for (var j = 0; j < keys.length; j++) if (String(NOMBRE[keys[j]]).toLowerCase() === k.toLowerCase()) return NOMBRE[keys[j]];
+    if (root.AdmiraVoces && typeof root.AdmiraVoces.casting === "function") {
+      var c = root.AdmiraVoces.casting(k);
+      if (c) return c.persona;
+    }
+    return "";
+  }
+  function esConsejero(s) { return !!claveConsejero(s); }
 
   function leerOidos(silla, store) {
     var ls = store || (root.localStorage || null);
@@ -142,8 +158,13 @@
     if (t.id != null && String(t.id) !== "") return String(t.id);
     return ["hilo", t.rol || "", t.ts || "", textoHilo(t)].join("\0");
   }
-  function esTurnoConsejero(t) {
-    return !!(t && t.rol && String(t.rol).toLowerCase() !== "carlos" && textoHilo(t));
+  function esTurnoConsejero(t, silla) {
+    if (!t || !t.rol || !textoHilo(t)) return false;
+    var rol = String(t.rol).trim();
+    if (SILENCIO_ROLES[rol.toLowerCase()]) return false;
+    if (esConsejero(rol)) return true;
+    if (rol.toLowerCase() === "persona" && esConsejero(silla)) return true;
+    return false;
   }
   function iniciarOidosHilo(silla, turnos, store) {
     marcarOidosEn(LS_HILO, silla, turnos, store, idHilo);
@@ -152,7 +173,7 @@
   function pendientesHiloDeLocutar(silla, turnos, store) {
     var vistos = noOidosEn(LS_HILO, silla, turnos, store, idHilo);
     marcarOidosEn(LS_HILO, silla, vistos, store, idHilo);
-    return vistos.filter(esTurnoConsejero).map(function (t) {
+    return vistos.filter(function (t) { return esTurnoConsejero(t, silla); }).map(function (t) {
       return { id: idHilo(t), de: t.rol, persona: nombre(silla), texto: textoHilo(t), fuente: "chat-hilo" };
     });
   }
@@ -166,7 +187,7 @@
     var vistos = noOidos(silla, msgs, store);
     marcarOidos(silla, vistos, store);
     return vistos.filter(function (m) {
-      return !esAgente(m) && esEntrante(m, silla) && textoDe(m);
+      return !esAgente(m) && esEntrante(m, silla) && textoDe(m) && esConsejero(m.de);
     }).map(function (m) {
       return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m), fuente: "chat-entre" };
     });
@@ -184,7 +205,7 @@
     var vistos = noOidos(silla, msgs, store);
     marcarOidos(silla, vistos, store);
     return vistos.filter(function (m) {
-      return !esAgente(m) && textoDe(m) && (m.de === silla || m.para === silla);
+      return !esAgente(m) && textoDe(m) && (m.de === silla || m.para === silla) && esConsejero(m.de);
     }).map(function (m) {
       return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m), etiqueta: etiqueta(m) };
     });
@@ -206,7 +227,7 @@
     pendientesTranscripcion: pendientesTranscripcion, etiqueta: etiqueta,
     tsDe: tsDe, mergePorHora: mergePorHora, nombre: nombre, cortoDe: cortoDe,
     leerVozOn: leerVozOn, escribirVozOn: escribirVozOn, idHilo: idHilo,
-    textoHilo: textoHilo, esTurnoConsejero: esTurnoConsejero,
+    textoHilo: textoHilo, esTurnoConsejero: esTurnoConsejero, esConsejero: esConsejero, claveConsejero: claveConsejero,
     iniciarOidosHilo: iniciarOidosHilo, pendientesHiloDeLocutar: pendientesHiloDeLocutar
   };
   root.AdmiraEntreVoces = api;

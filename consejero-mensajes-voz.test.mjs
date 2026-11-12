@@ -115,8 +115,8 @@ test('casting publicado: Jobs = Mónica (femenina provisional), Elon = Reed (sin
 test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión de consejero-mensajes.js', () => {
   for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
-    assert.match(html, /consejeros-voces\.js\?v=20261112-jobs-femenina/);
-    assert.match(html, /consejero-mensajes\.js\?v=20261112-turno-voz/);
+    assert.match(html, /consejeros-voces\.js\?v=20261112-sin-voz-sistema/);
+    assert.match(html, /consejero-mensajes\.js\?v=20261112-sin-voz-sistema/);
     assert.match(html, /voz-turno-cliente\.js\?v=20261112-turno-voz/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');
@@ -201,4 +201,42 @@ test('hilo principal: no locuta los turnos de Carlos ni el histórico ya marcado
   voces.iniciarOidosHilo('Jobs', [], ls);
   const deCarlos = { id: 'c1', rol: 'carlos', texto: '¿Me oyes?' };
   assert.deepEqual(voces.pendientesHiloDeLocutar('Jobs', [deCarlos], ls), []);
+});
+
+test('no locuta avisos de sistema, encargos, Carlos ni remitentes sin consejero', () => {
+  const ls = store();
+  voces.iniciarOidos('Jobs', [], ls);
+  const sistema = { id: 's1', de: 'sistema', para: 'Jobs', texto: 'Chat limpio', hora: '2026-11-12T10:40:00Z' };
+  const encargo = { id: 's2', de: 'encargo', para: 'Jobs', texto: 'Enviado · esperando al bot', hora: '2026-11-12T10:40:01Z' };
+  const alguien = { id: 's3', de: 'bandeja', para: 'Jobs', texto: 'Aviso de la bandeja', hora: '2026-11-12T10:40:02Z' };
+  assert.deepEqual(voces.pendientesDeLocutar('Jobs', [sistema, encargo, alguien], ls), []);
+  voces.iniciarOidosHilo('Jobs', [], ls);
+  assert.deepEqual(voces.pendientesHiloDeLocutar('Jobs', [
+    { id: 'h-sis', rol: 'sistema', texto: 'Chat limpio' },
+    { id: 'h-enc', rol: 'encargo', texto: 'Escribiendo…' },
+    { id: 'h-car', rol: 'carlos', texto: '¿Me oyes?' },
+  ], ls), []);
+  assert.equal(voces.esConsejero('Jobs'), true);
+  assert.equal(voces.esConsejero('Elon Musk'), true);
+  assert.equal(voces.esConsejero('sistema'), false);
+  assert.equal(voces.esConsejero('carlos'), false);
+});
+
+test('portada, chats y sala de voz ya no caen en la voz del sistema', () => {
+  const leer = f => readFileSync(new URL('./' + f, import.meta.url), 'utf8');
+  const hola = leer('hola/index.html');
+  assert.match(hola, /Nunca la narradora ni la voz por defecto del sistema/);
+  assert.doesNotMatch(hola, /else u\.lang="es-ES"/);
+  const sala = leer('sala-voz/sala-voz.js');
+  assert.match(sala, /nunca la voz del sistema/);
+  assert.doesNotMatch(sala, /u\.lang = "es-ES"/);
+  const reunion = leer('reunion.html');
+  assert.match(reunion, /solo la voz asignada del consejero/);
+  assert.doesNotMatch(reunion, /else u\.lang="es-ES"/);
+  const escena = leer('escena0/escena0.js');
+  assert.doesNotMatch(escena, /u\.lang = 'es-ES'/);
+  assert.match(leer('index.html'), /consejeros-voces\.js\?v=20261112-sin-voz-sistema/);
+  assert.match(leer('hola/index.html'), /consejeros-voces\.js\?v=20261112-sin-voz-sistema/);
+  assert.match(leer('voces/index.html'), /consejeros-voces\.js\?v=20261112-sin-voz-sistema/);
+  assert.match(leer('council-grokbot.js'), /V\.speak\(/);
 });

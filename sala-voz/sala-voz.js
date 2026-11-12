@@ -49,17 +49,13 @@ function hablar(item) {
     const V = window.AdmiraVoces;
     const texto = String(item.texto || "").slice(0, 800);
     if (!texto) { resolve(); return; }
-    if (V && typeof V.speak === "function" && V.supported && V.supported()) {
+    // 12-11-2026: nunca la voz del sistema. Si no hay voz asignada al consejero, silencio.
+    if (V && typeof V.speak === "function" && V.supported && V.supported() && V.casting && V.casting(item.persona)) {
       const ok = V.speak(item.persona, texto, { onend: resolve, onerror: resolve });
       if (!ok) resolve();
       return;
     }
-    try {
-      const u = new SpeechSynthesisUtterance(texto);
-      u.lang = "es-ES";
-      u.onend = resolve; u.onerror = resolve;
-      speechSynthesis.speak(u);
-    } catch (e) { resolve(); }
+    resolve();
   });
 }
 

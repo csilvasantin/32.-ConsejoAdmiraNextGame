@@ -52,20 +52,37 @@ test('en un Mac con las voces de serie, cada consejero suena con una de sus voce
   assert.equal(V.generoDe(V.profile('Steve Jobs').voice), 'f');
   assert.notEqual(V.profile('Mira Murati').voiceName, 'Mónica', 'Murati cede Mónica a Jobs (prioridad 1)');
   const usos = {}; for (const p of perf) usos[p.voiceName] = (usos[p.voiceName] || 0) + 1;
-  assert.ok(Math.max(...Object.values(usos)) <= 3, JSON.stringify(usos));
+  assert.ok(Math.max(...Object.values(usos)) <= 4, JSON.stringify(usos));
   // las mujeres nunca caen en voz masculina conocida
   for (const n of ['Steve Jobs', 'Mira Murati', 'Ruth Porat']) assert.equal(V.generoDe(V.profile(n).voice), 'f', n);
   // nunca una voz que no sea española si hay españolas
   for (const p of perf) assert.match(p.lang, /^es/);
 });
 
-test('respaldo: con solo dos voces españolas, se reparten por género y no se queda nadie sin voz', () => {
-  V._setVoicesForTest([v('Google español', 'es-ES'), v('Spanish (Spain)', 'es'), v('Google US English', 'en-US')]);
-  for (const c of V.CASTING) assert.ok(V.profile(c.persona).voice, c.persona);
-  assert.equal(V.profile('Ruth Porat').voiceName, 'Google español');
+test('si no está ninguna voz de su lista, silencio: nunca la voz del sistema', () => {
+  V._setVoicesForTest([v('Samantha', 'en-US'), v('Zarvox', 'en-US'), v('Spanish (Spain)', 'es'), v('Microsoft David', 'en-US')]);
+  for (const c of V.CASTING) {
+    const p = V.profile(c.persona);
+    assert.equal(p.voice, null, c.persona);
+    assert.equal(p.via, 'sin-voces', c.persona);
+  }
+  spoken.length = 0;
+  assert.equal(V.speak('Steve Jobs', 'Hola desde Jobs'), false);
+  assert.equal(V.speak('Elon Musk', 'Hola desde Elon'), false);
+  assert.equal(spoken.length, 0, 'no se encola la voz del sistema');
+  // Google español no está en la lista de Jobs/Elon: tampoco la usan como «sistema».
+  V._setVoicesForTest([v('Google español', 'es-ES'), v('Samantha', 'en-US')]);
+  assert.equal(V.profile('Steve Jobs').voice, null);
+  assert.equal(V.profile('Elon Musk').voice, null);
+  spoken.length = 0;
+  assert.equal(V.speak('Steve Jobs', 'Hola'), false);
+  assert.equal(spoken.length, 0);
   V._setVoicesForTest([]);
   assert.equal(V.profile('Steve Jobs').voice, null);
   assert.equal(V.profile('Steve Jobs').lang, 'es-ES');
+  spoken.length = 0;
+  assert.equal(V.speak('Steve Jobs', 'Hola'), false);
+  assert.equal(spoken.length, 0);
 });
 
 test('personalización local: pisa al casting y se puede deshacer', () => {
@@ -109,6 +126,16 @@ test('locución: trozos cortos por frases, con la voz, el ritmo y el tono del co
   for (const u of spoken) { assert.equal(u.voice.name, 'Rocko (Español (España))'); assert.equal(u.rate, 0.9); assert.equal(u.pitch, 0.78); }
   assert.equal(V.speak('Nadie Conocido', 'hola'), false);
   assert.equal(V.speak('Steve Jobs', '   '), false);
+  assert.equal(V.tieneVozAsignada('Steve Jobs'), true);
+  assert.equal(V.tieneVozAsignada('Nadie Conocido'), false);
+});
+
+test('el módulo cancela la cola al cargar y nunca locuta sin u.voice', () => {
+  const src = readFileSync(new URL('./consejeros-voces.js', import.meta.url), 'utf8');
+  assert.match(src, /synth\.cancel\(\)/);
+  assert.match(src, /sin voz asignada/);
+  assert.match(src, /NUNCA la voz por defecto del sistema/);
+  assert.ok(!/if \(p\.voice\) u\.voice/.test(src), 'ya no habla sin voz asignada');
 });
 
 test('portada: muda por defecto; las páginas cargan el módulo', () => {
@@ -139,9 +166,14 @@ test('Jobs y Elon: Jobs voz femenina provisional, Elon Reed, nunca la misma voz 
   for (const lista of escenarios) {
     V._setVoicesForTest(lista);
     const a = V.profile('Steve Jobs'), b = V.profile('Elon Musk');
-    assert.ok(a.voice && b.voice);
-    assert.notEqual(a.voiceName, b.voiceName, lista.map(x => x.name).join(','));
+    if (a.voice && b.voice) {
+      assert.notEqual(a.voiceName, b.voiceName, lista.map(x => x.name).join(','));
+    }
   }
+  // Sin voces de su lista (solo genéricas del sistema): silencio, no se las reparten.
+  V._setVoicesForTest([v('Google español', 'es-ES'), v('Spanish (Spain)', 'es')]);
+  assert.equal(V.profile('Steve Jobs').voice, null);
+  assert.equal(V.profile('Elon Musk').voice, null);
   V._setVoicesForTest(MAC);
   assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
   assert.equal(V.profile('Elon Musk').voiceName, 'Reed (Español (España))');

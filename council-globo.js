@@ -544,15 +544,17 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
    * Lasseter en Coetáneos: Mickey junto a Disney, la manzana de Apple de
    * colores junto a Woz y la lámpara de Pixar (Luxo Jr.) junto a Jobs.
    * Sprites pixel art en assets/atrezo/, colocados en % del arte (como las
-   * flechas), debajo de las cajas y sin capturar clics. */
+   * flechas), debajo de las cajas y sin capturar clics. t1296u: manzana y
+   * Mickey suben hasta los apuntes de Woz y de Disney (antes parecían de
+   * Jobs y de Lucas). */
   const ATREZO = {
     leyendas: [
       { id: 'lampara', persona: 'Steve Jobs', src: 'assets/atrezo/lampara.png', cx: 19.5, base: 72, alto: 16, alt: 'Lámpara de Pixar (Luxo Jr.)' },
-      { id: 'manzana', persona: 'Steve Wozniak', src: 'assets/atrezo/manzana.png', cx: 26, base: 69, alto: 7, alt: 'Manzana de Apple de colores' },
-      { id: 'mickey', persona: 'Walt Disney', src: 'assets/atrezo/mickey.png', cx: 69, base: 70.5, alto: 13, alt: 'Mickey Mouse' },
+      { id: 'manzana', persona: 'Steve Wozniak', src: 'assets/atrezo/manzana.png', cx: 29.5, base: 60.5, alto: 7, alt: 'Manzana de Apple de colores' },
+      { id: 'mickey', persona: 'Walt Disney', src: 'assets/atrezo/mickey.png', cx: 76.5, base: 66.5, alto: 12, alt: 'Mickey Mouse' },
     ],
   };
-  const ATREZO_V = '20261112-r178';
+  const ATREZO_V = '20261112-r179';
   function pintarAtrezo() {
     const d = doc(); const stage = escena(); if (!d || !stage) return;
     let c = d.getElementById('mesa-atrezo');

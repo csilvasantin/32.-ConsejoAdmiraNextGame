@@ -453,16 +453,17 @@
     hablando = false;
     callarVoz();
   }
+  function despertarMotorVoz() {
+    try {
+      if (root.speechSynthesis && typeof root.speechSynthesis.getVoices === "function") root.speechSynthesis.getVoices();
+    } catch (e) {}
+  }
   function desbloquearAudio() {
     if (!vozOn) return;
-    try {
-      if (root.speechSynthesis && root.SpeechSynthesisUtterance) {
-        var u = new root.SpeechSynthesisUtterance(" ");
-        u.volume = 0;
-        root.speechSynthesis.speak(u);
-      }
-      vozDesbloqueada = true;
-    } catch (e) {}
+    // No locutar un espacio a volumen 0: en Chrome/macOS suena un clic o acople
+    // aunque no se diga nada, y al cancelarlo al arrancar la frase real empeora.
+    // El primer speak() real en el mismo gesto ya desbloquea la síntesis.
+    try { despertarMotorVoz(); vozDesbloqueada = true; } catch (e) {}
     if (pendiente) encolarUno(pendiente);
   }
   function activarVoz() {

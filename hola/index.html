@@ -97,7 +97,7 @@
   <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live/hola</div>
 </div>
 
-<script src="/consejeros-voces.js?v=20261112-sin-voz-sistema"></script>
+<script src="/consejeros-voces.js?v=20261112-sin-acople"></script>
 <script src="/hola-intent.js?v=20261111-hola1"></script>
 <script src="/hablar-cmd.js?v=20261111-hablar-2"></script>
 <script src="/assets/chat-hilo-client.js?v=20261111-hola1"></script>
@@ -168,7 +168,6 @@
   function desbloquearAudio(){
     if (desbloqueado) return; desbloqueado=true;
     try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume&&actx.resume(); }catch(e){}
-    try{ var u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); }catch(e){}
   }
 
   // ── Voz: Admira (narradora neutra) y consejeros ──

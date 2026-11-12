@@ -361,6 +361,9 @@
   }
 
   var current = null;
+  function hayLocucion() {
+    try { return !!(synth && (synth.speaking || synth.pending)); } catch (e) { return false; }
+  }
   function stop() {
     current = null;
     try { if (synth) synth.cancel(); } catch (e) {}
@@ -374,7 +377,10 @@
       if (opts.onerror) opts.onerror(new Error("sin voz del consejero"));
       return false;
     }
-    stop();
+    // Si la locución anterior ya terminó, no llamar a cancel(): en Chrome
+    // (macOS) produce un clic o un ruido de acople al acabar, incluso en silencio.
+    if (current || hayLocucion()) stop();
+    else current = null;
     var token = {}; current = token;
     var i = 0, started = false;
     function next() {

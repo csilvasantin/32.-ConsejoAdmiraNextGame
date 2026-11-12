@@ -268,11 +268,7 @@ function toggleFullscreen() {
 
 function desbloquearVoz() {
   try {
-    if (window.speechSynthesis) {
-      speechSynthesis.getVoices();
-      const u = new SpeechSynthesisUtterance(' ');
-      u.volume = 0; speechSynthesis.speak(u); speechSynthesis.cancel();
-    }
+    if (window.speechSynthesis) speechSynthesis.getVoices();
   } catch (e) {}
 }
 

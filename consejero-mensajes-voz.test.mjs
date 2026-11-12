@@ -116,7 +116,8 @@ test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión
   for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
     assert.match(html, /consejeros-voces\.js\?v=20261112-jobs-femenina/);
-    assert.match(html, /consejero-mensajes\.js\?v=20261112-voz-auto/);
+    assert.match(html, /consejero-mensajes\.js\?v=20261112-turno-voz/);
+    assert.match(html, /voz-turno-cliente\.js\?v=20261112-turno-voz/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');
     assert.ok(iVoces >= 0 && iVoces < iMsg, who + ': voces antes de mensajes');
@@ -128,6 +129,8 @@ test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión
   assert.match(js, /pointerdown/);
   assert.match(js, /keydown/);
   assert.match(js, /touchstart/);
+  assert.match(js, /AdmiraVozTurno/);
+  assert.match(js, /silencioSiSala/);
 });
 
 test('etiqueta: Jobs → Elon y Elon → Jobs (no dice Musk)', () => {

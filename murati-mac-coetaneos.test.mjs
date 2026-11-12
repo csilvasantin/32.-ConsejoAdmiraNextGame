@@ -24,5 +24,5 @@ test('Coetáneos: Murati con figura nueva, máscara y recorte coherentes', () =>
   assert.ok(Math.min(...xs) >= c.x && Math.max(...xs) <= c.x + c.w, 'máscara dentro del recorte (x)');
   assert.ok(Math.min(...ys) >= c.y && Math.max(...ys) <= c.y + c.h, 'máscara dentro del recorte (y)');
   // Los recortes manuales de KV anteriores a esta foto no pisan la máscara nueva.
-  assert.match(rd('assets/council-recorte.js'), /coetaneos: '2026-11-12T08:00:00Z'/);
+  assert.match(rd('assets/council-recorte.js'), /coetaneos: '2026-11-12T08:20:00Z'/);
 });

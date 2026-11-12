@@ -190,7 +190,7 @@ test('home · al seleccionar Elon se ve el mismo par con con=musk, intercalado p
 
 test('index.html de la portada carga consejero-mensajes.js y el council-grokbot nuevo', () => {
   const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-  assert.match(html, /consejero-mensajes\.js\?v=20261112-transcripcion-entre/);
-  assert.match(html, /council-grokbot\.js\?v=20261112-transcripcion-entre/);
+  assert.match(html, /consejero-mensajes\.js\?v=20261112-voz-auto/);
+  assert.match(html, /council-grokbot\.js\?v=20261112-voz-auto/);
   assert.match(html, /consejeros-voces\.js/);
 });

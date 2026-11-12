@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Sala de voz · Consejo AdmiraNeXT</title>
+  <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
+  <link rel="stylesheet" href="/sala-voz/sala-voz.css?v=20261112-sala-voz">
+</head>
+<body>
+  <div id="elige" hidden>
+    <h1>Sala de voz</h1>
+    <p>Dos pantallas, un solo diálogo. Cada una oye solo a los suyos.</p>
+    <a href="?consejo=leyendas">Leyendas</a>
+    <a href="?consejo=coetaneos">Coetáneos</a>
+  </div>
+  <main id="sala" hidden>
+    <header id="hablante">
+      <img id="retrato" alt="" hidden>
+      <div id="retrato-fallback" hidden></div>
+      <div id="quien">
+        <p id="consejo-kicker"></p>
+        <h1 id="nombre">Sala de voz</h1>
+      </div>
+    </header>
+    <section id="transcripcion" aria-live="polite" aria-label="Transcripción entre consejeros"></section>
+    <p id="estado" role="status"></p>
+  </main>
+  <script src="/consejeros-voces.js?v=20261112-voz-auto"></script>
+  <script src="/assets/chat-hilo-client.js?v=20261024-r96-sesion"></script>
+  <script type="module" src="/sala-voz/sala-voz.js?v=20261112-sala-voz"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('./council-grokbot.js', import.meta.url), 'utf8');
 const clienteSrc = readFileSync(new URL('./assets/chat-hilo-client.js', import.meta.url), 'utf8');
+const entreSrc = readFileSync(new URL('./assets/consejero-mensajes.js', import.meta.url), 'utf8');
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
 class El {
   constructor(tag, doc) { this.tagName = tag.toUpperCase(); this.doc = doc; this.children = []; this.text = ''; this.hidden = false; this.lookup = new Map(); this.scrollTop = 0; this.parentNode = null; }
@@ -31,10 +32,17 @@ class El {
   get childElementCount() { return this.children.filter(n => n.tagName !== '#TEXT').length; }
   get scrollHeight() { return this.textContent.length; }
 }
-function harness({ jwt = 'tok' } = {}) {
+function harness({ jwt = 'tok', entre = [] } = {}) {
   const doc = { hidden: false, details: null, createElement(t) { const n = new El(t, this); if (t === 'section') this.details = n; return n; }, createTextNode(t) { const n = new El('#text', this); n.textContent = t; return n; }, addEventListener() {} };
   const net = [], hiloCalls = [], authReady = [];
-  const fetch = async (url, init) => { net.push(url); return { ok: true, status: 200, json: async () => ({ ok: true, mode: 'desktop', bidirectional: true, available: true, messages: [] }) }; };
+  const fetch = async (url, init) => {
+    const u = String(url);
+    net.push(u);
+    if (/entre-consejeros/.test(u)) {
+      return { ok: true, status: jwt ? 200 : 401, json: async () => ({ ok: true, con: (u.match(/con=([^&]+)/) || [])[1], mensajes: entre.slice(), pendientes: 0 }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ ok: true, mode: 'desktop', bidirectional: true, available: true, messages: [] }) };
+  };
   const w = {}; new Function('window', clienteSrc)(w);
   const C = w.ChatHiloClient;
   const state = { jwt };
@@ -47,7 +55,13 @@ function harness({ jwt = 'tok' } = {}) {
     cargarGoogle: (b, ok) => { hiloCalls.push(['google']); state.jwt = 'tok'; ok(); }
   };
   const timers = [];
-  const ctx = vm.createContext({ console, URL, AbortController, Date, Intl, crypto: { randomUUID: () => 'u' }, setTimeout: (f, d) => { timers.push(d); return timers.length; }, clearTimeout() {}, setInterval: () => 99, clearInterval() {} });
+  const store = {};
+  const ctx = vm.createContext({
+    console, URL, AbortController, Date, Intl, crypto: { randomUUID: () => 'u' },
+    localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
+    setTimeout: (f, d) => { timers.push(d); return timers.length; }, clearTimeout() {}, setInterval: () => 99, clearInterval() {},
+  });
+  vm.runInContext(entreSrc, ctx);
   vm.runInContext(source, ctx);
   const statuses = [], answers = [];
   const api = ctx.CouncilGrokBot.mount({ document: doc, container: doc.createElement('div'), fetch, mountInside: true, hilo, onStatus: s => statuses.push(s), onAuthReady: p => authReady.push(p), onAnswer: a => answers.push(a) });
@@ -58,10 +72,11 @@ test('home · Jobs: visita en blanco — no carga el histórico, envía por /api
   const h = harness();
   assert.equal(await h.api.select('Steve Jobs'), true);
   await flush();
-  assert.deepEqual(h.net, [], 'no toca el puente de GrokBot');
-  assert.deepEqual(h.hiloCalls, [], 'al seleccionar no se lee el hilo (sin histórico en la home)');
+  assert.ok(h.net.every(u => /entre-consejeros\?con=jobs/.test(u)), 'al seleccionar pide la transcripción, no el puente de GrokBot');
+  assert.deepEqual(h.hiloCalls, [], 'al seleccionar no se lee el hilo Carlos↔Jobs (sin histórico de visita en la home)');
   let txt = h.log().textContent;
-  assert.match(txt, /Chat limpio/); assert.match(txt, /le llega a Jobs y se guarda en la misma conversación que en GrokBot/);
+  assert.match(txt, /Escribe a Steve Jobs y pulsa Enviar/);
+  assert.match(txt, /transcripción entre consejeros aparecerá aquí/i);
   assert.doesNotMatch(txt, /Hola desde la app|Hola, Carlos/);
   const toolbar = h.doc.details.querySelector('.council-chat__toolbar');
   const link = toolbar.children.find(n => n.className === 'council-chat__historico');
@@ -85,7 +100,7 @@ test('home · Jobs: visita en blanco — no carga el histórico, envía por /api
   assert.doesNotMatch(txt, /Escrito en la App/);
   assert.doesNotMatch(txt, /está escribiendo/);
   assert.deepEqual(h.answers.map(a => a.text), ['Piensa diferente.']);
-  assert.deepEqual(h.net, []);
+  assert.ok(h.net.every(u => /entre-consejeros/.test(u)), 'sigue sin tocar el puente de GrokBot');
 });
 
 test('home · Jobs sin sesión: se puede escribir; al enviar pide Entrar con Google, conserva el texto y avisa al entrar', async () => {
@@ -104,13 +119,14 @@ test('home · Jobs sin sesión: se puede escribir; al enviar pide Entrar con Goo
   assert.equal(await h.api.send('Steve Jobs', 'hola'), true);
 });
 
-test('los demás consejeros siguen por el puente de GrokBot', async () => {
+test('los consejeros sin hilo compartido siguen por el puente de GrokBot', async () => {
   const h = harness();
-  await h.api.select('Steve Wozniak'); await flush();
+  await h.api.select('Mira Murati'); await flush();
   assert.ok(h.net.some(u => /\/capabilities/.test(u)));
+  assert.ok(!h.net.some(u => /entre-consejeros/.test(u)), 'sin transcripción entre consejeros fuera del hilo compartido');
   assert.equal(h.hiloCalls.length, 0);
   const link = h.doc.details.querySelector('.council-chat__toolbar').children.find(n => n.className === 'council-chat__historico');
-  assert.ok(link.hidden, '«Ver histórico» solo con el hilo compartido');
+  assert.ok(link.hidden, '«Histórico» solo con el hilo compartido');
 });
 
 test('home · el compositor queda fijo abajo: el panel no crece con los mensajes (CSS)', () => {
@@ -125,4 +141,56 @@ test('home · la barra «Preguntar a … Enviar» va por el mismo camino y conse
   assert.match(src, /if\(bridge\.selected!==persona&&bridge\.has\(persona\)\)await bridge\.select\(persona\)/);
   assert.match(src, /finally\{if\(!ok&&.*restoreDraft\(persona,text\);\}/);
   assert.match(src, /onAuthReady\(persona\)\{[^}]*sendPreview\(text\)/);
+});
+
+const PAR_JOBS_ELON = [
+  { id: 'cmmwdd8mdbfyqplc', de: 'Jobs', para: 'Musk', texto: 'Hola Elon, ¿me oyes?', hora: '2026-11-12T09:49:00Z' },
+  { id: 'cmmelonreply1', de: 'Musk', para: 'Jobs', texto: 'Te oigo, Jobs. Sigamos por admira.live.', hora: '2026-11-12T09:49:40Z' },
+];
+
+test('home · Conversación muestra la transcripción Jobs ↔ Elon y no la borra el chat limpio', async () => {
+  const h = harness({ entre: PAR_JOBS_ELON });
+  assert.equal(await h.api.select('Steve Jobs'), true);
+  await flush();
+  assert.ok(h.net.some(u => /entre-consejeros\?con=jobs/.test(u)));
+  let txt = h.log().textContent;
+  assert.match(txt, /Jobs → Elon/);
+  assert.match(txt, /Elon → Jobs/);
+  assert.match(txt, /Hola Elon, ¿me oyes\?/);
+  assert.match(txt, /Te oigo, Jobs/);
+  assert.match(txt, /queda registrada; no la borra el chat limpio/i);
+  assert.doesNotMatch(txt, /Hola desde la app|Hola, Carlos/, 'el histórico Carlos↔Jobs sigue fuera');
+  const voz = h.doc.details.querySelector('.council-chat__toolbar').children.find(n => n.className === 'council-chat__voz');
+  assert.ok(voz, 'botón Activar voz en la barra');
+  // Re-seleccionar (nueva visita en blanco) no pierde la transcripción.
+  assert.equal(await h.api.select('Steve Jobs'), true);
+  await flush();
+  txt = h.log().textContent;
+  assert.match(txt, /Jobs → Elon/);
+  assert.match(txt, /Te oigo, Jobs/);
+});
+
+test('home · al seleccionar Elon se ve el mismo par con con=musk, intercalado por hora con esta visita', async () => {
+  const h = harness({ entre: PAR_JOBS_ELON });
+  assert.equal(await h.api.select('Elon Musk'), true);
+  await flush();
+  assert.ok(h.net.some(u => /entre-consejeros\?con=musk/.test(u)));
+  let txt = h.log().textContent;
+  assert.match(txt, /Jobs → Elon/);
+  assert.match(txt, /Elon → Jobs/);
+  const posJobs = txt.indexOf('Hola Elon');
+  const posElon = txt.indexOf('Te oigo, Jobs');
+  assert.ok(posJobs >= 0 && posJobs < posElon, 'orden cronológico');
+  assert.equal(await h.api.send('Elon Musk', 'Sigo aquí'), true);
+  await flush();
+  txt = h.log().textContent;
+  assert.match(txt, /Sigo aquí/);
+  assert.match(txt, /Te oigo, Jobs/, 'la transcripción permanece tras escribir en esta visita');
+});
+
+test('index.html de la portada carga consejero-mensajes.js y el council-grokbot nuevo', () => {
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(html, /consejero-mensajes\.js\?v=20261112-transcripcion-entre/);
+  assert.match(html, /council-grokbot\.js\?v=20261112-transcripcion-entre/);
+  assert.match(html, /consejeros-voces\.js/);
 });

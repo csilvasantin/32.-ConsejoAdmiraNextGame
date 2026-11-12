@@ -81,12 +81,40 @@
       return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m) };
     });
   }
+  // Etiqueta corta pedida por Carlos: «Jobs → Elon», no «Musk».
+  var CORTO = { Jobs: "Jobs", Musk: "Elon", Huang: "Jensen", Wozniak: "Woz", Disney: "Disney", Lucas: "Lucas", Y: "Y" };
+  function cortoDe(s) { return CORTO[s] || String(s || ""); }
+  function etiqueta(m) {
+    if (!m) return "";
+    return cortoDe(m.de) + " → " + cortoDe(m.para);
+  }
+  function tsDe(m) { return Date.parse((m && (m.hora || m.ts)) || 0) || 0; }
+  // Portada: Carlos oye ambos sentidos (Jobs→Elon y Elon→Jobs), no solo los entrantes.
+  function pendientesTranscripcion(silla, msgs, store) {
+    var vistos = noOidos(silla, msgs, store);
+    marcarOidos(silla, vistos, store);
+    return vistos.filter(function (m) {
+      return !esAgente(m) && textoDe(m) && (m.de === silla || m.para === silla);
+    }).map(function (m) {
+      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m), etiqueta: etiqueta(m) };
+    });
+  }
+  // Intercala turnos del hilo de esta visita con la transcripción entre consejeros, por hora.
+  function mergePorHora(hilos, entres) {
+    var items = [];
+    (hilos || []).forEach(function (t) { items.push({ tipo: "hilo", ts: Date.parse((t && t.ts) || 0) || 0, t: t }); });
+    (entres || []).forEach(function (m) { items.push({ tipo: "entre", ts: tsDe(m), m: m }); });
+    items.sort(function (a, b) { return a.ts - b.ts || (a.tipo === b.tipo ? 0 : a.tipo === "entre" ? -1 : 1); });
+    return items;
+  }
 
   var api = {
-    NOMBRE: NOMBRE, LS_OIDOS: LS_OIDOS, textoDe: textoDe, idDe: idDe,
+    NOMBRE: NOMBRE, LS_OIDOS: LS_OIDOS, CORTO: CORTO, textoDe: textoDe, idDe: idDe,
     esAgente: esAgente, esEntrante: esEntrante, leerOidos: leerOidos,
     escribirOidos: escribirOidos, marcarOidos: marcarOidos, noOidos: noOidos,
-    iniciarOidos: iniciarOidos, pendientesDeLocutar: pendientesDeLocutar, nombre: nombre
+    iniciarOidos: iniciarOidos, pendientesDeLocutar: pendientesDeLocutar,
+    pendientesTranscripcion: pendientesTranscripcion, etiqueta: etiqueta,
+    tsDe: tsDe, mergePorHora: mergePorHora, nombre: nombre, cortoDe: cortoDe
   };
   root.AdmiraEntreVoces = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

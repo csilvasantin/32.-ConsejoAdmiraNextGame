@@ -169,3 +169,10 @@ body.mouths-off .council-speech-mouth{display:none!important}
 @media(max-width:600px){.council-chat__ascii{font-size:11px}}
 /* Con un dibujo en pantalla la barra crece (mín. ~62% del alto de la ventana) para verlo entero sin scroll. */
 .scumm-bottom[data-layout-ready]:has(.council-preview .council-chat__ascii){height:max(var(--scumm-height,300px),min(600px,62vh))}
+
+/* Transcripción entre consejeros en la Conversación de la portada (12-11-2026). */
+.council-chat__hilo--entre{margin-right:auto;align-items:flex-start;max-width:92%}
+.council-chat__hilo--entre .council-chat__entre-body{background:#2a2214;border:1px solid #8b5a14;color:#f3e6c0}
+.council-chat__hilo--entre .council-chat__entre-body strong{display:block;color:#ffdd66;font-weight:700;margin-bottom:2px}
+.council-chat__voz{color:#ffdf73;font:11px/1.4 system-ui,sans-serif;background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;white-space:nowrap}
+.council-chat__voz[hidden]{display:none!important}

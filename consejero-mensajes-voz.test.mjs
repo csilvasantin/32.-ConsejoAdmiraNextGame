@@ -115,8 +115,8 @@ test('casting publicado: Jobs = Mónica (femenina provisional), Elon = Reed (sin
 test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión de consejero-mensajes.js', () => {
   for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
-    assert.match(html, /consejeros-voces.js\?v=20261112-sin-voz-sistema/);
-    assert.match(html, /consejero-mensajes.js\?v=20261112-recuadro-conv/);
+    assert.match(html, /consejeros-voces.js\?v=20261112-sin-acople/);
+    assert.match(html, /consejero-mensajes.js\?v=20261112-sin-acople/);
     assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');
@@ -230,7 +230,7 @@ test('/hola ya no locuta textos de sistema con la narradora ni la voz del sistem
   const hola = readFileSync(new URL('./hola/index.html', import.meta.url), 'utf8');
   assert.match(hola, /Nunca la narradora ni la voz del sistema/);
   assert.doesNotMatch(hola, /else u\.lang="es-ES"/);
-  assert.match(hola, /consejeros-voces\.js\?v=20261112-sin-voz-sistema/);
+  assert.match(hola, /consejeros-voces.js\?v=20261112-sin-acople/);
   const src = readFileSync(new URL('./consejeros-voces.js', import.meta.url), 'utf8');
   assert.match(src, /synth\.cancel\(\)/);
 });

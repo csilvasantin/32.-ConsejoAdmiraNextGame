@@ -262,3 +262,22 @@ test('speak reenvía onboundary con charIndex global entre trozos', async () => 
   assert.equal(events[0].charIndex, 10);
   assert.equal(events[0].chunkIndex, 0);
 });
+
+test('al encadenar una locución ya terminada no se llama a cancel (evita el clic de Chrome)', async () => {
+  V._setVoicesForTest(MAC);
+  cancelled = 0;
+  await new Promise((res) => { assert.equal(V.speak('Steve Jobs', 'primera frase', { onend: res }), true); });
+  assert.equal(V.speaking(), false);
+  const antes = cancelled;
+  await new Promise((res) => { assert.equal(V.speak('Elon Musk', 'segunda frase', { onend: res }), true); });
+  assert.equal(cancelled, antes, 'no cancelar si la anterior ya había terminado');
+});
+
+test('sí se cancela si se interrumpe una locución en curso', () => {
+  V._setVoicesForTest(MAC);
+  cancelled = 0;
+  assert.equal(V.speak('Steve Jobs', 'frase larga que aún no termina'), true);
+  assert.equal(V.speaking(), true);
+  assert.equal(V.speak('Elon Musk', 'la siguiente'), true);
+  assert.ok(cancelled >= 1, 'cancelar al interrumpir');
+});

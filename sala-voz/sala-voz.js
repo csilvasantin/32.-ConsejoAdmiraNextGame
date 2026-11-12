@@ -30,12 +30,10 @@ function credencial() {
 
 function desbloquearAudio() {
   if (pantalla) return;
+  // No locutar un espacio a volumen 0: en Chrome/macOS suena un clic o acople
+  // aunque no se diga nada. El primer speak() real en el mismo gesto ya desbloquea.
   try {
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
-      const u = new SpeechSynthesisUtterance(" ");
-      u.volume = 0;
-      speechSynthesis.speak(u);
-    }
+    if (window.speechSynthesis && typeof speechSynthesis.getVoices === "function") speechSynthesis.getVoices();
   } catch (e) {}
 }
 

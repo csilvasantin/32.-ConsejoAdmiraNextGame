@@ -207,7 +207,7 @@ test("_headers declara /sala-voz y el lib del turno; las páginas piden el clien
   const sala = readFileSync(new URL("./sala-voz/index.html", import.meta.url), "utf8");
   const js = readFileSync(new URL("./sala-voz/sala-voz.js", import.meta.url), "utf8");
   assert.match(sala, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
-  assert.match(sala, /sala-voz\.js\?v=20261112-karaoke/);
+  assert.match(sala, /sala-voz.js\?v=20261112-sin-acople/);
   assert.match(js, /AdmiraVozTurno/);
   assert.match(js, /sala-voz-/);
   const msg = readFileSync(new URL("./assets/consejero-mensajes.js", import.meta.url), "utf8");

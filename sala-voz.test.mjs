@@ -119,7 +119,7 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(html, /auth-gate\.js/);
   assert.match(html, /consejeros-voces\.js/);
   assert.match(html, /chat-hilo-client\.js/);
-  assert.match(html, /sala-voz\.js\?v=20261112-hora-frase/);
+  assert.match(html, /sala-voz.js\?v=20261112-sin-acople/);
   assert.match(css, /cursor:\s*none/);
   assert.doesNotMatch(js, /Activar voz/);
   assert.match(js, /Escape/);
@@ -130,7 +130,7 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
   assert.match(html, /id="karaoke"/);
   assert.match(html, /sala-voz\.css\?v=20261112-hora-frase/);
-  assert.match(html, /consejeros-voces\.js\?v=20261112-karaoke/);
+  assert.match(html, /consejeros-voces.js\?v=20261112-sin-acople/);
   assert.match(js, /sala-voz-lib\.mjs\?v=20261112-hora-frase/);
   assert.match(js, /onboundary/);
   assert.match(js, /iniciarKaraokeVisual/);

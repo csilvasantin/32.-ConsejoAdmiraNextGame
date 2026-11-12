@@ -84,7 +84,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r175-cajas-anchas', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r176-cajas-anchas', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -95,8 +95,8 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.equal(p.nombre, nombre);
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
-  assert.match(index, /consejo-caja-prefs\.mjs\?v=20261112-r175-cajas-anchas/);
-  assert.match(index, /council-globo\.js\?v=20261112-r175-cajas-anchas/);
+  assert.match(index, /consejo-caja-prefs\.mjs\?v=20261112-r176-cajas-anchas/);
+  assert.match(index, /council-globo\.js\?v=20261112-r176-cajas-anchas/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',
@@ -168,4 +168,11 @@ test('cada caja tiene × para cerrar, asa de redimensionado y memoria en localSt
   assert.doesNotMatch(resize[0], /r\.bottom/);
   assert.match(resize[0], /globo-proyectos/);
   assert.match(resize[0], /colocarGlobo/);
+});
+
+test('el reparto final usa translateX y un pase con medidas reales para no pisarse', () => {
+  assert.match(src, /function evitatSolapeCajas\(/);
+  assert.match(src, /translateX\(/);
+  assert.match(src, /evitatSolapeCajas\(c\)/);
+  assert.doesNotMatch(src, /lab\.style\.marginLeft/);
 });

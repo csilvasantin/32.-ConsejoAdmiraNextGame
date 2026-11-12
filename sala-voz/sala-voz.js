@@ -1,6 +1,7 @@
 /* Sala de voz: transcripción entre consejeros en las dos pantallas Terminator.
-   12-11-2026: un solo turno de voz en toda la sala (lock en /api/chat/turno-voz). */
-import * as Sala from "/sala-voz-lib.mjs";
+   12-11-2026: un solo turno de voz en toda la sala (lock en /api/chat/turno-voz).
+   12-11-2026: subtítulos karaoke bajo el hablante, al ritmo de la voz (boundary o tiempo). */
+import * as Sala from "/sala-voz-lib.mjs?v=20261112-karaoke";
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -12,6 +13,11 @@ let hablando = false;
 let pendiente = null;
 let ultimoId = "";
 let avisoSesion = false;
+
+let karaokeTimer = null;
+let karaokeWatch = null;
+let karaokeEspera = null;
+let karaokeCtx = null;
 
 function estado(txt) { $("estado").textContent = txt || ""; }
 
@@ -43,19 +49,152 @@ function callar() {
   try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
 }
 
-function hablar(item) {
+function rateDe(persona) {
+  try {
+    const V = window.AdmiraVoces;
+    if (V && typeof V.profile === "function") {
+      const p = V.profile(persona);
+      if (p && isFinite(p.rate)) return p.rate;
+    }
+  } catch (e) {}
+  return 1;
+}
+
+function reduceMotion() {
+  try { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { return false; }
+}
+
+function pararKaraokeAnim() {
+  if (karaokeTimer) { clearTimeout(karaokeTimer); karaokeTimer = null; }
+  if (karaokeWatch) { clearTimeout(karaokeWatch); karaokeWatch = null; }
+  if (karaokeEspera) { clearTimeout(karaokeEspera); karaokeEspera = null; }
+}
+
+function pintarPalabras(indice, hecho) {
+  const box = $("karaoke");
+  if (!box) return;
+  const spans = box.querySelectorAll(".palabra");
+  spans.forEach((sp, i) => {
+    sp.classList.toggle("dicha", hecho || i < indice);
+    sp.classList.toggle("actual", !hecho && i === indice);
+  });
+}
+
+function montarKaraoke(texto) {
+  const box = $("karaoke");
+  if (!box) return [];
+  box.replaceChildren();
+  const tokens = Sala.tokensKaraoke(texto);
+  tokens.forEach((tok) => {
+    const sp = document.createElement("span");
+    sp.className = "palabra";
+    sp.textContent = tok.texto;
+    box.append(sp, document.createTextNode(tok.sep || " "));
+  });
+  return tokens;
+}
+
+function iniciarKaraokeVisual(x, elapsedMs, duracionMs) {
+  const texto = String((x && x.texto) || "").slice(0, 800);
+  const tokens = montarKaraoke(texto);
+  const dur = duracionMs || Sala.duracionKaraokeMs(texto, rateDe(x && x.persona));
+  karaokeCtx = {
+    id: x && x.id,
+    tokens,
+    duracionMs: dur,
+    startedAt: Date.now() - (Number(elapsedMs) || 0),
+    vistoBoundary: false,
+    modo: "tiempo",
+  };
+  if (reduceMotion()) {
+    pintarPalabras(tokens.length, true);
+    return karaokeCtx;
+  }
+  const av = Sala.indicePorTiempo(tokens, Number(elapsedMs) || 0, dur);
+  pintarPalabras(av.indice, av.hecho);
+  return karaokeCtx;
+}
+
+function arrancarKaraokeTiempo(ctx) {
+  if (!ctx || reduceMotion()) return;
+  if (karaokeTimer) { clearTimeout(karaokeTimer); karaokeTimer = null; }
+  ctx.modo = "tiempo";
+  const tick = () => {
+    if (!karaokeCtx || karaokeCtx !== ctx) return;
+    const elapsed = Date.now() - ctx.startedAt;
+    const av = Sala.indicePorTiempo(ctx.tokens, elapsed, ctx.duracionMs);
+    pintarPalabras(av.indice, av.hecho);
+    if (av.hecho) { karaokeTimer = null; return; }
+    karaokeTimer = setTimeout(tick, 80);
+  };
+  tick();
+}
+
+function terminarKaraoke() {
+  if (karaokeCtx) pintarPalabras((karaokeCtx.tokens || []).length, true);
+  pararKaraokeAnim();
+}
+
+function esperarFinKaraoke(ctx) {
   return new Promise((resolve) => {
+    if (!ctx || reduceMotion()) { resolve(); return; }
+    const left = Math.max(0, (ctx.startedAt + ctx.duracionMs) - Date.now());
+    karaokeEspera = setTimeout(() => {
+      karaokeEspera = null;
+      terminarKaraoke();
+      resolve();
+    }, left);
+  });
+}
+
+function onKaraokeBoundary(ev) {
+  if (!karaokeCtx) return;
+  karaokeCtx.vistoBoundary = true;
+  karaokeCtx.modo = "boundary";
+  if (karaokeWatch) { clearTimeout(karaokeWatch); karaokeWatch = null; }
+  if (karaokeTimer) { clearTimeout(karaokeTimer); karaokeTimer = null; }
+  const av = Sala.indicePorChar(karaokeCtx.tokens, ev && ev.charIndex);
+  pintarPalabras(av.indice, av.hecho);
+}
+
+function armarWatchdogBoundary(ctx) {
+  if (!ctx || reduceMotion()) return;
+  if (karaokeWatch) { clearTimeout(karaokeWatch); karaokeWatch = null; }
+  karaokeWatch = setTimeout(() => {
+    karaokeWatch = null;
+    if (karaokeCtx === ctx && !ctx.vistoBoundary) arrancarKaraokeTiempo(ctx);
+  }, Sala.KARAOKE_BOUNDARY_MS);
+}
+
+function hablar(item, hooks) {
+  return new Promise((resolve) => {
+    let done = false;
+    const fin = (r) => { if (!done) { done = true; resolve(r); } };
     const V = window.AdmiraVoces;
     const texto = String(item.texto || "").slice(0, 800);
-    if (!texto) { resolve(); return; }
+    if (!texto) { fin({ hablado: false }); return; }
     // Solo la voz propia del consejero: si no está, no se habla (nunca la del sistema).
     if (V && typeof V.speak === "function") {
-      const ok = V.speak(item.persona, texto, { onend: resolve, onerror: resolve });
-      if (!ok) resolve();
+      const ok = V.speak(item.persona, texto, {
+        onend: () => fin({ hablado: true }),
+        onerror: () => fin({ hablado: false }),
+        onstart: hooks && hooks.onstart,
+        onboundary: hooks && hooks.onboundary,
+      });
+      if (!ok) fin({ hablado: false });
       return;
     }
-    resolve();
+    fin({ hablado: false });
   });
+}
+
+async function observarTurno() {
+  const T = turnoApi();
+  if (!T || typeof T.get !== "function") return null;
+  try {
+    const id = typeof T.clienteId === "function" ? T.clienteId() : "";
+    return await T.get(credencial(), id);
+  } catch (e) { return null; }
 }
 
 async function locutarUno(x) {
@@ -74,15 +213,50 @@ async function locutarUno(x) {
       credencial: credencial(),
       onPerdido: callar,
     });
-    if (!ticket || !ticket.concedido) {
+    // Si no se concede el turno, esta pantalla NO habla. Sí pinta karaoke.
+    if (!ticket) {
       hablando = false;
       return;
     }
   }
   mostrarHablante(x.de || x.nombre, true);
-  await hablar(x);
-  if (ticket && typeof ticket.liberar === "function") {
-    try { await ticket.liberar(); } catch (e) {}
+  const texto = String(x.texto || "").slice(0, 800);
+  const duracion = Sala.duracionKaraokeMs(texto, rateDe(x.persona));
+
+  const puedeHablar = (ticket && ticket.concedido) || !T || typeof T.aguardarTurno !== "function";
+  if (puedeHablar) {
+    iniciarKaraokeVisual(x, 0, duracion);
+    const r = await hablar(x, {
+      onstart: () => {
+        if (!karaokeCtx) return;
+        karaokeCtx.startedAt = Date.now();
+        armarWatchdogBoundary(karaokeCtx);
+      },
+      onboundary: onKaraokeBoundary,
+    });
+    if (!r || !r.hablado) {
+      // sin-voces u otro fallo: ritmo por tiempo, nunca una voz genérica.
+      if (karaokeCtx) arrancarKaraokeTiempo(karaokeCtx);
+      await esperarFinKaraoke(karaokeCtx);
+    } else {
+      terminarKaraoke();
+    }
+    if (ticket && typeof ticket.liberar === "function") {
+      try { await ticket.liberar(); } catch (e) {}
+    }
+  } else {
+    // Pantalla que solo muestra: el turno lo tiene otro cliente (o yaDicho).
+    let elapsed = 0, dur = duracion;
+    const st = await observarTurno();
+    const turno = st && st.turno && String(st.turno.mensajeId) === String(x.id) ? st.turno : null;
+    if (turno) {
+      const sync = Sala.elapsedDesdeTurno(turno, Date.now(), duracion);
+      elapsed = sync.elapsedMs;
+      dur = sync.duracionMs || duracion;
+    }
+    const ctx = iniciarKaraokeVisual(x, elapsed, dur);
+    if (ctx && !reduceMotion()) arrancarKaraokeTiempo(ctx);
+    await esperarFinKaraoke(ctx);
   }
   hablando = false;
   // No encadenar la siguiente lectura: el próximo mensaje espera a un sondeo nuevo.
@@ -91,6 +265,8 @@ async function locutarUno(x) {
 function pararSala() {
   pendiente = null;
   hablando = false;
+  pararKaraokeAnim();
+  karaokeCtx = null;
   callar();
 }
 
@@ -129,7 +305,8 @@ function pintar(msgs) {
   });
   const ultimo = vis[vis.length - 1];
   if (ultimo && idDeSafe(ultimo) !== ultimoId && !hablando) {
-    mostrarHablante(ultimo.de);
+    const propio = vis.slice().reverse().find((m) => Sala.pertenece(m.de, consejo));
+    if (propio) mostrarHablante(propio.de);
   }
   if (ultimo) ultimoId = idDeSafe(ultimo) || ultimoId;
   if (!vis.length) {

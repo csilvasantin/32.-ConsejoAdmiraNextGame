@@ -53,6 +53,22 @@ body { font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
   font-size: clamp(36px, 5.4vw, 96px);
   line-height: 1.05; font-weight: 650;
 }
+#karaoke {
+  flex: 0 0 auto;
+  margin-top: 1.8vh;
+  font-size: clamp(22px, 2.7vw, 52px);
+  line-height: 1.28;
+  max-width: 100%;
+  min-height: 1.3em;
+  font-weight: 560;
+}
+#karaoke:empty { min-height: 0; margin-top: 0; }
+#karaoke .palabra {
+  opacity: .42;
+  transition: opacity .12s linear, color .12s linear, text-shadow .12s linear;
+}
+#karaoke .palabra.dicha { opacity: 1; }
+#karaoke .palabra.actual { opacity: 1; font-weight: 650; }
 #transcripcion {
   flex: 1 1 auto; min-height: 0;
   display: flex; flex-direction: column; justify-content: flex-end;
@@ -108,6 +124,12 @@ body.leyendas .linea.actual {
   color: #0b3d14;
   text-shadow: 0 0 12px rgba(80, 255, 120, .28);
 }
+body.leyendas #karaoke { color: #16351c; }
+body.leyendas #karaoke .palabra.dicha,
+body.leyendas #karaoke .palabra.actual {
+  color: #0b3d14;
+  text-shadow: 0 0 12px rgba(80, 255, 120, .28);
+}
 body.leyendas #estado { color: #5a4a32; }
 
 /* Coetáneos — holograma cian */
@@ -151,8 +173,15 @@ body.coetaneos .linea.actual {
   color: #ffffff;
   text-shadow: 0 0 14px rgba(120, 220, 255, .8);
 }
+body.coetaneos #karaoke { color: #bfeeff; }
+body.coetaneos #karaoke .palabra.dicha,
+body.coetaneos #karaoke .palabra.actual {
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(120, 220, 255, .8);
+}
 body.coetaneos #estado { color: #7cd8ff; }
 
 @media (prefers-reduced-motion: reduce) {
   body.leyendas::after, body.coetaneos::after { background: none; }
+  #karaoke .palabra { transition: none; opacity: 1; }
 }

@@ -16,7 +16,7 @@
  * de la página (pagehide / beforeunload / visibility hidden) se cancela la síntesis.
  *
  * Uso (script clásico, también importable desde node:test):
- *   AdmiraVoces.speak("Steve Jobs", "texto", { onstart, onend })
+ *   AdmiraVoces.speak("Steve Jobs", "texto", { onstart, onend, onerror, onboundary })
  *   AdmiraVoces.preview("steve-jobs")        → frase de prueba con su voz
  *   AdmiraVoces.stop()
  *   AdmiraVoces.profile("Walt Disney")      → { voice, rate, pitch, lang, … }
@@ -380,12 +380,30 @@
     function next() {
       if (current !== token) return;
       if (i >= trozos.length) { current = null; if (opts.onend) opts.onend(); return; }
-      var u = new root.SpeechSynthesisUtterance(trozos[i++]);
+      var trozo = trozos[i];
+      var offset = 0, k;
+      for (k = 0; k < i; k++) offset += trozos[k].length + 1;
+      i++;
+      var u = new root.SpeechSynthesisUtterance(trozo);
       u.voice = p.voice;
       u.lang = p.lang || "es-ES";
       u.rate = p.rate; u.pitch = p.pitch;
       if (opts.volume != null) u.volume = opts.volume;
       u.onstart = function () { if (!started) { started = true; if (opts.onstart) opts.onstart(p); } };
+      u.onboundary = function (e) {
+        if (current !== token) return;
+        if (typeof opts.onboundary !== "function") return;
+        var ev = e || {};
+        var local = Number(ev.charIndex) || 0;
+        opts.onboundary({
+          name: ev.name || "word",
+          charIndex: local + offset,
+          charIndexLocal: local,
+          chunkIndex: i - 1,
+          chunkText: trozo,
+          persona: p
+        }, ev);
+      };
       u.onend = next;
       u.onerror = function (e) {
         if (current !== token) return;

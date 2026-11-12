@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <title>Sala de voz · Consejo AdmiraNeXT</title>
   <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
-  <link rel="stylesheet" href="/sala-voz/sala-voz.css?v=20261112-sala-voz">
+  <link rel="stylesheet" href="/sala-voz/sala-voz.css?v=20261112-karaoke">
 </head>
 <body>
   <div id="elige" hidden>
@@ -25,12 +25,13 @@
         <h1 id="nombre">Sala de voz</h1>
       </div>
     </header>
+    <p id="karaoke" aria-live="polite" aria-label="Subtítulos de lo que está hablando"></p>
     <section id="transcripcion" aria-live="polite" aria-label="Transcripción entre consejeros"></section>
     <p id="estado" role="status"></p>
   </main>
-  <script src="/consejeros-voces.js?v=20261112-sin-voz-sistema"></script>
+  <script src="/consejeros-voces.js?v=20261112-karaoke"></script>
   <script src="/assets/chat-hilo-client.js?v=20261024-r96-sesion"></script>
   <script src="/assets/voz-turno-cliente.js?v=20261112-voz-propia"></script>
-  <script type="module" src="/sala-voz/sala-voz.js?v=20261112-voz-propia"></script>
+  <script type="module" src="/sala-voz/sala-voz.js?v=20261112-karaoke"></script>
 </body>
 </html>

@@ -119,7 +119,7 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(html, /auth-gate\.js/);
   assert.match(html, /consejeros-voces\.js/);
   assert.match(html, /chat-hilo-client\.js/);
-  assert.match(html, /sala-voz\.js\?v=20261112-voz-propia/);
+  assert.match(html, /sala-voz\.js\?v=20261112-karaoke/);
   assert.match(css, /cursor:\s*none/);
   assert.doesNotMatch(js, /Activar voz/);
   assert.match(js, /Escape/);
@@ -128,6 +128,14 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(js, /desbloquearAudio/);
   assert.match(js, /AdmiraVozTurno/);
   assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
+  assert.match(html, /id="karaoke"/);
+  assert.match(html, /sala-voz\.css\?v=20261112-karaoke/);
+  assert.match(html, /consejeros-voces\.js\?v=20261112-karaoke/);
+  assert.match(js, /sala-voz-lib\.mjs\?v=20261112-karaoke/);
+  assert.match(js, /onboundary/);
+  assert.match(js, /iniciarKaraokeVisual/);
+  assert.match(css, /#karaoke/);
+  assert.match(css, /\.palabra\.actual/);
   assert.match(js, /pagehide/);
   assert.match(js, /beforeunload/);
   assert.match(js, /visibilitychange/);
@@ -136,3 +144,62 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.equal(Sala.SONDEO_MS >= 3000 && Sala.SONDEO_MS <= 5000, true);
   assert.equal(Sala.VISIBLES, 6);
 });
+
+test("tokensKaraoke parte en palabras y conserva la puntuación", () => {
+  const t = Sala.tokensKaraoke("Hola, Carlos, soy Steve Jobs.");
+  assert.deepEqual(t.map((x) => x.texto), ["Hola,", "Carlos,", "soy", "Steve", "Jobs."]);
+  assert.equal(t[0].inicio, 0);
+  assert.equal(t[0].fin, "Hola,".length);
+  assert.equal(t[1].inicio, "Hola, ".length);
+  assert.deepEqual(Sala.tokensKaraoke(""), []);
+  assert.deepEqual(Sala.tokensKaraoke("   "), []);
+  assert.equal(Sala.tokensKaraoke("uno").length, 1);
+});
+
+test("indicePorChar y indicePorTiempo avanzan palabra a palabra", () => {
+  const t = Sala.tokensKaraoke("Hola, Carlos, soy Steve Jobs.");
+  assert.equal(Sala.indicePorChar(t, 0).indice, 0);
+  assert.equal(Sala.indicePorChar(t, 0).hecho, false);
+  assert.equal(Sala.indicePorChar(t, t[2].inicio).indice, 2);
+  const last = Sala.indicePorChar(t, t[t.length - 1].fin + 10);
+  assert.equal(last.indice, t.length - 1);
+  assert.equal(last.hecho, true);
+  assert.equal(Sala.indicePorChar([], 0).hecho, true);
+
+  const mid = Sala.indicePorTiempo(t, 5000, 10000);
+  assert.equal(mid.hecho, false);
+  assert.ok(mid.indice >= 1 && mid.indice <= 3, "medio: " + mid.indice);
+  assert.equal(Sala.indicePorTiempo(t, 0, 10000).indice, 0);
+  assert.equal(Sala.indicePorTiempo(t, 10000, 10000).hecho, true);
+  assert.equal(Sala.indicePorTiempo(t, 20000, 10000).hecho, true);
+});
+
+test("duracionKaraokeMs respeta el ritmo y se acota", () => {
+  const a = Sala.duracionKaraokeMs("Hola, Carlos, soy Steve Jobs.", 1);
+  const rapido = Sala.duracionKaraokeMs("Hola, Carlos, soy Steve Jobs.", 2);
+  const lento = Sala.duracionKaraokeMs("Hola, Carlos, soy Steve Jobs.", 0.5);
+  assert.ok(a >= Sala.KARAOKE_MIN_MS && a <= Sala.KARAOKE_MAX_MS);
+  assert.ok(rapido < a);
+  assert.ok(lento > a);
+  assert.equal(Sala.duracionKaraokeMs("", 1), Sala.KARAOKE_MIN_MS);
+  const largo = "palabra ".repeat(2000);
+  assert.equal(Sala.duracionKaraokeMs(largo, 0.5), Sala.KARAOKE_MAX_MS);
+});
+
+test("elapsedDesdeTurno se sincroniza con el turno público o arranca al llegar", () => {
+  const t0 = 1_000_000;
+  const alLlegar = Sala.elapsedDesdeTurno(null, t0, 8000);
+  assert.equal(alLlegar.elapsedMs, 0);
+  assert.equal(alLlegar.sincronizado, false);
+  assert.equal(alLlegar.duracionMs, 8000);
+
+  const sync = Sala.elapsedDesdeTurno({ mensajeId: "m", desde: t0, hasta: t0 + 8000, duracionMs: 8000 }, t0 + 2000, 8000);
+  assert.equal(sync.elapsedMs, 2000);
+  assert.equal(sync.sincronizado, true);
+  assert.equal(sync.duracionMs, 8000);
+
+  const inferido = Sala.elapsedDesdeTurno({ hasta: t0 + 5000 }, t0 + 2000, 5000);
+  assert.equal(inferido.elapsedMs, 2000);
+  assert.equal(inferido.sincronizado, true);
+});
+

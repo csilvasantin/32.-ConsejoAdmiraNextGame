@@ -232,3 +232,33 @@ test('al salir de la página se cancela la síntesis (pagehide, beforeunload, vi
   assert.ok(cancelled >= 1, 'visibility hidden cancela');
   assert.equal(V.speaking(), false);
 });
+
+test('speak reenvía onboundary con charIndex global entre trozos', async () => {
+  V._setVoicesForTest(MAC);
+  const events = [];
+  const nSpoken = spoken.length;
+  const ok = V.speak('Steve Jobs', 'Hola Carlos', {
+    onboundary: (ev) => events.push(ev),
+  });
+  assert.equal(ok, true);
+  const u = spoken[nSpoken];
+  assert.ok(u, 'hay locución');
+  assert.equal(typeof u.onboundary, 'function');
+  u.onboundary({ name: 'word', charIndex: 5 });
+  assert.equal(events.length, 1);
+  assert.equal(events[0].name, 'word');
+  assert.equal(events[0].charIndex, 5);
+  assert.equal(events[0].charIndexLocal, 5);
+  assert.equal(events[0].chunkIndex, 0);
+
+  // segundo trozo: el charIndex local se suma al offset del primero
+  events.length = 0;
+  spoken.length = 0;
+  const largo = 'A'.repeat(200) + '. ' + 'Segunda frase del consejero.';
+  assert.equal(V.speak('Steve Jobs', largo, { onboundary: (ev) => events.push(ev), max: 220 }), true);
+  assert.ok(spoken.length >= 1);
+  // disparamos el boundary del primer trozo (aún no ha terminado el setTimeout de onend)
+  spoken[0].onboundary({ name: 'word', charIndex: 10 });
+  assert.equal(events[0].charIndex, 10);
+  assert.equal(events[0].chunkIndex, 0);
+});

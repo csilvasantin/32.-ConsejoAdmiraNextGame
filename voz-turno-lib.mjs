@@ -253,7 +253,9 @@ export function publicState(doc, ahora, yo) {
       mensajeId: doc.turno.mensajeId,
       fuente: doc.turno.fuente,
       prioridad: doc.turno.prioridad,
+      desde: doc.turno.desde,
       hasta: doc.turno.hasta,
+      duracionMs: doc.turno.duracionMs,
       mia: !!(mio && String(doc.turno.clienteId) === String(mio)),
     } : null,
     cola: (doc.cola || []).map((x) => ({

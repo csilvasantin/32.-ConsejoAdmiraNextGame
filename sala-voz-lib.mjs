@@ -219,7 +219,7 @@ export function pendientesDeLocutar(consejo, msgs, store) {
     persona: vozDe(m.de),
     nombre: nombreDe(m.de),
     retrato: retratoDe(m.de),
-    texto: textoDe(m),
+    texto: textoFraseVisible(textoDe(m)),
   }));
 }
 
@@ -316,5 +316,42 @@ export function elapsedDesdeTurno(turno, ahora, duracionFallback) {
     return { elapsedMs: Math.max(0, t - inferido), duracionMs, sincronizado: true };
   }
   return { elapsedMs: 0, duracionMs, sincronizado: false };
+}
+
+/* Hora de inicio y texto visible de una frase (12-11-2026, Carlos).
+   La transcripción es exactamente lo que se dice: sin etiquetas en el texto.
+   La hora (HH:MM:SS, Madrid) y el indicador de directo van aparte, como metadato. */
+
+const PREFIJO_DIRECTO = /^(?:🔴\s*)?(?:EN\s+DIRECTO)\s*[:.\-–—]?\s*/i;
+
+export function horaMadrid(fecha) {
+  let d;
+  if (fecha == null || fecha === "") d = new Date();
+  else if (fecha instanceof Date) d = fecha;
+  else d = new Date(fecha);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime()) || d.getTime() <= 0) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const get = (t) => (parts.find((p) => p.type === t) || {}).value || "00";
+  return get("hour") + ":" + get("minute") + ":" + get("second");
+}
+
+export function esFraseDirecto(texto, mensaje) {
+  if (mensaje && (mensaje.directo === true || mensaje.en_directo === true || mensaje.vivo === true || mensaje.live === true)) {
+    return true;
+  }
+  return PREFIJO_DIRECTO.test(String(texto == null ? "" : texto).trim());
+}
+
+/** Texto que se ve y se dice: exactamente la frase, sin etiquetas ni notas. */
+export function textoFraseVisible(texto) {
+  let t = String(texto == null ? "" : texto).trim();
+  t = t.replace(PREFIJO_DIRECTO, "").trim();
+  return t;
 }
 

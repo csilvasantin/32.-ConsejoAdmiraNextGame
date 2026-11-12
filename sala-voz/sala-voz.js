@@ -3,7 +3,7 @@
    12-11-2026: subtítulos karaoke bajo el hablante, al ritmo de la voz (boundary o tiempo).
    12-11-2026: ?pantalla=1 — espera persistente (foto a la izquierda, karaoke a la derecha);
    voces Reed/Mónica llegan de fuera; la página no habla sola. */
-import * as Sala from "/sala-voz-lib.mjs?v=20261112-pantalla-espera";
+import * as Sala from "/sala-voz-lib.mjs?v=20261112-hora-frase";
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -99,7 +99,9 @@ function montarKaraoke(texto) {
 }
 
 function iniciarKaraokeVisual(x, elapsedMs, duracionMs) {
-  const texto = String((x && x.texto) || "").slice(0, 800);
+  const texto = Sala.textoFraseVisible(String((x && x.texto) || "")).slice(0, 800);
+  const inicio = Date.now() - (Number(elapsedMs) || 0);
+  mostrarHoraFrase(inicio);
   const tokens = montarKaraoke(texto);
   const dur = duracionMs || Sala.duracionKaraokeMs(texto, rateDe(x && x.persona));
   karaokeCtx = {
@@ -274,6 +276,7 @@ function pararSala() {
   karaokeCtx = null;
   callar();
   if (pantalla) kdiceParar();
+  ocultarHoraFrase();
 }
 
 function mostrarHablante(de, forzar) {
@@ -303,10 +306,24 @@ function pintar(msgs) {
   vis.forEach((m, i) => {
     const linea = document.createElement("p");
     linea.className = "linea" + (i === vis.length - 1 ? " actual" : "");
+    const raw = Sala.textoDe(m);
+    const hora = Sala.horaMadrid(Sala.tsDe(m));
+    if (hora) {
+      const h = document.createElement("span");
+      h.className = "hora-frase";
+      h.textContent = hora;
+      linea.append(h);
+    }
+    if (Sala.esFraseDirecto(raw, m)) {
+      const d = document.createElement("span");
+      d.className = "directo-frase";
+      d.textContent = "EN DIRECTO";
+      linea.append(d);
+    }
     const de = document.createElement("span");
     de.className = "de";
     de.textContent = Sala.etiqueta(m);
-    linea.append(de, document.createTextNode(Sala.textoDe(m)));
+    linea.append(de, document.createTextNode(Sala.textoFraseVisible(raw)));
     box.appendChild(linea);
   });
   const ultimo = vis[vis.length - 1];
@@ -401,7 +418,7 @@ function montarEspera() {
   if ($("espera-nombre")) $("espera-nombre").textContent = p.nombre;
   if ($("espera-subtitulo")) $("espera-subtitulo").textContent = p.subtitulo;
   if ($("espera")) $("espera").hidden = false;
-  ["karaoke", "elonKar", "transcripcion", "mensajes", "sala", "elige", "estado"].forEach((id) => {
+  ["karaoke", "elonKar", "transcripcion", "mensajes", "sala", "elige", "estado", "hora-frase"].forEach((id) => {
     const el = $(id);
     if (el) el.hidden = true;
   });
@@ -410,6 +427,20 @@ function montarEspera() {
 
 let kDiceTimer = null;
 let kDiceHide = null;
+
+
+function ocultarHoraFrase() {
+  const hf = $("hora-frase");
+  if (hf) { hf.textContent = ""; hf.hidden = true; }
+}
+
+function mostrarHoraFrase(ts) {
+  const hf = $("hora-frase");
+  if (!hf) return;
+  const hora = Sala.horaMadrid(ts == null ? Date.now() : ts);
+  hf.textContent = hora ? ("🔴 " + hora) : "";
+  hf.hidden = !hora;
+}
 
 function kdiceParar() {
   if (kDiceTimer) { clearInterval(kDiceTimer); kDiceTimer = null; }
@@ -420,8 +451,10 @@ function kdice(texto, palabrasPorSegundo, retardoMs) {
   kdiceParar();
   const ov = $("kOv");
   if (!ov) return;
-  const words = String(texto || "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  const limpio = Sala.textoFraseVisible(String(texto || ""));
+  const words = limpio.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   ov.replaceChildren();
+  ocultarHoraFrase();
   words.forEach((w, i) => {
     const sp = document.createElement("span");
     sp.textContent = w;
@@ -436,6 +469,7 @@ function kdice(texto, palabrasPorSegundo, retardoMs) {
   let i = 0;
   const spans = ov.querySelectorAll("span");
   const arrancarIntervalo = () => {
+    mostrarHoraFrase(Date.now());
     kDiceTimer = setInterval(() => {
       if (i < spans.length) {
         spans[i].classList.add("d");
@@ -447,6 +481,7 @@ function kdice(texto, palabrasPorSegundo, retardoMs) {
         kDiceHide = setTimeout(() => {
           ov.replaceChildren();
           ov.hidden = true;
+          ocultarHoraFrase();
           kDiceHide = null;
         }, 700);
       }

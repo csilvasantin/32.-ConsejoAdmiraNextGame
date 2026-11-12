@@ -23,6 +23,31 @@
     var t = m.texto != null && String(m.texto).trim() !== "" ? m.texto : m.resumen;
     return String(t == null ? "" : t).trim();
   }
+  var PREFIJO_DIRECTO = /^(?:🔴\s*)?(?:EN\s+DIRECTO)\s*[:.\-–—]?\s*/i;
+  function textoFraseVisible(texto) {
+    var t = String(texto == null ? "" : texto).trim();
+    return t.replace(PREFIJO_DIRECTO, "").trim();
+  }
+  function esFraseDirecto(texto, mensaje) {
+    if (mensaje && (mensaje.directo === true || mensaje.en_directo === true || mensaje.vivo === true || mensaje.live === true)) return true;
+    return PREFIJO_DIRECTO.test(String(texto == null ? "" : texto).trim());
+  }
+  function horaMadrid(fecha) {
+    var d;
+    if (fecha == null || fecha === "") d = new Date();
+    else d = fecha instanceof Date ? fecha : new Date(fecha);
+    if (!(d instanceof Date) || isNaN(d.getTime()) || d.getTime() <= 0) return "";
+    var parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hourCycle: "h23"
+    }).formatToParts(d);
+    function get(t) {
+      for (var i = 0; i < parts.length; i++) if (parts[i].type === t) return parts[i].value;
+      return "00";
+    }
+    return get("hour") + ":" + get("minute") + ":" + get("second");
+  }
   function idDe(m) {
     if (!m) return "";
     if (m.id != null && String(m.id) !== "") return String(m.id);
@@ -189,7 +214,7 @@
     return vistos.filter(function (m) {
       return !esAgente(m) && esEntrante(m, silla) && textoDe(m) && esConsejero(m.de);
     }).map(function (m) {
-      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m), fuente: "chat-entre" };
+      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoFraseVisible(textoDe(m)), fuente: "chat-entre" };
     });
   }
   // Etiqueta corta pedida por Carlos: «Jobs → Elon», no «Musk».
@@ -207,7 +232,7 @@
     return vistos.filter(function (m) {
       return !esAgente(m) && textoDe(m) && (m.de === silla || m.para === silla) && esConsejero(m.de);
     }).map(function (m) {
-      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoDe(m), etiqueta: etiqueta(m) };
+      return { id: idDe(m), de: m.de, persona: nombre(m.de), texto: textoFraseVisible(textoDe(m)), etiqueta: etiqueta(m) };
     });
   }
   // Intercala turnos del hilo de esta visita con la transcripción entre consejeros, por hora.
@@ -221,7 +246,7 @@
 
   var api = {
     NOMBRE: NOMBRE, LS_OIDOS: LS_OIDOS, LS_HILO: LS_HILO, LS_VOZ: LS_VOZ, CORTO: CORTO,
-    textoDe: textoDe, idDe: idDe, esAgente: esAgente, esEntrante: esEntrante,
+    textoDe: textoDe, textoFraseVisible: textoFraseVisible, esFraseDirecto: esFraseDirecto, horaMadrid: horaMadrid, idDe: idDe, esAgente: esAgente, esEntrante: esEntrante,
     leerOidos: leerOidos, escribirOidos: escribirOidos, marcarOidos: marcarOidos,
     noOidos: noOidos, iniciarOidos: iniciarOidos, pendientesDeLocutar: pendientesDeLocutar,
     pendientesTranscripcion: pendientesTranscripcion, etiqueta: etiqueta,
@@ -409,12 +434,13 @@
       art.className = "turno " + (m.de === silla ? "persona" : "otro");
       var b = doc.createElement("div");
       b.className = "burbuja";
-      b.textContent = textoDe(m) || m.texto || "";
+      b.textContent = textoFraseVisible(textoDe(m) || m.texto || "");
       var meta = doc.createElement("div");
       meta.className = "meta";
-      var hora = m.hora ? m.hora.replace("T", " ").slice(0, 16) : "";
-      var acuse = m.leido ? (" · leído" + (m.leido_en ? " " + m.leido_en.replace("T", " ").slice(0, 16) : "")) : " · pendiente";
-      meta.textContent = nombre(m.de) + (m.de_tipo === "agente" ? " (agente)" : "") + " → " + nombre(m.para) + (m.para_tipo === "agente" ? " (agente)" : "") + " · " + (m.maquina || "") + " · " + hora + acuse;
+      var hora = m.hora ? horaMadrid(m.hora) : "";
+      var directo = esFraseDirecto(textoDe(m), m) ? " · EN DIRECTO" : "";
+      var acuse = m.leido ? (" · leído" + (m.leido_en ? " " + horaMadrid(m.leido_en) : "")) : " · pendiente";
+      meta.textContent = nombre(m.de) + (m.de_tipo === "agente" ? " (agente)" : "") + " → " + nombre(m.para) + (m.para_tipo === "agente" ? " (agente)" : "") + " · " + (m.maquina || "") + (hora ? " · " + hora : "") + directo + acuse;
       art.append(b, meta);
       lista.appendChild(art);
     });

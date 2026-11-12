@@ -310,3 +310,45 @@ html.pantalla #kOv span.d {
   text-decoration: underline .08em var(--pantalla-color);
   text-underline-offset: .22em;
 }
+
+
+/* Hora de inicio de la frase: pequeñita, arriba a la derecha, color del consejero. */
+#hora-frase {
+  display: none;
+  position: fixed;
+  top: 1.6vh;
+  right: 2vw;
+  z-index: 20;
+  font: 600 1.3vw/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  cursor: none;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#hora-frase:not([hidden]) { display: block; }
+html.pantalla.coetaneos #hora-frase,
+body.coetaneos #hora-frase {
+  color: #39f;
+  text-shadow: 0 0 12px #39f, 0 0 22px #6cf;
+}
+html.pantalla.leyendas #hora-frase,
+body.leyendas #hora-frase {
+  color: #f93;
+  text-shadow: 0 0 12px #f93, 0 0 22px #fc6;
+}
+
+.linea .hora-frase,
+.linea .directo-frase {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  font-size: 0.62em;
+  letter-spacing: 0.06em;
+  margin-right: 0.55em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+body.coetaneos .linea .hora-frase,
+body.coetaneos .linea .directo-frase { color: #39f; }
+body.leyendas .linea .hora-frase,
+body.leyendas .linea .directo-frase { color: #f93; }

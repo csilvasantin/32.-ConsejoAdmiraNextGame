@@ -116,7 +116,7 @@ test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión
   for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
     assert.match(html, /consejeros-voces.js\?v=20261112-sin-voz-sistema/);
-    assert.match(html, /consejero-mensajes.js\?v=20261112-sin-voz-sistema/);
+    assert.match(html, /consejero-mensajes.js\?v=20261112-hora-frase/);
     assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');

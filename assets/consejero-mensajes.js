@@ -1,11 +1,17 @@
 /* Mensajes privados entre consejeros. Los escribe el MCP. PRIVADO (19-10-2026): solo con la
    sesión Google autorizada de admira.live, vía /api/chat/entre-consejeros (nunca en abierto).
    12-11-2026: locuta cada mensaje NUEVO entre consejeros con la voz del remitente
-   (AdmiraVoces). En la primera carga marca los ya existentes como oídos y no los relée. */
+   (AdmiraVoces). En la primera carga marca los ya existentes como oídos y no los relée.
+   12-11-2026 (Carlos): la voz va activa por defecto (si estás en la página, quieres oír).
+   Queda un control pequeño para silenciar, recordado en localStorage. En Chrome se
+   desbloquea el audio en el primer gesto (pointerdown/keydown/touchstart). También
+   locuta las respuestas NUEVAS del consejero en el hilo #hilo (nunca el histórico). */
 (function (root) {
   "use strict";
   var NOMBRE = { Huang: "Jensen Huang", Musk: "Elon Musk", Lucas: "George Lucas", Jobs: "Steve Jobs", Wozniak: "Steve Wozniak", Disney: "Walt Disney", Y: "Y" };
   var LS_OIDOS = "admira_entre_oidos_v1";
+  var LS_HILO = "admira_hilo_oidos_v1";
+  var LS_VOZ = "admira_entre_voz_v1";
   var MAX_OIDOS = 200;
 
   function nombre(s) { return NOMBRE[s] || s; }
@@ -66,6 +72,87 @@
       return id && !seen[id];
     });
   }
+  function leerVozOn(store) {
+    var ls = store || (root.localStorage || null);
+    if (!ls) return true;
+    try {
+      var v = ls.getItem(LS_VOZ);
+      if (v === "off") return false;
+    } catch (e) {}
+    return true;
+  }
+  function escribirVozOn(on, store) {
+    var ls = store || (root.localStorage || null);
+    if (!ls) return !!on;
+    try { ls.setItem(LS_VOZ, on ? "on" : "off"); } catch (e) {}
+    return !!on;
+  }
+  function leerOidosEn(clave, silla, store) {
+    var ls = store || (root.localStorage || null);
+    if (!ls || !silla) return [];
+    try {
+      var d = JSON.parse(ls.getItem(clave) || "{}") || {};
+      return Array.isArray(d[silla]) ? d[silla].map(String) : [];
+    } catch (e) { return []; }
+  }
+  function escribirOidosEn(clave, silla, ids, store) {
+    var ls = store || (root.localStorage || null);
+    if (!ls || !silla) return [];
+    var uniq = [], seen = {};
+    (ids || []).forEach(function (id) {
+      id = String(id || "");
+      if (!id || seen[id]) return;
+      seen[id] = 1; uniq.push(id);
+    });
+    if (uniq.length > MAX_OIDOS) uniq = uniq.slice(-MAX_OIDOS);
+    try {
+      var d = {};
+      try { d = JSON.parse(ls.getItem(clave) || "{}") || {}; } catch (e) { d = {}; }
+      d[silla] = uniq;
+      ls.setItem(clave, JSON.stringify(d));
+    } catch (e) {}
+    return uniq;
+  }
+  function marcarOidosEn(clave, silla, msgs, store, idFn) {
+    idFn = idFn || idDe;
+    var ids = leerOidosEn(clave, silla, store);
+    var seen = {};
+    ids.forEach(function (id) { seen[id] = 1; });
+    (msgs || []).forEach(function (m) {
+      var id = idFn(m);
+      if (id && !seen[id]) { seen[id] = 1; ids.push(id); }
+    });
+    return escribirOidosEn(clave, silla, ids, store);
+  }
+  function noOidosEn(clave, silla, msgs, store, idFn) {
+    idFn = idFn || idDe;
+    var seen = {};
+    leerOidosEn(clave, silla, store).forEach(function (id) { seen[id] = 1; });
+    return (msgs || []).filter(function (m) {
+      var id = idFn(m);
+      return id && !seen[id];
+    });
+  }
+  function textoHilo(t) { return String((t && t.texto) || "").trim(); }
+  function idHilo(t) {
+    if (!t) return "";
+    if (t.id != null && String(t.id) !== "") return String(t.id);
+    return ["hilo", t.rol || "", t.ts || "", textoHilo(t)].join("\0");
+  }
+  function esTurnoConsejero(t) {
+    return !!(t && t.rol && String(t.rol).toLowerCase() !== "carlos" && textoHilo(t));
+  }
+  function iniciarOidosHilo(silla, turnos, store) {
+    marcarOidosEn(LS_HILO, silla, turnos, store, idHilo);
+    return [];
+  }
+  function pendientesHiloDeLocutar(silla, turnos, store) {
+    var vistos = noOidosEn(LS_HILO, silla, turnos, store, idHilo);
+    marcarOidosEn(LS_HILO, silla, vistos, store, idHilo);
+    return vistos.filter(esTurnoConsejero).map(function (t) {
+      return { id: idHilo(t), de: t.rol, persona: nombre(silla), texto: textoHilo(t) };
+    });
+  }
   // Primera carga de una visita: todos los que ya están en la bandeja se marcan oídos y no se locutan.
   function iniciarOidos(silla, msgs, store) {
     marcarOidos(silla, msgs, store);
@@ -109,12 +196,15 @@
   }
 
   var api = {
-    NOMBRE: NOMBRE, LS_OIDOS: LS_OIDOS, CORTO: CORTO, textoDe: textoDe, idDe: idDe,
-    esAgente: esAgente, esEntrante: esEntrante, leerOidos: leerOidos,
-    escribirOidos: escribirOidos, marcarOidos: marcarOidos, noOidos: noOidos,
-    iniciarOidos: iniciarOidos, pendientesDeLocutar: pendientesDeLocutar,
+    NOMBRE: NOMBRE, LS_OIDOS: LS_OIDOS, LS_HILO: LS_HILO, LS_VOZ: LS_VOZ, CORTO: CORTO,
+    textoDe: textoDe, idDe: idDe, esAgente: esAgente, esEntrante: esEntrante,
+    leerOidos: leerOidos, escribirOidos: escribirOidos, marcarOidos: marcarOidos,
+    noOidos: noOidos, iniciarOidos: iniciarOidos, pendientesDeLocutar: pendientesDeLocutar,
     pendientesTranscripcion: pendientesTranscripcion, etiqueta: etiqueta,
-    tsDe: tsDe, mergePorHora: mergePorHora, nombre: nombre, cortoDe: cortoDe
+    tsDe: tsDe, mergePorHora: mergePorHora, nombre: nombre, cortoDe: cortoDe,
+    leerVozOn: leerVozOn, escribirVozOn: escribirVozOn, idHilo: idHilo,
+    textoHilo: textoHilo, esTurnoConsejero: esTurnoConsejero,
+    iniciarOidosHilo: iniciarOidosHilo, pendientesHiloDeLocutar: pendientesHiloDeLocutar
   };
   root.AdmiraEntreVoces = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
@@ -129,7 +219,7 @@
   estilo.textContent = "#entre-consejeros .turno.otro{margin-right:auto;align-items:flex-start}#entre-consejeros .turno.otro .burbuja{background:#3a2a22;border-bottom-left-radius:5px}#entre-consejeros .turno.persona{margin-left:auto;align-items:flex-end}#entre-activar-voz,#entre-voz-aviso{font-size:12px;margin-left:8px}#entre-voz-aviso{color:var(--suave,#8b96a5)}";
   doc.head.appendChild(estilo);
   // 19-10-2026: también mensajes con agentes de la flota; filtro Todos / Consejeros / Agentes.
-  var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, vozOn = false, hablando = false, cola = [];
+  var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, hiloListos = false, vozOn = leerVozOn(), vozDesbloqueada = false, hablando = false, cola = [];
   var barra = doc.createElement("div");
   barra.id = "entre-filtro";
   barra.className = "meta";
@@ -151,8 +241,8 @@
   btnVoz.type = "button";
   btnVoz.id = "entre-activar-voz";
   btnVoz.className = "enlace";
-  btnVoz.textContent = "Activar voz";
-  btnVoz.title = "Un clic desbloquea el audio (hace falta en Firefox) y oirás los mensajes nuevos con la voz de quien los escribe.";
+  btnVoz.textContent = vozOn ? "Silenciar voz" : "Activar voz";
+  btnVoz.title = "La voz empieza activa. Puedes silenciarla; los mensajes siguen visibles.";
   btnVoz.hidden = true;
   var avisoVoz = doc.createElement("span");
   avisoVoz.id = "entre-voz-aviso";
@@ -165,8 +255,9 @@
       avisoVoz.textContent = root.AdmiraVoces ? " Este navegador no tiene síntesis de voz." : "";
       return;
     }
-    btnVoz.hidden = vozOn;
-    avisoVoz.textContent = vozOn ? " Voz activa: los mensajes nuevos se oyen con la voz del remitente." : "";
+    btnVoz.hidden = false;
+    btnVoz.textContent = vozOn ? "Silenciar voz" : "Activar voz";
+    avisoVoz.textContent = vozOn ? " Voz activa: los mensajes nuevos se oyen con la voz del remitente." : " Voz silenciada.";
   }
   function soltarCola() {
     if (hablando || !vozOn || !vozDisponible()) return;
@@ -179,20 +270,44 @@
     });
     if (!ok) { hablando = false; soltarCola(); }
   }
-  function desbloquearVoz() {
-    vozOn = true;
+  function desbloquearAudio() {
+    if (!vozOn) return;
     try {
       if (root.speechSynthesis && root.SpeechSynthesisUtterance) {
         var u = new root.SpeechSynthesisUtterance(" ");
         u.volume = 0;
         root.speechSynthesis.speak(u);
       }
+      vozDesbloqueada = true;
     } catch (e) {}
-    pintarVoz();
     soltarCola();
   }
-  btnVoz.addEventListener("click", desbloquearVoz);
+  function activarVoz() {
+    vozOn = escribirVozOn(true);
+    pintarVoz();
+    desbloquearAudio();
+  }
+  function silenciarVoz() {
+    vozOn = escribirVozOn(false);
+    hablando = false;
+    cola = [];
+    try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {}
+    pintarVoz();
+  }
+  function alternarVoz() { if (vozOn) silenciarVoz(); else activarVoz(); }
+  function gestoDesbloqueo() {
+    if (!vozOn) return;
+    desbloquearAudio();
+    root.removeEventListener("pointerdown", gestoDesbloqueo, true);
+    root.removeEventListener("keydown", gestoDesbloqueo, true);
+    root.removeEventListener("touchstart", gestoDesbloqueo, true);
+  }
+  btnVoz.addEventListener("click", alternarVoz);
+  root.addEventListener("pointerdown", gestoDesbloqueo, true);
+  root.addEventListener("keydown", gestoDesbloqueo, true);
+  root.addEventListener("touchstart", gestoDesbloqueo, true);
   pintarVoz();
+  if (vozOn) desbloquearAudio();
   lista.parentNode.insertBefore(barra, lista);
   function conAgente(m) { return esAgente(m); }
   function pintar(msgs, pendientes) {
@@ -234,6 +349,33 @@
     nuevos.forEach(function (n) { cola.push(n); });
     if (vozOn) soltarCola();
     else pintarVoz();
+  }
+  function locutarHiloSiToca(turnos) {
+    if (!silla || !doc.getElementById("hilo")) return;
+    if (!hiloListos) { iniciarOidosHilo(silla, turnos); hiloListos = true; return; }
+    var nuevos = pendientesHiloDeLocutar(silla, turnos);
+    if (!nuevos.length) return;
+    nuevos.forEach(function (n) { cola.push(n); });
+    if (vozOn) soltarCola();
+  }
+  api.locutarHiloSiToca = locutarHiloSiToca;
+  if (doc.getElementById("hilo") && root.fetch) {
+    var fetchOrig = root.fetch.bind(root);
+    root.fetch = function (url, opts) {
+      var p = fetchOrig(url, opts);
+      try {
+        var u = typeof url === "string" ? url : (url && url.url) || "";
+        if (/\/api\/chat\/hilo\b/.test(String(u))) {
+          p.then(function (r) {
+            if (!r || !r.ok) return;
+            return r.clone().json().then(function (d) {
+              if (d && d.ok && Array.isArray(d.turnos)) locutarHiloSiToca(d.turnos);
+            }).catch(function () {});
+          }).catch(function () {});
+        }
+      } catch (e) {}
+      return p;
+    };
   }
   function jwt() {
     var C = root.ChatHiloClient;

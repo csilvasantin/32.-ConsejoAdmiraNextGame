@@ -1,0 +1,158 @@
+/* Sala de voz — pantallas gigantes de la sala Terminator. Sin puntero, sin popups. */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body { font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
+#elige, #sala { width: 100%; height: 100%; }
+#elige {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.2rem; background: #0d0f12; color: #e8ecf1; cursor: none;
+}
+#elige[hidden], #sala[hidden] { display: none !important; }
+#elige h1 { font-size: clamp(28px, 4vw, 64px); letter-spacing: .04em; }
+#elige p { color: #8b96a5; font-size: clamp(16px, 1.6vw, 28px); }
+#elige a {
+  display: inline-block; margin: .4rem; padding: .7rem 1.6rem;
+  font-size: clamp(18px, 2vw, 32px); text-decoration: none;
+  border: 2px solid currentColor; color: inherit; cursor: none;
+}
+#elige a:first-of-type { color: #3a2a14; background: #d4cdb6; border-color: #8c8474; }
+#elige a:last-of-type { color: #aaeeff; background: rgba(10, 60, 130, .4); border-color: #7cd8ff; }
+
+#sala {
+  display: flex; flex-direction: column;
+  padding: 4vh 5vw 3vh;
+}
+#hablante {
+  display: flex; align-items: center; gap: 2.4vw;
+  min-height: 32vh; flex: 0 0 auto;
+}
+#retrato, #retrato-fallback {
+  width: min(28vh, 22vw); height: min(36vh, 28vw);
+  object-fit: cover; object-position: top center;
+  flex: 0 0 auto;
+}
+#retrato-fallback {
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(40px, 6vw, 96px); font-weight: 700; letter-spacing: .06em;
+}
+#retrato[hidden], #retrato-fallback[hidden] { display: none !important; }
+#quien { min-width: 0; }
+#consejo-kicker {
+  font-size: clamp(14px, 1.4vw, 24px);
+  letter-spacing: .22em; text-transform: uppercase;
+  margin-bottom: .4rem;
+}
+#nombre {
+  font-size: clamp(36px, 5.4vw, 96px);
+  line-height: 1.05; font-weight: 650;
+}
+#transcripcion {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  gap: 1.1vh; overflow: hidden;
+  margin-top: 2.5vh;
+}
+.linea {
+  font-size: clamp(22px, 2.7vw, 52px);
+  line-height: 1.28; max-width: 100%;
+}
+.linea .de {
+  font-weight: 700; margin-right: .4em;
+  font-size: 0.62em; letter-spacing: .04em; text-transform: uppercase;
+}
+.linea.actual { font-weight: 560; }
+#estado {
+  margin-top: 1.6vh;
+  font-size: clamp(12px, 1.1vw, 18px);
+  letter-spacing: .08em; text-transform: uppercase;
+  min-height: 1.2em; opacity: .75;
+}
+
+/* Leyendas — Apple II beige, CRT verde */
+body.leyendas {
+  background:
+    radial-gradient(ellipse at 50% 0%, #efe8d4 0%, #d4cdb6 42%, #b3a98c 100%);
+  color: #1c1810;
+}
+body.leyendas::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 2;
+  box-shadow: inset 0 0 0 18px #8c8474, inset 0 0 0 22px #b3a98c, inset 0 0 80px rgba(0,0,0,.28);
+}
+body.leyendas::after {
+  content: ""; position: fixed; inset: 22px; pointer-events: none; z-index: 2;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,.04) 0,
+    rgba(255,255,255,.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+body.leyendas #sala { position: relative; z-index: 1; }
+body.leyendas #retrato, body.leyendas #retrato-fallback {
+  border: 6px solid #8c8474; background: #3a2a14; color: #efe8d4;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 0 0 2px #b3a98c;
+}
+body.leyendas #consejo-kicker { color: #5a4a32; }
+body.leyendas #nombre { color: #1c1810; text-shadow: 0 1px 0 #efe8d4; }
+body.leyendas .linea { color: #16351c; }
+body.leyendas .linea .de { color: #2a6a38; }
+body.leyendas .linea.actual {
+  color: #0b3d14;
+  text-shadow: 0 0 12px rgba(80, 255, 120, .28);
+}
+body.leyendas #estado { color: #5a4a32; }
+
+/* Coetáneos — holograma cian */
+body.coetaneos {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(80,200,255,.18), transparent 55%),
+    #031018;
+  color: #d7f6ff;
+}
+body.coetaneos::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 2;
+  border: 2px solid rgba(170, 238, 255, .7);
+  box-shadow:
+    0 0 40px rgba(80, 200, 255, .45),
+    inset 0 0 80px rgba(80, 200, 255, .18);
+}
+body.coetaneos::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 2;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(120,220,255,.12) 0,
+    rgba(120,220,255,.12) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+body.coetaneos #sala { position: relative; z-index: 1; }
+body.coetaneos #retrato, body.coetaneos #retrato-fallback {
+  border: 1px solid #aaeeff; background: rgba(0, 30, 60, .6); color: #aaeeff;
+  box-shadow: 0 0 28px rgba(80, 200, 255, .7), inset 0 0 18px rgba(80, 200, 255, .3);
+}
+body.coetaneos #consejo-kicker { color: #7cd8ff; }
+body.coetaneos #nombre {
+  color: #e8fbff;
+  text-shadow: 0 0 18px rgba(120, 220, 255, .7);
+}
+body.coetaneos .linea { color: #bfeeff; }
+body.coetaneos .linea .de { color: #7cd8ff; }
+body.coetaneos .linea.actual {
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(120, 220, 255, .8);
+}
+body.coetaneos #estado { color: #7cd8ff; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.leyendas::after, body.coetaneos::after { background: none; }
+}

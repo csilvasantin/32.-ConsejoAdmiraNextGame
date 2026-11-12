@@ -80,7 +80,7 @@
        Los demás consejeros siguen por el puente de GrokBot sin cambios. */
     const hilo=options.sharedThread===false?null:(options.hilo||root.ChatHiloClient||null);
     const sharedOf=name=>hilo&&name?hilo.personaDe(name):null;
-    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1,entre:[],entreTimer:null,entreListos:false,vozOn:false,hablando:false,cola:[]};
+    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1,entre:[],entreTimer:null,entreListos:false,vozOn:true,vozPreferenciaLeida:false,hablando:false,cola:[]};
     // «Histórico» → /chat/jobs/ (solo en el hilo compartido).
     const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
     $('.council-chat__toolbar')?.append(historico);
@@ -413,11 +413,26 @@
       const V=root.AdmiraVoces;
       return !!(V&&typeof V.speak==='function'&&V.supported&&V.supported());
     }
+    function vozPreferida(){
+      const E=root.AdmiraEntreVoces;
+      if(E&&typeof E.leerVozOn==='function')return E.leerVozOn();
+      try{
+        const v=root.localStorage&&root.localStorage.getItem('admira_entre_voz_v1');
+        if(v==='off')return false;
+      }catch(e){}
+      return true;
+    }
+    function guardarVoz(on){
+      sh.vozOn=!!on;
+      const E=root.AdmiraEntreVoces;
+      if(E&&typeof E.escribirVozOn==='function')E.escribirVozOn(sh.vozOn);
+      else try{root.localStorage&&root.localStorage.setItem('admira_entre_voz_v1',sh.vozOn?'on':'off');}catch(e){}
+    }
     function pintarVozBtn(){
       if(!sh.vozBtn)return;
       const ok=vozDisponible();
-      sh.vozBtn.hidden=!ok||sh.vozOn;
-      sh.vozBtn.textContent='Activar voz';
+      sh.vozBtn.hidden=!ok;
+      sh.vozBtn.textContent=sh.vozOn?'Silenciar voz':'Activar voz';
     }
     function soltarColaVoz(){
       const V=root.AdmiraVoces, E=root.AdmiraEntreVoces;
@@ -431,14 +446,35 @@
       });
       if(!ok){sh.hablando=false;soltarColaVoz();}
     }
-    function desbloquearVoz(){
-      sh.vozOn=true;
+    function desbloquearAudio(){
+      if(!sh.vozOn)return;
       try{
         if(root.speechSynthesis&&root.SpeechSynthesisUtterance){
           const u=new root.SpeechSynthesisUtterance(' ');u.volume=0;root.speechSynthesis.speak(u);
         }
       }catch(e){}
-      pintarVozBtn();soltarColaVoz();
+      soltarColaVoz();
+    }
+    function alternarVoz(){
+      if(sh.vozOn){
+        guardarVoz(false);
+        sh.hablando=false;sh.cola=[];
+        try{root.speechSynthesis&&root.speechSynthesis.cancel();}catch(e){}
+        pintarVozBtn();
+      }else{
+        guardarVoz(true);
+        pintarVozBtn();
+        desbloquearAudio();
+      }
+    }
+    function gestoVoz(){
+      if(!sh.vozOn)return;
+      desbloquearAudio();
+      if(typeof root.removeEventListener==='function'){
+        root.removeEventListener('pointerdown',gestoVoz,true);
+        root.removeEventListener('keydown',gestoVoz,true);
+        root.removeEventListener('touchstart',gestoVoz,true);
+      }
     }
     function locutarEntre(msgs,inicial){
       const E=root.AdmiraEntreVoces;if(!E||!sharedOf(selected))return;
@@ -453,10 +489,17 @@
       for(const sel of ['[data-chat-attach]','[data-chat-routines]','[data-chat-stop]','[data-chat-screen]','.council-chat__native'])if($(sel))$(sel).hidden=true;
       historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;entre.href='/chat/'+sharedOf(selected)+'/#entre-consejeros';entre.hidden=false;
       if(!sh.vozBtn){
-        const b=doc.createElement('button');b.type='button';b.className='council-chat__voz';b.textContent='Activar voz';
-        b.title='Un clic desbloquea el audio (hace falta en Firefox) y oirás la transcripción con la voz de cada consejero.';
-        b.addEventListener('click',desbloquearVoz);sh.vozBtn=b;
+        const b=doc.createElement('button');b.type='button';b.className='council-chat__voz';b.textContent='Silenciar voz';
+        b.title='La voz empieza activa. Puedes silenciarla; el texto sigue visible.';
+        b.addEventListener('click',alternarVoz);sh.vozBtn=b;
         $('.council-chat__toolbar')?.append(b);
+        if(!sh.vozPreferenciaLeida){sh.vozOn=vozPreferida();sh.vozPreferenciaLeida=true;}
+        if(typeof root.addEventListener==='function'){
+          root.addEventListener('pointerdown',gestoVoz,true);
+          root.addEventListener('keydown',gestoVoz,true);
+          root.addEventListener('touchstart',gestoVoz,true);
+        }
+        if(sh.vozOn)desbloquearAudio();
       }
       pintarVozBtn();
       const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO();

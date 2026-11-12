@@ -112,17 +112,21 @@ test('casting publicado: Jobs = Jorge grave/lento, Elon = Reed rápido/agudo (si
 });
 
 test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión de consejero-mensajes.js', () => {
-  for (const who of ['jobs', 'musk']) {
+  for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
-    assert.match(html, /consejeros-voces\.js\?v=20261112-voz-entre/);
-    assert.match(html, /consejero-mensajes\.js\?v=20261112-voz-entre/);
+    assert.match(html, /consejeros-voces\.js\?v=20261112-voz-auto/);
+    assert.match(html, /consejero-mensajes\.js\?v=20261112-voz-auto/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');
     assert.ok(iVoces >= 0 && iVoces < iMsg, who + ': voces antes de mensajes');
   }
   const js = readFileSync(new URL('./assets/consejero-mensajes.js', import.meta.url), 'utf8');
   assert.match(js, /Activar voz/);
+  assert.match(js, /Silenciar voz/);
   assert.match(js, /AdmiraVoces\.speak/);
+  assert.match(js, /pointerdown/);
+  assert.match(js, /keydown/);
+  assert.match(js, /touchstart/);
 });
 
 test('etiqueta: Jobs → Elon y Elon → Jobs (no dice Musk)', () => {
@@ -157,4 +161,40 @@ test('mergePorHora intercala por hora la transcripción y los turnos de esta vis
   assert.equal(mix[0].m.texto, 'Hola');
   assert.equal(mix[1].t.texto, 'Sigo aquí');
   assert.equal(mix[2].m.texto, 'Te oigo');
+});
+
+
+test('voz activa por defecto; solo se silencia si localStorage dice off', () => {
+  assert.equal(voces.leerVozOn(store()), true);
+  assert.equal(voces.leerVozOn(null), true);
+  const ls = store();
+  ls.setItem(voces.LS_VOZ, 'off');
+  assert.equal(voces.leerVozOn(ls), false);
+  voces.escribirVozOn(true, ls);
+  assert.equal(voces.leerVozOn(ls), true);
+  voces.escribirVozOn(false, ls);
+  assert.equal(voces.leerVozOn(ls), false);
+});
+
+test('hilo principal: la primera carga no relée el histórico; una respuesta NUEVA del consejero se locuta', () => {
+  const ls = store();
+  const hist = [
+    { id: 'h1', rol: 'carlos', texto: 'Hola Jobs', ts: '2026-11-12T10:00:00Z' },
+    { id: 'h2', rol: 'jobs', texto: 'Hola, Carlos. Cuéntame.', ts: '2026-11-12T10:00:10Z' },
+  ];
+  assert.deepEqual(voces.iniciarOidosHilo('Jobs', hist, ls), []);
+  assert.deepEqual(voces.pendientesHiloDeLocutar('Jobs', hist, ls), []);
+  const nueva = { id: 'h3', rol: 'jobs', texto: 'He visto la sala.', ts: '2026-11-12T10:01:00Z' };
+  const pend = voces.pendientesHiloDeLocutar('Jobs', hist.concat(nueva), ls);
+  assert.equal(pend.length, 1);
+  assert.equal(pend[0].persona, 'Steve Jobs');
+  assert.equal(pend[0].texto, 'He visto la sala.');
+  assert.deepEqual(voces.pendientesHiloDeLocutar('Jobs', hist.concat(nueva), ls), []);
+});
+
+test('hilo principal: no locuta los turnos de Carlos ni el histórico ya marcado', () => {
+  const ls = store();
+  voces.iniciarOidosHilo('Jobs', [], ls);
+  const deCarlos = { id: 'c1', rol: 'carlos', texto: '¿Me oyes?' };
+  assert.deepEqual(voces.pendientesHiloDeLocutar('Jobs', [deCarlos], ls), []);
 });

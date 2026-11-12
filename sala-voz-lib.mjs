@@ -229,3 +229,92 @@ export function etiqueta(m) {
   const corto = (s) => (s === "Musk" ? "Elon" : s === "Huang" ? "Jensen" : s === "Wozniak" ? "Woz" : s);
   return (corto(de) || m.de || "") + " → " + (corto(para) || m.para || "");
 }
+
+/* Karaoke: palabra a palabra al ritmo de la voz. Lógica pura, sin síntesis. */
+
+export const KARAOKE_CHAR_MS = 70;
+export const KARAOKE_PAD_MS = 700;
+export const KARAOKE_MIN_MS = 1500;
+export const KARAOKE_MAX_MS = 45000;
+/** Si no llega un evento boundary en este plazo tras onstart, se usa el ritmo por tiempo (Firefox en macOS a menudo no los dispara). */
+export const KARAOKE_BOUNDARY_MS = 450;
+
+export function tokensKaraoke(texto) {
+  const t = String(texto == null ? "" : texto).replace(/\s+/g, " ").trim();
+  if (!t) return [];
+  const tokens = [];
+  const re = /(\S+)(\s*)/g;
+  let m, i = 0;
+  while ((m = re.exec(t))) {
+    tokens.push({
+      texto: m[1],
+      sep: m[2] || "",
+      inicio: m.index,
+      fin: m.index + m[1].length,
+      i: i++,
+    });
+  }
+  return tokens;
+}
+
+export function duracionKaraokeMs(texto, rate) {
+  const t = String(texto == null ? "" : texto).trim();
+  const r = Math.max(0.5, Math.min(2, Number(rate) || 1));
+  if (!t) return KARAOKE_MIN_MS;
+  return Math.min(KARAOKE_MAX_MS, Math.max(KARAOKE_MIN_MS, (t.length * KARAOKE_CHAR_MS + KARAOKE_PAD_MS) / r));
+}
+
+/** Palabra actual según charIndex de un evento boundary (índice global del texto, no del trozo). */
+export function indicePorChar(tokens, charIndex) {
+  if (!tokens || !tokens.length) return { indice: -1, hecho: true };
+  const c = Math.max(0, Number(charIndex) || 0);
+  for (let i = 0; i < tokens.length; i++) {
+    if (c < tokens[i].fin) return { indice: i, hecho: false };
+  }
+  return { indice: tokens.length - 1, hecho: true };
+}
+
+/** Palabra actual según el tiempo transcurrido, ponderada por longitud. */
+export function indicePorTiempo(tokens, elapsedMs, duracionMs) {
+  if (!tokens || !tokens.length) return { indice: -1, hecho: true };
+  const dur = Math.max(1, Number(duracionMs) || 1);
+  const el = Math.max(0, Number(elapsedMs) || 0);
+  if (el >= dur) return { indice: tokens.length - 1, hecho: true };
+  const pesos = tokens.map((tok) => Math.max(1, String(tok.texto || "").length));
+  const total = pesos.reduce((a, b) => a + b, 0) || tokens.length;
+  const pos = (el / dur) * total;
+  let acc = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    acc += pesos[i];
+    if (pos < acc) return { indice: i, hecho: false };
+  }
+  return { indice: tokens.length - 1, hecho: true };
+}
+
+/**
+ * Elapsed para una pantalla que solo muestra (no locuta): si el turno público
+ * de este mensaje es observable (desde / hasta / duracionMs), se sincroniza;
+ * si no, elapsed 0 («al llegar»).
+ */
+export function elapsedDesdeTurno(turno, ahora, duracionFallback) {
+  const fallback = Math.max(KARAOKE_MIN_MS, Number(duracionFallback) || KARAOKE_MIN_MS);
+  const t = ahora != null && Number.isFinite(Number(ahora)) ? Number(ahora) : Date.now();
+  if (!turno || typeof turno !== "object") {
+    return { elapsedMs: 0, duracionMs: fallback, sincronizado: false };
+  }
+  const desde = Number(turno.desde);
+  const hasta = Number(turno.hasta);
+  const dur = Number(turno.duracionMs);
+  let duracionMs = fallback;
+  if (Number.isFinite(dur) && dur > 0) duracionMs = dur;
+  else if (Number.isFinite(desde) && Number.isFinite(hasta) && hasta > desde) duracionMs = hasta - desde;
+  if (Number.isFinite(desde) && desde > 0) {
+    return { elapsedMs: Math.max(0, t - desde), duracionMs, sincronizado: true };
+  }
+  if (Number.isFinite(hasta) && hasta > 0) {
+    const inferido = hasta - duracionMs;
+    return { elapsedMs: Math.max(0, t - inferido), duracionMs, sincronizado: true };
+  }
+  return { elapsedMs: 0, duracionMs, sincronizado: false };
+}
+

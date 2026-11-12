@@ -125,6 +125,9 @@ test("publicState no expone clienteId ajeno", () => {
   assert.equal(pub.turno.mia, false);
   assert.doesNotMatch(raw, /secreto-cliente/);
   assert.equal(pub.turno.mensajeId, "m");
+  assert.equal(pub.turno.desde, t0);
+  assert.equal(pub.turno.hasta, t0 + 4000);
+  assert.equal(pub.turno.duracionMs, 4000);
   assert.equal(pub.ok, true);
 });
 
@@ -204,7 +207,7 @@ test("_headers declara /sala-voz y el lib del turno; las páginas piden el clien
   const sala = readFileSync(new URL("./sala-voz/index.html", import.meta.url), "utf8");
   const js = readFileSync(new URL("./sala-voz/sala-voz.js", import.meta.url), "utf8");
   assert.match(sala, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
-  assert.match(sala, /sala-voz\.js\?v=20261112-voz-propia/);
+  assert.match(sala, /sala-voz\.js\?v=20261112-karaoke/);
   assert.match(js, /AdmiraVozTurno/);
   assert.match(js, /sala-voz-/);
   const msg = readFileSync(new URL("./assets/consejero-mensajes.js", import.meta.url), "utf8");

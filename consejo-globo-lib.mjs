@@ -209,6 +209,46 @@ export function proyectoDeLatido(entrada, ahoraS) {
   return { nombre, vigente: latidoVigente(entrada, ahoraS) };
 }
 
+/** Frase de estado del latido (campo mision). Vacía o ausente → null; no se inventa. */
+export function fraseMisionLatido(entrada) {
+  const t = String((entrada && entrada.mision) || '').replace(/\s+/g, ' ').trim();
+  return t || null;
+}
+
+/**
+ * Aplica un payload vivo de /consejeros/latido sobre una mesa ya armada:
+ * actualiza estado, proyecto, en_curso, frase y el texto del globo.
+ * No toca el recuento de hoy (eso sigue viniendo de /api/consejo/estado).
+ */
+export function aplicarLatidoEnMesa(mesa, consejeros, ahoraS) {
+  if (!mesa || typeof mesa !== 'object') return mesa;
+  const mapa = consejeros && typeof consejeros === 'object' ? consejeros : {};
+  const ahora = Number.isFinite(Number(ahoraS)) ? Number(ahoraS) : Math.floor(Date.now() / 1000);
+  for (const gen of Object.keys(mesa)) {
+    const filas = mesa[gen];
+    if (!Array.isArray(filas)) continue;
+    for (const s of filas) {
+      if (!s || !s.bot) continue;
+      const entrada = mapa[s.bot] || null;
+      s.proyecto = proyectoDeLatido(entrada, ahora);
+      const vivo = latidoVigente(entrada, ahora);
+      s.estado = vivo ? 'trabajando' : 'libre';
+      s.frase = vivo ? fraseMisionLatido(entrada) : null;
+      if (vivo) {
+        const titulo = fraseMisionLatido(entrada);
+        const numero = entrada && entrada.encargo ? Number(entrada.encargo) : null;
+        const inicio = (entrada && (Number(entrada.desde) || Number(entrada.at))) || 0;
+        s.en_curso = (titulo || numero) ? { numero: numero || null, titulo: titulo || (numero ? 'encargo' : null), inicio, fin: 0 } : null;
+      } else {
+        s.en_curso = null;
+      }
+      s.globo = lineasGlobo(s, ahora * 1000);
+      s.texto = textoGlobo(s, ahora * 1000);
+    }
+  }
+  return mesa;
+}
+
 /**
  * Un consejero está trabajando solo si su último latido dice «trabajando»
  * y no han pasado más de 30 min sin renovarlo (ni se ha cumplido `hasta`).
@@ -500,6 +540,7 @@ export function asientoPublico(def, { latidos, latidoPayload, bandejas, inboxOtr
     en_curso,
     ultimo,
     proyecto: proyectoDeLatido(entrada, ahoraS),
+    frase: estado === 'trabajando' ? fraseMisionLatido(entrada) : null,
     hoy: hoyVacio(),
   };
   const inicio = Number.isFinite(desdeS) ? desdeS : inicioDiaMadridS(ahoraS * 1000);

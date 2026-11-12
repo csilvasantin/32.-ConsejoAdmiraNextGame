@@ -4,10 +4,12 @@
  * Flecha, caja de hoy y globo leen un único mapa / instantánea por pintado.
  * Encima de la flecha, una caja centrada en su eje: título del proyecto
  * principal arriba; debajo, el proyecto en el que está ahora (latido
- * vigente, o el último conocido atenuado, o «—» si no hay dato); y bajo
- * eso, el recuento de hoy flanqueado por flechas ◀ ▶ (mismo
+ * vigente, o el último conocido atenuado, o «—» si no hay dato); debajo,
+ * si está trabajando, la frase de su misión actual (la misma que en Grok Bot,
+ * campo mision del latido); y bajo eso, el recuento de hoy flanqueado por
+ * flechas ◀ ▶ (mismo
  * estilo que el carrusel de Carlos Silva) para el proyecto anterior/siguiente
- * del consejero. Clicar las flechas no enciende el Mac 1984; el resto de la
+ * del consejero. El latido se refresca cada 2 s, sin recargar la página. Clicar las flechas no enciende el Mac 1984; el resto de la
  * caja sí. El puesto va dentro del triángulo, más pequeño para que quepa en
  * la punta, en negro. Sin «/6». La flecha no pisa la caja.
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
@@ -25,6 +27,8 @@
   const ENDPOINT = (root && root.ADMIRA_GLOBO_URL) || '/api/consejo/estado';
   const OBJETIVOS_URL = (root && root.ADMIRA_OBJETIVOS_ABC_URL) || '/api/consejo/objetivos-abc';
   const REUSE_MS = 20000;
+  const LATIDO_URL = (root && root.ADMIRA_LATIDO_URL) || 'https://mcp.admira.live/consejeros/latido';
+  const LATIDO_MS = 2000;
   const COLORES = { trabajando: '#e23d3d', libre: '#3ddc84', desconocido: '#ffd60a' };
   const PAPEL = {
     leyendas: {
@@ -58,6 +62,7 @@
 #papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:12em;overflow:hidden;text-overflow:ellipsis}
 #papel-halos .consejero-ranking .ranking-ahora{font-weight:600;font-size:8px;line-height:1.2;letter-spacing:.01em;max-width:12em;margin-top:1px;overflow:hidden;text-overflow:ellipsis;opacity:.9}
 #papel-halos .consejero-ranking .ranking-ahora.is-ultimo{opacity:.55}
+#papel-halos .consejero-ranking .ranking-mision{font-weight:600;font-size:7px;line-height:1.25;letter-spacing:.01em;max-width:14em;margin-top:2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;opacity:.95}
 #papel-halos .consejero-ranking .ranking-fila{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px}
 #papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1;min-width:1.1em}
 #papel-halos .consejero-ranking .ranking-nav{appearance:none;flex:0 0 auto;width:20px;height:20px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:13px/1 sans-serif;cursor:pointer}
@@ -74,6 +79,7 @@
   #papel-halos .consejero-ranking .ranking-n{font-size:12px}
   #papel-halos .consejero-ranking .ranking-proy{font-size:8px;max-width:11em}
   #papel-halos .consejero-ranking .ranking-ahora{font-size:7px;max-width:11em}
+  #papel-halos .consejero-ranking .ranking-mision{font-size:6px;max-width:12em}
   #papel-halos .consejero-ranking .ranking-nav{width:18px;height:18px;font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){.consejero-flecha{animation:none!important}}
@@ -144,6 +150,7 @@
 `;
 
   let datos = null, datosAt = 0, enVuelo = null, globo = null, abierto = null, hideT = null, wired = false;
+  let latidoPayload = null, latidoVuelo = null, latidoTimer = null;
   let objetivosAbc = null, objetivosAt = 0, carlosIdx = 0, carlosFijado = false, sobreGlobo = false, proyIdx = Object.create(null);
 
   function doc() { return root.document; }
@@ -317,6 +324,69 @@
     const nombre = p && String(p.nombre || '').replace(/\s+/g, ' ').trim();
     return { texto: nombre || '—', vigente: !!(nombre && p.vigente) };
   }
+  function fraseMisionDe(silla) {
+    if (!silla || silla.estado !== 'trabajando') return '';
+    const directa = silla.frase != null ? String(silla.frase).replace(/\s+/g, ' ').trim() : '';
+    if (directa) return directa;
+    const t = silla.en_curso && String(silla.en_curso.titulo || '').replace(/\s+/g, ' ').trim();
+    return t || '';
+  }
+  function latidoVigenteDe(entrada, ahoraS) {
+    if (!entrada || entrada.modo !== 'trabajando' || entrada.caducado === true) return false;
+    const hasta = Number(entrada.hasta);
+    if (Number.isFinite(hasta) && hasta > 0 && hasta <= ahoraS) return false;
+    const at = Number(entrada.at || entrada.desde);
+    if (!Number.isFinite(at) || at <= 0) return false;
+    if ((ahoraS - at) > 30 * 60) return false;
+    return true;
+  }
+  function aplicarLatido(payload) {
+    latidoPayload = payload && typeof payload === 'object' ? payload : null;
+    if (!datos || !datos.mesa || !latidoPayload) return;
+    const mapa = latidoPayload.consejeros || {};
+    const ahoraS = Number(latidoPayload.now) || Math.floor(Date.now() / 1000);
+    const gens = Object.keys(datos.mesa);
+    for (let g = 0; g < gens.length; g++) {
+      const filas = datos.mesa[gens[g]] || [];
+      for (let i = 0; i < filas.length; i++) {
+        const s = filas[i];
+        if (!s || !s.bot) continue;
+        const entrada = mapa[s.bot] || null;
+        const nombre = entrada && String(entrada.proyecto || '').replace(/\s+/g, ' ').trim();
+        const vivo = latidoVigenteDe(entrada, ahoraS);
+        s.proyecto = nombre ? { nombre: nombre.length > 60 ? (nombre.slice(0, 59).replace(/[\s·,;:.\-–—]+$/u, '') + '…') : nombre, vigente: vivo } : { nombre: null, vigente: false };
+        s.estado = vivo ? 'trabajando' : 'libre';
+        const frase = vivo ? String((entrada && entrada.mision) || '').replace(/\s+/g, ' ').trim() : '';
+        s.frase = frase || null;
+        if (vivo) {
+          const numero = entrada && entrada.encargo ? Number(entrada.encargo) : null;
+          const inicio = (entrada && (Number(entrada.desde) || Number(entrada.at))) || 0;
+          s.en_curso = (frase || numero) ? { numero: numero || null, titulo: frase || (numero ? 'encargo' : null), inicio, fin: 0 } : null;
+          if (!s.globo) s.globo = {};
+          s.globo.mision = frase ? ('Misión actual: ' + frase) : (s.globo.mision || '');
+        } else {
+          s.en_curso = null;
+          s.frase = null;
+        }
+      }
+    }
+  }
+  function cargarLatido() {
+    if (latidoVuelo) return latidoVuelo;
+    const f = root.fetch && root.fetch.bind(root);
+    if (!f) return Promise.reject(new Error('sin fetch'));
+    latidoVuelo = f(LATIDO_URL, { cache: 'no-store', headers: { accept: 'application/json' } })
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then((d) => { if (!d || !d.ok || !d.consejeros) throw new Error('sin latido'); aplicarLatido(d); pintarHalos(); if (abierto) pintarGlobo(abierto.persona, abierto.anchor); return d; })
+      .finally(() => { latidoVuelo = null; });
+    return latidoVuelo;
+  }
+  function tickVivo() {
+    const d = doc();
+    if (d && d.hidden) return;
+    cargar(false);
+    cargarLatido();
+  }
   function pasoProyecto(persona, dir, e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     const lista = proyectosDe(persona);
@@ -343,7 +413,7 @@
     if (!f) return Promise.reject(new Error('sin fetch'));
     enVuelo = f(ENDPOINT, { cache: 'no-store', headers: { accept: 'application/json' } })
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then((d) => { if (!d || !d.ok || !d.mesa) throw new Error('sin mesa'); datos = d; datosAt = Date.now(); pintarHalos(); if (abierto) pintarGlobo(abierto.persona, abierto.anchor); return d; })
+      .then((d) => { if (!d || !d.ok || !d.mesa) throw new Error('sin mesa'); datos = d; datosAt = Date.now(); if (latidoPayload) aplicarLatido(latidoPayload); pintarHalos(); if (abierto) pintarGlobo(abierto.persona, abierto.anchor); return d; })
       .finally(() => { enVuelo = null; });
     return enVuelo;
   }
@@ -440,6 +510,14 @@
         ahora.textContent = actual.texto;
         if (!actual.vigente) ahora.classList.add('is-ultimo');
         lab.appendChild(ahora);
+        const frase = fraseMisionDe(silla);
+        if (frase) {
+          const mis = d.createElement('span');
+          mis.className = 'ranking-mision';
+          mis.textContent = frase;
+          mis.title = frase;
+          lab.appendChild(mis);
+        }
         const fila = d.createElement('span');
         fila.className = 'ranking-fila';
         const prev = d.createElement('button');
@@ -471,8 +549,9 @@
         lab.setAttribute('data-persona', persona);
         const nomTit = proy && proy.nombre ? (proy.nombre + ' · ') : '';
         const ahoraTit = actual.texto + ' · ';
-        lab.title = nomTit + ahoraTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
-        lab.setAttribute('aria-label', nomTit + ahoraTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
+        const fraseTit = frase ? (frase + ' · ') : '';
+        lab.title = nomTit + ahoraTit + fraseTit + 'Ver las misiones de hoy de ' + persona + ' en el Mac 1984';
+        lab.setAttribute('aria-label', nomTit + ahoraTit + fraseTit + (cifra.textContent) + ' misiones de hoy de ' + persona);
         lab.addEventListener('click', (e) => {
           if (e.target && e.target.closest && e.target.closest('.ranking-nav')) { e.preventDefault(); e.stopPropagation(); return; }
           e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
@@ -955,9 +1034,11 @@
     prepararHotspots();
     cargar(true).then(pintarHalos, pintarHalos);
     cargarObjetivos(false).then(pintarHalos, pintarHalos);
+    cargarLatido();
+    if (root.setInterval && !latidoTimer) latidoTimer = root.setInterval(tickVivo, LATIDO_MS);
   }
   if (doc() && doc().readyState === 'loading') doc().addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
-  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, pasoProyecto };
+  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto };
 })(typeof window !== 'undefined' ? window : globalThis);

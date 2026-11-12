@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- players · v.2026.07.16.r37 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+<!-- players · v.2026.11.12.r38 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+     r38: control por voz de la playlist (siguiente / anterior / primero / último) sin tocar el mando ni el doble tick.
      r37: IoT en «CANALES DS · FLOTA» — fila de ENERGÍA/SISTEMA (☀️ encender · 🌙 apagar pantalla · 🔅 brillo · 🔁 player · ⏻ reiniciar · 🚨 emergencia)
           + CHIPS DE TELEMETRÍA por tarjeta (🌡 temp · 🧠 carga · ▦ RAM · 💾 disco · ⏱ uptime · ▶ player). Las acciones fluyen por la MISMA cola
           /api/cmd (el worker las pasa tal cual al executor v2); la telemetría llega en b.telemetry de /api/browsers (requiere el patch aditivo del worker).
@@ -19,6 +20,8 @@
   <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
   <script src="/admira-bar.js?v=20260918-r38"></script>
   <script src="/failover.js"></script>
+  <script src="/playlist-voz-cmd.js?v=20261112-playlist-voz"></script>
+  <script src="/assets/playlist-voz.js?v=20261112-playlist-voz"></script>
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -225,7 +228,21 @@
     .tele .tchip.warn{color:var(--warn);border-color:#6d5a2f}
     .tele .tchip.hot{color:var(--bad);border-color:#6d2f2f;box-shadow:0 0 8px -3px var(--bad)}
     .tele .tchip.mut{opacity:.5;font-style:italic}
-  </style>
+  
+    /* Control por voz de la playlist (12-11-2026): no altera el mando ni el doble tick. */
+    .playlist-voz{margin:0 0 14px;padding:12px 14px;border:1px solid #4a3410;background:#120c04;display:flex;flex-direction:column;gap:8px}
+    .playlist-voz .pv-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .playlist-voz h3{margin:0;font-size:13px;color:#ffe08a;letter-spacing:.4px;font-weight:700}
+    .playlist-voz .hint{margin:0;font-size:11.5px;color:var(--mut)}
+    .playlist-voz input[type=text]{flex:1;min-width:180px;background:#0d0a04;border:1px solid #8b5a14;color:var(--ink);padding:8px 10px;font:13px var(--sans)}
+    .playlist-voz button{background:#1a1408;border:1px solid #8b5a14;color:#ffe08a;padding:8px 12px;font:12.5px/1.2 var(--sans);font-weight:700;cursor:pointer}
+    .playlist-voz button[aria-pressed="true"]{background:#3a2a10;border-color:#ffe08a}
+    .playlist-voz button:disabled{opacity:.5;cursor:not-allowed}
+    .playlist-voz .pv-status{min-height:1.2em;font-size:12px;color:#ffe08a}
+    .playlist-voz .pv-confirm{display:none;gap:8px;align-items:center;flex-wrap:wrap}
+    .playlist-voz .pv-confirm.is-on{display:flex}
+    .scard[aria-selected="true"]{outline:2px solid #ffe08a;outline-offset:2px}
+</style>
 </head>
 <body>
   <div class="porteria">
@@ -372,6 +389,23 @@
       <div class="ds-subhd">
         <h2>🖥️ Pantallas en antena<span class="tag"> · plano de contenido</span></h2>
         <span class="sub">Lo que emite cada cristal · mando de transporte + previo</span>
+      </div>
+      <div class="playlist-voz" id="playlist-voz">
+        <div class="pv-row">
+          <h3>🎙️ Control por voz de la playlist</h3>
+          <p class="hint">Di «siguiente», «anterior», «primero» o «último» (vale «siguiente canción», «vuelve al principio», «última pista»). Se confirma antes de enviar. No se dispara con lo que hablan los consejeros.</p>
+        </div>
+        <div class="pv-row">
+          <input type="text" id="playlist-voz-text" placeholder="siguiente canción" autocomplete="off" aria-label="Comando de playlist">
+          <button type="button" id="playlist-voz-mic" aria-pressed="false">Micrófono</button>
+          <button type="button" id="playlist-voz-send">Entender</button>
+        </div>
+        <p class="pv-status" id="playlist-voz-status"></p>
+        <div class="pv-confirm" id="playlist-voz-confirm">
+          <span id="playlist-voz-understood"></span>
+          <button type="button" id="playlist-voz-yes">Sí, enviar</button>
+          <button type="button" id="playlist-voz-no">Cancelar</button>
+        </div>
       </div>
       <div class="scards" id="screensCards">
         <div class="sc-empty">Cargando pantallas vivas…</div>
@@ -628,6 +662,7 @@
     card.querySelectorAll('button.mb').forEach(b=>{
       b.addEventListener('click',()=>sendCmd(screen,b.getAttribute('data-cmd'),b,lastEl));
     });
+    card.addEventListener('click',()=>markSelected(screen));
     const nowEl=card.querySelector('[data-now]');
     const prevEl=card.querySelector('[data-preview]');
     pollNow(screen,nowEl,prevEl);
@@ -693,6 +728,7 @@
     if(!arr.length){ box.innerHTML='<div class="sc-empty">'+(lastScreens.length?'Ninguna pantalla coincide con el filtro.':'No hay pantallas vivas ahora mismo.')+'</div>'; return; }
     box.innerHTML=arr.map(cardHTML).join('');
     box.querySelectorAll('.scard').forEach(wireCard);
+    markSelected(selectedScreen);
   }
 
   async function refresh(){
@@ -756,6 +792,38 @@
     // estado de colas: antigüedad del último /signage/screens
     setInterval(()=>{ const qa=$('#qAge'); if(qa) qa.textContent=lastFetchAt?(Math.round((Date.now()-lastFetchAt)/1000)+'s'):'—'; },1000);
   }
+
+
+  /* Control por voz / texto de la playlist: usa el mando existente, no lo reescribe. */
+  var selectedScreen='';
+  function markSelected(screen){
+    var alive=new Set((visibleScreens||[]).map(function(s){ return s.screen; }));
+    if(screen && !alive.has(screen)) screen='';
+    selectedScreen=screen||'';
+    if(!box) return;
+    box.querySelectorAll('.scard').forEach(function(card){
+      card.setAttribute('aria-selected', String(card.getAttribute('data-screen')===selectedScreen));
+    });
+  }
+  window.AdmiraPlayersPlaylist={
+    ejecutar:function(cmd){
+      var transport={next:'next',prev:'prev',first:'first',last:'last'}[cmd]||cmd;
+      if(['first','prev','next','last'].indexOf(transport)<0) return {ok:false,error:'cmd',mensaje:'Comando de playlist no reconocido.'};
+      var targets=visibleScreens||[];
+      var screen = (selectedScreen && targets.some(function(s){ return s.screen===selectedScreen; }))
+        ? selectedScreen
+        : (targets.filter(function(s){ return s.online; })[0]||targets[0]||{}).screen;
+      if(!screen) return {ok:false,error:'pantalla',mensaje:'No hay pantallas visibles para enviar el comando.'};
+      markSelected(screen);
+      var card=box.querySelector('.scard[data-screen="'+CSS.escape(screen)+'"]');
+      var lastEl=card?card.querySelector('[data-last]'):null;
+      var btn=card?card.querySelector('button.mb[data-cmd="'+transport+'"]'):null;
+      sendCmd(screen,transport,btn,lastEl);
+      return {ok:true,cmd:transport,screen:screen};
+    },
+    seleccionada:function(){ return selectedScreen; },
+    visibles:function(){ return (visibleScreens||[]).map(function(s){ return s.screen; }); }
+  };
 
   wireControls();
   refresh();

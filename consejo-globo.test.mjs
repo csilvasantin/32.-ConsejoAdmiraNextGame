@@ -4,7 +4,7 @@ import {
   clasificar, textoGlobo, lineasGlobo, latidoVigente, tituloCorto, horaMadrid,
   ultimoHecho, ultimoDe, asientoPublico, armarMesa, tieneBot,
   encargadosHoy, empezadasHoy, etiquetaMisiones,
-  nombreProyectoLatido, proyectoDeLatido,
+  nombreProyectoLatido, proyectoDeLatido, fraseMisionLatido, aplicarLatidoEnMesa,
   CADUCIDAD_SEG, PAPEL_POS, MESA, COLORES, mapaEstados, estadoDe, clavePersona,
   esActivo, llevaFlecha, llevaHalo, nuncaFlecha,
   CONSEJO_RANKING, CONSEJO_RANKING_TOTAL, enRanking,
@@ -550,3 +550,46 @@ test('proyecto del latido vigente se publica; el caducado queda atenuado; sin da
   assert.deepEqual(sinBot.proyecto, { nombre: null, vigente: false });
 });
 
+test('la frase del latido vigente se publica; en reposo no se inventa', () => {
+  const frase = 'Sumando la tarea del audio: reviso el ruido al final de las voces';
+  assert.equal(fraseMisionLatido({ mision: '  ' + frase + '  ' }), frase);
+  assert.equal(fraseMisionLatido({ mision: '' }), null);
+  assert.equal(fraseMisionLatido(null), null);
+  const vivo = { modo: 'trabajando', proyecto: 'admira.live', mision: frase, at: S - 60, hasta: S + 600 };
+  const s = asientoPublico({ persona: 'Steve Jobs', rol: 'CEO' }, { latidos: { Jobs: vivo }, bandejas: {}, ahoraS: S });
+  assert.equal(s.estado, 'trabajando');
+  assert.equal(s.frase, frase);
+  assert.equal(s.en_curso.titulo, 'Sumando la tarea del audio: reviso el ruido al final de las voces');
+  const reposo = asientoPublico({ persona: 'Steve Jobs', rol: 'CEO' }, { latidos: { Jobs: { modo: 'reposo', mision: frase, at: S - 4000, hasta: S - 3000 } }, bandejas: {}, ahoraS: S });
+  assert.equal(reposo.estado, 'libre');
+  assert.equal(reposo.frase, null);
+});
+
+test('aplicarLatidoEnMesa refresca frase, proyecto y estado sin tocar el recuento de hoy', () => {
+  const d = armarMesa({
+    latidos: { Jobs: { modo: 'reposo', at: S - 4000, hasta: S - 3000 } },
+    bandejas: {},
+    ahoraMs: AHORA,
+  });
+  const jobs = d.mesa.leyendas.find((s) => s.persona === 'Steve Jobs');
+  const nHoy = jobs.hoy.n;
+  assert.equal(jobs.estado, 'libre');
+  assert.equal(jobs.frase, null);
+  const frase = 'Sumando la tarea del audio: reviso el ruido al final de las voces';
+  aplicarLatidoEnMesa(d.mesa, {
+    Jobs: { modo: 'trabajando', proyecto: 'admira.live', mision: frase, at: S - 5, hasta: S + 600 },
+  }, S);
+  assert.equal(jobs.estado, 'trabajando');
+  assert.equal(jobs.frase, frase);
+  assert.deepEqual(jobs.proyecto, { nombre: 'admira.live', vigente: true });
+  assert.match(jobs.globo.mision, /Sumando la tarea del audio/);
+  assert.equal(jobs.hoy.n, nHoy);
+  aplicarLatidoEnMesa(d.mesa, {
+    Jobs: { modo: 'reposo', proyecto: 'admira.live', mision: frase, at: S - 5, hasta: S - 1 },
+  }, S);
+  assert.equal(jobs.estado, 'libre');
+  assert.equal(jobs.frase, null);
+  assert.equal(jobs.proyecto.vigente, false);
+  assert.equal(jobs.proyecto.nombre, 'admira.live');
+  assert.equal(jobs.hoy.n, nHoy);
+});

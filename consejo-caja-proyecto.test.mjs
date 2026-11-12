@@ -19,11 +19,13 @@ test('la caja pone el título arriba, el recuento debajo y flechas ◀ ▶ a los
   // Título, proyecto actual y, debajo, la fila del número.
   const iProy = src.indexOf("nom.className = 'ranking-proy'");
   const iAhora = src.indexOf("ahora.className = 'ranking-ahora'");
+  const iMision = src.indexOf("mis.className = 'ranking-mision'");
   const iFila = src.indexOf("fila.className = 'ranking-fila'");
   const iCifra = src.indexOf("cifra.className = 'ranking-n'");
   assert.ok(iProy > 0 && iAhora > iProy, 'el proyecto actual se construye debajo del título');
-  assert.ok(iFila > iAhora, 'la fila del recuento va debajo del proyecto actual');
-  assert.ok(iCifra > iAhora, 'el número queda debajo del proyecto actual');
+  assert.ok(iMision > iAhora, 'la frase de misión va debajo del proyecto actual');
+  assert.ok(iFila > iMision, 'la fila del recuento va debajo de la misión');
+  assert.ok(iCifra > iMision, 'el número queda debajo de la misión');
   // Mismo estilo que el carrusel de Carlos: fondo, color y borde dorados.
   assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*background:#1a140a/);
   assert.match(src, /#papel-halos \.consejero-ranking \.ranking-nav\{[^}]*color:#ffd75e/);
@@ -40,6 +42,21 @@ test('la línea del proyecto actual va entre el principal y el recuento, con «�
   const iAhora = src.indexOf("ahora.className = 'ranking-ahora'");
   const iFila = src.indexOf("fila.className = 'ranking-fila'");
   assert.ok(iProy > 0 && iAhora > iProy && iFila > iAhora);
+});
+
+test('la frase de la misión vigente se pinta bajo el proyecto y el latido se refresca solo', () => {
+  assert.match(src, /function fraseMisionDe\(/);
+  assert.match(src, /function cargarLatido\(/);
+  assert.match(src, /const LATIDO_MS = 2000/);
+  assert.match(src, /mcp\.admira\.live\/consejeros\/latido/);
+  assert.match(src, /setInterval\(tickVivo, LATIDO_MS\)/);
+  assert.match(src, /mis\.className = 'ranking-mision'/);
+  assert.match(src, /silla\.estado !== 'trabajando'/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-mision\{[^}]*-webkit-line-clamp:3/);
+  const iAhora = src.indexOf("ahora.className = 'ranking-ahora'");
+  const iMision = src.indexOf("mis.className = 'ranking-mision'");
+  const iFila = src.indexOf("fila.className = 'ranking-fila'");
+  assert.ok(iAhora > 0 && iMision > iAhora && iFila > iMision);
 });
 
 test('clicar la flecha de proyecto no enciende el Mac; el resto de la caja sí', () => {
@@ -67,7 +84,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r173', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r173-mision', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -78,7 +95,7 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.equal(p.nombre, nombre);
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
-  assert.match(index, /council-globo\.js\?v=20261112-r173-proyecto-actual/);
+  assert.match(index, /council-globo\.js\?v=20261112-r173-proyecto-mision/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',

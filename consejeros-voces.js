@@ -10,8 +10,10 @@
  *   1. personalización LOCAL de este navegador  (localStorage admira_voces_v1)
  *   2. personalización COMPARTIDA del equipo   (api.yokup.com /prefs/customize → customize.voices)
  *   3. CASTING de serie (abajo): lista de voces preferidas por nombre
- *   4. respaldo: una voz es-* del género del casting, repartida para que no se repitan
- * Si la voz elegida no existe en este equipo, se pasa al siguiente nivel.
+ * Si no está la voz propia del consejero (ninguna de su lista preferida, ni una
+ * personalización existente), NO se habla: nunca se usa la voz genérica del sistema.
+ * 12-11-2026, Carlos: «no sigue hablando el sistema, solo consejeros». Al salir
+ * de la página (pagehide / beforeunload / visibility hidden) se cancela la síntesis.
  *
  * Uso (script clásico, también importable desde node:test):
  *   AdmiraVoces.speak("Steve Jobs", "texto", { onstart, onend })
@@ -114,8 +116,8 @@
   var BY_SLUG = {};
   CASTING.forEach(function (c) { c.slug = slug(c.persona); BY_SLUG[c.slug] = c; });
 
-  // Nombres de voces de serie habituales, para adivinar el género de una voz
-  // del sistema en el respaldo (cuando no hay ninguna preferida instalada).
+  // Nombres de voces de serie habituales, para adivinar el género (tests y
+  // para no mezclar Jobs/Murati con una voz masculina de su propia lista).
   var FEMENINAS = ["monica", "paulina", "elvira", "laura", "helena", "ximena", "dalia", "elena", "salome",
     "paloma", "catalina", "sabina", "shelley", "sandy", "flo", "grandma", "google espanol", "marisol",
     "lucia", "conchita", "penelope", "mia", "lupe", "abril", "irene", "estrella", "triz", "vera"];
@@ -178,6 +180,7 @@
     if (resolved) return resolved;
     var all = voices.slice(), es = spanish(all), pool = es.length ? es : all;
     var used = {}, out = {};
+    // Solo voces de la lista preferida de cada consejero (nunca un respaldo genérico).
     // Por RONDAS: primero la 1.ª preferencia de cada uno, luego la 2.ª… Así la voz
     // «de firma» de un consejero no se la lleva otro que la tenía de 3.ª opción.
     // Jobs y Elon (los de /hola) eligen antes que nadie, cada uno su lista completa:
@@ -204,32 +207,19 @@
     }
     CASTING.forEach(function (c) {
       if (out[c.slug]) return;
-      var mismo = pool.filter(function (v) { return generoDe(v) === c.genero; });
-      var neutro = pool.filter(function (v) { return !generoDe(v); });
-      var cands = mismo.length ? mismo : (neutro.length ? neutro : pool);
-      // Sin voces libres de su género: antes que una al azar, su propia preferida
-      // (compartida); el ritmo y el tono del casting ya lo distinguen.
-      var libres = cands.filter(function (v) { return !used[v.voiceURI || v.name]; });
-      if (!libres.length) {
-        var mejor = null;
-        for (var i = 0; i < c.prefer.length; i++) {
-          var pref = findPreferred(cands, c.prefer[i], c.lang);
-          if (pref && (!mejor || (used[pref.voiceURI || pref.name] || 0) < (used[mejor.voiceURI || mejor.name] || 0))) mejor = pref;
-        }
-        if (mejor) { var kp = mejor.voiceURI || mejor.name; used[kp] = (used[kp] || 0) + 1; out[c.slug] = { voice: mejor, via: "casting" }; return; }
+      // Sin una preferida libre: se puede compartir una de SU lista, nunca una voz genérica.
+      var mejor = null;
+      for (var i = 0; i < c.prefer.length; i++) {
+        var pref = findPreferred(pool, c.prefer[i], c.lang);
+        if (pref && (!mejor || (used[pref.voiceURI || pref.name] || 0) < (used[mejor.voiceURI || mejor.name] || 0))) mejor = pref;
       }
-      // la menos usada; a igualdad, la de la variante de idioma del casting
-      var best = null, bestScore = Infinity;
-      cands.forEach(function (v, idx) {
-        var k = v.voiceURI || v.name;
-        var s = (used[k] || 0) * 10 + (String(v.lang).toLowerCase().replace("_", "-") === c.lang.toLowerCase() ? 0 : 1) + idx * 0.001;
-        if (s < bestScore) { bestScore = s; best = v; }
-      });
-      if (best) {
-        var key = best.voiceURI || best.name;
-        used[key] = (used[key] || 0) + 1;
-        out[c.slug] = { voice: best, via: "respaldo" };
-      } else out[c.slug] = { voice: null, via: "sin-voces" };
+      if (mejor) {
+        var kp = mejor.voiceURI || mejor.name;
+        used[kp] = (used[kp] || 0) + 1;
+        out[c.slug] = { voice: mejor, via: "casting" };
+        return;
+      }
+      out[c.slug] = { voice: null, via: "sin-voces" };
     });
     // «evita»: Elon nunca con la misma voz que Jobs mientras exista otra voz en español.
     CASTING.forEach(function (c) {
@@ -241,11 +231,7 @@
         if (!resto.length) return;
         var pref = null;
         for (var i = 0; i < c.prefer.length && !pref; i++) pref = findPreferred(resto, c.prefer[i], c.lang);
-        var mismo = resto.filter(function (v) { return generoDe(v) === c.genero; });
-        var elegida = pref || (mismo.length ? mismo : resto).slice().sort(function (x, y) {
-          return (used[x.voiceURI || x.name] || 0) - (used[y.voiceURI || y.name] || 0);
-        })[0];
-        out[c.slug] = { voice: elegida, via: a.via };
+        if (pref) out[c.slug] = { voice: pref, via: "casting" };
       });
     });
     resolved = out;
@@ -382,7 +368,10 @@
     var p = profile(persona);
     if (!synth || !root.SpeechSynthesisUtterance) { if (opts.onerror) opts.onerror(new Error("sin síntesis de voz")); return false; }
     var trozos = chunks(text, opts.max);
-    if (!p || !trozos.length) return false;
+    if (!p || !p.voice || !trozos.length) {
+      if (opts.onerror) opts.onerror(new Error("sin voz del consejero"));
+      return false;
+    }
     stop();
     var token = {}; current = token;
     var i = 0, started = false;
@@ -390,7 +379,7 @@
       if (current !== token) return;
       if (i >= trozos.length) { current = null; if (opts.onend) opts.onend(); return; }
       var u = new root.SpeechSynthesisUtterance(trozos[i++]);
-      if (p.voice) u.voice = p.voice;
+      u.voice = p.voice;
       u.lang = p.lang || "es-ES";
       u.rate = p.rate; u.pitch = p.pitch;
       if (opts.volume != null) u.volume = opts.volume;
@@ -417,6 +406,22 @@
   function portadaOn() { try { return root.localStorage.getItem(LS_PORTADA) === "1"; } catch (e) { return false; } }
   function setPortada(on) { try { root.localStorage.setItem(LS_PORTADA, on ? "1" : "0"); } catch (e) {} }
 
+  function pararAlSalir() { stop(); }
+  function instalarParadaAlSalir(target) {
+    target = target || root;
+    if (!target || typeof target.addEventListener !== "function") return false;
+    target.addEventListener("pagehide", pararAlSalir, true);
+    target.addEventListener("beforeunload", pararAlSalir, true);
+    var doc = target.document || root.document;
+    if (doc && typeof doc.addEventListener === "function") {
+      doc.addEventListener("visibilitychange", function () {
+        if (doc.hidden || doc.visibilityState === "hidden") pararAlSalir();
+      }, true);
+    }
+    return true;
+  }
+  instalarParadaAlSalir(root);
+
   var api = {
     CASTING: CASTING, slug: slug, casting: casting, profile: profile, speak: speak, preview: preview,
     stop: stop, speaking: speaking, supported: supported, available: available, spanish: function () { return spanish(voices); },
@@ -424,6 +429,8 @@
     setOverride: setOverride, resetOverride: resetOverride, localOverrides: localOverrides,
     sharedOverrides: function () { return JSON.parse(JSON.stringify(shared)); },
     portadaOn: portadaOn, setPortada: setPortada, chunks: chunks, generoDe: generoDe,
+    puedeHablar: function (persona) { var p = profile(persona); return !!(p && p.voice); },
+    _instalarParadaAlSalir: instalarParadaAlSalir, _pararAlSalir: pararAlSalir,
     _setVoicesForTest: setVoicesForTest, JOBS_SELLO: JOBS_SELLO,
   };
   root.AdmiraVoces = api;

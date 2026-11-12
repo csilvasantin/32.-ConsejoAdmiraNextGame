@@ -119,7 +119,7 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(html, /auth-gate\.js/);
   assert.match(html, /consejeros-voces\.js/);
   assert.match(html, /chat-hilo-client\.js/);
-  assert.match(html, /sala-voz\.js\?v=20261112-turno-voz/);
+  assert.match(html, /sala-voz\.js\?v=20261112-voz-propia/);
   assert.match(css, /cursor:\s*none/);
   assert.doesNotMatch(js, /Activar voz/);
   assert.match(js, /Escape/);
@@ -127,7 +127,12 @@ test("la página es privada, a pantalla limpia, sin botón de voz y con cursor o
   assert.match(js, /entre-consejeros/);
   assert.match(js, /desbloquearAudio/);
   assert.match(js, /AdmiraVozTurno/);
-  assert.match(html, /voz-turno-cliente\.js\?v=20261112-turno-voz/);
+  assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
+  assert.match(js, /pagehide/);
+  assert.match(js, /beforeunload/);
+  assert.match(js, /visibilitychange/);
+  assert.doesNotMatch(js, /u\.lang = \"es-ES\"/);
+  assert.doesNotMatch(js, /soltarCola/);
   assert.equal(Sala.SONDEO_MS >= 3000 && Sala.SONDEO_MS <= 5000, true);
   assert.equal(Sala.VISIBLES, 6);
 });

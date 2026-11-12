@@ -222,7 +222,7 @@
   estilo.textContent = "#entre-consejeros .turno.otro{margin-right:auto;align-items:flex-start}#entre-consejeros .turno.otro .burbuja{background:#3a2a22;border-bottom-left-radius:5px}#entre-consejeros .turno.persona{margin-left:auto;align-items:flex-end}#entre-activar-voz,#entre-voz-aviso{font-size:12px;margin-left:8px}#entre-voz-aviso{color:var(--suave,#8b96a5)}";
   doc.head.appendChild(estilo);
   // 19-10-2026: también mensajes con agentes de la flota; filtro Todos / Consejeros / Agentes.
-  var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, hiloListos = false, vozOn = leerVozOn(), vozDesbloqueada = false, hablando = false, cola = [];
+  var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, hiloListos = false, vozOn = leerVozOn(), vozDesbloqueada = false, hablando = false, pendiente = null;
   var barra = doc.createElement("div");
   barra.id = "entre-filtro";
   barra.className = "meta";
@@ -269,20 +269,25 @@
   function credencialTurno() {
     try { return jwt(); } catch (e) { return ""; }
   }
-  function soltarCola() {
-    if (hablando || !vozOn || !vozDisponible()) return;
-    var x = cola[0];
-    if (!x) return;
+  function locutarUno(x) {
+    if (hablando || !vozOn || !x) return;
+    if (!root.AdmiraVoces || typeof root.AdmiraVoces.speak !== "function") return;
     hablando = true;
+    pendiente = null;
     var T = root.AdmiraVozTurno;
-    var seguir = function () {
-      var ok = root.AdmiraVoces.speak(x.persona, x.texto, {
-        onend: function () { if (ticket && ticket.liberar) ticket.liberar(); hablando = false; soltarCola(); },
-        onerror: function () { if (ticket && ticket.liberar) ticket.liberar(); hablando = false; soltarCola(); }
-      });
-      if (!ok) { if (ticket && ticket.liberar) ticket.liberar(); hablando = false; soltarCola(); }
-    };
     var ticket = null;
+    var terminar = function () {
+      if (ticket && ticket.liberar) try { ticket.liberar(); } catch (e) {}
+      hablando = false;
+      // No encadenar otra lectura: el siguiente mensaje espera a un sondeo nuevo.
+    };
+    var decir = function () {
+      var ok = root.AdmiraVoces.speak(x.persona, x.texto, {
+        onend: terminar,
+        onerror: terminar
+      });
+      if (!ok) terminar();
+    };
     if (T && typeof T.aguardarTurno === "function") {
       T.aguardarTurno({
         mensajeId: x.id,
@@ -294,14 +299,26 @@
         onPerdido: callarVoz
       }).then(function (t) {
         ticket = t;
-        if (!t || !t.concedido) { cola.shift(); hablando = false; soltarCola(); return; }
-        cola.shift();
-        seguir();
-      }).catch(function () { cola.shift(); hablando = false; soltarCola(); });
+        if (!t || !t.concedido) { hablando = false; return; }
+        decir();
+      }).catch(function () { hablando = false; });
       return;
     }
-    cola.shift();
-    seguir();
+    decir();
+  }
+  function encolarUno(item) {
+    if (!item) return;
+    pendiente = item;
+    if (!hablando && vozOn) {
+      var x = pendiente;
+      pendiente = null;
+      locutarUno(x);
+    }
+  }
+  function pararPagina() {
+    pendiente = null;
+    hablando = false;
+    callarVoz();
   }
   function desbloquearAudio() {
     if (!vozOn) return;
@@ -313,7 +330,7 @@
       }
       vozDesbloqueada = true;
     } catch (e) {}
-    soltarCola();
+    if (pendiente) encolarUno(pendiente);
   }
   function activarVoz() {
     vozOn = escribirVozOn(true);
@@ -323,7 +340,7 @@
   function silenciarVoz() {
     vozOn = escribirVozOn(false);
     hablando = false;
-    cola = [];
+    pendiente = null;
     callarVoz();
     pintarVoz();
   }
@@ -339,6 +356,13 @@
   root.addEventListener("pointerdown", gestoDesbloqueo, true);
   root.addEventListener("keydown", gestoDesbloqueo, true);
   root.addEventListener("touchstart", gestoDesbloqueo, true);
+  root.addEventListener("pagehide", pararPagina, true);
+  root.addEventListener("beforeunload", pararPagina, true);
+  if (doc.addEventListener) {
+    doc.addEventListener("visibilitychange", function () {
+      if (doc.hidden || doc.visibilityState === "hidden") pararPagina();
+    }, true);
+  }
   pintarVoz();
   if (vozOn) desbloquearAudio();
   lista.parentNode.insertBefore(barra, lista);
@@ -379,17 +403,15 @@
     if (!oidosListos) { iniciarOidos(silla, msgs); oidosListos = true; pintarVoz(); return; }
     var nuevos = pendientesDeLocutar(silla, msgs);
     if (!nuevos.length) return;
-    nuevos.forEach(function (n) { cola.push(n); });
-    if (vozOn) soltarCola();
-    else pintarVoz();
+    encolarUno(nuevos[nuevos.length - 1]);
+    if (!vozOn) pintarVoz();
   }
   function locutarHiloSiToca(turnos) {
     if (!silla || !doc.getElementById("hilo")) return;
     if (!hiloListos) { iniciarOidosHilo(silla, turnos); hiloListos = true; return; }
     var nuevos = pendientesHiloDeLocutar(silla, turnos);
     if (!nuevos.length) return;
-    nuevos.forEach(function (n) { cola.push(n); });
-    if (vozOn) soltarCola();
+    encolarUno(nuevos[nuevos.length - 1]);
   }
   api.locutarHiloSiToca = locutarHiloSiToca;
   if (doc.getElementById("hilo") && root.fetch) {

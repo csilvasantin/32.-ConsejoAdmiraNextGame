@@ -42,9 +42,12 @@
   // y Chrome (Google español). La parte de idioma se comprueba con «lang».
   var CASTING = [
     // ── Leyendas ──
-    { persona: "Steve Jobs", role: "CEO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 0.88, pitch: 0.75,
-      prefer: ["Jorge", "Alvaro", "Diego", "Rocko", "Pablo", "Grandpa"], prioridad: 1,
-      timbre: "Grave, lento y preciso. Frases cortas con pausa: el contrapunto de Elon.",
+    // PROVISIONAL (Carlos, 12-11-2026 11:28 Madrid): voz femenina para
+    // diferenciarlo rápido de Elon (Reed). Luego se pondrá su voz real. No usar Eddy.
+    { persona: "Steve Jobs", role: "CEO", gen: "leyendas", genero: "f", lang: "es-ES", rate: 0.95, pitch: 1.05,
+      prefer: ["Monica", "Paulina", "Marisol", "Shelley", "Sandy", "Flo", "Elvira", "Helena", "Laura", "Grandma"],
+      prioridad: 1,
+      timbre: "Provisional: voz femenina (Mónica) para distinguirlo al vuelo de Elon. Luego, su voz real.",
       frase: "Hola, soy Steve Jobs. Menos ruido y más foco: ¿qué vamos a crear hoy?" },
     { persona: "Steve Wozniak", role: "CTO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 1.06, pitch: 1.14,
       prefer: ["Pablo", "Juan", "Reed", "Alonso", "Gonzalo"],
@@ -256,12 +259,19 @@
     catch (e) { return {}; }
   }
   function writeLocal(d) { try { root.localStorage.setItem(LS_KEY, JSON.stringify(d || {})); } catch (e) {} }
+  // PROVISIONAL: la voz femenina de Jobs gana sobre personalizaciones anteriores
+  // (Jorge en localStorage admira_voces_v1 o api.yokup.com/prefs/customize).
+  // Una personalización NUEVA, hecha ya con este sello (p. ej. en /voces), sí se respeta.
+  // El resto de consejeros no se toca.
+  var JOBS_SLUG = "steve-jobs";
+  var JOBS_SELLO = "femenina-provisional-20261112";
   function clean(o) {
     var r = {};
     if (!o || typeof o !== "object") return r;
     if (typeof o.voice === "string" && o.voice) r.voice = o.voice.slice(0, 200);
     if (isFinite(o.rate)) r.rate = clamp(+o.rate, 0.5, 2);
     if (isFinite(o.pitch)) r.pitch = clamp(+o.pitch, 0, 2);
+    if (typeof o.sello === "string" && o.sello) r.sello = o.sello.slice(0, 80);
     return r;
   }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
@@ -269,12 +279,14 @@
     var local = readLocal()[key], sh = shared[key];
     var r = {};
     [sh, local].forEach(function (o) { var c = clean(o); for (var k in c) r[k] = c[k]; });
+    if (key === JOBS_SLUG && r.sello !== JOBS_SELLO) return {};
     return r;
   }
   function setOverride(persona, data) {
     var key = slug(persona), d = readLocal();
     var c = clean(data);
-    if (Object.keys(c).length) d[key] = c; else delete d[key];
+    if (key === JOBS_SLUG && (c.voice || c.rate != null || c.pitch != null)) c.sello = JOBS_SELLO;
+    if (c.voice || c.rate != null || c.pitch != null) d[key] = c; else delete d[key];
     writeLocal(d);
   }
   function resetOverride(persona) { var d = readLocal(); delete d[slug(persona)]; writeLocal(d); }
@@ -412,7 +424,7 @@
     setOverride: setOverride, resetOverride: resetOverride, localOverrides: localOverrides,
     sharedOverrides: function () { return JSON.parse(JSON.stringify(shared)); },
     portadaOn: portadaOn, setPortada: setPortada, chunks: chunks, generoDe: generoDe,
-    _setVoicesForTest: setVoicesForTest,
+    _setVoicesForTest: setVoicesForTest, JOBS_SELLO: JOBS_SELLO,
   };
   root.AdmiraVoces = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

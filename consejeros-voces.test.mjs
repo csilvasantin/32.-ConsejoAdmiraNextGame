@@ -43,16 +43,18 @@ test('en un Mac con las voces de serie, cada consejero suena con una de sus voce
   V._setVoicesForTest(MAC);
   const perf = V.CASTING.map(c => V.profile(c.persona));
   for (const p of perf) assert.equal(p.via, 'casting', p.persona);
-  // las 9 voces españolas de un Mac de serie se usan todas
-  assert.equal(new Set(perf.map(p => p.voiceName)).size, 9);
+  // se usan las voces españolas de un Mac de serie (Jobs femenina suma una más que cuando era Jorge)
+  const nVoces = new Set(perf.map(p => p.voiceName)).size;
+  assert.ok(nVoces >= 9 && nVoces <= 11, 'voces distintas: ' + nVoces);
   assert.equal(V.profile('Walt Disney').voiceName, 'Grandpa (Español (España))');
   assert.equal(V.profile('George Lucas').voiceName, 'Rocko (Español (España))');
-  assert.equal(V.profile('Mira Murati').voiceName, 'Mónica');
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.generoDe(V.profile('Steve Jobs').voice), 'f');
+  assert.notEqual(V.profile('Mira Murati').voiceName, 'Mónica', 'Murati cede Mónica a Jobs (prioridad 1)');
   const usos = {}; for (const p of perf) usos[p.voiceName] = (usos[p.voiceName] || 0) + 1;
   assert.ok(Math.max(...Object.values(usos)) <= 3, JSON.stringify(usos));
   // las mujeres nunca caen en voz masculina conocida
-  for (const n of ['Mira Murati', 'Ruth Porat']) assert.equal(V.generoDe(V.profile(n).voice), 'f', n);
+  for (const n of ['Steve Jobs', 'Mira Murati', 'Ruth Porat']) assert.equal(V.generoDe(V.profile(n).voice), 'f', n);
   // nunca una voz que no sea española si hay españolas
   for (const p of perf) assert.match(p.lang, /^es/);
 });
@@ -77,7 +79,7 @@ test('personalización local: pisa al casting y se puede deshacer', () => {
   assert.notEqual(V.profile('Steve Jobs').voiceName, 'No existe aquí');
   V.resetOverride('Steve Jobs');
   p = V.profile('Steve Jobs');
-  assert.equal(p.custom, false); assert.equal(p.rate, 0.88);
+  assert.equal(p.custom, false); assert.equal(p.rate, 0.95);
 });
 
 test('guardar para el equipo: solo cambia «voices» y conserva agentes, máquinas y tablero', async () => {
@@ -119,9 +121,14 @@ test('portada: muda por defecto; las páginas cargan el módulo', () => {
   assert.match(leer('reunion.html'), /AdmiraVoces\.speak\(c\.persona/);
 });
 
-test('Jobs y Elon: contraste máximo y nunca la misma voz si hay otra en español', () => {
+test('Jobs y Elon: Jobs voz femenina provisional, Elon Reed, nunca la misma voz si hay otra en español', () => {
   const J = V.casting('Steve Jobs'), E = V.casting('Elon Musk');
-  assert.ok(E.rate - J.rate >= 0.3 && E.pitch - J.pitch >= 0.5);
+  assert.equal(J.genero, 'f');
+  assert.equal(J.prefer[0], 'Monica');
+  assert.ok(!J.prefer.some(x => /eddy/i.test(x)));
+  assert.equal(J.rate, 0.95); assert.equal(J.pitch, 1.05);
+  assert.ok(E.rate > J.rate && E.pitch > J.pitch);
+  assert.ok((E.evita || []).includes('steve-jobs'));
   const escenarios = [
     MAC,
     [v('Jorge', 'es-ES'), v('Juan', 'es-MX')],
@@ -136,22 +143,45 @@ test('Jobs y Elon: contraste máximo y nunca la misma voz si hay otra en españo
     assert.notEqual(a.voiceName, b.voiceName, lista.map(x => x.name).join(','));
   }
   V._setVoicesForTest(MAC);
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
   assert.equal(V.profile('Elon Musk').voiceName, 'Reed (Español (España))');
 });
 
-test('Chrome en Mac sin Jorge/Juan/Diego (solo Eddy, Rocko, Reed… en es-ES y es-MX): Jobs grave y nunca Eddy; Elon distinto', () => {
+test('Chrome en Mac: Jobs voz femenina (Mónica) y nunca Eddy; Elon sigue en Reed', () => {
   const nombres = ['Eddy', 'Flo', 'Grandma', 'Grandpa', 'Reed', 'Rocko', 'Sandy', 'Shelley'];
   const CHROME = [...nombres.map(n => v(n + ' (español (España))', 'es-ES')), ...nombres.map(n => v(n + ' (español (México))', 'es-MX')),
     v('Mónica', 'es-ES'), v('Paulina', 'es-MX'), v('Google español', 'es-ES'), v('Google español de Estados Unidos', 'es-US')];
   V._setVoicesForTest(CHROME);
   const jobs = V.profile('Steve Jobs'), elon = V.profile('Elon Musk');
-  assert.equal(jobs.voiceName, 'Rocko (español (España))');
-  assert.doesNotMatch(jobs.voiceName, /Eddy/);
+  assert.equal(jobs.voiceName, 'Mónica');
+  assert.equal(V.generoDe(jobs.voice), 'f');
+  assert.doesNotMatch(jobs.voiceName, /Eddy/i);
   assert.notEqual(elon.voiceName, jobs.voiceName);
   assert.equal(elon.voiceName, 'Reed (español (España))');
-  assert.equal(jobs.rate, 0.88); assert.equal(jobs.pitch, 0.75);
-  // y con Jorge instalado, Jobs se queda Jorge
+  assert.equal(jobs.rate, 0.95); assert.equal(jobs.pitch, 1.05);
+  // con Jorge instalado, Jobs se queda en Mónica (provisional), no vuelve a Jorge
   V._setVoicesForTest([v('Jorge', 'es-ES'), ...CHROME]);
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Jorge');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+});
+
+test('Jobs provisional: un Jorge guardado en localStorage o en prefs compartidas no pisa la voz femenina', async () => {
+  V._setVoicesForTest(MAC);
+  store['admira_voces_v1'] = JSON.stringify({ 'steve-jobs': { voice: 'Jorge', rate: 0.88, pitch: 0.75 } });
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Steve Jobs').via, 'casting');
+  // una personalización NUEVA (con sello) sí se respeta
+  V.setOverride('Steve Jobs', { voice: 'Paulina' });
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
+  assert.equal(V.profile('Steve Jobs').via, 'personalizada');
+  const local = JSON.parse(store['admira_voces_v1']);
+  assert.equal(local['steve-jobs'].sello, V.JOBS_SELLO);
+  V.resetOverride('Steve Jobs');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  // prefs compartidas antiguas (sin sello) tampoco pisan; las de otro consejero siguen
+  const fakeFetch = async (url, opts) => ({
+    json: async () => ({ ok: true, customize: { voices: { 'steve-jobs': { voice: 'Jorge' }, 'walt-disney': { voice: 'Rocko (Español (España))' } } } })
+  });
+  await V.loadShared(fakeFetch);
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Walt Disney').voiceName, 'Rocko (Español (España))');
 });

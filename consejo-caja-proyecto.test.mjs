@@ -36,7 +36,7 @@ test('la línea del proyecto actual va entre el principal y el recuento, con «�
   assert.match(src, /function proyectoActualDe\(/);
   assert.match(src, /texto: nombre \|\| '—'/);
   assert.match(src, /ahora\.classList\.add\('is-ultimo'\)/);
-  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-ahora\{[^}]*font-size:8px/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-ahora\{[^}]*font-size:10px/);
   assert.match(src, /#papel-halos \.consejero-ranking \.ranking-ahora\.is-ultimo\{[^}]*opacity:\.55/);
   const iProy = src.indexOf("nom.className = 'ranking-proy'");
   const iAhora = src.indexOf("ahora.className = 'ranking-ahora'");
@@ -84,7 +84,7 @@ test('el puesto dentro de la flecha es más pequeño y cabe en el triángulo, si
   assert.doesNotMatch(src, /puesto[^\n]{0,80}\/6/);
 });
 
-test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r173-mision', () => {
+test('el mapa de la caja coincide con el reparto de titulares y el script se cachea como r175-cajas-anchas', () => {
   for (const [persona, nombre] of [
     ['Steve Wozniak', 'Alsea'],
     ['Walt Disney', 'PortAventuraNeXT'],
@@ -95,7 +95,8 @@ test('el mapa de la caja coincide con el reparto de titulares y el script se cac
     assert.equal(p.nombre, nombre);
     assert.match(src, new RegExp("'" + persona + "': '" + nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'"));
   }
-  assert.match(index, /council-globo\.js\?v=20261112-r173-proyecto-mision/);
+  assert.match(index, /consejo-caja-prefs\.mjs\?v=20261112-r175-cajas-anchas/);
+  assert.match(index, /council-globo\.js\?v=20261112-r175-cajas-anchas/);
   const plantilla = plantillaInicial();
   assert.deepEqual(plantilla.map((x) => x.titular + ':' + x.nombre), [
     'Walt:PortAventuraNeXT', 'Lucas:AdmiraNeXT', 'Woz:Alsea', 'Jobs:Día a día',
@@ -137,4 +138,34 @@ test('la firma no aparenta una aportación del titular si el texto lo puso otro'
   // Alsea y Día a día no están en la excepción: esas firmas sí son reales.
   assert.doesNotMatch(src, /FIRMAS_PROVISIONALES_WOZ = \{[\s\S]*alsea/);
   assert.doesNotMatch(src, /FIRMAS_PROVISIONALES_WOZ = \{[\s\S]*dia-a-dia/);
+});
+
+test('las cajas de consejero apuntan a 280 px, envuelven el texto y no usan el recorte de 12 em', () => {
+  assert.match(src, /#papel-halos \.consejero-ranking\{[^}]*width:280px/);
+  assert.match(src, /#papel-halos \.consejero-ranking\{[^}]*min-width:140px/);
+  assert.match(src, /#papel-halos \.consejero-ranking\{[^}]*white-space:normal/);
+  assert.match(src, /#papel-halos \.consejero-ranking \.ranking-proy\{[^}]*-webkit-line-clamp:2/);
+  assert.doesNotMatch(src, /ranking-proy\{[^}]*max-width:12em/);
+  assert.match(src, /function repartirCajas\(/);
+  assert.match(src, /function evitatSolapeFlechas\(/);
+  assert.match(src, /Caja\.repartirAnchos/);
+});
+
+test('cada caja tiene × para cerrar, asa de redimensionado y memoria en localStorage', () => {
+  assert.match(src, /className = 'caja-cerrar'/);
+  assert.match(src, /textContent = '×'/);
+  assert.match(src, /className = 'caja-resize'/);
+  assert.match(src, /CAJA_STORAGE_KEY/);
+  assert.match(src, /localStorage\.setItem/);
+  assert.match(src, /function cerrarCaja\(/);
+  assert.match(src, /function abrirCaja\(/);
+  assert.match(src, /className = 'caja-reabrir'/);
+  assert.match(src, /intentarReabrir/);
+  assert.match(src, /mostrarCarlosPersistente/);
+  // El redimensionado no usa r.bottom para recolocar a Carlos (sigue anclado arriba).
+  const resize = src.match(/function wireResize\([\s\S]*?\n  \}/);
+  assert.ok(resize, 'existe wireResize');
+  assert.doesNotMatch(resize[0], /r\.bottom/);
+  assert.match(resize[0], /globo-proyectos/);
+  assert.match(resize[0], /colocarGlobo/);
 });

@@ -43,6 +43,11 @@
 /api/consejo/escena0
   Cache-Control: no-store
 
+
+/consejo-caja-prefs.mjs
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+
 /escena0-lib.mjs
   Content-Type: text/javascript; charset=utf-8
   Cache-Control: public, max-age=300, must-revalidate

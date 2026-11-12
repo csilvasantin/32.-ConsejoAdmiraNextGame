@@ -20,6 +20,14 @@
  * t1224u: esa caja queda fija encima de su cabeza (tamaño fijo, scroll interno);
  * al pasar de proyecto con ◀ ▶ no se desplaza ni cambia de tamaño. Si el texto
  * lo escribió otro, la firma dice «provisional · autor real · hora».
+ * t1285u: las cajas de dedicación de cada consejero se ensanchan hacia 280 px
+ * (como la de Carlos), con texto envuelto y recorte de líneas; no se pisan
+ * entre sí ni pisan las flechas o el número del puesto, y la de Carlos no
+ * se mueve de su sitio inicial. t1286u: todas llevan un × arriba a la
+ * derecha para cerrarlas y un asa de redimensionado abajo a la derecha
+ * (estilo píxel). El cierre y el tamaño se recuerdan en localStorage; se
+ * reabren al clicar el personaje, al pasar de nuevo por su máscara o con
+ * un + en la flecha. El redimensionado no mueve la caja de Carlos.
  * prefers-reduced-motion: halo y flecha sin animación. */
 (function (root) {
   'use strict';
@@ -58,12 +66,12 @@
 #papel-halos .consejero-flecha{width:clamp(40px,9.2%,72px);aspect-ratio:80/88;line-height:normal;position:relative;flex:0 0 auto}
 #papel-halos .consejero-flecha svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)) drop-shadow(0 0 3px currentColor)}
 #papel-halos .consejero-flecha .puesto{position:absolute;left:0;right:0;top:47%;height:36%;display:flex;align-items:center;justify-content:center;margin:0;padding:0;font:800 13px/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:#140e06;-webkit-text-stroke:0.35px rgba(243,230,196,.45);text-shadow:none;pointer-events:none;z-index:2}
-#papel-halos .consejero-ranking{margin:0;padding:3px 7px 4px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:2px;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:nowrap;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer}
-#papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:9px;line-height:1.2;letter-spacing:.01em;max-width:12em;overflow:hidden;text-overflow:ellipsis}
-#papel-halos .consejero-ranking .ranking-ahora{font-weight:600;font-size:8px;line-height:1.2;letter-spacing:.01em;max-width:12em;margin-top:1px;overflow:hidden;text-overflow:ellipsis;opacity:.9}
+#papel-halos .consejero-ranking{margin:0;padding:16px 16px 14px;background:rgba(20,14,6,.92);border:1px solid currentColor;border-radius:0;color:inherit;font:700 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-align:center;display:flex;flex-direction:column;align-items:center;white-space:normal;box-sizing:border-box;position:relative;width:280px;min-width:140px;max-width:280px;overflow:hidden;text-shadow:0 1px 0 #140e06,-1px -1px 0 #140e06,1px -1px 0 #140e06,-1px 1px 0 #140e06,1px 1px 0 #140e06;pointer-events:auto;cursor:pointer;box-shadow:3px 3px 0 #000}
+#papel-halos .consejero-ranking .ranking-proy{font-weight:700;font-size:11px;line-height:1.25;letter-spacing:.01em;max-width:100%;width:100%;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+#papel-halos .consejero-ranking .ranking-ahora{font-weight:600;font-size:10px;line-height:1.25;letter-spacing:.01em;max-width:100%;width:100%;margin-top:2px;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;opacity:.9}
 #papel-halos .consejero-ranking .ranking-ahora.is-ultimo{opacity:.55}
-#papel-halos .consejero-ranking .ranking-mision{font-weight:600;font-size:7px;line-height:1.25;letter-spacing:.01em;max-width:14em;margin-top:2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;opacity:.95}
-#papel-halos .consejero-ranking .ranking-fila{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px}
+#papel-halos .consejero-ranking .ranking-mision{font-weight:600;font-size:9px;line-height:1.3;letter-spacing:.01em;max-width:100%;width:100%;margin-top:2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;opacity:.95}
+#papel-halos .consejero-ranking .ranking-fila{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:3px;white-space:nowrap;flex:0 0 auto}
 #papel-halos .consejero-ranking .ranking-n{font-weight:800;font-size:13px;line-height:1.1;min-width:1.1em}
 #papel-halos .consejero-ranking .ranking-nav{appearance:none;flex:0 0 auto;width:20px;height:20px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;font:13px/1 sans-serif;cursor:pointer}
 #papel-halos .consejero-ranking .ranking-nav:disabled{opacity:.4;cursor:default}
@@ -75,17 +83,27 @@
   #papel-halos .consejero-marker{gap:8px}
   #papel-halos .consejero-flecha{width:clamp(34px,10%,56px)}
   #papel-halos .consejero-flecha .puesto{font-size:11px;top:48%;height:34%}
-  #papel-halos .consejero-ranking{padding:2px 5px 3px}
+  #papel-halos .consejero-ranking{padding:14px 12px 12px}
   #papel-halos .consejero-ranking .ranking-n{font-size:12px}
-  #papel-halos .consejero-ranking .ranking-proy{font-size:8px;max-width:11em}
-  #papel-halos .consejero-ranking .ranking-ahora{font-size:7px;max-width:11em}
-  #papel-halos .consejero-ranking .ranking-mision{font-size:6px;max-width:12em}
+  #papel-halos .consejero-ranking .ranking-proy{font-size:9px;max-width:100%}
+  #papel-halos .consejero-ranking .ranking-ahora{font-size:8px;max-width:100%}
+  #papel-halos .consejero-ranking .ranking-mision{font-size:7px;max-width:100%}
   #papel-halos .consejero-ranking .ranking-nav{width:18px;height:18px;font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){.consejero-flecha{animation:none!important}}
 
-.consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:7px 10px 8px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%)}
-.consejo-globo.globo-proyectos{width:280px;min-width:280px;max-width:280px;height:220px;min-height:220px;max-height:220px;box-sizing:border-box;padding:8px 10px 10px;pointer-events:auto;z-index:24;text-align:center;display:flex;flex-direction:column;overflow:hidden}
+#papel-halos .consejero-ranking.caja-compacta .ranking-proy,#papel-halos .consejero-ranking.caja-compacta .ranking-ahora{font-size:8px;-webkit-line-clamp:1}
+#papel-halos .consejero-ranking.caja-compacta .ranking-mision{font-size:7px;-webkit-line-clamp:2}
+.caja-cerrar{appearance:none;position:absolute;top:2px;right:2px;z-index:5;width:16px;height:16px;padding:0;margin:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;box-shadow:1px 1px 0 #000;font:700 12px/14px "Press Start 2P",ui-monospace,monospace;cursor:pointer;pointer-events:auto}
+.caja-cerrar:focus-visible{outline:2px dashed #ffd75e;outline-offset:1px}
+.caja-resize{position:absolute;right:0;bottom:0;z-index:5;width:12px;height:12px;cursor:nwse-resize;pointer-events:auto;background:linear-gradient(135deg,transparent 0 46%,#c9a227 46% 54%,transparent 54% 68%,#c9a227 68% 76%,transparent 76% 90%,#c9a227 90% 100%)}
+#papel-halos .consejero-flecha{position:relative}
+#papel-halos .caja-reabrir{appearance:none;position:absolute;left:50%;top:-2px;transform:translate(-50%,-100%);z-index:6;width:16px;height:16px;padding:0;background:#1a140a;color:#ffd75e;border:1px solid #c9a227;box-shadow:1px 1px 0 #000;font:700 12px/14px "Press Start 2P",ui-monospace,monospace;cursor:pointer;pointer-events:auto}
+#papel-halos .caja-reabrir:focus-visible{outline:2px dashed #ffd75e;outline-offset:1px}
+.consejero-ancla-carlos{width:0;height:0;overflow:visible;pointer-events:none}
+
+.consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:16px 12px 10px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%);box-sizing:border-box}
+.consejo-globo.globo-proyectos{width:280px;min-width:280px;max-width:280px;height:220px;min-height:220px;max-height:220px;box-sizing:border-box;padding:16px 12px 14px;pointer-events:auto;z-index:24;text-align:center;display:flex;flex-direction:column;overflow:hidden}
 .consejo-globo b{display:block;margin:0 0 3px;font:bold 9px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.3px}
 .consejo-globo.globo-proyectos b{flex:0 0 auto;text-align:center;letter-spacing:0;white-space:nowrap;width:100%}
 .consejo-globo.globo-proyectos .gp-nav{flex:0 0 auto}
@@ -466,6 +484,7 @@
     return (p && Array.isArray(p.puntos) && p.puntos.length >= 3) ? p.puntos : [];
   }
   function pintarHalos() {
+    if (redimensionando) return;
     const d = doc(); if (!d) return;
     estilos();
     const c = capaHalos(); if (!c) return;
@@ -561,14 +580,27 @@
           if (e.key !== 'Enter' && e.key !== ' ') return;
           e.preventDefault(); e.stopPropagation(); mostrarListaMac(persona);
         });
+        cromarCaja(lab, persona);
+        if (estaCerrada(persona)) lab.hidden = true;
         wrap.appendChild(lab);
       }
       const el = d.createElement('span');
       el.className = 'consejero-flecha';
       el.innerHTML = flechaSvg(hoy && hoy.puesto);
+      if (estaCerrada(persona)) {
+        const btn = d.createElement('button');
+        btn.type = 'button';
+        btn.className = 'caja-reabrir';
+        btn.setAttribute('aria-label', 'Mostrar caja de ' + persona);
+        btn.textContent = '+';
+        btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); abrirCaja(persona); });
+        el.appendChild(btn);
+      }
       wrap.appendChild(el);
       c.appendChild(wrap);
     });
+    mostrarCarlosPersistente();
+    repartirCajas(c);
   }
 
   function textoEtiqueta(et) {
@@ -578,6 +610,226 @@
     return compacto ? t.replace(/\s*hoy\s*·\s*/, '·') : t;
   }
 
+  let prefsCajas = null, redimensionando = false;
+  const noHoverHastaSalir = Object.create(null);
+  const Caja = root.ConsejoCajaPrefs || null;
+
+  function leerPrefsCajas() {
+    if (prefsCajas) return prefsCajas;
+    if (!Caja) { prefsCajas = {}; return prefsCajas; }
+    try {
+      prefsCajas = Caja.parsePrefs(root.localStorage && root.localStorage.getItem(Caja.CAJA_STORAGE_KEY));
+    } catch (e) { prefsCajas = {}; }
+    return prefsCajas;
+  }
+  function prefDeCaja(persona) {
+    return Caja ? Caja.prefDe(leerPrefsCajas(), persona) : {};
+  }
+  function estaCerrada(persona) {
+    return !!prefDeCaja(persona).closed;
+  }
+  function guardarPrefCaja(persona, patch) {
+    if (!Caja || !persona) return;
+    prefsCajas = Caja.fusionarPref(leerPrefsCajas(), persona, patch);
+    try { root.localStorage && root.localStorage.setItem(Caja.CAJA_STORAGE_KEY, Caja.serializarPrefs(prefsCajas)); } catch (e) {}
+  }
+  function aplicarTamanoCaja(el, persona) {
+    if (!el || !persona) return;
+    const pref = prefDeCaja(persona);
+    const ancho = pref.w || (Caja ? Caja.CAJA_ANCHO_PREF : 280);
+    el.style.width = ancho + 'px';
+    if (!el.classList.contains('globo-proyectos')) {
+      el.style.minWidth = ancho + 'px';
+      el.style.maxWidth = ancho + 'px';
+    }
+    if (pref.h) {
+      el.style.height = pref.h + 'px';
+      if (el.classList.contains('globo-proyectos')) {
+        el.style.minHeight = pref.h + 'px';
+        el.style.maxHeight = pref.h + 'px';
+      }
+    }
+  }
+  function wireResize(handle, caja, persona) {
+    if (!handle || !caja) return;
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (handle.setPointerCapture) try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+      redimensionando = true;
+      const startX = e.clientX, startY = e.clientY;
+      const startW = caja.offsetWidth, startH = caja.offsetHeight;
+      const minW = (Caja && Caja.CAJA_ANCHO_MIN) || 140;
+      const minH = (Caja && Caja.CAJA_ALTO_MIN) || 72;
+      const move = (ev) => {
+        const nw = Math.max(minW, Math.min(800, Math.round(startW + (ev.clientX - startX) * 2)));
+        const nh = Math.max(minH, Math.min(800, Math.round(startH - (ev.clientY - startY))));
+        caja.style.width = nw + 'px';
+        caja.style.minWidth = nw + 'px';
+        caja.style.maxWidth = nw + 'px';
+        caja.style.height = nh + 'px';
+        caja.style.minHeight = nh + 'px';
+        caja.style.maxHeight = nh + 'px';
+        /* Solo cambia ancho/alto: la de Carlos sigue anclada encima de la cabeza. */
+        if (caja.classList.contains('globo-proyectos') && abierto) colocarGlobo(abierto.anchor);
+      };
+      const up = (ev) => {
+        if (handle.releasePointerCapture) try { handle.releasePointerCapture(ev.pointerId); } catch (err) {}
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', up);
+        handle.removeEventListener('pointercancel', up);
+        redimensionando = false;
+        guardarPrefCaja(persona, { w: caja.offsetWidth, h: caja.offsetHeight });
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', up);
+      handle.addEventListener('pointercancel', up);
+    });
+  }
+  function cromarCaja(el, persona) {
+    const d = doc(); if (!d || !el || !persona) return;
+    el.setAttribute('data-caja', persona);
+    if (!el.querySelector(':scope > .caja-cerrar')) {
+      const x = d.createElement('button');
+      x.type = 'button';
+      x.className = 'caja-cerrar';
+      x.setAttribute('aria-label', 'Cerrar caja de ' + persona);
+      x.textContent = '×';
+      x.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); cerrarCaja(persona); });
+      el.appendChild(x);
+    }
+    if (!el.querySelector(':scope > .caja-resize')) {
+      const h = d.createElement('span');
+      h.className = 'caja-resize';
+      h.setAttribute('aria-hidden', 'true');
+      h.title = 'Redimensionar';
+      wireResize(h, el, persona);
+      el.appendChild(h);
+    }
+    aplicarTamanoCaja(el, persona);
+  }
+  function cerrarCaja(persona) {
+    if (!persona) return;
+    guardarPrefCaja(persona, { closed: true });
+    noHoverHastaSalir[key(persona)] = true;
+    if (esCarlos(persona)) {
+      carlosFijado = false;
+      sobreGlobo = false;
+      if (globo) globo.hidden = true;
+      abierto = null;
+      return;
+    }
+    const d = doc();
+    if (d) d.querySelectorAll('.consejero-ranking').forEach((lab) => {
+      if (lab.getAttribute('data-caja') === persona) lab.hidden = true;
+    });
+    pintarHalos();
+  }
+  function abrirCaja(persona) {
+    if (!persona) return;
+    guardarPrefCaja(persona, { closed: false });
+    delete noHoverHastaSalir[key(persona)];
+    if (esCarlos(persona)) { mostrarCarlosPersistente(); return; }
+    pintarHalos();
+  }
+  function anclaCarlos() {
+    const d = doc(); if (!d) return null;
+    const c = capaHalos(); if (!c) return null;
+    if (genActual() !== 'leyendas') return null;
+    const pos = (PAPEL.leyendas || {})['Carlos Silva'];
+    const fl = pos && pos.flecha; if (!fl) return null;
+    let el = c.querySelector('.consejero-ancla-carlos');
+    if (!el) {
+      el = d.createElement('span');
+      el.className = 'consejero-marker consejero-ancla-carlos';
+      el.setAttribute('data-persona', 'Carlos Silva');
+      el.setAttribute('aria-hidden', 'true');
+      c.appendChild(el);
+    }
+    el.style.left = fl.x + '%';
+    el.style.top = fl.y + '%';
+    return el;
+  }
+  function mostrarCarlosPersistente() {
+    if (genActual() !== 'leyendas') {
+      if (globo && globo.classList.contains('globo-proyectos')) globo.hidden = true;
+      if (abierto && esCarlos(abierto.persona)) { abierto = null; carlosFijado = false; }
+      return;
+    }
+    if (estaCerrada('Carlos Silva')) {
+      if (globo && globo.classList.contains('globo-proyectos')) globo.hidden = true;
+      if (abierto && esCarlos(abierto.persona)) { abierto = null; carlosFijado = false; }
+      return;
+    }
+    const ancla = anclaCarlos();
+    if (!ancla) return;
+    carlosFijado = true;
+    pintarGlobo('Carlos Silva', ancla);
+  }
+  function evitatSolapeFlechas(c) {
+    if (!c || !Caja) return;
+    const rectsFlecha = [...c.querySelectorAll('.consejero-flecha, .consejero-flecha .puesto')].map((el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, el };
+    });
+    const carlos = (globo && !globo.hidden && globo.classList.contains('globo-proyectos')) ? globo.getBoundingClientRect() : null;
+    c.querySelectorAll('.consejero-ranking:not([hidden])').forEach((lab) => {
+      const r = lab.getBoundingClientRect();
+      const box = { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+      const propia = lab.closest && lab.closest('.consejero-marker');
+      let pisa = rectsFlecha.some((f) => {
+        if (propia && propia.contains(f.el)) return false;
+        return Caja.solapan(box, f, 1);
+      });
+      if (carlos && Caja.solapan(box, carlos, 1)) pisa = true;
+      lab.classList.toggle('caja-compacta', pisa);
+    });
+  }
+  function repartirCajas(c) {
+    if (!c || !Caja) return;
+    const stageW = c.getBoundingClientRect().width || 0;
+    if (!stageW) return;
+    const markers = [...c.querySelectorAll('.consejero-marker')].filter((el) => {
+      const lab = el.querySelector('.consejero-ranking');
+      return lab && !lab.hidden;
+    });
+    const items = markers.map((el) => {
+      const persona = el.getAttribute('data-persona');
+      const pref = prefDeCaja(persona);
+      return { id: persona, xPct: parseFloat(el.style.left), preferred: pref.w || Caja.CAJA_ANCHO_PREF, el };
+    });
+    if (globo && !globo.hidden && globo.classList.contains('globo-proyectos')) {
+      const ancla = c.querySelector('.consejero-ancla-carlos');
+      const xPct = ancla ? parseFloat(ancla.style.left) : 50;
+      const pref = prefDeCaja('Carlos Silva');
+      items.push({ id: 'Carlos Silva', xPct, preferred: pref.w || Caja.CAJA_ANCHO_PREF, fixed: true });
+    }
+    const laid = Caja.repartirAnchos(items, { stageW });
+    const by = Object.create(null);
+    laid.forEach((x) => { by[x.id] = x; });
+    markers.forEach((el) => {
+      const persona = el.getAttribute('data-persona');
+      const spec = by[persona];
+      const lab = el.querySelector('.consejero-ranking');
+      if (!spec || !lab) return;
+      lab.style.width = spec.width + 'px';
+      lab.style.minWidth = spec.width + 'px';
+      lab.style.maxWidth = spec.width + 'px';
+      lab.style.marginLeft = spec.shift ? (spec.shift + 'px') : '';
+      const pref = prefDeCaja(persona);
+      if (pref.h) {
+        lab.style.height = pref.h + 'px';
+        lab.style.minHeight = pref.h + 'px';
+        lab.style.maxHeight = pref.h + 'px';
+      }
+    });
+    evitatSolapeFlechas(c);
+  }
+  function intentarReabrir(persona) {
+    if (!persona || !estaCerrada(persona)) return false;
+    if (noHoverHastaSalir[key(persona)]) return false;
+    abrirCaja(persona);
+    return true;
+  }
 
   function colocarGlobo(anchor) {
     if (!globo || !anchor) return;
@@ -590,11 +842,13 @@
      * aunque el texto de a/b/c sea largo (el listado hace scroll). */
     if (globo.classList.contains('globo-proyectos')) {
       const ANCHO = 280, ALTO_MIN = 180, ALTO_MAX = 280;
-      const alto = Math.min(ALTO_MAX, Math.max(ALTO_MIN, Math.floor(r.top - 12)));
-      globo.style.width = ANCHO + 'px';
+      const pref = prefDeCaja('Carlos Silva');
+      const ancho = (pref.w && pref.w >= 140) ? pref.w : ANCHO;
+      const alto = pref.h || Math.min(ALTO_MAX, Math.max(ALTO_MIN, Math.floor(r.top - 12)));
+      globo.style.width = ancho + 'px';
       globo.style.height = alto + 'px';
       let left = r.left + r.width / 2 - sr.left;
-      left = Math.max(ANCHO / 2 + 6, Math.min(sr.width - ANCHO / 2 - 6, left));
+      left = Math.max(ancho / 2 + 6, Math.min(sr.width - ancho / 2 - 6, left));
       const top = r.top - sr.top - 10;
       globo.style.left = left + 'px';
       globo.style.top = top + 'px';
@@ -668,6 +922,13 @@
         const p = d.createElement('p'); p.textContent = texto;
         globo.appendChild(p);
         globo.setAttribute('aria-label', persona + ': ' + texto);
+      }
+    }
+    if (carlos) {
+      cromarCaja(globo, persona);
+      if (estaCerrada(persona)) {
+        globo.hidden = true;
+        return;
       }
     }
     colocarGlobo(anchor);
@@ -941,22 +1202,34 @@
       c.addEventListener('mouseover', (e) => {
         if (esTactil()) return;
         const el = e.target.closest && e.target.closest('[data-persona]');
-        if (el) mostrar(el);
+        if (!el) return;
+        const persona = el.getAttribute('data-persona');
+        if (estaCerrada(persona)) { intentarReabrir(persona); return; }
+        mostrar(el);
       });
       c.addEventListener('mouseout', (e) => {
         if (esTactil()) return;
         const el = e.target.closest && e.target.closest('[data-persona]');
         if (!el) return;
         if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+        const persona = el.getAttribute('data-persona');
+        if (persona) delete noHoverHastaSalir[key(persona)];
+        if (esCarlos(persona) && carlosFijado) return;
         ocultar();
       });
       c.addEventListener('click', (e) => {
-        if (!esTactil()) return;
         const el = e.target.closest && e.target.closest('[data-persona]');
         if (!el) return;
         const persona = el.getAttribute('data-persona');
+        if (estaCerrada(persona)) {
+          e.preventDefault(); e.stopPropagation();
+          delete noHoverHastaSalir[key(persona)];
+          abrirCaja(persona);
+          return;
+        }
+        if (!esTactil()) return;
         if (abierto && abierto.persona === persona && globo && !globo.hidden) {
-          if (esCarlos(persona) && carlosFijado) { carlosFijado = false; ocultar(true); return; }
+          if (esCarlos(persona) && carlosFijado) return;
           ocultar(true); return;
         }
         mostrar(el);
@@ -987,7 +1260,7 @@
       if (e.target.closest && e.target.closest('#consejo-globo')) return;
       if (abierto) { carlosFijado = false; ocultar(true); }
     }, true);
-    d.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (listaAbierta) { cerrarListaMac(); return; } if (abierto) { carlosFijado = false; ocultar(true); } } });
+    d.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (listaAbierta) { cerrarListaMac(); return; } if (abierto && esCarlos(abierto.persona) && carlosFijado) { cerrarCaja('Carlos Silva'); return; } if (abierto) { carlosFijado = false; ocultar(true); } } });
     d.addEventListener('mouseover', (e) => {
       if (e.target.closest && e.target.closest('#consejo-globo.globo-proyectos')) {
         sobreGlobo = true; clearTimeout(hideT);
@@ -1013,7 +1286,7 @@
     if (root.addEventListener) {
       root.addEventListener('resize', () => {
         const c = doc().getElementById('papel-halos');
-        if (c) ajustarCapa(c);
+        if (c) { ajustarCapa(c); repartirCajas(c); }
         if (abierto) colocarGlobo(abierto.anchor);
       });
     }
@@ -1022,7 +1295,7 @@
     if (root.ResizeObserver && escena()) {
       new root.ResizeObserver(() => {
         const c = doc().getElementById('papel-halos');
-        if (c) ajustarCapa(c);
+        if (c) { ajustarCapa(c); repartirCajas(c); }
         if (abierto) colocarGlobo(abierto.anchor);
       }).observe(escena());
     }
@@ -1040,5 +1313,5 @@
   if (doc() && doc().readyState === 'loading') doc().addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 
-  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto };
+  root.CouncilGlobo = { cargar, pintarHalos, mostrar, ocultar, sillaDe, mapaEstados, estadoDe, proyectosDe, proyectoDe, proyectoActualDe, fraseMisionDe, cargarLatido, aplicarLatido, pasoProyecto, abrirCaja, cerrarCaja, repartirCajas, mostrarCarlosPersistente };
 })(typeof window !== 'undefined' ? window : globalThis);

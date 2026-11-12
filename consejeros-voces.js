@@ -139,7 +139,9 @@
     try { voices = synth ? (synth.getVoices() || []) : []; } catch (e) { voices = []; }
     return voices;
   }
+  // Al cargar una versión nueva, corta cualquier cola en curso (voz del sistema incluida).
   if (synth) {
+    try { synth.cancel(); } catch (e) {}
     loadVoices();
     try {
       var prev = synth.onvoiceschanged;

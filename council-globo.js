@@ -814,7 +814,7 @@
       lab.style.width = spec.width + 'px';
       lab.style.minWidth = spec.width + 'px';
       lab.style.maxWidth = spec.width + 'px';
-      lab.style.marginLeft = spec.shift ? (spec.shift + 'px') : '';
+      lab.style.transform = spec.shift ? ('translateX(' + spec.shift + 'px)') : '';
       const pref = prefDeCaja(persona);
       if (pref.h) {
         lab.style.height = pref.h + 'px';
@@ -822,7 +822,71 @@
         lab.style.maxHeight = pref.h + 'px';
       }
     });
+    evitatSolapeCajas(c);
     evitatSolapeFlechas(c);
+  }
+
+  function centroFlechaDe(lab) {
+    const m = lab && lab.closest && lab.closest('.consejero-marker');
+    if (!m) return null;
+    const r = m.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.bottom };
+  }
+  function aplicarAnchoCaja(lab, width, shift) {
+    lab.style.width = width + 'px';
+    lab.style.minWidth = width + 'px';
+    lab.style.maxWidth = width + 'px';
+    lab.style.transform = shift ? ('translateX(' + Math.round(shift) + 'px)') : '';
+  }
+  /* Paso final con medidas reales: si dos cajas se pisan, se encogen o se
+   * desplazan; la de Carlos no se mueve. */
+  function evitatSolapeCajas(c) {
+    if (!c || !Caja) return;
+    const gap = Caja.CAJA_HUECO || 8;
+    const min = Caja.CAJA_ANCHO_MIN || 140;
+    const list = [...c.querySelectorAll('.consejero-ranking:not([hidden])')];
+    for (let pass = 0; pass < 16; pass++) {
+      let changed = false;
+      const recs = list.map((el) => {
+        const r = el.getBoundingClientRect();
+        let shift = 0;
+        const tm = (el.style.transform || '').match(/translateX\(([\-\d.]+)px\)/);
+        if (tm) shift = parseFloat(tm[1]) || 0;
+        return { el, r, shift, fl: centroFlechaDe(el) };
+      });
+      const muros = recs.map((x) => x);
+      if (globo && !globo.hidden && globo.classList.contains('globo-proyectos')) {
+        muros.push({ el: globo, r: globo.getBoundingClientRect(), shift: 0, fl: null, fijo: true });
+      }
+      for (let i = 0; i < recs.length; i++) {
+        const a = recs[i];
+        for (let j = 0; j < muros.length; j++) {
+          const b = muros[j];
+          if (a.el === b.el) continue;
+          if (!Caja.solapan(a.r, b.r, gap)) continue;
+          const overlapX = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+          const need = Math.ceil(overlapX + gap);
+          const split = b.fijo ? 1 : 2;
+          const curW = a.el.offsetWidth;
+          const nw = Math.max(min, curW - Math.ceil(need / split));
+          let nextShift = a.shift;
+          if (nw === curW) {
+            const dir = ((a.r.left + a.r.right) / 2 <= (b.r.left + b.r.right) / 2) ? -1 : 1;
+            nextShift = a.shift + dir * Math.ceil(need / split);
+            if (a.fl) {
+              const cx = (a.r.left + a.r.right) / 2 + (nextShift - a.shift);
+              const left = cx - nw / 2, right = cx + nw / 2;
+              if (a.fl.x < left + 8 || a.fl.x > right - 8) nextShift = a.shift;
+            }
+          }
+          if (nw < curW || nextShift !== a.shift) {
+            aplicarAnchoCaja(a.el, nw, nextShift);
+            changed = true;
+          }
+        }
+      }
+      if (!changed) break;
+    }
   }
   function intentarReabrir(persona) {
     if (!persona || !estaCerrada(persona)) return false;

@@ -246,7 +246,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   /** Crear un encargo para una persona (agente de la flota o consejero). */
   async function encargar({ persona, maquina = '', texto, proyecto_id = '', de = '', deadline = '', criterio = '' }) {
     // Silla por máquina: agente_encargar(persona:'', maquina:'MacBookAirAzul') o persona = la máquina → Jobs.
-    const libre = consejeroNemotron(persona);
+    let libre = consejeroNemotron(persona);
     let p = libre ? libre.apellido : personaCanonica(persona);
     if (!p && consejeroDeMaquina(persona)) p = consejeroDeMaquina(persona);
     if (!p && maquina && consejeroDeMaquina(maquina)) p = consejeroDeMaquina(maquina);
@@ -261,7 +261,13 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     if (limite || hecho) cuerpo += `${limite ? `\n⏰ Fecha límite: ${limite}` : ''}${hecho ? `\n✅ Criterio de hecho: ${hecho}` : ''}`;
     let destino = maquina ? norm(maquina) : '';
     let nota = '';
-    if (libre) { destino = ''; nota = `${libre.nombre} (${libre.rol} · ${libre.gen}) es consejero no principal: no se despierta su Grok Bot. Lo contesta Cypher en la GrokBotBox con Nemotron 3 Ultra (gratis) firmando como ${libre.nombre}; suele tardar 1-3 min y atiende de uno en uno`; }
+    // ENCARGO PROPIO (Carlos, 12-nov-2026): la rutina de un consejero se encarga algo a sí misma para que
+    // cuente como misión. Se queda en su bandeja (ni Cypher ni otro agente) y él la cierra con encargo_responder.
+    const yo = identidad && identidad.persona ? (personaCanonica(identidad.persona) || sillaCanonica(identidad.persona)) : null;
+    const propio = !!(yo && esConsejero(yo) && (yo === p || (libre && libre.apellido === yo)));
+    if (propio) { p = yo; libre = null; }
+    if (propio) { destino = MAQUINA_CONSEJEROS; nota = `encargo propio de ${p}: se queda en tu bandeja (sin Cypher ni webhook); ciérralo con encargo_responder(numero, done, nota)`; }
+    else if (libre) { destino = ''; nota = `${libre.nombre} (${libre.rol} · ${libre.gen}) es consejero no principal: no se despierta su Grok Bot. Lo contesta Cypher en la GrokBotBox con Nemotron 3 Ultra (gratis) firmando como ${libre.nombre}; suele tardar 1-3 min y atiende de uno en uno`; }
     else if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = `consejero de GrokBot (silla ${SILLAS[p].rol} · ${SILLAS[p].maquina}): el worker lo despierta por su webhook; suele contestar en 1-3 min`; }
     else if (!destino) {
       destino = await maquinaDe(p);
@@ -271,13 +277,14 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     // Contrato del bot-inbox: con proyecto el encargo nace como misión FLT en yokup; sin proyecto
     // es conversación (materialize_mission:false) y no ensucia el tablero de misiones.
     const body = { text: cuerpo, target_persona: p, target_machine: destino, from: firma };
+    if (propio) body.de_consejero = p;
     if (proyecto_id) { body.project_id = proyecto_id; body.materialize_mission = true; } else body.materialize_mission = false;
     if (limite) body.deadline = limite;
     if (hecho) body.done_criteria = hecho;
     const r = await llamar(`${base}/api/bot-inbox`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!r || !r.ok) throw new Error(`el bot-inbox no aceptó el encargo: ${JSON.stringify(r)}`);
     const etiqueta = etiquetaEncargo(r.id, r.ts, r.etiqueta);
-    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, ...(libre ? { consejero: libre.nombre, via: 'Nemotron 3 Ultra (gratis)', atiende: 'Cypher · grokbotbox', grokbot: false } : {}), publicado_en_telegram: r.posted !== false, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
+    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, ...(propio ? { encargo_propio: true } : {}), ...(libre ? { consejero: libre.nombre, via: 'Nemotron 3 Ultra (gratis)', atiende: 'Cypher · grokbotbox', grokbot: false } : {}), publicado_en_telegram: r.posted !== false, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
       ...(limite ? { deadline: limite } : {}), ...(hecho ? { criterio: hecho } : {}),
       nota, siguiente: `encargo_estado con encargo=${r.id} para leer el acuse y la respuesta. La etiqueta visible es ${etiqueta || ("#" + r.id)} (se publica también en hilo en Telegram y en admira.live/telegram).` };
   }

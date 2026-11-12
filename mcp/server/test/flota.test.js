@@ -14,6 +14,8 @@ const AHORA = 1_800_000_000_000;
 const KEYS = {
   'clave-de-morfeo-macmini-xxxxxxxxxx': { persona: 'Morfeo', machine: 'MacMini', runtime: 'Claude Code', model: 'Fable 5.1' },
   'clave-de-jobs-xxxxxxxxxxxxxxxxxxxx': { persona: 'Jobs' },
+  'clave-de-lucas-xxxxxxxxxxxxxxxxxxx': { persona: 'Lucas' },
+  'clave-de-disney-xxxxxxxxxxxxxxxxxx': { persona: 'Disney' },
 };
 const ENV = { MCP_KEYS: JSON.stringify(KEYS), ADMIRA_TELEGRAM_PANEL_KEY: 'panel', ADMIRA_TELEGRAM_URL: 'https://telegram.test', VERSION: 'v.05.09.2026.r1.00:00' };
 
@@ -39,6 +41,11 @@ function fetchFalso(peticiones, estado) {
       const id = estado.siguiente++;
       estado.encargos[id] = { id, ts: AHORA / 1000, from_name: `status-web · ${body.from}`, target_persona: body.target_persona, target_machine: body.target_machine, task_id: `task-web-${id}`, text: body.text, status: 'pending', project_id: body.project_id || null };
       return ok({ ok: true, id, ts: AHORA / 1000, task_id: `task-web-${id}`, owner_verified: true, project_id: body.project_id || null });
+    }
+    const st = u.match(/\/api\/bot-inbox\/(\d+)\/status$/);
+    if (st && method === 'POST') {
+      const x = estado.encargos[Number(st[1])]; if (!x) return ok({ ok: false, error: 'no existe' }, 404);
+      Object.assign(x, { status: body.status, note: body.respuesta || x.note }); return ok({ ok: true, item: x });
     }
     const m = u.match(/\/api\/bot-inbox\/(\d+)$/);
     if (m && method === 'GET') {
@@ -277,4 +284,29 @@ test('agente_encargar a Oráculo sin máquina va a su equipo de casa, el Mac Min
   assert.equal(r.maquina, 'macmini');
   const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
   assert.equal(post.body.target_machine, 'macmini');
+});
+
+// Carlos, 12-nov-2026: la rutina de las 00:00 de Lucas o Disney se encarga algo a sí misma para que cuente como
+// misión. Antes caía en Cypher (#7552 bloqueado, #7555 anulado) y el consejero no podía cerrarlo.
+test('encargo propio: Lucas se encarga algo a sí mismo, se queda en su bandeja (sin Cypher) y lo cierra como done', async () => {
+  const { client, peticiones, estado } = await cliente('clave-de-lucas-xxxxxxxxxxxxxxxxxxx');
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Lucas', texto: '3 mejoras AdmiraNeXT para hoy' } }));
+  assert.equal(r.persona, 'Lucas'); assert.equal(r.encargo_propio, true); assert.equal(r.maquina, 'grokbot');
+  assert.equal(r.consejero, undefined); assert.equal(r.atiende, undefined); assert.match(r.nota, /encargo propio/); assert.doesNotMatch(r.nota, /Nemotron|lo contesta Cypher/i);
+  const post = peticiones.find((p) => p.method === 'POST' && String(p.url).endsWith('/api/bot-inbox'));
+  assert.equal(post.body.target_persona, 'Lucas'); assert.equal(post.body.de_consejero, 'Lucas'); assert.equal(post.body.target_machine, 'grokbot');
+  const d = res(await client.callTool({ name: 'encargo_responder', arguments: { numero: r.encargo, estado: 'done', nota: 'a) b) c)' } }));
+  assert.equal(d.ok, true); assert.equal(estado.encargos[r.encargo].status, 'done');
+});
+
+test('encargo propio: Disney por su nombre completo; y otro consejero que encarga a Lucas sigue por Cypher', async () => {
+  const dis = await cliente('clave-de-disney-xxxxxxxxxxxxxxxxxx');
+  const r = res(await dis.client.callTool({ name: 'agente_encargar', arguments: { persona: 'Walt Disney', texto: '3 mejoras PortAventuraNeXT' } }));
+  assert.equal(r.persona, 'Disney'); assert.equal(r.encargo_propio, true);
+  const jobs = await cliente('clave-de-jobs-xxxxxxxxxxxxxxxxxxxx');
+  const o = res(await jobs.client.callTool({ name: 'agente_encargar', arguments: { persona: 'Lucas', texto: 'una idea de saga' } }));
+  assert.equal(o.encargo_propio, undefined); assert.equal(o.consejero, 'George Lucas'); assert.equal(o.maquina, null);
+  const p = jobs.peticiones.find((x) => x.method === 'POST'); assert.equal(p.body.de_consejero, undefined);
+  const yo = res(await jobs.client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jobs', texto: 'parte del día' } }));
+  assert.equal(yo.encargo_propio, true); assert.equal(yo.maquina, 'grokbot');
 });

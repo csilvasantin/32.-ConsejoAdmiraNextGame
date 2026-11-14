@@ -12,7 +12,7 @@
   };
   var POS = { mesa: 'coetaneos', x: 45.0, y: 35.5, w: 12.6, h: 25.722 };
   // Demo (?demo=pan, data-demo-pan en <html>): el neón de la mesa dice «PortAventuraNeXT». Igual que LOGO_DEMO de escena0-guion.mjs.
-  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
+  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan-humo', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
   var DEFECTO = 'carlo-bonomi';
 
   function plano(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' '); }

@@ -213,6 +213,9 @@
   async function sendPreview(text,meta){
     const C=window.AdmiraHablarCmd;
     const raw=String(text||'').trim();
+    // Carlos 23:39: «/consejeros placas» también desde el chat de Conversación (solo la mesa, nada al consejero).
+    const PL=window.CouncilCabecera&&window.CouncilCabecera.comandoPlacas?window.CouncilCabecera.comandoPlacas(raw):null;
+    if(PL){writeDraft('');avisoHablar(PL.msg);return;}
     if(C&&typeof C.parseLinea==='function'){
       const linea=C.parseLinea(raw,{generation:mesaHablar(),persona:draftPersona});
       if(linea){
@@ -306,6 +309,8 @@
     async send(persona,text){
       saveDraft();
       const C=window.AdmiraHablarCmd;
+      const PL=window.CouncilCabecera&&window.CouncilCabecera.comandoPlacas?window.CouncilCabecera.comandoPlacas(String(text||'').trim()):null;
+      if(PL){writeDraft('');avisoHablar(PL.msg);return true;}
       if(C&&typeof C.parseLinea==='function'){
         const linea=C.parseLinea(String(text||'').trim(),{generation:mesaHablar(),persona:persona||draftPersona});
         if(linea){writeDraft('');await aplicarHablar(linea);return true;}

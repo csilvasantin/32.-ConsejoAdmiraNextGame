@@ -12,7 +12,7 @@
     // Elon Musk lip centre ≈ (181, 427), lip box ≈ 32×10.
     const SOURCE = Object.freeze({
         leyendas: /council-leyendas\.(?:jpg|jpeg|png)(?:[?#]|$)/i,
-        coetaneos: /council-coetaneos\./i
+        coetaneos: /council-coetaneos[.-]/i
     });
     const IMAGES = Object.freeze({
         leyendas: Object.freeze({ width: 1360, height: 768 }),

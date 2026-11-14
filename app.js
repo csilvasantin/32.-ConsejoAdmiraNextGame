@@ -261,7 +261,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20261114-mesa3";
+    const COUNCIL_IMAGE_VERSION = "20261114-mesa4";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",
@@ -328,7 +328,10 @@
         const img = document.getElementById("council-img");
         const nextSrc = gen === "leyendas"
             ? `assets/council-leyendas.jpg?v=${COUNCIL_IMAGE_VERSION}`
-            : `assets/council-coetaneos.jpg?v=${COUNCIL_IMAGE_VERSION}`;
+            : (window.CouncilCabecera && typeof window.CouncilCabecera.arteCoetaneos === 'function'
+                // Carlos 23:39: sin placas por defecto (objetos en su sitio); «/consejeros placas» pone el arte con placas.
+                ? window.CouncilCabecera.arteCoetaneos()
+                : `assets/council-coetaneos.jpg?v=${COUNCIL_IMAGE_VERSION}`);
         img.style.opacity = "0";
         const preload = new Image();
         preload.onload = () => {
@@ -1875,6 +1878,7 @@
             li('<strong>/hablar [consejero] [mensaje] · /talk</strong>', 'habla con un consejero (Jobs en Leyendas, Elon en Coetáneos si no pones nombre). /hablar off cuelga. El literal no se envía al consejero', 'talk to a counsellor (Jobs on Legends, Elon on Contemporaries if you omit the name). /talk off hangs up. The literal is never sent to the counsellor') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/consejero</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table') +
+            li('<strong>/consejeros placas [on | off]</strong>', 'enseña u oculta las placas con el nombre en la mesa de los Coetáneos (por defecto ocultas: cada consejero tiene su objeto en ese sitio — Model X, DGX, portátil, Ferrari Land); sin argumento alterna', 'shows or hides the name plates on the Contemporaries table (hidden by default: each councillor has their object there — Model X, DGX, laptop, Ferrari Land); with no argument it toggles') +
             li('<strong>/ceo</strong>', 'aparece o desaparece Carlos (tú) en la silla central', 'shows or hides Carlos (you) in the centre chair') +
             li('<strong>/cabecera [bonomi | off]</strong>', 'sienta a un invitado en la cabecera de los Coetáneos (p. ej. /cabecera Carlo Bonomi); /cabecera off la deja vacía', 'seats a guest at the head of the Contemporaries table (e.g. /cabecera Carlo Bonomi); /cabecera off empties it') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
@@ -2419,6 +2423,16 @@
                 addUserEntry(text);
                 if (r.ok && r.gen && r.gen !== currentGen) setGen(r.gen); else window.CouncilCabecera.sync(currentGen);
                 setActionLine(r.msg);
+                return true;
+            }
+        }
+        // ── /consejeros placas (Carlos 23:39): alterna las cartelas de los Coetáneos ↔ los objetos de cada consejero ──
+        if (/^\/(consejeros?|advisors?|councill?ors?)\s+(placas?|cartelas?|plates?|nameplates?)(\s|$)/i.test(text) && window.CouncilCabecera && window.CouncilCabecera.comandoPlacas) {
+            const rP = window.CouncilCabecera.comandoPlacas(text);
+            if (rP) {
+                addUserEntry(text);
+                if (rP.ok && currentGen !== 'coetaneos') setGen('coetaneos');
+                setActionLine(rP.msg);
                 return true;
             }
         }

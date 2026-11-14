@@ -1,11 +1,11 @@
 import {
   parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261114-mesa3';
+} from '/escena0-lib.mjs?v=20261114-mesa4';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
-} from '/escena0-guion.mjs?v=20261114-mesa3';
+} from '/escena0-guion.mjs?v=20261114-mesa4';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -103,6 +103,13 @@ function colocarCabecera() {
   const corte = CABECERA_POS.corte || 0;
   const img = $('cabecera-img'); if (img) img.style.clipPath = 'inset(0 0 ' + corte + '% 0)';
   const placa = $('cabecera-placa'); if (placa) placa.style.top = (100 - corte + 0.8 / CABECERA_POS.h * 100) + '%';
+  // Sin placas (como la mesa de la home por defecto): el objeto del invitado, en % de la caja de la cabecera.
+  const ob = $('cabecera-objeto'), o = cabecera.objeto;
+  if (ob && o) {
+    ob.style.left = ((o.cx - CABECERA_POS.x) / CABECERA_POS.w * 100) + '%';
+    ob.style.top = ((o.y - CABECERA_POS.y) / CABECERA_POS.h * 100) + '%';
+    ob.style.height = (o.h / CABECERA_POS.h * 100) + '%';
+  }
 }
 
 // Neón de la mesa de los Coetáneos con «PortAventuraNeXT» en el flujo de presentación (pan, carlos-bonomi, gartner).
@@ -125,6 +132,8 @@ function montarCabecera() {
   $('cabecera-img').src = cabecera.foto;
   $('cabecera-img').alt = cabecera.nombre + ' en la cabecera de la mesa';
   $('cabecera-placa').textContent = cabecera.nombre;
+  const ob = $('cabecera-objeto');
+  if (ob && cabecera.objeto) { ob.src = cabecera.objeto.foto; ob.alt = cabecera.objeto.alt; ob.hidden = false; }
   colocarCabecera();
 }
 
@@ -625,7 +634,7 @@ function montarFlujo() {
   $('mesa-img').addEventListener('load', () => { colocarCabecera(); colocarLogo(); pintarGloboFlujo(); });
   // Precarga de las dos mesas y del retrato: el cambio Leyendas ↔ Coetáneos no espera a la red.
   Object.values(IMG).forEach((u) => { const i = new Image(); i.src = u; });
-  if (cabecera && cabecera.foto) { const i = new Image(); i.src = cabecera.foto; }
+  if (cabecera && cabecera.foto) { const i = new Image(); i.src = cabecera.foto; if (cabecera.objeto) { const j = new Image(); j.src = cabecera.objeto.foto; } }
   idleCursor();
   // Arranque directo para capturas y kioscos ya desbloqueados: ?paso=N (1 = Leyendas).
   const pq = parseInt(q.get('paso') || '', 10);

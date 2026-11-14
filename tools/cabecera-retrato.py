@@ -2,7 +2,7 @@
 """Retrato pixel-art para la cabecera de la mesa de Coetáneos (Lucas, 14-nov-2026).
 
 Uso:
-  python3 tools/cabecera-retrato.py FOTO SALIDA.webp [--recorte x,y,w,h]
+  python3 tools/cabecera-retrato.py FOTO SALIDA.webp [--recorte x,y,w,h] [--pixel 1.6]
   python3 tools/cabecera-retrato.py --provisional SALIDA.webp   # silueta sin foto
 
 Dibuja el respaldo de la silla de cabecera con un marco dorado y, dentro, la foto
@@ -67,16 +67,21 @@ def recorte_foto(ruta, caja=None):
             ch = fh - y
             cw = int(ch * w / h)
             x = (fw - cw) // 2
-    trozo = foto.crop((x, y, x + cw, y + ch)).resize((w, h), Image.LANCZOS)
-    rgb = trozo.convert("RGB").quantize(colors=48, method=Image.MEDIANCUT).convert("RGBA")
-    return rgb
+    return foto.crop((x, y, x + cw, y + ch)).resize((w * ESCALA, h * ESCALA), Image.LANCZOS)
 
 
-def componer(retrato, salida):
-    base = plantilla()
-    x, y, _, _ = MARCO
-    base.alpha_composite(retrato, (x, y))
-    base = base.resize((W * ESCALA, H * ESCALA), Image.NEAREST)
+def componer(retrato, salida, pixel=1.0):
+    """pixel=1: el retrato va a la rejilla base (×ESCALA, pixel-art grueso, la silueta).
+    pixel>1: foto real a la resolución final, pixelada solo ×pixel (reconocible, retro suave)."""
+    base = plantilla().resize((W * ESCALA, H * ESCALA), Image.NEAREST)
+    x, y, w, h = MARCO
+    if pixel <= 1:
+        base.alpha_composite(retrato.resize((w * ESCALA, h * ESCALA), Image.NEAREST), (x * ESCALA, y * ESCALA))
+    else:
+        fw, fh = w * ESCALA, h * ESCALA
+        peq = retrato.resize((max(1, round(fw / pixel)), max(1, round(fh / pixel))), Image.LANCZOS)
+        peq = peq.convert("RGB").quantize(colors=64, method=Image.MEDIANCUT, dither=Image.Dither.NONE).convert("RGBA")
+        base.alpha_composite(peq.resize((fw, fh), Image.NEAREST), (x * ESCALA, y * ESCALA))
     base.save(salida, "WEBP", lossless=True)
     print("ok", salida, base.size)
 
@@ -89,7 +94,8 @@ def main(argv):
     caja = None
     if "--recorte" in argv:
         caja = tuple(int(v) for v in argv[argv.index("--recorte") + 1].split(","))
-    componer(recorte_foto(argv[1], caja), argv[2]); return 0
+    pixel = float(argv[argv.index("--pixel") + 1]) if "--pixel" in argv else 1.6
+    componer(recorte_foto(argv[1], caja), argv[2], pixel); return 0
 
 
 if __name__ == "__main__":

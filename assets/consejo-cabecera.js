@@ -8,7 +8,7 @@
   'use strict';
   var KEY = 'admira:consejo-cabecera';
   var CABECERAS = {
-    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi.webp?v=20261114-cabecera', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
+    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi.webp?v=20261114-foto', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
   };
   var POS = { mesa: 'coetaneos', x: 44.6, y: 31, w: 11.6, h: 27.5 };
   var DEFECTO = 'carlo-bonomi';

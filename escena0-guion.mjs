@@ -43,7 +43,7 @@ export const CABECERAS = Object.freeze({
     id: 'carlo-bonomi',
     nombre: 'Carlo Bonomi',
     corto: 'Carlo',
-    foto: '/assets/cabecera/carlo-bonomi.webp?v=20261114-cabecera',
+    foto: '/assets/cabecera/carlo-bonomi.webp?v=20261114-foto',
     alias: Object.freeze(['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi']),
   }),
 });

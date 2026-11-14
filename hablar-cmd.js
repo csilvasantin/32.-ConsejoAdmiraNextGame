@@ -156,10 +156,65 @@
       'Cada intervención va como mensaje entre consejeros (consejero_mensaje de ' + corto(l.a) + ' a ' + corto(l.b) + ' y consejero_responder de ' + corto(l.b) + '), ' +
       'para que salga en la transcripción de Conversación de admira.live. No publiques nada fuera de admira.live.';
   }
+
+  /* t1347u (Carlos, 14-11): /consejero <nombre> desaparecer|aparecer en Conversación.
+   * Quita o devuelve a un consejero de la mesa. Nunca se envía al consejero ni suena voz.
+   * Carlos Silva es la figura Y-3 del centro de Leyendas; Carlo Bonomi es el invitado de la
+   * cabecera de Coetáneos (assets/consejo-cabecera.js). Gwynne Shotwell ya no está en la mesa. */
+  var CONSEJERO = /^\/(?:consejeros?|advisors?|councill?ors?)(?:\s+([\s\S]*))?$/i;
+  var OCULTAR = /^(desaparecer|desaparece|ocultar|oculta|hide)$/;
+  var MOSTRAR = /^(aparecer|aparece|mostrar|muestra|show)$/;
+  var MESA = {
+    leyendas: {
+      'Steve Jobs': ['steve jobs', 'jobs', 'steve'],
+      'Steve Wozniak': ['steve wozniak', 'wozniak', 'woz'],
+      'Tim Cook': ['tim cook', 'cook', 'tim'],
+      'Warren Buffett': ['warren buffett', 'warren buffet', 'buffett', 'buffet', 'warren'],
+      'Walt Disney': ['walt disney', 'disney', 'walt'],
+      'Dieter Rams': ['dieter rams', 'rams', 'dieter'],
+      'Howard Schultz': ['howard schultz', 'schultz', 'howard'],
+      'George Lucas': ['george lucas', 'lucas', 'george'],
+      'Carlos Silva': ['carlos silva', 'carlossilva', 'carlos', 'silva']
+    },
+    coetaneos: {
+      'Elon Musk': ['elon musk', 'elon', 'musk'],
+      'Jensen Huang': ['jensen huang', 'jensen', 'huang'],
+      'Mira Murati': ['mira murati', 'murati', 'mira'],
+      'Ruth Porat': ['ruth porat', 'porat', 'ruth'],
+      'John Lasseter': ['john lasseter', 'lasseter', 'john'],
+      'Jony Ive': ['jony ive', 'jony', 'ive'],
+      'Carlos Ratti': ['carlos ratti', 'carlo ratti', 'ratti'],
+      'Ryan Reynolds': ['ryan reynolds', 'reynolds', 'ryan'],
+      'Carlo Bonomi': ['carlo bonomi', 'carlobonomi', 'bonomi', 'bononi', 'carlo']
+    }
+  };
+  var FUERA_MESA = { 'gwynne shotwell': 'Gwynne Shotwell', 'shotwell': 'Gwynne Shotwell', 'gwynne': 'Gwynne Shotwell' };
+  function mesaDe(nombre) {
+    var n = norm(nombre); if (!n) return null;
+    for (var g in MESA) for (var p in MESA[g]) if (MESA[g][p].indexOf(n) >= 0) return { persona: p, mesa: g };
+    return null;
+  }
+  function parseConsejero(args) {
+    var w = norm(args).split(' ').filter(Boolean);
+    if (w.length < 2) return { accion: 'error', mensaje: 'consejero-uso' };
+    var verbo = null, nombre = null;
+    if (OCULTAR.test(w[w.length - 1]) || MOSTRAR.test(w[w.length - 1])) { verbo = w[w.length - 1]; nombre = w.slice(0, -1).join(' '); }
+    else if (OCULTAR.test(w[0]) || MOSTRAR.test(w[0])) { verbo = w[0]; nombre = w.slice(1).join(' '); }
+    if (!verbo || !nombre) return { accion: 'error', mensaje: 'consejero-uso' };
+    var r = mesaDe(nombre);
+    if (!r) {
+      if (FUERA_MESA[nombre]) return { accion: 'error', mensaje: 'consejero-fuera', persona: FUERA_MESA[nombre] };
+      return { accion: 'error', mensaje: 'consejero-nombre', nombre: nombre };
+    }
+    return { accion: 'consejero', persona: r.persona, mesa: r.mesa, visible: MOSTRAR.test(verbo) };
+  }
+
   function parseLinea(texto, estado, Intent) {
     var raw = String(texto || '').trim();
     var c = CONVERSACION.exec(raw);
     if (c) return parseConversacion(c[1] || '', Intent);
+    var cj = CONSEJERO.exec(raw);
+    if (cj) return parseConsejero(cj[1] || '');
     var men = parseMencion(raw, Intent);
     if (men) return men;
     var m = VERBO.exec(raw);
@@ -230,7 +285,8 @@
     tieneLinea: tieneLinea, claveDe: claveDe, urlChat: urlChat,
     listaAyuda: listaAyuda, crearMic: crearMic,
     parseConversacion: parseConversacion, parseMencion: parseMencion, promptConversacion: promptConversacion,
-    CONVERSACION_TURNOS: CONVERSACION_TURNOS
+    CONVERSACION_TURNOS: CONVERSACION_TURNOS,
+    MESA: MESA, mesaDe: mesaDe, parseConsejero: parseConsejero
   };
   root.AdmiraHablarCmd = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

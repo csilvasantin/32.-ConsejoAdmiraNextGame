@@ -165,6 +165,13 @@
       avisoHablar(linea.mensaje==='conversacion-tema'?'Falta el tema: /conversacion jobs vs elon PortAventuraNeXT':linea.mensaje==='conversacion-mismo'?'Elige dos consejeros distintos: /conversacion jobs vs elon PortAventuraNeXT':'Uso: /conversacion <consejero> vs <consejero> <tema> · p. ej. /conversacion jobs vs elon PortAventuraNeXT');
       return;
     }
+    // t1347u: /consejero <nombre> desaparecer|aparecer — solo la mesa; nada al consejero, sin voz.
+    if(linea.accion==='consejero'||(linea.accion==='error'&&/^consejero/.test(linea.mensaje||''))){
+      const M=window.CouncilConsejeroMesa;
+      if(linea.accion==='consejero'&&M){avisoHablar(M.aplicar(linea).msg);return;}
+      avisoHablar(M?M.mensajeError(linea):'Uso: /consejero <nombre> desaparecer · /consejero <nombre> aparecer');
+      return;
+    }
     if(linea.accion==='error'){avisoHablar('No reconozco a ese consejero. Prueba /hablar Lucas, Jobs, Woz, Disney, Elon o Jensen.');return;}
     // t1341u: «@Elon texto» en Conversación habla con ese consejero (sin micrófono).
     if(linea.accion==='mencion'){

@@ -4,7 +4,7 @@ import {
 } from '/escena0-lib.mjs';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura,
-} from '/escena0-guion.mjs?v=20261114-foto';
+} from '/escena0-guion.mjs?v=20261114-cartoon';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);

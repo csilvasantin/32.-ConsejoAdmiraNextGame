@@ -37,18 +37,19 @@ export function parseGuion(v) {
   return null;
 }
 
-/** Invitados de cabecera. Posición en % del arte de Coetáneos (1280×720): la silla del fondo, al centro. */
+/** Invitados de cabecera: sentados como un consejero más (dibujo recortado, silla azul), al fondo y al centro.
+ *  Posición en % del arte de Coetáneos (1280×720); las manos se apoyan en la mesa del arte. */
 export const CABECERAS = Object.freeze({
   'carlo-bonomi': Object.freeze({
     id: 'carlo-bonomi',
     nombre: 'Carlo Bonomi',
     corto: 'Carlo',
-    foto: '/assets/cabecera/carlo-bonomi.webp?v=20261114-foto',
+    foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-cartoon',
     alias: Object.freeze(['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi']),
   }),
 });
 
-export const CABECERA_POS = Object.freeze({ mesa: 'coetaneos', x: 44.6, y: 31, w: 11.6, h: 27.5 });
+export const CABECERA_POS = Object.freeze({ mesa: 'coetaneos', x: 43.125, y: 36.944, w: 13.672, h: 28.056 });
 
 export function plano(s) {
   return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ');

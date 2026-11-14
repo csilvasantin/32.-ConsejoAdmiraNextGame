@@ -123,3 +123,54 @@ test('escena0: ?guion= manda sobre ?flujo=pan y el guion de personas reales no l
   const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
   assert.match(html, /guion=carlos-bonomi/);
 });
+
+test('bilingüe: ?lang=es|en|both (por defecto both) solo en el guion Carlos ↔ Bonomi; los 12 turnos tienen inglés', async () => {
+  const { GUION_CARLOS_BONOMI: G, parseLang, lineasTurno } = await import('./escena0-guion.mjs');
+  assert.equal(parseLang(null, G), 'both');
+  assert.equal(parseLang('EN', G), 'en');
+  assert.equal(parseLang('es', G), 'es');
+  assert.equal(parseLang('en', GUION_PAN), 'es', 'el guion pan sigue en castellano');
+  for (const t of G.turnos) {
+    assert.ok(t.en && t.en.length > 10 && t.en.length <= 200, t.en);
+    assert.deepEqual(lineasTurno(t, null, 'both').map((l) => l.lang), ['es', 'en']);
+    assert.deepEqual(lineasTurno(t, null, 'en').map((l) => l.lang), ['en']);
+  }
+  assert.match(G.turnos[11].en, /Studio entrance/);
+  assert.match(G.turnos[11].en, /If it doesn't move people, we don't scale it/);
+  assert.deepEqual(lineasTurno(GUION_PAN.turnos[0], null, 'both').map((l) => l.lang), ['es']);
+});
+
+test('cajas del flujo: la zona de cada mesa no pisa caras, placas ni logo, en 1920×1080, 1600×900 y 1280×720', async () => {
+  const { ZONAS_GLOBO, OBSTACULOS, cajaGlobo, anchoGlobo, obstaculosPx, seSolapan, PERSONAS_GUION, GUION_CARLOS_BONOMI } = await import('./escena0-guion.mjs');
+  const artes = { leyendas: [1360, 768], coetaneos: [1280, 720] };
+  const quien = [...GUION_PAN.turnos, ...GUION_CARLOS_BONOMI.turnos];
+  for (const [W, H] of [[1920, 1080], [1600, 900], [1280, 720]]) {
+    for (const t of quien) {
+      const mesa = mesaDeGuion(t.persona);
+      const [nw, nh] = artes[mesa]; const s = Math.min(W / nw, H / nh);
+      const box = { x: (W - nw * s) / 2, y: (H - nh * s) / 2, w: nw * s, h: nh * s };
+      const z = ZONAS_GLOBO[mesa];
+      const gh = ((z.y1 - z.y0) / 100) * box.h - 0.5; // la caja más alta que cabe
+      const a = (ANCLA[mesa] || {})[t.persona] || PERSONAS_GUION[t.persona].ancla;
+      const c = cajaGlobo(mesa, a.x, box, anchoGlobo(mesa, box), gh);
+      assert.ok(c.cabe);
+      const choque = obstaculosPx(mesa, box).filter((o) => seSolapan(c, o)).map((o) => o.id);
+      assert.deepEqual(choque, [], `${W}x${H} ${t.persona}`);
+      assert.ok(c.left >= 0 && c.left + c.w <= W && c.top >= 0 && c.top + c.h <= H);
+    }
+  }
+  assert.ok(OBSTACULOS.coetaneos.some((o) => o.id === 'cara Carlo Bonomi'));
+  assert.ok(OBSTACULOS.leyendas.some((o) => o.id === 'cara Carlos Silva'));
+});
+
+test('escena0: una sola caja por turno en el flujo (sin barra), funde antes de la siguiente, inglés en la caja', () => {
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /if \(flujo\) \{ bar\.hidden = true; return; \}/);
+  assert.match(js, /await ocultarGloboFlujo\(\)/);
+  assert.match(js, /parseLang\(q\.get\('lang'\), guion\)/);
+  const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="globo-en" lang="en"/);
+  assert.match(html, /escena0\.js\?v=20261114-bilingue/);
+  const css = readFileSync(new URL('./escena0/escena0.css', import.meta.url), 'utf8');
+  assert.match(css, /#globo\.flujo-caja\.fuera \{ opacity:0/);
+});

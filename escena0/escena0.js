@@ -4,7 +4,8 @@ import {
 } from '/escena0-lib.mjs';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
-} from '/escena0-guion.mjs?v=20261114-cb';
+  parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo,
+} from '/escena0-guion.mjs?v=20261114-bilingue';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -17,6 +18,8 @@ const flujo = parseGuion(q.get('flujo')) ? (guionQ || parseGuion(q.get('flujo'))
 const guion = flujo || guionQ;
 const cabecera = parseCabecera(q.get('cabecera')) || (guion && guion.cabecera ? parseCabecera(guion.cabecera) : null);
 const conIA = q.get('ia') === '1' && !(guion && guion.soloGuion);
+// ?lang=es|en|both (por defecto both) en los guiones bilingües (Carlos Silva ↔ Carlo Bonomi).
+const lang = parseLang(q.get('lang'), guion);
 const mesa = flujo ? 'leyendas' : parseMesa(q.get('mesa') || q.get('gen') || q.get('generation'));
 let mesaVista = mesa;
 const silencio = q.get('silencio') === '1' || q.get('mute') === '1';
@@ -65,6 +68,7 @@ function cajaArte() {
 }
 
 function colocarGlobo(persona) {
+  if (globoFlujo) { pintarGloboFlujo(); return; }
   const g = $('globo'); const ancla = (ANCLA[mesaVista] || {})[persona] || anclaGuion(mesaVista, persona);
   const box = cajaArte();
   if (!g || !ancla || !box) return;
@@ -412,30 +416,84 @@ let token = 0;
 let dichos = [];
 
 function construirPasos() {
+  const bi = !!guion.bilingue && lang !== 'es';
   const p = [
-    { tipo: 'mesa', mesa: 'leyendas', titulo: '1 · Consejo de Leyendas', sub: LEYENDAS_TXT, ms: 8000 },
-    { tipo: 'mesa', mesa: 'coetaneos', titulo: '2 · Consejo de Coetáneos', sub: COETANEOS_TXT + (cabecera ? ' — en la cabecera, ' + cabecera.nombre : ''), ms: 9000 },
-    { tipo: 'rotulo', mesa: 'coetaneos', titulo: '3 · Conversación · consejero vs consejero', sub: guion.titulo, ms: 5000 },
+    { tipo: 'mesa', mesa: 'leyendas', titulo: '1 · Consejo de Leyendas', en: bi && ROTULOS_EN.leyendas, sub: LEYENDAS_TXT, ms: 8000 },
+    { tipo: 'mesa', mesa: 'coetaneos', titulo: '2 · Consejo de Coetáneos', en: bi && ROTULOS_EN.coetaneos, sub: COETANEOS_TXT + (cabecera ? ' — ' + (lang === 'en' ? ROTULOS_EN.cabecera : 'en la cabecera') + ', ' + cabecera.nombre : ''), ms: 9000 },
+    { tipo: 'rotulo', mesa: 'coetaneos', titulo: '3 · Conversación · consejero vs consejero', en: bi && ROTULOS_EN.conversacion, sub: lang === 'en' && guion.tituloEn ? guion.tituloEn : guion.titulo, ms: 5000 },
   ];
   guion.turnos.forEach((t, i) => p.push({ tipo: 'turno', i, persona: t.persona, mesa: mesaDeGuion(t.persona) }));
   p.push({ tipo: 'rotulo', mesa: 'coetaneos', titulo: 'PortAventuraNeXT', sub: guion.cierre, ms: 0 });
   return p;
 }
 
-function rotulo(titulo, sub) {
+function rotulo(titulo, sub, en) {
   const r = $('rotulo');
   if (!titulo) { r.hidden = true; return; }
-  $('rotulo-titulo').textContent = titulo;
+  const soloEn = lang === 'en' && en;
+  $('rotulo-titulo').textContent = soloEn ? en : titulo;
   $('rotulo-sub').textContent = sub || '';
+  const e = $('rotulo-en');
+  e.textContent = lang === 'both' && en ? en : '';
+  e.hidden = !(lang === 'both' && en);
   r.hidden = false;
+}
+
+// Cajas del flujo (Carlos, 14-11 17:11: «las cajas se pisan»): una sola caja a la vez, en la zona libre
+// de la mesa (nunca encima de caras, placas ni del HUD), con funde de salida antes de la siguiente.
+const FUNDE_MS = 260;
+let globoFlujo = null;
+
+function ocultarGloboFlujo() {
+  const g = $('globo');
+  if (g.hidden) return Promise.resolve();
+  g.classList.add('fuera');
+  return new Promise((res) => setTimeout(() => { g.hidden = true; res(); }, FUNDE_MS));
+}
+
+function pintarGloboFlujo() {
+  const g = $('globo'); const box = cajaArte();
+  if (!globoFlujo || !box || g.hidden) return;
+  const { persona, mesa: m } = globoFlujo;
+  const w = anchoGlobo(m, box);
+  g.style.width = w + 'px';
+  let fs = Math.max(12, Math.min(19, Math.round(box.h / 52)));
+  let c = null;
+  for (; fs >= 10; fs--) {
+    g.style.fontSize = fs + 'px';
+    const a = (ANCLA[m] || {})[persona] || anclaGuion(m, persona);
+    c = cajaGlobo(m, a ? a.x : null, box, w, g.offsetHeight);
+    if (c.cabe) break;
+  }
+  g.style.left = c.left + 'px';
+  g.style.top = c.top + 'px';
+  g.dataset.cola = c.cola;
+  g.style.setProperty('--cola-x', c.colaX + 'px');
+}
+
+function mostrarGloboFlujo(persona, m, lineas, pensando) {
+  const g = $('globo');
+  globoFlujo = { persona, mesa: m };
+  g.classList.add('flujo-caja', 'fuera');
+  $('globo-nombre').textContent = persona + (ROLES[persona] ? ' · ' + ROLES[persona] : '');
+  const es = lineas.find((l) => l.lang === 'es'); const en = lineas.find((l) => l.lang === 'en');
+  $('globo-texto').textContent = es ? es.texto : (pensando ? 'pensando…' : '');
+  $('globo-texto').hidden = !es && !pensando;
+  $('globo-en').textContent = en ? en.texto : '';
+  $('globo-en').hidden = !en;
+  g.classList.toggle('pensando', !!pensando);
+  g.hidden = false;
+  pintarGloboFlujo();
+  requestAnimationFrame(() => requestAnimationFrame(() => g.classList.remove('fuera')));
 }
 
 function esperar(ms, t) {
   return new Promise((res) => setTimeout(() => res(t === token), ms));
 }
 
-function hablarFlujo(persona, texto) {
+function hablarFlujo(persona, texto, idioma) {
   return new Promise((resolve) => {
+    if (idioma === 'en' && !guion.sinVoz) { setTimeout(resolve, msLectura(texto)); return; }
     if (silencio || !texto || guion.sinVoz || !(window.AdmiraVoces && typeof AdmiraVoces.speak === 'function')) {
       setTimeout(resolve, msLectura(texto)); return;
     }
@@ -463,25 +521,29 @@ async function ejecutarPaso(n) {
   try { if (window.AdmiraVoces && AdmiraVoces.stop) AdmiraVoces.stop(); } catch (e) {}
   paso = Math.max(0, Math.min(n, pasos.length - 1));
   const st = pasos[paso];
-  $('globo').hidden = true;
+  await ocultarGloboFlujo();
+  if (t !== token) return;
   verMesa(st.mesa);
   $('hud-mesa').textContent = 'Demo del Consejo · ' + (paso + 1) + '/' + pasos.length;
   if (st.tipo === 'mesa' || st.tipo === 'rotulo') {
-    rotulo(st.titulo, st.sub);
+    rotulo(st.titulo, st.sub, st.en);
     estado(st.tipo === 'mesa' ? 'Mesa de ' + nombreMesa(st.mesa) : '');
     if (!st.ms) { estado('Fin · ← para volver'); return; }
     if (!(await esperar(st.ms, t))) return;
   } else {
     rotulo('', '');
-    if (conIA) mostrarGlobo(st.persona, '', true);
+    if (conIA) mostrarGloboFlujo(st.persona, st.mesa, [], true);
     estado(st.persona + (conIA ? ' pensando…' : ' habla'));
     const texto = await textoDe(st);
     if (t !== token) return;
     dichos = dichos.filter((d) => d.paso !== paso).concat([{ paso, persona: st.persona, texto }]);
-    mostrarGlobo(st.persona, texto, false);
+    if (conIA) await ocultarGloboFlujo();
+    if (t !== token) return;
+    const lineas = conIA ? [{ lang: 'es', texto }] : lineasTurno(guion.turnos[st.i], cabecera, lang);
+    mostrarGloboFlujo(st.persona, st.mesa, lineas, false);
     pintarBarraFlujo(st);
     estado(st.persona + ' habla · ' + (st.i + 1) + '/' + guion.turnos.length);
-    await hablarFlujo(st.persona, texto);
+    await hablarFlujo(st.persona, lineas.map((l) => l.texto).join(' '), lineas[0].lang);
     if (t !== token) return;
     if (!(await esperar(900, t))) return;
   }
@@ -491,6 +553,8 @@ async function ejecutarPaso(n) {
 
 function pintarBarraFlujo(st) {
   const bar = $('barra-escucha');
+  // Una sola caja por turno: en el flujo de una pantalla no se pinta la barra de «lo último de la otra mesa».
+  if (flujo) { bar.hidden = true; return; }
   const otra = st.mesa === 'leyendas' ? 'coetaneos' : 'leyendas';
   const prev = [...dichos].reverse().find((d) => d.paso < paso && mesaDeGuion(d.persona) === otra);
   if (!prev) { bar.hidden = true; return; }
@@ -531,11 +595,8 @@ function montarFlujo() {
   document.addEventListener('fullscreenchange', () => {
     document.body.classList.toggle('fs', !!(document.fullscreenElement || document.webkitFullscreenElement));
   });
-  window.addEventListener('resize', () => {
-    colocarCabecera();
-    const n = $('globo-nombre').textContent.split(' · ')[0];
-    if (n && !$('globo').hidden) colocarGlobo(n);
-  });
+  window.addEventListener('resize', () => { colocarCabecera(); pintarGloboFlujo(); });
+  $('mesa-img').addEventListener('load', () => pintarGloboFlujo());
   idleCursor();
   // Arranque directo para capturas y kioscos ya desbloqueados: ?paso=N (1 = Leyendas).
   const pq = parseInt(q.get('paso') || '', 10);

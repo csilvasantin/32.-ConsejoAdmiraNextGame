@@ -11,7 +11,7 @@
  * estilo que el carrusel de Carlos Silva) para la misión anterior/siguiente
  * de hoy del consejero (t1293u; antes pasaban de proyecto y casi siempre
  * estaban apagadas). Botón «Misiones» en la barra de Previos: muestra u
- * oculta todas las cajas (encendido por defecto, recordado en localStorage). El latido se refresca cada 2 s, sin recargar la página. Clicar las flechas no enciende el Mac 1984; el resto de la
+ * oculta todas las cajas (apagado por defecto desde t1341u, recordado en localStorage). El latido se refresca cada 2 s, sin recargar la página. Clicar las flechas no enciende el Mac 1984; el resto de la
  * caja sí. El puesto va dentro del triángulo, más pequeño para que quepa en
  * la punta, en negro. Sin «/6». La flecha no pisa la caja.
  * Flag `activo` (y `nuncaFlecha` en Carlos Silva / Y-3, centro): fácil de reactivar.
@@ -1495,14 +1495,15 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
   }
 
   /* t1293u: botón «Misiones» (a la izquierda de Conversación, en la barra de
-   * Previos). Encendido por defecto: se ven las cajas de misiones y sus
-   * flechas sobre todas las cabezas (también la caja fija de Carlos). Al
-   * pulsarlo se ocultan todas; al volver a pulsarlo reaparecen en su sitio.
-   * Solo CSS (html.misiones-off): no se repinta nada ni se mueve la caja de
-   * Carlos. El estado se recuerda en localStorage. */
-  const MISIONES_KEY = 'admira.live.misiones.visibles';
+   * Previos). t1341u (Carlos, 14-11): APAGADO por defecto: sin cajas,
+   * flechas ni popup de Carlos sobre las cabezas. Al pulsarlo aparecen todas;
+   * al volver a pulsarlo se ocultan. Solo CSS (html.misiones-off): no se
+   * repinta nada ni se mueve la caja de Carlos. Se recuerda en localStorage
+   * con clave nueva (v2): el «encendido» guardado con la clave antigua (que
+   * era el defecto) no cuenta; solo vale un «1» puesto pulsando el botón. */
+  const MISIONES_KEY = 'admira.live.misiones.visibles.v2';
   function misionesVisibles() {
-    try { return !(root.localStorage && root.localStorage.getItem(MISIONES_KEY) === '0'); } catch (e) { return true; }
+    try { return !!(root.localStorage && root.localStorage.getItem(MISIONES_KEY) === '1'); } catch (e) { return false; }
   }
   function sincronizarBotonMisiones(on) {
     const d = doc(); if (!d) return;

@@ -8,11 +8,12 @@
   'use strict';
   var KEY = 'admira:consejo-cabecera';
   var CABECERAS = {
-    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
+    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa-pan', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
   };
-  var POS = { mesa: 'coetaneos', x: 45.0, y: 35.5, w: 12.6, h: 25.722 };
+  // Carlos 21:33: Bonomi un 10 % más grande y más al fondo, tras el borde lejano de la mesa (y=57.57 %); corte = % inferior oculto por la mesa.
+  var POS = { mesa: 'coetaneos', x: 44.37, y: 33.24, w: 13.86, h: 28.294, corte: 14 };
   // Demo (?demo=pan, data-demo-pan en <html>): el neón de la mesa dice «PortAventuraNeXT». Igual que LOGO_DEMO de escena0-guion.mjs.
-  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan-humo', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
+  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-mesa-pan', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
   var DEFECTO = 'carlo-bonomi';
 
   function plano(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' '); }
@@ -94,8 +95,8 @@
     document.documentElement.toggleAttribute('data-cabecera', !!(c && gen === POS.mesa));
     if (!c || gen !== POS.mesa) { el.style.display = 'none'; el.innerHTML = ''; return; }
     el.innerHTML =
-      '<img alt="' + c.nombre + ' en la cabecera" data-cabecera="' + c.id + '" src="' + c.foto + '" style="position:absolute;left:' + POS.x + '%;top:' + POS.y + '%;width:' + POS.w + '%;height:' + POS.h + '%;image-rendering:auto">' +
-      '<span class="cabecera-placa" style="position:absolute;left:' + (POS.x + POS.w / 2) + '%;top:' + (POS.y + POS.h + 1.4) + '%;transform:translateX(-50%);white-space:nowrap;padding:.25em .7em;font:700 clamp(8px,1.05vw,15px)/1.1 Georgia,serif;letter-spacing:.06em;text-transform:uppercase;color:#3a2405;background:linear-gradient(#ffe58a,#c9a227 55%,#9c7414);border:1px solid #5a3d08;border-radius:3px;box-shadow:0 2px 0 rgba(0,0,0,.6)">' + c.nombre + '</span>';
+      '<img alt="' + c.nombre + ' en la cabecera" data-cabecera="' + c.id + '" src="' + c.foto + '" style="position:absolute;left:' + POS.x + '%;top:' + POS.y + '%;width:' + POS.w + '%;height:' + POS.h + '%;image-rendering:auto;clip-path:inset(0 0 ' + (POS.corte || 0) + '% 0)">' +
+      '<span class="cabecera-placa" style="position:absolute;left:' + (POS.x + POS.w / 2) + '%;top:' + (POS.y + POS.h * (1 - (POS.corte || 0) / 100) + 0.8) + '%;transform:translateX(-50%);white-space:nowrap;padding:.25em .7em;font:700 clamp(8px,1.05vw,15px)/1.1 Georgia,serif;letter-spacing:.06em;text-transform:uppercase;color:#3a2405;background:linear-gradient(#ffe58a,#c9a227 55%,#9c7414);border:1px solid #5a3d08;border-radius:3px;box-shadow:0 2px 0 rgba(0,0,0,.6)">' + c.nombre + '</span>';
     el.style.display = 'block';
   }
   root.CouncilCabecera = {

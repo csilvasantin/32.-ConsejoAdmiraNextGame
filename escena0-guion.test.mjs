@@ -175,14 +175,15 @@ test('escena0: una sola caja por turno en el flujo (sin barra), funde antes de l
   assert.match(css, /#globo\.flujo-caja\.fuera \{ opacity:0/);
 });
 
-test('guion Gartner 2027: Carlos ↔ Bonomi, 14 turnos bilingües, cifras tal como las da el PDF; el de PortAventuraNeXT no cambia', async () => {
+test('guion Gartner · 3 tendencias (World Models, DSLM, MAS) para PortAventuraNeXT: Carlos ↔ Bonomi, 14 turnos bilingües, cifras tal como las dan los PDF', async () => {
   const { GUION_GARTNER: G, GUION_CARLOS_BONOMI: CB, parseLang, lineasTurno } = await import('./escena0-guion.mjs');
   assert.equal(parseGuion('gartner'), G);
   assert.equal(parseGuion('carlos-bonomi'), CB);
   assert.equal(CB.turnos.length, 12);
   assert.equal(G.turnos.length, 14);
   assert.ok(G.soloGuion && G.sinVoz && G.bilingue);
-  assert.equal(G.cierreTitulo, 'AdmiraNeXT');
+  assert.equal(G.cierreTitulo, 'PortAventuraNeXT');
+  assert.equal(parseGuion('gartner3'), G);
   assert.equal(parseLang(null, G), 'both');
   G.turnos.forEach((t, i) => {
     assert.equal(t.persona, i % 2 ? 'Carlos Silva' : 'Carlo Bonomi', 'turno ' + (i + 1));
@@ -190,10 +191,14 @@ test('guion Gartner 2027: Carlos ↔ Bonomi, 14 turnos bilingües, cifras tal co
     assert.deepEqual(lineasTurno(t, null, 'both').map((l) => l.lang), ['es', 'en']);
   });
   const en = G.turnos.map((t) => t.en).join(' ');
-  for (const frase of [/over 70% of enterprise voice interactions/, /less than 10% in 2026/, /up to 80% and reduce costs by up to 60%/, /25% of enterprise security breaches will trace back to AI agent abuse/, /80% of their new applications disposable and easy to replace/, /Mastering the new boundaries of machine behavior/]) assert.match(en, frase);
+  for (const frase of [/40% of robotics applications will incorporate world models/, /less than 1% in 2025/, /training costs will fall tenfold within three years/, /simulate future states, predict outcomes and understand the consequences of their actions before execution/, /30% of GenAI workloads to run DSLMs on-premises or on-device by 2028/, /70% of MAS to use narrowly specialized agents by 2027, improving accuracy but increasing coordination complexity/]) assert.match(en, frase);
+  // Orden pedido por Carlos: World Models → DSLM → MAS; y honestidad sobre la lista (DSLM y MAS son de 2026).
+  const iWM = en.indexOf('What is a world model'), iDS = en.indexOf('domain-specific language models, trained'), iMA = en.indexOf('Third: multiagent systems');
+  assert.ok(iWM > 0 && iWM < iDS && iDS < iMA);
+  assert.match(en, /world models are on the 2027 list; the other two come from the 2026 list/);
   assert.ok(!/CEO|presidente|director|fundador/i.test(G.turnos.filter((t) => t.persona === 'Carlo Bonomi').map((t) => t.texto + t.en).join(' ')));
   const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
-  assert.match(html, /guion=gartner&amp;cabecera=bonomi">Demo · Gartner 2027 · Carlos Silva ↔ Carlo Bonomi/);
+  assert.match(html, /guion=gartner&amp;cabecera=bonomi">Demo · Gartner · 3 tendencias PortAventuraNeXT · Carlos Silva ↔ Carlo Bonomi/);
 });
 
 test('neón «PortAventuraNeXT» en la mesa de los Coetáneos: solo en el flujo de escena0 y en la home con ?demo=pan', async () => {

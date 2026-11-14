@@ -69,36 +69,39 @@ export function anclaGuion(mesa, persona) {
   return p && p.mesa === mesa ? p.ancla : null;
 }
 
-/** Gartner Top 10 Strategic Technology Trends for 2027 (PDF GTS_542668, 28 págs.), contado por Carlos Silva
- *  (centro de las Leyendas) a Carlo Bonomi (cabecera de los Coetáneos). Solo cifras y frases del documento:
- *  págs. 2-4 (idea y frentes), 7 (voz), 12 (contexto), 16 (identidad de agente) y 23 (aplicaciones desechables).
- *  Lo de AdmiraNeXT: digital signage, retail media, phygital, el Consejo de agentes y PortAventuraNeXT. */
+/** Gartner, tres tendencias para PortAventuraNeXT (Carlos, 14-nov 21:06): World Models primero, luego
+ *  modelos de lenguaje de dominio (DSLM) y sistemas multiagente (MAS). Contado por Carlos Silva (centro de
+ *  las Leyendas) a Carlo Bonomi (cabecera de los Coetáneos). Honesto con las fuentes:
+ *  - World Models es la tendencia 3 de Gartner Top 10 Strategic Technology Trends for 2027 (GTS_542668), págs. 3, 9 y 10.
+ *  - DSLM y MAS NO están en la lista de 2027: son las tendencias 5 y 4 de la de 2026 (págs. 3, 12 y 14 de ese PDF).
+ *    En el de 2027, «multiagent system» sale como técnica de World Models (pág. 9).
+ *  Lo de PortAventuraNeXT sale del guion del show (16-nov, Planeta 7, «Terminator»); lo que aún no existe va como propuesta. */
 export const GUION_GARTNER = Object.freeze({
   id: 'gartner',
-  titulo: 'Gartner 2027 · Carlos Silva y Carlo Bonomi',
-  tituloEn: 'Gartner 2027 · Carlos Silva and Carlo Bonomi',
-  tema: 'Las diez tendencias tecnológicas estratégicas de Gartner para 2027 y qué hace AdmiraNeXT con ellas.',
-  cierreTitulo: 'AdmiraNeXT',
-  cierre: 'Gartner · Top 10 Strategic Technology Trends for 2027',
+  titulo: 'Gartner · 3 tendencias para PortAventuraNeXT · Carlos Silva y Carlo Bonomi',
+  tituloEn: 'Gartner · 3 trends for PortAventuraNeXT · Carlos Silva and Carlo Bonomi',
+  tema: 'Tres tendencias de Gartner aplicadas a PortAventuraNeXT: World Models (2027), modelos de lenguaje de dominio y sistemas multiagente (2026).',
+  cierreTitulo: 'PortAventuraNeXT',
+  cierre: 'Gartner · World Models · Domain-specific language models · Multiagent systems',
   cabecera: 'carlo-bonomi',
   soloGuion: true,
   sinVoz: true,
   bilingue: true,
   turnos: Object.freeze([
-    { persona: 'Carlo Bonomi', texto: 'Carlos, Gartner ya ha publicado sus diez tendencias tecnológicas estratégicas para 2027. ¿Cuál es la idea de fondo?', en: 'Carlos, Gartner has published its top ten strategic technology trends for 2027. What\'s the big idea?' },
-    { persona: 'Carlos Silva', texto: 'Dominar los nuevos límites del comportamiento de las máquinas. Pasamos de la escasez de software a la abundancia, y de ejecutar código a orquestar trabajadores autónomos.', en: 'Mastering the new boundaries of machine behavior. We\'re moving from software scarcity to abundance, and from running static code to orchestrating autonomous machine workers.' },
-    { persona: 'Carlo Bonomi', texto: 'Son tres frentes. Empecemos por el primero: ¿qué es la IA no textual y por qué te importa?', en: 'There are three fronts. Start with the first: what is nontextual AI, and why should you care?' },
-    { persona: 'Carlos Silva', texto: 'Modelos que calculan, oyen y simulan. Gartner prevé que en 2030 más del 70% de las interacciones de voz de las empresas las lleven modelos de voz de forma autónoma, frente a menos del 10% en 2026.', en: 'Models that calculate, hear and simulate. Gartner expects that by 2030, over 70% of enterprise voice interactions will be handled autonomously by speech models, up from less than 10% in 2026.' },
-    { persona: 'Carlo Bonomi', texto: 'Pero la voz razona menos a fondo que el texto. ¿No es un riesgo?', en: 'But voice reasons less deeply than text. Isn\'t that a risk?' },
-    { persona: 'Carlos Silva', texto: 'Lo es, y Gartner lo dice: modelos rápidos para lo rutinario y razonamiento profundo para lo complejo. En PortAventuraNeXT la voz solo da órdenes cortas, como «hola Admira, siguiente».', en: 'It is, and Gartner says so: fast models for routine tasks, deep reasoning for complex decisions. In PortAventuraNeXT, voice only gives short commands, like “hola Admira, siguiente”.' },
-    { persona: 'Carlo Bonomi', texto: 'Segundo frente: gobernar a los agentes. ¿Cómo evitas que se equivoquen?', en: 'Second front: governing the agents. How do you stop them from getting it wrong?' },
-    { persona: 'Carlos Silva', texto: 'Con contexto. Según Gartner, en 2027 quien priorice la semántica en sus datos preparados para IA aumentará la precisión de la IA agéntica hasta un 80% y reducirá costes hasta un 60%. Nuestro Consejo de agentes trabaja así: cada uno con su rol y el contexto del proyecto.', en: 'With context. According to Gartner, by 2027 organizations that prioritize semantics in AI-ready data will increase agentic AI accuracy by up to 80% and reduce costs by up to 60%. Our council of AI agents works that way: each with its own role and the project\'s context.' },
-    { persona: 'Carlo Bonomi', texto: '¿Y quién responde de lo que hace un agente?', en: 'And who is accountable for what an agent does?' },
-    { persona: 'Carlos Silva', texto: 'Gartner avisa: en 2028, el 25% de las brechas de seguridad empresariales tendrán su origen en el abuso de agentes de IA. Por eso cada consejero firma lo que hace, y lo que sale fuera lo aprueba una persona.', en: 'Gartner warns that by 2028, 25% of enterprise security breaches will trace back to AI agent abuse. That\'s why every councillor signs its work, and anything that goes out is approved by a person.' },
-    { persona: 'Carlo Bonomi', texto: 'Tercer frente: agilidad duradera. ¿Qué cambia en una tienda o en un parque?', en: 'Third front: durable agility. What changes in a store or a park?' },
-    { persona: 'Carlos Silva', texto: 'Gartner prevé que en 2030 las organizaciones líderes hagan que el 80% de sus aplicaciones nuevas sean desechables y fáciles de sustituir. Así trabajamos el digital signage y el retail media: cada campaña o experiencia phygital se lanza, cumple su función y se retira.', en: 'By 2030, Gartner expects leading organizations to make 80% of their new applications disposable and easy to replace. That\'s how we run digital signage and retail media: each campaign or phygital experience launches, does its job and is retired.' },
+    { persona: 'Carlo Bonomi', texto: 'Carlos, de todo lo que anuncia Gartner, ¿con qué tres tendencias te quedas para PortAventuraNeXT?', en: 'Carlos, of everything Gartner is calling out, which three trends do you pick for PortAventuraNeXT?' },
+    { persona: 'Carlos Silva', texto: 'World Models, modelos de lenguaje de dominio y sistemas multiagente, en ese orden. Para ser exactos: los World Models están en la lista de 2027; las otras dos son de la lista de 2026.', en: 'World models, domain-specific language models and multiagent systems, in that order. To be precise: world models are on the 2027 list; the other two come from the 2026 list.' },
+    { persona: 'Carlo Bonomi', texto: 'Empieza por la que más te gusta. ¿Qué es un World Model?', en: 'Start with your favourite. What is a world model?' },
+    { persona: 'Carlos Silva', texto: 'Gartner lo define como un sistema entrenado con datos multimodales que aprende representaciones de entornos físicos y virtuales. Permite a los agentes simular estados futuros, predecir resultados y entender las consecuencias de sus actos antes de ejecutarlos.', en: 'Gartner defines them as computational systems trained on multimodal datasets to learn abstract representations of physical and virtual environments. They let autonomous agents simulate future states, predict outcomes and understand the consequences of their actions before execution.' },
+    { persona: 'Carlo Bonomi', texto: '¿Y qué pinta eso en un parque?', en: 'And what does that have to do with a park?' },
+    { persona: 'Carlos Silva', texto: 'Un parque es un mundo físico con una historia dentro, y cada pantalla de PortAventuraNeXT ya sabe cuánta gente tiene. Con un World Model ensayaríamos antes de mover: qué pasa con las colas si la grieta sale en las cinco pantallas. Primero en la maqueta y el plano 3D; luego, en el parque.', en: 'A park is a physical world with a story inside, and every PortAventuraNeXT screen already knows how many people it holds. With a world model we\'d rehearse before moving: what happens to queues if the rift plays on all five screens. First on the model and the 3D plan; then in the park.' },
+    { persona: 'Carlo Bonomi', texto: 'Suena caro. ¿No es pronto?', en: 'Sounds expensive. Isn\'t it too early?' },
+    { persona: 'Carlos Silva', texto: 'Gartner admite que hoy el coste de cómputo frena el despliegue, pero dice que el de entrenar caerá diez veces en tres años. Y prevé que en 2030 el 40% de las aplicaciones de robótica usen World Models, frente a menos del 1% en 2025. Por eso: piloto medido en la entrada del Studio.', en: 'Gartner admits high computational costs restrict deployment today, but says model training costs will fall tenfold within three years. And by 2030, 40% of robotics applications will incorporate world models, compared with less than 1% in 2025. So: a measured pilot at the Studio entrance.' },
+    { persona: 'Carlo Bonomi', texto: 'Segunda: modelos de lenguaje de dominio, entrenados con datos de un sector. ¿Por qué no uno general?', en: 'Second: domain-specific language models, trained on one industry\'s data. Why not a general one?' },
+    { persona: 'Carlos Silva', texto: 'Porque uno general no conoce el parque. El nuestro hablaría PortAventuraNeXT: sus mundos, los diez capítulos, la carta de Benny\'s Burgers. Gartner prevé que en 2028 el 30% de las cargas de IA generativa ejecuten DSLM en local o en el dispositivo: aquí, los cinco ordenadores AdmiraNeXT.', en: 'Because a general one doesn\'t know the park. Ours would speak PortAventuraNeXT: its worlds, its ten chapters, the Benny\'s Burgers menu. Gartner expects 30% of GenAI workloads to run DSLMs on-premises or on-device by 2028: here, the five AdmiraNeXT PCs.' },
+    { persona: 'Carlo Bonomi', texto: 'Tercera: sistemas multiagente. ¿Quién manda cuando hay muchos agentes?', en: 'Third: multiagent systems. Who is in charge when there are many agents?' },
+    { persona: 'Carlos Silva', texto: 'Este show lo montó un consejo de agentes: Wozniak el show, Walt el reloj, Lucas el guion. Gartner prevé que en 2027 el 70% de los sistemas multiagente usen agentes muy especializados: más precisión, pero más complejidad de coordinación. Por eso, un solo reloj, un solo GO y una persona que aprueba.', en: 'A council of agents built this show: Wozniak the show, Walt the clock, Lucas the script. Gartner expects 70% of MAS to use narrowly specialized agents by 2027, improving accuracy but increasing coordination complexity. Hence one clock, one GO, and a person who approves.' },
     { persona: 'Carlo Bonomi', texto: 'Si me llevo una sola frase al comité, ¿cuál es?', en: 'If I take one sentence back to the board, what is it?' },
-    { persona: 'Carlos Silva', texto: 'Gartner habla de máquinas que hay que gobernar. AdmiraNeXT las pone donde está la gente: en la pantalla, en la tienda y en el parque, con límites claros y con emoción. Si no emociona, no se escala.', en: 'Gartner talks about machines that need governing. AdmiraNeXT puts them where people are: on the screen, in the store and in the park, with clear limits and with emotion. If it doesn\'t move people, it doesn\'t scale.' },
+    { persona: 'Carlos Silva', texto: 'El World Model ensaya el parque, el modelo de dominio lo cuenta y los agentes lo mueven. Las personas deciden. Si no emociona, no se escala.', en: 'The world model rehearses the park, the domain model tells its story and the agents run it. People decide. If it doesn\'t move people, it doesn\'t scale.' },
   ]),
 });
 
@@ -108,7 +111,7 @@ export function parseGuion(v) {
   const s = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/[^a-z]/g, '');
   if (['pan', 'portaventura', 'portaventuranext', 'portaventuranextcom'].includes(s)) return GUION_PAN;
   if (['carlosbonomi', 'carlossilvabonomi', 'carlossilvacarlobonomi', 'bonomi'].includes(s)) return GUION_CARLOS_BONOMI;
-  if (['gartner', 'gartner2027', 'tendencias', 'trends', 'toptrends2027'].includes(s)) return GUION_GARTNER;
+  if (['gartner', 'gartner2027', 'gartner3', 'tendencias', 'trends', 'toptrends2027'].includes(s)) return GUION_GARTNER;
   return null;
 }
 

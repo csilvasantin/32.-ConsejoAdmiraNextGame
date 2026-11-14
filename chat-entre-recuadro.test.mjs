@@ -134,8 +134,8 @@ test("el CSS y el HTML cargan el recuadro y la hora visible junto a la frase", (
   assert.match(entre, /agruparConversaciones/);
   assert.match(entre, /hablanteDe/);
   assert.match(html, /consejero-mensajes.js\?v=20261112-sin-acople/);
-  assert.match(html, /council-grokbot.js\?v=20261112-sin-acople/);
-  assert.match(html, /council-grokbot\.css\?v=20261112-recuadro-conv/);
+  assert.match(html, /council-grokbot.js\?v=20261114-r181-conversacion/);
+  assert.match(html, /council-grokbot\.css\?v=20261114-r181-conversacion/);
 });
 
 test("el panel refresca la transcripción cada ~1 s, no cada 15 s", () => {

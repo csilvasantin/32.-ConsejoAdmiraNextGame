@@ -242,3 +242,8 @@ body.mouths-off .council-speech-mouth{display:none!important}
   color:#3ee0c0;
   vertical-align:middle;
 }
+
+/* t1341u (Carlos, 14-11): selector de destinatario en Conversación (hablar con cualquier consejero). */
+.council-chat__destinatario{font:11px/1.3 system-ui,sans-serif;color:#e6c788;background:#2a1a08;border:1px solid #5a3c1c;padding:2px 4px;border-radius:0;max-width:150px;cursor:pointer}
+.council-chat__destinatario:focus-visible{outline:2px dashed #ffd75e;outline-offset:1px}
+.previos-head-tools .council-chat__destinatario{font:7px/1 'Press Start 2P',monospace;color:#ffee88;padding:2px 3px;max-width:130px;height:auto;min-height:0}

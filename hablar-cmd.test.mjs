@@ -135,7 +135,7 @@ test('reconocidos sin línea directa (Lasseter, Ive) no tienen url de chat', () 
 
 test('la home carga el parser antes del panel y la CLI lo registra', () => {
   const home = leer('index.html');
-  assert.match(home, /hablar-cmd\.js\?v=20261114-r181-conversacion/);
+  assert.match(home, /hablar-cmd\.js\?v=20261114-consejero-mesa/);
   const cmdAt = home.indexOf('hablar-cmd.js');
   const integAt = home.indexOf('council-integration.js');
   assert.ok(cmdAt >= 0 && integAt > cmdAt, 'hablar-cmd.js debe cargarse antes de council-integration.js');

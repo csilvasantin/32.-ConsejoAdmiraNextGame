@@ -2422,6 +2422,16 @@
                 return true;
             }
         }
+        // ── /consejero <nombre> desaparecer|aparecer (t1347u, 14-11-2026): explícito, persistente ──
+        if (/^\/(consejeros?|advisors?|councill?ors?)\s/i.test(text) && window.AdmiraHablarCmd && window.CouncilConsejeroMesa) {
+            const lineaC = window.AdmiraHablarCmd.parseLinea(text, { generation: currentGen });
+            if (lineaC && (lineaC.accion === 'consejero' || /^consejero-(fuera|nombre)$/.test(lineaC.mensaje || ''))) {
+                addUserEntry(text);
+                const rC = lineaC.accion === 'consejero' ? window.CouncilConsejeroMesa.aplicar(lineaC) : { msg: window.CouncilConsejeroMesa.mensajeError(lineaC) };
+                setActionLine(rC.msg);
+                return true;
+            }
+        }
         // ── /consejero [todos|ninguno|<nombre>] y /ceo (Carlos, 06-11-2026): presencia en la mesa ──
         if (/^\/(consejeros?|advisors?|councill?ors?|ceo|yo)(\s|$)/i.test(text) && window.CouncilPresencia) {
             const r = window.CouncilPresencia.comando(text, currentGen);

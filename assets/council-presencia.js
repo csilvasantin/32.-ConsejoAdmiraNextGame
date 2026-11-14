@@ -70,6 +70,7 @@
       mitad: function (gen, side) { var l = lado(gen, side), h = Math.ceil(l.length / 2); l.forEach(function (p, i) { api.set(gen, p, i < h); }); },
       carlosVisible: function () { return !st.carlosOculto; },
       toggleCarlos: function () { st.carlosOculto = !st.carlosOculto; guardar(); return !st.carlosOculto; },
+      setCarlos: function (on) { st.carlosOculto = !on; guardar(); return !st.carlosOculto; },
       raw: function () { return st; }
     };
     return api;
@@ -131,6 +132,8 @@
     // Ocultos fuera de nameplates y hotspots.
     document.querySelectorAll('#nameplates .np[data-persona], #body-hotspots [data-persona]').forEach(function (n) {
       var p = n.getAttribute('data-persona'); var off = personas(gen).indexOf(p) >= 0 && !estado.visible(gen, p);
+      // Carlos Silva (figura Y-3 de Leyendas) sale con su recorte: fuera su cartela y su hotspot.
+      if (p === 'Carlos Silva') off = gen === 'leyendas' && !estado.carlosVisible();
       n.style.display = off ? 'none' : '';
     });
     document.querySelectorAll('.presente-cb[data-persona]').forEach(function (cb) { cb.checked = estado.visible(gen, cb.getAttribute('data-persona')); });

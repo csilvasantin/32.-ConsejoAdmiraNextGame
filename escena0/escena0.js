@@ -1,11 +1,11 @@
 import {
   parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261114-mesa-pan';
+} from '/escena0-lib.mjs?v=20261114-mesa2';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
-} from '/escena0-guion.mjs?v=20261114-mesa-pan';
+} from '/escena0-guion.mjs?v=20261114-mesa2';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -82,11 +82,19 @@ function colocarGlobo(persona) {
 }
 
 // Cabecera de los Coetáneos: retrato en la silla del fondo + placa dorada (sin cargo).
+// Carlos 21:50: la cabecera y el neón no salen hasta que el arte de su mesa está cargado (antes Bonomi aparecía sobre la mesa anterior).
+function mesaCargada() {
+  const img = $('mesa-img');
+  if (!img) return true;
+  const want = (IMG[mesaVista] || '').split('?')[0];
+  return img.complete && img.naturalWidth > 0 && (!want || (img.currentSrc || img.src).indexOf(want) >= 0);
+}
+
 function colocarCabecera() {
   const el = $('cabecera');
   if (!el) return;
   const box = cajaArte();
-  if (!cabecera || mesaVista !== CABECERA_POS.mesa || !box) { el.hidden = true; return; }
+  if (!cabecera || mesaVista !== CABECERA_POS.mesa || !box || !mesaCargada()) { el.hidden = true; return; }
   el.hidden = false;
   el.style.left = (box.x + CABECERA_POS.x / 100 * box.w) + 'px';
   el.style.top = (box.y + CABECERA_POS.y / 100 * box.h) + 'px';
@@ -102,7 +110,7 @@ function colocarLogo() {
   const el = $('logo-demo');
   if (!el) return;
   const box = cajaArte();
-  if (!flujo || mesaVista !== LOGO_DEMO.mesa || !box) { el.hidden = true; return; }
+  if (!flujo || mesaVista !== LOGO_DEMO.mesa || !box || !mesaCargada()) { el.hidden = true; return; }
   if (!el.getAttribute('src')) el.src = LOGO_DEMO.foto;
   el.hidden = false;
   el.style.left = (box.x + LOGO_DEMO.x / 100 * box.w) + 'px';
@@ -614,7 +622,10 @@ function montarFlujo() {
     document.body.classList.toggle('fs', !!(document.fullscreenElement || document.webkitFullscreenElement));
   });
   window.addEventListener('resize', () => { colocarCabecera(); colocarLogo(); pintarGloboFlujo(); });
-  $('mesa-img').addEventListener('load', () => { colocarLogo(); pintarGloboFlujo(); });
+  $('mesa-img').addEventListener('load', () => { colocarCabecera(); colocarLogo(); pintarGloboFlujo(); });
+  // Precarga de las dos mesas y del retrato: el cambio Leyendas ↔ Coetáneos no espera a la red.
+  Object.values(IMG).forEach((u) => { const i = new Image(); i.src = u; });
+  if (cabecera && cabecera.foto) { const i = new Image(); i.src = cabecera.foto; }
   idleCursor();
   // Arranque directo para capturas y kioscos ya desbloqueados: ?paso=N (1 = Leyendas).
   const pq = parseInt(q.get('paso') || '', 10);

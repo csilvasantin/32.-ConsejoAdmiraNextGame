@@ -55,7 +55,7 @@ body.fs #btn-fs { opacity:.55; }
 #cabecera[hidden] { display:none; }
 #cabecera img { position:absolute; inset:0; width:100%; height:100%; }
 #cabecera-placa {
-  position:absolute; left:50%; top:111%; transform:translateX(-50%); white-space:nowrap;
+  position:absolute; left:50%; top:105.5%; transform:translateX(-50%); white-space:nowrap;
   padding:.25em .7em; font:700 clamp(9px,1.05vw,16px)/1.1 Georgia,serif; letter-spacing:.06em; text-transform:uppercase;
   color:#3a2405; background:linear-gradient(#ffe58a,#c9a227 55%,#9c7414); border:1px solid #5a3d08; border-radius:3px;
   box-shadow:0 2px 0 rgba(0,0,0,.6);

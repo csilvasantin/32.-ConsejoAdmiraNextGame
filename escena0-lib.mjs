@@ -26,8 +26,8 @@ export const ROLES = Object.freeze({
 });
 
 export const IMG = Object.freeze({
-  leyendas: '/assets/council-leyendas.jpg?v=20261112-holgado',
-  coetaneos: '/assets/council-coetaneos.jpg?v=20261112-holgado',
+  leyendas: '/assets/council-leyendas.jpg?v=20261114-mesa',
+  coetaneos: '/assets/council-coetaneos.jpg?v=20261114-mesa',
 });
 
 /** Punta de la flecha (cabeza) en % del arte, de PAPEL_POS. */

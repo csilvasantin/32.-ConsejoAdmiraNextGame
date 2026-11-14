@@ -1,11 +1,11 @@
 import {
   parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261114-pan-humo';
+} from '/escena0-lib.mjs?v=20261114-mesa-pan';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
-} from '/escena0-guion.mjs?v=20261114-pan-humo';
+} from '/escena0-guion.mjs?v=20261114-mesa-pan';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -92,6 +92,9 @@ function colocarCabecera() {
   el.style.top = (box.y + CABECERA_POS.y / 100 * box.h) + 'px';
   el.style.width = (CABECERA_POS.w / 100 * box.w) + 'px';
   el.style.height = (CABECERA_POS.h / 100 * box.h) + 'px';
+  const corte = CABECERA_POS.corte || 0;
+  const img = $('cabecera-img'); if (img) img.style.clipPath = 'inset(0 0 ' + corte + '% 0)';
+  const placa = $('cabecera-placa'); if (placa) placa.style.top = (100 - corte + 0.8 / CABECERA_POS.h * 100) + '%';
 }
 
 // Neón de la mesa de los Coetáneos con «PortAventuraNeXT» en el flujo de presentación (pan, carlos-bonomi, gartner).

@@ -170,7 +170,44 @@ test('escena0: una sola caja por turno en el flujo (sin barra), funde antes de l
   assert.match(js, /parseLang\(q\.get\('lang'\), guion\)/);
   const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
   assert.match(html, /id="globo-en" lang="en"/);
-  assert.match(html, /escena0\.js\?v=20261114-bilingue/);
+  assert.match(html, /escena0\.js\?v=20261114-[a-z]+/);
   const css = readFileSync(new URL('./escena0/escena0.css', import.meta.url), 'utf8');
   assert.match(css, /#globo\.flujo-caja\.fuera \{ opacity:0/);
+});
+
+test('guion Gartner 2027: Carlos ↔ Bonomi, 14 turnos bilingües, cifras tal como las da el PDF; el de PortAventuraNeXT no cambia', async () => {
+  const { GUION_GARTNER: G, GUION_CARLOS_BONOMI: CB, parseLang, lineasTurno } = await import('./escena0-guion.mjs');
+  assert.equal(parseGuion('gartner'), G);
+  assert.equal(parseGuion('carlos-bonomi'), CB);
+  assert.equal(CB.turnos.length, 12);
+  assert.equal(G.turnos.length, 14);
+  assert.ok(G.soloGuion && G.sinVoz && G.bilingue);
+  assert.equal(G.cierreTitulo, 'AdmiraNeXT');
+  assert.equal(parseLang(null, G), 'both');
+  G.turnos.forEach((t, i) => {
+    assert.equal(t.persona, i % 2 ? 'Carlos Silva' : 'Carlo Bonomi', 'turno ' + (i + 1));
+    assert.ok(t.en && t.en.length > 10);
+    assert.deepEqual(lineasTurno(t, null, 'both').map((l) => l.lang), ['es', 'en']);
+  });
+  const en = G.turnos.map((t) => t.en).join(' ');
+  for (const frase of [/over 70% of enterprise voice interactions/, /less than 10% in 2026/, /up to 80% and reduce costs by up to 60%/, /25% of enterprise security breaches will trace back to AI agent abuse/, /80% of their new applications disposable and easy to replace/, /Mastering the new boundaries of machine behavior/]) assert.match(en, frase);
+  assert.ok(!/CEO|presidente|director|fundador/i.test(G.turnos.filter((t) => t.persona === 'Carlo Bonomi').map((t) => t.texto + t.en).join(' ')));
+  const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  assert.match(html, /guion=gartner&amp;cabecera=bonomi">Demo · Gartner 2027 · Carlos Silva ↔ Carlo Bonomi/);
+});
+
+test('neón «PortAventuraNeXT» en la mesa de los Coetáneos: solo en el flujo de escena0 y en la home con ?demo=pan', async () => {
+  const { LOGO_DEMO } = await import('./escena0-guion.mjs');
+  const { existsSync } = await import('node:fs');
+  assert.equal(LOGO_DEMO.mesa, 'coetaneos');
+  assert.ok(existsSync(new URL('.' + LOGO_DEMO.foto.split('?')[0], import.meta.url)));
+  const ctx = {}; ctx.globalThis = ctx;
+  vm.runInNewContext(readFileSync(new URL('./assets/consejo-cabecera.js', import.meta.url), 'utf8'), ctx);
+  assert.deepEqual({ ...ctx.CouncilCabeceraLib.LOGO }, { ...LOGO_DEMO }, 'home y escena0 usan el mismo parche');
+  const cab = readFileSync(new URL('./assets/consejo-cabecera.js', import.meta.url), 'utf8');
+  assert.match(cab, /hasAttribute\('data-demo-pan'\)/, 'la home normal sigue con AdmiraNext');
+  const demo = readFileSync(new URL('./assets/consejo-demo.js', import.meta.url), 'utf8');
+  assert.ok(demo.indexOf("setAttribute('data-demo-pan'") > demo.indexOf("if (!/^(pan|consejo|portaventura|portaventuranext)$/.test(modo)) return;"), 'solo con ?demo=pan');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /if \(!flujo \|\| mesaVista !== LOGO_DEMO\.mesa/);
 });

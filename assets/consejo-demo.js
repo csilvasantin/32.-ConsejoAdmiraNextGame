@@ -30,6 +30,7 @@
   var q; try { q = new URLSearchParams(root.location.search); } catch (e) { return; }
   var modo = String(q.get('demo') || '').toLowerCase();
   if (!/^(pan|consejo|portaventura|portaventuranext)$/.test(modo)) return;
+  document.documentElement.setAttribute('data-demo-pan', '');
   var a = limpio(q.get('a'), PARES.a), b = limpio(q.get('b'), PARES.b);
   if (a === b) b = a === 'elon' ? 'jobs' : 'elon';
 
@@ -83,6 +84,8 @@
     });
     document.body.appendChild(bar);
     aviso('Pulsa 1, 2 y 3');
+    var g = document.querySelector('.council-image'), gen = g && g.getAttribute('data-generation');
+    if (gen && root.CouncilCabecera) root.CouncilCabecera.sync(gen);
   }
   root.CouncilDemo = { lib: lib, paso: function (n) { if (pasos[n]) { marcar(n); pasos[n](); } }, a: a, b: b };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();

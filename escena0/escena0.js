@@ -4,8 +4,8 @@ import {
 } from '/escena0-lib.mjs';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
-  parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo,
-} from '/escena0-guion.mjs?v=20261114-bilingue';
+  parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
+} from '/escena0-guion.mjs?v=20261114-gartner-logo';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -94,6 +94,20 @@ function colocarCabecera() {
   el.style.height = (CABECERA_POS.h / 100 * box.h) + 'px';
 }
 
+// Neón de la mesa de los Coetáneos con «PortAventuraNeXT» en el flujo de presentación (pan, carlos-bonomi, gartner).
+function colocarLogo() {
+  const el = $('logo-demo');
+  if (!el) return;
+  const box = cajaArte();
+  if (!flujo || mesaVista !== LOGO_DEMO.mesa || !box) { el.hidden = true; return; }
+  if (!el.getAttribute('src')) el.src = LOGO_DEMO.foto;
+  el.hidden = false;
+  el.style.left = (box.x + LOGO_DEMO.x / 100 * box.w) + 'px';
+  el.style.top = (box.y + LOGO_DEMO.y / 100 * box.h) + 'px';
+  el.style.width = (LOGO_DEMO.w / 100 * box.w) + 'px';
+  el.style.height = (LOGO_DEMO.h / 100 * box.h) + 'px';
+}
+
 function montarCabecera() {
   const el = $('cabecera');
   if (!el || !cabecera) return;
@@ -113,6 +127,7 @@ function verMesa(m) {
     img.alt = 'Mesa de ' + nombreMesa(m) + ' del Consejo AdmiraNeXT';
   }
   colocarCabecera();
+  colocarLogo();
 }
 
 function mostrarGlobo(persona, texto, pensando) {
@@ -423,7 +438,7 @@ function construirPasos() {
     { tipo: 'rotulo', mesa: 'coetaneos', titulo: '3 · Conversación · consejero vs consejero', en: bi && ROTULOS_EN.conversacion, sub: lang === 'en' && guion.tituloEn ? guion.tituloEn : guion.titulo, ms: 5000 },
   ];
   guion.turnos.forEach((t, i) => p.push({ tipo: 'turno', i, persona: t.persona, mesa: mesaDeGuion(t.persona) }));
-  p.push({ tipo: 'rotulo', mesa: 'coetaneos', titulo: 'PortAventuraNeXT', sub: guion.cierre, ms: 0 });
+  p.push({ tipo: 'rotulo', mesa: 'coetaneos', titulo: guion.cierreTitulo || 'PortAventuraNeXT', sub: guion.cierre, ms: 0 });
   return p;
 }
 
@@ -595,8 +610,8 @@ function montarFlujo() {
   document.addEventListener('fullscreenchange', () => {
     document.body.classList.toggle('fs', !!(document.fullscreenElement || document.webkitFullscreenElement));
   });
-  window.addEventListener('resize', () => { colocarCabecera(); pintarGloboFlujo(); });
-  $('mesa-img').addEventListener('load', () => pintarGloboFlujo());
+  window.addEventListener('resize', () => { colocarCabecera(); colocarLogo(); pintarGloboFlujo(); });
+  $('mesa-img').addEventListener('load', () => { colocarLogo(); pintarGloboFlujo(); });
   idleCursor();
   // Arranque directo para capturas y kioscos ya desbloqueados: ?paso=N (1 = Leyendas).
   const pq = parseInt(q.get('paso') || '', 10);

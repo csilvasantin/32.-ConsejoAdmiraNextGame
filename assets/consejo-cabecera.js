@@ -11,6 +11,8 @@
     'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-cartoon', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
   };
   var POS = { mesa: 'coetaneos', x: 43.125, y: 36.944, w: 13.672, h: 28.056 };
+  // Demo (?demo=pan, data-demo-pan en <html>): el neón de la mesa dice «PortAventuraNeXT». Igual que LOGO_DEMO de escena0-guion.mjs.
+  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
   var DEFECTO = 'carlo-bonomi';
 
   function plano(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' '); }
@@ -50,7 +52,7 @@
     };
   }
 
-  var lib = { KEY: KEY, CABECERAS: CABECERAS, POS: POS, plano: plano, buscar: buscar, comando: comando, crearEstado: crearEstado };
+  var lib = { KEY: KEY, CABECERAS: CABECERAS, POS: POS, LOGO: LOGO, plano: plano, buscar: buscar, comando: comando, crearEstado: crearEstado };
   if (typeof module !== 'undefined' && module.exports) module.exports = lib;
   if (typeof document === 'undefined') { root.CouncilCabeceraLib = lib; return; }
 
@@ -72,8 +74,21 @@
     }
     return el;
   }
+  function pintarLogo(gen) {
+    var box = document.querySelector('.council-image'); if (!box) return;
+    var el = document.getElementById('demo-logo-layer');
+    var on = gen === LOGO.mesa && document.documentElement.hasAttribute('data-demo-pan');
+    if (!on) { if (el) el.style.display = 'none'; return; }
+    if (!el) {
+      el = document.createElement('img'); el.id = 'demo-logo-layer'; el.alt = 'PortAventuraNeXT'; el.src = LOGO.foto;
+      el.style.cssText = 'position:absolute;left:' + LOGO.x + '%;top:' + LOGO.y + '%;width:' + LOGO.w + '%;height:' + LOGO.h + '%;pointer-events:none;z-index:2';
+      box.appendChild(el);
+    }
+    el.style.display = 'block';
+  }
   function pintar(gen) {
     genVista = gen;
+    pintarLogo(gen);
     var el = capa(); if (!el) return;
     var c = estado.get() && CABECERAS[estado.get()];
     document.documentElement.toggleAttribute('data-cabecera', !!(c && gen === POS.mesa));

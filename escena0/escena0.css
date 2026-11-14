@@ -78,7 +78,7 @@ body.flujo #globo.flujo-caja, #globo.flujo-caja {
   transform:none; max-width:none; min-width:0; padding:.6em .9em .7em; line-height:1.38;
   transition:opacity .26s ease, transform .26s ease; opacity:1;
 }
-#globo.flujo-caja.fuera { opacity:0; transform:translateY(4px); }
+body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transform:translateY(4px); }
 #globo.flujo-caja b { font-size:.72em; margin-bottom:.35em; }
 #globo.flujo-caja::after {
   content:""; position:absolute; left:var(--cola-x, 50%); width:14px; height:14px; margin-left:-7px;

@@ -82,7 +82,7 @@ export const GUION_GARTNER = Object.freeze({
   tituloEn: 'Gartner · 3 trends for PortAventuraNeXT · Carlos Silva and Carlo Bonomi',
   tema: 'Tres tendencias de Gartner aplicadas a PortAventuraNeXT: World Models (2027), modelos de lenguaje de dominio y sistemas multiagente (2026).',
   cierreTitulo: 'PortAventuraNeXT',
-  cierre: 'Gartner · World Models · Domain-specific language models · Multiagent systems',
+  cierre: 'Gartner · World Models · DSLMs · Multiagent systems',
   cabecera: 'carlo-bonomi',
   soloGuion: true,
   sinVoz: true,

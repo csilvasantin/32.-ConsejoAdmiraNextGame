@@ -54,6 +54,9 @@ body.fs #btn-fs { opacity:.55; }
 #cabecera { position:absolute; z-index:10; pointer-events:none; }
 #cabecera[hidden] { display:none; }
 #cabecera img { position:absolute; inset:0; width:100%; height:100%; }
+/* Carlos 23:39: placas ocultas por defecto; la maqueta de Ferrari Land va en el sitio de la placa. */
+#cabecera #cabecera-objeto { inset:auto; width:auto; transform:translateX(-50%); }
+#cabecera [hidden] { display:none; }
 #cabecera-placa {
   position:absolute; left:50%; top:105.5%; transform:translateX(-50%); white-space:nowrap;
   padding:.25em .7em; font:700 clamp(9px,1.05vw,16px)/1.1 Georgia,serif; letter-spacing:.06em; text-transform:uppercase;

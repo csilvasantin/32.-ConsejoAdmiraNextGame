@@ -1,6 +1,6 @@
 /* Cabecera de la mesa de Coetáneos (Lucas, 14-nov-2026, pedido de Carlos).
- * Un invitado se sienta en la silla del fondo, al centro, de la mesa de Coetáneos: su retrato
- * en la silla y su placa dorada, como las de los consejeros. Sin cargo: solo nombre y retrato.
+ * Un invitado se sienta al fondo, al centro, de la mesa de Coetáneos como un consejero más (dibujo
+ * con el look de la mesa, silla azul) y con su placa dorada delante, como las de los consejeros. Sin cargo: solo nombre y retrato.
  *   /cabecera bonomi · /cabecera Carlo Bonomi · /cabecera off · /cabecera (alterna)
  *   ?cabecera=bonomi en la URL (la deja puesta) · ?cabecera=off la quita.
  * Estado en localStorage (admira:consejo-cabecera). Misma ficha y posición que escena0-guion.mjs. */
@@ -8,9 +8,9 @@
   'use strict';
   var KEY = 'admira:consejo-cabecera';
   var CABECERAS = {
-    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi.webp?v=20261114-foto', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
+    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-cartoon', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
   };
-  var POS = { mesa: 'coetaneos', x: 44.6, y: 31, w: 11.6, h: 27.5 };
+  var POS = { mesa: 'coetaneos', x: 43.125, y: 36.944, w: 13.672, h: 28.056 };
   var DEFECTO = 'carlo-bonomi';
 
   function plano(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' '); }
@@ -79,8 +79,8 @@
     document.documentElement.toggleAttribute('data-cabecera', !!(c && gen === POS.mesa));
     if (!c || gen !== POS.mesa) { el.style.display = 'none'; el.innerHTML = ''; return; }
     el.innerHTML =
-      '<img alt="' + c.nombre + ' en la cabecera" data-cabecera="' + c.id + '" src="' + c.foto + '" style="position:absolute;left:' + POS.x + '%;top:' + POS.y + '%;width:' + POS.w + '%;height:' + POS.h + '%;image-rendering:pixelated;filter:drop-shadow(2px 3px 0 rgba(0,0,0,.55))">' +
-      '<span class="cabecera-placa" style="position:absolute;left:' + (POS.x + POS.w / 2) + '%;top:' + (POS.y + POS.h - 4) + '%;transform:translateX(-50%);white-space:nowrap;padding:.25em .7em;font:700 clamp(8px,1.05vw,15px)/1.1 Georgia,serif;letter-spacing:.06em;text-transform:uppercase;color:#3a2405;background:linear-gradient(#ffe58a,#c9a227 55%,#9c7414);border:1px solid #5a3d08;border-radius:3px;box-shadow:0 2px 0 rgba(0,0,0,.6)">' + c.nombre + '</span>';
+      '<img alt="' + c.nombre + ' en la cabecera" data-cabecera="' + c.id + '" src="' + c.foto + '" style="position:absolute;left:' + POS.x + '%;top:' + POS.y + '%;width:' + POS.w + '%;height:' + POS.h + '%;image-rendering:auto">' +
+      '<span class="cabecera-placa" style="position:absolute;left:' + (POS.x + POS.w / 2) + '%;top:' + (POS.y + POS.h + 3) + '%;transform:translateX(-50%);white-space:nowrap;padding:.25em .7em;font:700 clamp(8px,1.05vw,15px)/1.1 Georgia,serif;letter-spacing:.06em;text-transform:uppercase;color:#3a2405;background:linear-gradient(#ffe58a,#c9a227 55%,#9c7414);border:1px solid #5a3d08;border-radius:3px;box-shadow:0 2px 0 rgba(0,0,0,.6)">' + c.nombre + '</span>';
     el.style.display = 'block';
   }
   root.CouncilCabecera = {

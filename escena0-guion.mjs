@@ -69,12 +69,46 @@ export function anclaGuion(mesa, persona) {
   return p && p.mesa === mesa ? p.ancla : null;
 }
 
-export const GUIONES = Object.freeze({ pan: GUION_PAN, 'carlos-bonomi': GUION_CARLOS_BONOMI });
+/** Gartner Top 10 Strategic Technology Trends for 2027 (PDF GTS_542668, 28 págs.), contado por Carlos Silva
+ *  (centro de las Leyendas) a Carlo Bonomi (cabecera de los Coetáneos). Solo cifras y frases del documento:
+ *  págs. 2-4 (idea y frentes), 7 (voz), 12 (contexto), 16 (identidad de agente) y 23 (aplicaciones desechables).
+ *  Lo de AdmiraNeXT: digital signage, retail media, phygital, el Consejo de agentes y PortAventuraNeXT. */
+export const GUION_GARTNER = Object.freeze({
+  id: 'gartner',
+  titulo: 'Gartner 2027 · Carlos Silva y Carlo Bonomi',
+  tituloEn: 'Gartner 2027 · Carlos Silva and Carlo Bonomi',
+  tema: 'Las diez tendencias tecnológicas estratégicas de Gartner para 2027 y qué hace AdmiraNeXT con ellas.',
+  cierreTitulo: 'AdmiraNeXT',
+  cierre: 'Gartner · Top 10 Strategic Technology Trends for 2027',
+  cabecera: 'carlo-bonomi',
+  soloGuion: true,
+  sinVoz: true,
+  bilingue: true,
+  turnos: Object.freeze([
+    { persona: 'Carlo Bonomi', texto: 'Carlos, Gartner ya ha publicado sus diez tendencias tecnológicas estratégicas para 2027. ¿Cuál es la idea de fondo?', en: 'Carlos, Gartner has published its top ten strategic technology trends for 2027. What\'s the big idea?' },
+    { persona: 'Carlos Silva', texto: 'Dominar los nuevos límites del comportamiento de las máquinas. Pasamos de la escasez de software a la abundancia, y de ejecutar código a orquestar trabajadores autónomos.', en: 'Mastering the new boundaries of machine behavior. We\'re moving from software scarcity to abundance, and from running static code to orchestrating autonomous machine workers.' },
+    { persona: 'Carlo Bonomi', texto: 'Son tres frentes. Empecemos por el primero: ¿qué es la IA no textual y por qué te importa?', en: 'There are three fronts. Start with the first: what is nontextual AI, and why should you care?' },
+    { persona: 'Carlos Silva', texto: 'Modelos que calculan, oyen y simulan. Gartner prevé que en 2030 más del 70% de las interacciones de voz de las empresas las lleven modelos de voz de forma autónoma, frente a menos del 10% en 2026.', en: 'Models that calculate, hear and simulate. Gartner expects that by 2030, over 70% of enterprise voice interactions will be handled autonomously by speech models, up from less than 10% in 2026.' },
+    { persona: 'Carlo Bonomi', texto: 'Pero la voz razona menos a fondo que el texto. ¿No es un riesgo?', en: 'But voice reasons less deeply than text. Isn\'t that a risk?' },
+    { persona: 'Carlos Silva', texto: 'Lo es, y Gartner lo dice: modelos rápidos para lo rutinario y razonamiento profundo para lo complejo. En PortAventuraNeXT la voz solo da órdenes cortas, como «hola Admira, siguiente».', en: 'It is, and Gartner says so: fast models for routine tasks, deep reasoning for complex decisions. In PortAventuraNeXT, voice only gives short commands, like “hola Admira, siguiente”.' },
+    { persona: 'Carlo Bonomi', texto: 'Segundo frente: gobernar a los agentes. ¿Cómo evitas que se equivoquen?', en: 'Second front: governing the agents. How do you stop them from getting it wrong?' },
+    { persona: 'Carlos Silva', texto: 'Con contexto. Según Gartner, en 2027 quien priorice la semántica en sus datos preparados para IA aumentará la precisión de la IA agéntica hasta un 80% y reducirá costes hasta un 60%. Nuestro Consejo de agentes trabaja así: cada uno con su rol y el contexto del proyecto.', en: 'With context. According to Gartner, by 2027 organizations that prioritize semantics in AI-ready data will increase agentic AI accuracy by up to 80% and reduce costs by up to 60%. Our council of AI agents works that way: each with its own role and the project\'s context.' },
+    { persona: 'Carlo Bonomi', texto: '¿Y quién responde de lo que hace un agente?', en: 'And who is accountable for what an agent does?' },
+    { persona: 'Carlos Silva', texto: 'Gartner avisa: en 2028, el 25% de las brechas de seguridad empresariales tendrán su origen en el abuso de agentes de IA. Por eso cada consejero firma lo que hace, y lo que sale fuera lo aprueba una persona.', en: 'Gartner warns that by 2028, 25% of enterprise security breaches will trace back to AI agent abuse. That\'s why every councillor signs its work, and anything that goes out is approved by a person.' },
+    { persona: 'Carlo Bonomi', texto: 'Tercer frente: agilidad duradera. ¿Qué cambia en una tienda o en un parque?', en: 'Third front: durable agility. What changes in a store or a park?' },
+    { persona: 'Carlos Silva', texto: 'Gartner prevé que en 2030 las organizaciones líderes hagan que el 80% de sus aplicaciones nuevas sean desechables y fáciles de sustituir. Así trabajamos el digital signage y el retail media: cada campaña o experiencia phygital se lanza, cumple su función y se retira.', en: 'By 2030, Gartner expects leading organizations to make 80% of their new applications disposable and easy to replace. That\'s how we run digital signage and retail media: each campaign or phygital experience launches, does its job and is retired.' },
+    { persona: 'Carlo Bonomi', texto: 'Si me llevo una sola frase al comité, ¿cuál es?', en: 'If I take one sentence back to the board, what is it?' },
+    { persona: 'Carlos Silva', texto: 'Gartner habla de máquinas que hay que gobernar. AdmiraNeXT las pone donde está la gente: en la pantalla, en la tienda y en el parque, con límites claros y con emoción. Si no emociona, no se escala.', en: 'Gartner talks about machines that need governing. AdmiraNeXT puts them where people are: on the screen, in the store and in the park, with clear limits and with emotion. If it doesn\'t move people, it doesn\'t scale.' },
+  ]),
+});
+
+export const GUIONES = Object.freeze({ pan: GUION_PAN, 'carlos-bonomi': GUION_CARLOS_BONOMI, gartner: GUION_GARTNER });
 
 export function parseGuion(v) {
   const s = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/[^a-z]/g, '');
   if (['pan', 'portaventura', 'portaventuranext', 'portaventuranextcom'].includes(s)) return GUION_PAN;
   if (['carlosbonomi', 'carlossilvabonomi', 'carlossilvacarlobonomi', 'bonomi'].includes(s)) return GUION_CARLOS_BONOMI;
+  if (['gartner', 'gartner2027', 'tendencias', 'trends', 'toptrends2027'].includes(s)) return GUION_GARTNER;
   return null;
 }
 
@@ -89,6 +123,11 @@ export const CABECERAS = Object.freeze({
     alias: Object.freeze(['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi']),
   }),
 });
+
+/** Demo (Carlos, 14-11 18:22): en las escenas de presentación el neón de la mesa de los Coetáneos dice
+ *  «PortAventuraNeXT» en vez de «AdmiraNext». Parche del arte (% del arte 1280×720), hecho con
+ *  tools/logo-mesa-portaventuranext.py; la home normal sigue con AdmiraNext. */
+export const LOGO_DEMO = Object.freeze({ mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 });
 
 export const CABECERA_POS = Object.freeze({ mesa: 'coetaneos', x: 43.125, y: 36.944, w: 13.672, h: 28.056 });
 
@@ -205,7 +244,7 @@ export const OBSTACULOS = Object.freeze({
     { id: 'placa Elon Musk', x0: 18.5, y0: 81.5, x1: 30.5, y1: 86.5 },
     { id: 'placa John Lasseter', x0: 69.5, y0: 74.5, x1: 79.5, y1: 79.5 },
     { id: 'placa Ryan Reynolds', x0: 75.5, y0: 84.5, x1: 87.5, y1: 89.5 },
-    { id: 'logo AdmiraNext', x0: 37.5, y0: 71.5, x1: 61.5, y1: 86.5 },
+    { id: 'logo de la mesa', x0: 37.5, y0: 71.5, x1: 61.5, y1: 86.5 },
   ]),
 });
 

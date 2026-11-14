@@ -93,3 +93,6 @@ body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transfo
 #globo-en[hidden], #globo-texto[hidden] { display:none; }
 #rotulo-en { font:italic 600 clamp(14px,1.5vw,22px)/1.2 Georgia,serif; color:#a9d4ff; }
 #rotulo-en[hidden] { display:none; }
+/* Neón «PortAventuraNeXT» de la mesa de los Coetáneos en el flujo de presentación. */
+#logo-demo { position:absolute; z-index:5; pointer-events:none; }
+#logo-demo[hidden] { display:none; }

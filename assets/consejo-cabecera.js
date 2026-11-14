@@ -8,12 +8,12 @@
   'use strict';
   var KEY = 'admira:consejo-cabecera';
   var CABECERAS = {
-    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa2', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
+    'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa3', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'] }
   };
   // Carlos 21:33: Bonomi un 10 % más grande y más al fondo, tras el borde lejano de la mesa (y=57.57 %); corte = % inferior oculto por la mesa.
   var POS = { mesa: 'coetaneos', x: 44.37, y: 33.24, w: 13.86, h: 28.294, corte: 14 };
   // Demo (?demo=pan, data-demo-pan en <html>): el neón de la mesa dice «PortAventuraNeXT». Igual que LOGO_DEMO de escena0-guion.mjs.
-  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-mesa2', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
+  var LOGO = { mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-mesa3', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 };
   var DEFECTO = 'carlo-bonomi';
 
   function plano(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' '); }
@@ -90,7 +90,7 @@
   // Carlos 21:50: al pasar de Leyendas a Coetáneos, Bonomi (y el neón de demo) salían antes que la mesa.
   // Las capas esperan a que #council-img tenga el arte de su mesa cargado y visible, y entran con el mismo fundido (.4s).
   var FUNDIDO = 'opacity .4s ease';
-  var ARTE_V = '20261114-mesa2'; // = COUNCIL_IMAGE_VERSION de app.flt-100529.js / app.js
+  var ARTE_V = '20261114-mesa3'; // = COUNCIL_IMAGE_VERSION de app.flt-100529.js / app.js
   function mesaLista(gen) {
     var img = document.getElementById('council-img');
     if (!img) return true;

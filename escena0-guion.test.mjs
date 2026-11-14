@@ -92,3 +92,34 @@ test('escena0: el flujo de demo y la cabecera están cableados en la página', (
   assert.match(js, /1 · Consejo de Leyendas/);
   assert.match(js, /2 · Consejo de Coetáneos/);
 });
+
+test('guion Carlos Silva ↔ Carlo Bonomi: 12 turnos, alterna mesas, sin IA ni voz y sin cargo inventado', async () => {
+  const { GUION_CARLOS_BONOMI: G, anclaGuion, PERSONAS_GUION } = await import('./escena0-guion.mjs');
+  assert.equal(parseGuion('carlos-bonomi'), G);
+  assert.equal(parseGuion('pan'), GUION_PAN, 'el guion pan sigue igual');
+  assert.equal(G.turnos.length, 12);
+  assert.ok(G.soloGuion && G.sinVoz);
+  assert.equal(parseCabecera(G.cabecera).nombre, 'Carlo Bonomi');
+  G.turnos.forEach((t, i) => {
+    assert.equal(t.persona, i % 2 ? 'Carlos Silva' : 'Carlo Bonomi', 'turno ' + (i + 1));
+    const m = mesaDeGuion(t.persona);
+    assert.equal(m, t.persona === 'Carlos Silva' ? 'leyendas' : 'coetaneos');
+    assert.ok(anclaGuion(m, t.persona), 'globo con ancla');
+    assert.ok(t.texto.length <= 200, 'líneas cortas');
+  });
+  assert.equal(anclaGuion('coetaneos', 'Carlos Silva'), null);
+  assert.match(G.turnos[11].texto, /Studio/);
+  assert.match(G.turnos[11].texto, /Si no emociona, no se escala/);
+  assert.ok(!/CEO|presidente|director|fundador/i.test(G.turnos.filter((t) => t.persona === 'Carlo Bonomi').map((t) => t.texto).join(' ')));
+  assert.equal(Object.keys(PERSONAS_GUION).length, 2);
+});
+
+test('escena0: ?guion= manda sobre ?flujo=pan y el guion de personas reales no llama a la IA ni a la voz', () => {
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /guionQ \|\| parseGuion\(q\.get\('flujo'\)\)/);
+  assert.match(js, /!\(guion && guion\.soloGuion\)/);
+  assert.match(js, /guion\.sinVoz/);
+  assert.match(js, /anclaGuion\(mesaVista, persona\)/);
+  const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  assert.match(html, /guion=carlos-bonomi/);
+});

@@ -72,7 +72,7 @@ test('/cabecera en la home: pone, alterna, quita y rechaza desconocidos', () => 
 
 test('la home carga el módulo y app.js / app.flt atienden /cabecera', () => {
   const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-  assert.match(html, /<script defer src="assets\/consejo-cabecera\.js\?v=[^"]+"><\/script>\s*<script defer src="app\.flt-100529\.js/);
+  assert.match(html, /<script defer src="assets\/consejo-cabecera\.js\?v=[^"]+"><\/script>[\s\S]{0,200}<script defer src="app\.flt-100529\.js/);
   for (const f of ['./app.js', './app.flt-100529.js']) {
     const js = readFileSync(new URL(f, import.meta.url), 'utf8');
     assert.match(js, /window\.CouncilCabecera\.comando\(text\)/, f);

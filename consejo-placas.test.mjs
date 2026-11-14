@@ -42,3 +42,11 @@ test('placas: la CLI y el chat de Conversación atienden /consejeros placas, y l
   assert.match(readFileSync(new URL('./council-integration.js', import.meta.url), 'utf8'), /comandoPlacas\(raw\)/);
   assert.match(readFileSync(new URL('./council-speech.js', import.meta.url), 'utf8'), /council-coetaneos\[\.-\]/);
 });
+
+test('Coetáneos: la caja de Carlos Silva no se cuela (hidden manda sobre display:flex) y las cajas no inventan datos', () => {
+  const s = readFileSync(new URL('./council-globo.js', import.meta.url), 'utf8');
+  assert.match(s, /\.consejo-globo\[hidden\]\{display:none!important\}/);
+  assert.match(s, /Sin agente vinculado/);
+  assert.match(s, /sinAgente \? '—' : recuentoCaja/);
+  assert.match(s, /'Última: ' \+ t/);
+});

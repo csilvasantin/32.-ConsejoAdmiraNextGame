@@ -118,6 +118,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
 .consejero-ancla-carlos{width:0;height:0;overflow:visible;pointer-events:none}
 
 .consejo-globo{position:absolute;z-index:20;max-width:220px;min-width:120px;padding:16px 12px 10px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:3px 3px 0 #000;font:11px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none;transform:translate(-50%,-100%);box-sizing:border-box}
+.consejo-globo[hidden]{display:none!important}
 .consejo-globo.globo-proyectos{width:280px;min-width:280px;max-width:280px;height:220px;min-height:220px;max-height:220px;box-sizing:border-box;padding:16px 12px 14px;pointer-events:auto;z-index:24;text-align:center;display:flex;flex-direction:column;overflow:hidden}
 .consejo-globo b{display:block;margin:0 0 3px;font:bold 9px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.3px}
 .consejo-globo.globo-proyectos b{flex:0 0 auto;text-align:center;letter-spacing:0;white-space:nowrap;width:100%}
@@ -625,7 +626,15 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
           nom.textContent = proy.nombre;
           lab.appendChild(nom);
         }
-        const actual = proyectoActualDe(silla);
+        /* Carlos 00:01: sin agente vinculado (Mira, Ryan) se dice tal cual, sin un 0 inventado; con agente y sin
+         * proyecto en el latido, la última misión real que da /api/consejo/estado (igual en las dos mesas). */
+        const sinAgente = !!(silla && !silla.bot);
+        let actual = proyectoActualDe(silla);
+        if (sinAgente) actual = { texto: 'Sin agente vinculado', vigente: false };
+        else if (actual.texto === '—' && silla && silla.ultimo && silla.ultimo.titulo) {
+          const t = String(silla.ultimo.titulo).replace(/^\s*\[[^\]]*\]\s*/, '').replace(/\s+/g, ' ').trim();
+          if (t) actual = { texto: 'Última: ' + t, vigente: false };
+        }
         const ahora = d.createElement('span');
         ahora.className = 'ranking-ahora';
         ahora.textContent = actual.texto;
@@ -663,7 +672,7 @@ html.misiones-off #papel-halos .consejero-marker,html.misiones-off #papel-halos 
         prev.textContent = '◀';
         const cifra = d.createElement('span');
         cifra.className = 'ranking-n';
-        cifra.textContent = recuentoCaja(hoy, proy);
+        cifra.textContent = sinAgente ? '—' : recuentoCaja(hoy, proy);
         const next = d.createElement('button');
         next.type = 'button';
         next.className = 'ranking-nav';

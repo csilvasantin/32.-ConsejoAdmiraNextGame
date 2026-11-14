@@ -5,7 +5,7 @@ import {
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
-} from '/escena0-guion.mjs?v=20261114-gartner-logo';
+} from '/escena0-guion.mjs?v=20261114-gartnertres';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);

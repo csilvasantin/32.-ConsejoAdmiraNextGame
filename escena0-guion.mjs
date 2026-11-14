@@ -130,7 +130,7 @@ export const CABECERAS = Object.freeze({
 /** Demo (Carlos, 14-11 18:22): en las escenas de presentación el neón de la mesa de los Coetáneos dice
  *  «PortAventuraNeXT» en vez de «AdmiraNext». Parche del arte (% del arte 1280×720), hecho con
  *  tools/logo-mesa-portaventuranext.py; la home normal sigue con AdmiraNext. */
-export const LOGO_DEMO = Object.freeze({ mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 });
+export const LOGO_DEMO = Object.freeze({ mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan-humo', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 });
 
 export const CABECERA_POS = Object.freeze({ mesa: 'coetaneos', x: 45.0, y: 35.5, w: 12.6, h: 25.722 });
 

@@ -1,11 +1,11 @@
 import {
   parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261114-pan-logo';
+} from '/escena0-lib.mjs?v=20261114-pan-humo';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
-} from '/escena0-guion.mjs?v=20261114-gartnertresb';
+} from '/escena0-guion.mjs?v=20261114-pan-humo';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);

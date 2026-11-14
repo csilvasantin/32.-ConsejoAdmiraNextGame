@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   var KEY = 'admira:consejo-presencia';
-  var ASSET_V = '20261114-pan-logo';
+  var ASSET_V = '20261114-pan-humo';
   var GENS = {
     leyendas: [
       ['Steve Jobs', 'CEO', 'racional', ['jobs', 'steve jobs', 'steve-jobs']],

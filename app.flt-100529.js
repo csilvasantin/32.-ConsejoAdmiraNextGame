@@ -261,7 +261,7 @@
     let currentGen = "leyendas";
     let speakerTurnMap = {};
     let activeLegendPersona = "Steve Jobs";
-    const COUNCIL_IMAGE_VERSION = "20261114-pan-logo";
+    const COUNCIL_IMAGE_VERSION = "20261114-pan-humo";
     const LEGEND_MANDATES = {
         "Steve Jobs": {
             short: "foco producto",

@@ -1,11 +1,11 @@
 import {
   parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261114-mesa2';
+} from '/escena0-lib.mjs?v=20261114-mesa3';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
-} from '/escena0-guion.mjs?v=20261114-mesa2';
+} from '/escena0-guion.mjs?v=20261114-mesa3';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);

@@ -58,7 +58,7 @@
         if(field.value!==value)field.value=value;
         field.disabled=!persona;button.disabled=!persona||busy;
         field.setAttribute('aria-label',persona?'Mensaje a '+persona:'Mensaje al consejero');
-        field.placeholder=persona?'Escribe a '+persona+'… · pega una imagen':'Elige un consejero';
+        field.placeholder=persona?'Escribe a '+persona+'… · @nombre para otro consejero · /conversacion jobs vs elon tema':'Elige un consejero';
         button.textContent=busy?'Enviando…':'Enviar';
         if(image===null){/* keep */}
         else if(!image){pending=null;renderThumb();}

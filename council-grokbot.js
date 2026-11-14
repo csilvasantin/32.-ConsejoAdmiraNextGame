@@ -65,7 +65,7 @@
     const recentSends=new Map();
     const histories=new Map(), pendingSends=new Set(), requests=new Set(), announced=new Map(), settled=new Map(), baselined=new Set();
     const details=doc.createElement(options.mountInside?'section':'details'); details.className='council-chat';
-    details.innerHTML='<summary>Chat de GrokBot <span class="council-chat__connection"></span></summary><div class="council-chat__toolbar"><strong class="council-chat__person"></strong><button type="button" data-chat-refresh>Actualizar</button><button type="button" data-chat-screen>Escritorio</button><button type="button" data-chat-attach hidden>Adjuntar</button><input type="file" data-chat-file hidden><button type="button" data-chat-routines hidden>Rutinas</button><button type="button" data-chat-stop hidden>Detener</button><a href="grokbot://" class="council-chat__native">Abrir GrokBot ↗</a></div><p class="council-chat__scope">Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.</p><p class="council-chat__status" role="status"></p><div class="council-chat__attachments" hidden></div><div class="council-chat__operations" hidden></div><div class="council-chat__messages" role="log" aria-label="Mensajes visibles de GrokBot"></div><p class="council-chat__limits">El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.</p>';
+    details.innerHTML='<summary>Chat de GrokBot <span class="council-chat__connection"></span></summary><div class="council-chat__toolbar"><strong class="council-chat__person" hidden></strong><select class="council-chat__destinatario" data-chat-destinatario aria-label="Hablar con" title="Hablar con cualquier consejero (también @nombre en el mensaje)"></select><button type="button" data-chat-refresh>Actualizar</button><button type="button" data-chat-screen>Escritorio</button><button type="button" data-chat-attach hidden>Adjuntar</button><input type="file" data-chat-file hidden><button type="button" data-chat-routines hidden>Rutinas</button><button type="button" data-chat-stop hidden>Detener</button><a href="grokbot://" class="council-chat__native">Abrir GrokBot ↗</a></div><p class="council-chat__scope">Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.</p><p class="council-chat__status" role="status"></p><div class="council-chat__attachments" hidden></div><div class="council-chat__operations" hidden></div><div class="council-chat__messages" role="log" aria-label="Mensajes visibles de GrokBot"></div><p class="council-chat__limits">El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.</p>';
     if(options.mountInside)details.innerHTML=details.innerHTML.replace('<summary>', '<header class="council-chat__heading">').replace('</summary>','</header>');
     details.hidden=true;
     if(options.mountInside){options.container.append(details);details.open=true;}
@@ -80,6 +80,14 @@
        Los demás consejeros siguen por el puente de GrokBot sin cambios. */
     const hilo=options.sharedThread===false?null:(options.hilo||root.ChatHiloClient||null);
     const sharedOf=name=>hilo&&name?hilo.personaDe(name):null;
+    // t1341u: selector de destinatario en Conversación: hablar con cualquier consejero, no solo Jobs.
+    const destinatario=details.querySelector('[data-chat-destinatario]');
+    if(destinatario){
+      const vacio=doc.createElement('option');vacio.value='';vacio.textContent='Elige consejero';destinatario.append(vacio);
+      for(const name of Object.keys(PEOPLE)){const o=doc.createElement('option');o.value=name;o.textContent=name;destinatario.append(o);}
+      destinatario.addEventListener('change',()=>{const v=destinatario.value;if(v&&v!==selected)select(v);});
+    }
+    const pintarDestinatario=()=>{if(destinatario&&destinatario.value!==(selected||''))destinatario.value=selected||'';};
     const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],enviados:{},desde:null,primero:null,firma:'',seen:new Set(),epoch:-1,entre:[],entreTimer:null,entreListos:false,vozOn:true,vozPreferenciaLeida:false,hablando:false,cola:[]};
     // «Histórico» → /chat/jobs/ (solo en el hilo compartido).
     const historico=doc.createElement('a');historico.className='council-chat__historico';historico.textContent='Histórico';historico.target='_blank';historico.rel='noopener';historico.hidden=true;
@@ -151,6 +159,7 @@
       const oldTop=log.scrollTop;
       const follow=renderedPersona!==selected || !options.mountInside || log.scrollHeight-log.clientHeight-oldTop<48;
       renderedPersona=selected;syncPending();
+      pintarDestinatario();
       if(sharedOf(selected)){$('.council-chat__person').textContent=selected;renderShared(follow,oldTop);return;}
       log.replaceChildren();
       if(!selected)return;

@@ -161,7 +161,34 @@
       avisoHablar(p?'En conversación con '+p+' · /hablar off cuelga.':'No hay conversación. /hablar a secas habla con el consejero de la mesa.');
       return;
     }
+    if(linea.accion==='error'&&/^conversacion/.test(linea.mensaje||'')){
+      avisoHablar(linea.mensaje==='conversacion-tema'?'Falta el tema: /conversacion jobs vs elon PortAventuraNeXT':linea.mensaje==='conversacion-mismo'?'Elige dos consejeros distintos: /conversacion jobs vs elon PortAventuraNeXT':'Uso: /conversacion <consejero> vs <consejero> <tema> · p. ej. /conversacion jobs vs elon PortAventuraNeXT');
+      return;
+    }
     if(linea.accion==='error'){avisoHablar('No reconozco a ese consejero. Prueba /hablar Lucas, Jobs, Woz, Disney, Elon o Jensen.');return;}
+    // t1341u: «@Elon texto» en Conversación habla con ese consejero (sin micrófono).
+    if(linea.accion==='mencion'){
+      const persona=linea.persona;
+      if(!(bridge&&bridge.has(persona))){avisoHablar(persona+' aún no tiene línea directa desde aquí. Prueba Jobs, Woz, Disney, Lucas, Elon o Jensen.');return;}
+      if(bridge.selected!==persona)await bridge.select(persona);
+      if(linea.texto)await sendPreviewTexto(linea.texto);
+      else avisoHablar('Ahora hablas con '+persona+'.');
+      return;
+    }
+    // t1341u: /conversacion <a> vs <b> <tema>. Reutiliza el canal del consejero A (hilo
+    // compartido) y la transcripción entre consejeros, que el panel Conversación ya pinta
+    // en su recuadro y locuta con las voces de cada consejero (nunca la del sistema).
+    if(linea.accion==='conversacion'){
+      const a=linea.a,b=linea.b;
+      if(!(bridge&&bridge.has(a))||!(bridge&&bridge.has(b))){avisoHablar('Para /conversacion los dos consejeros necesitan línea: Jobs, Woz, Disney, Lucas, Elon o Jensen.');return;}
+      pararHablarMic();
+      if(bridge.selected!==a)await bridge.select(a);
+      preview?.select(a);
+      const prompt=C&&typeof C.promptConversacion==='function'?C.promptConversacion(linea):('Conversación entre '+a+' y '+b+' sobre: '+linea.tema);
+      await sendPreviewTexto(prompt);
+      avisoHablar('Conversación '+a+' vs '+b+' sobre «'+linea.tema+'»: '+(linea.turnos||10)+' líneas cada uno, alternando. La transcripción y sus voces salen en Conversación.');
+      return;
+    }
     if(linea.accion==='conectar'||linea.accion==='preguntar'){
       const persona=linea.persona;
       const pregunta=linea.pregunta||linea.texto||'';

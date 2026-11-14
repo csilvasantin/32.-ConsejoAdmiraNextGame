@@ -115,8 +115,53 @@
     if (estado && estado.persona) return { accion: 'preguntar', persona: estado.persona, texto: t };
     return { accion: 'error', mensaje: 'nombre' };
   }
+  /* t1341u (Carlos, 14-11): /conversacion <a> vs <b> <tema> (con o sin tilde) y
+   * menciones «@consejero texto» para hablar con cualquiera desde Conversación. */
+  var CONVERSACION = /^\/(?:conversaci[oó]n|conversation)(?:\s+([\s\S]*))?$/i;
+  var VS = /\s+(?:vs\.?|versus|contra)\s+/i;
+  var MENCION = /^@(\S+)(?:\s+([\s\S]*))?$/;
+  var CONVERSACION_TURNOS = 10;
+  function personaExacta(texto, Intent) {
+    var m = resolverCon(texto, Intent);
+    return m && !String(m.resto || '').trim() ? m.persona : null;
+  }
+  function parseConversacion(args, Intent) {
+    var t = String(args || '').trim();
+    var partes = t.split(VS);
+    if (partes.length < 2) return { accion: 'error', mensaje: 'conversacion-uso' };
+    var a = personaExacta(partes[0], Intent);
+    var derecha = resolverCon(partes.slice(1).join(' vs '), Intent);
+    if (!a || !derecha) return { accion: 'error', mensaje: 'conversacion-nombre' };
+    var tema = String(derecha.resto || '').trim();
+    if (!tema) return { accion: 'error', mensaje: 'conversacion-tema', a: a, b: derecha.persona };
+    if (a === derecha.persona) return { accion: 'error', mensaje: 'conversacion-mismo', a: a };
+    return { accion: 'conversacion', a: a, b: derecha.persona, tema: tema, turnos: CONVERSACION_TURNOS };
+  }
+  function parseMencion(raw, Intent) {
+    var m = MENCION.exec(raw);
+    if (!m) return null;
+    var r = resolverCon(m[1] + ' ' + (m[2] || ''), Intent);
+    if (!r) return null;
+    return { accion: 'mencion', persona: r.persona, texto: String(r.resto || '').trim() };
+  }
+  function corto(persona) {
+    var k = PERSONAS[persona];
+    return k ? k.charAt(0).toUpperCase() + k.slice(1) : persona;
+  }
+  function promptConversacion(l) {
+    var n = (l && l.turnos) || CONVERSACION_TURNOS;
+    return '[/conversacion · Carlos · admira.live] Conversación entre ' + l.a + ' y ' + l.b + ' sobre: ' + l.tema + '.\n' +
+      'Reglas: ' + (2 * n) + ' intervenciones en total, ' + n + ' de cada uno, alternando y empezando ' + l.a + '. ' +
+      'Cada intervención en español, una o dos frases (máx. 220 caracteres), numerada (1/' + n + ' … ' + n + '/' + n + '), para leerse en voz alta con la voz del consejero. ' +
+      'Cada intervención va como mensaje entre consejeros (consejero_mensaje de ' + corto(l.a) + ' a ' + corto(l.b) + ' y consejero_responder de ' + corto(l.b) + '), ' +
+      'para que salga en la transcripción de Conversación de admira.live. No publiques nada fuera de admira.live.';
+  }
   function parseLinea(texto, estado, Intent) {
     var raw = String(texto || '').trim();
+    var c = CONVERSACION.exec(raw);
+    if (c) return parseConversacion(c[1] || '', Intent);
+    var men = parseMencion(raw, Intent);
+    if (men) return men;
     var m = VERBO.exec(raw);
     if (!m) return null;
     return parseHablar(m[1] || '', estado, Intent);
@@ -183,7 +228,9 @@
     norm: norm, defaultPersona: defaultPersona, mesaActiva: mesaActiva,
     resolverCon: resolverCon, parseHablar: parseHablar, parseLinea: parseLinea,
     tieneLinea: tieneLinea, claveDe: claveDe, urlChat: urlChat,
-    listaAyuda: listaAyuda, crearMic: crearMic
+    listaAyuda: listaAyuda, crearMic: crearMic,
+    parseConversacion: parseConversacion, parseMencion: parseMencion, promptConversacion: promptConversacion,
+    CONVERSACION_TURNOS: CONVERSACION_TURNOS
   };
   root.AdmiraHablarCmd = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

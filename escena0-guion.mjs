@@ -119,7 +119,7 @@ export const CABECERAS = Object.freeze({
     id: 'carlo-bonomi',
     nombre: 'Carlo Bonomi',
     corto: 'Carlo',
-    foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-cartoon',
+    foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa',
     alias: Object.freeze(['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi']),
   }),
 });
@@ -129,7 +129,7 @@ export const CABECERAS = Object.freeze({
  *  tools/logo-mesa-portaventuranext.py; la home normal sigue con AdmiraNext. */
 export const LOGO_DEMO = Object.freeze({ mesa: 'coetaneos', foto: '/assets/demo/logo-portaventuranext.webp?v=20261114-pan', x: 36.5625, y: 74.1667, w: 26.4062, h: 13.3333 });
 
-export const CABECERA_POS = Object.freeze({ mesa: 'coetaneos', x: 43.125, y: 36.944, w: 13.672, h: 28.056 });
+export const CABECERA_POS = Object.freeze({ mesa: 'coetaneos', x: 45.0, y: 35.5, w: 12.6, h: 25.722 });
 
 export function plano(s) {
   return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ');

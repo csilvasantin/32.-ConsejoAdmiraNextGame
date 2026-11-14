@@ -1,7 +1,7 @@
 import {
   parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs';
+} from '/escena0-lib.mjs?v=20261114-pan-logo';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,

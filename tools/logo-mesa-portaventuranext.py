@@ -1,6 +1,8 @@
+# Uso: python3 tools/logo-mesa-portaventuranext.py assets/council-coetaneos.jpg   (o assets/consejo-vacio/coetaneos.jpg)
+# Genera el parche «PortAventuraNeXT» (468,534)-(806,630) sobre el arte ORIGINAL con «AdmiraNext». Desde r193 el parche va horneado en ambos jpg.
 import cv2, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-art = Image.open('/workspace/demo-consejo-repo/assets/council-coetaneos.jpg').convert('RGB')
+art = Image.open(__import__('sys').argv[1]).convert('RGB')
 W, H = art.size
 X0, Y0, X1, Y1 = 468, 534, 806, 630           # parche (px del arte 1280x720)
 crop = np.array(art.crop((X0, Y0, X1, Y1)))

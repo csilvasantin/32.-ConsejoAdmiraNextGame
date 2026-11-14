@@ -86,7 +86,7 @@ test('escena0: el flujo de demo y la cabecera están cableados en la página', (
   assert.match(html, /id="cabecera"/); assert.match(html, /id="rotulo"/);
   assert.match(html, /\?flujo=pan&amp;cabecera=bonomi/);
   const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
-  assert.match(js, /from '\/escena0-guion\.mjs'/);
+  assert.match(js, /from '\/escena0-guion\.mjs(\?v=[^']+)?'/);
   assert.match(js, /parseGuion\(q\.get\('flujo'\)\)/);
   assert.match(js, /parseCabecera\(q\.get\('cabecera'\)\)/);
   assert.match(js, /1 · Consejo de Leyendas/);

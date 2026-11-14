@@ -29,11 +29,50 @@ export const GUION_PAN = Object.freeze({
   ]),
 });
 
-export const GUIONES = Object.freeze({ pan: GUION_PAN });
+/** Lunes 16-nov 13:00: Carlos Silva (centro de las Leyendas) presenta y Carlo Bonomi (cabecera de los
+ *  Coetáneos) pregunta. Personas reales: sin IA (soloGuion) y sin voz sintética (sinVoz), el globo se lee.
+ *  Fuentes: GUION.md del show y la conversación Jobs–Elon del 14-nov (identidad, piloto en el Studio). */
+export const GUION_CARLOS_BONOMI = Object.freeze({
+  id: 'carlos-bonomi',
+  titulo: 'PortAventuraNeXT · Carlos Silva y Carlo Bonomi',
+  tema: 'Presentación de PortAventuraNeXT: el parque que se cuenta solo, con la identidad del visitante y un piloto medido en la entrada del Studio.',
+  cierre: 'portaventuranext.com',
+  cabecera: 'carlo-bonomi',
+  soloGuion: true,
+  sinVoz: true,
+  turnos: Object.freeze([
+    { persona: 'Carlo Bonomi', texto: 'Carlos, la mesa es tuya. ¿Qué es PortAventuraNeXT en una frase?' },
+    { persona: 'Carlos Silva', texto: 'El parque que se cuenta solo. No va de más atracciones: va de que cada visitante sienta que el parque le reconoce.' },
+    { persona: 'Carlo Bonomi', texto: '¿Qué problema concreto resuelve?' },
+    { persona: 'Carlos Silva', texto: 'Hoy el visitante vive cinco minutos de magia y cincuenta de colas, mapas y menús. La historia se corta en cada puerta.' },
+    { persona: 'Carlo Bonomi', texto: '¿Y eso se arregla poniendo más pantallas?' },
+    { persona: 'Carlos Silva', texto: 'Con menos. Una sola experiencia, sin colas y sin pantallas de sobra: cada una enseña solo lo que el visitante necesita.' },
+    { persona: 'Carlo Bonomi', texto: '¿Por dónde se empieza?' },
+    { persona: 'Carlos Silva', texto: 'Por la identidad. Una pulsera o la app, ligada a una sola cuenta, que le reconoce en cada punto de contacto.' },
+    { persona: 'Carlo Bonomi', texto: '¿Y qué ve el visitante en ese momento?' },
+    { persona: 'Carlos Silva', texto: 'Un solo gesto: la pulsera le reconoce y la pantalla le enseña su siguiente paso y su espera real. En la tienda, el restaurante, la atracción y el hotel sigue la misma historia.' },
+    { persona: 'Carlo Bonomi', texto: '¿Dónde lo probáis, y cómo sabremos si funciona?' },
+    { persona: 'Carlos Silva', texto: 'Con un piloto en la entrada del Studio y un solo flujo de datos. Medimos minutos de espera y si el contenido era de verdad suyo. Si no emociona, no se escala.' },
+  ]),
+});
+
+/** Personas que hablan en un guion sin ser consejeros de la mesa: su mesa y la punta del globo (% del arte). */
+export const PERSONAS_GUION = Object.freeze({
+  'Carlos Silva': Object.freeze({ mesa: 'leyendas', ancla: Object.freeze({ x: 51.2, y: 24.5 }) }),
+  'Carlo Bonomi': Object.freeze({ mesa: 'coetaneos', ancla: Object.freeze({ x: 50, y: 38.5 }) }),
+});
+
+export function anclaGuion(mesa, persona) {
+  const p = PERSONAS_GUION[persona];
+  return p && p.mesa === mesa ? p.ancla : null;
+}
+
+export const GUIONES = Object.freeze({ pan: GUION_PAN, 'carlos-bonomi': GUION_CARLOS_BONOMI });
 
 export function parseGuion(v) {
   const s = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/[^a-z]/g, '');
   if (['pan', 'portaventura', 'portaventuranext', 'portaventuranextcom'].includes(s)) return GUION_PAN;
+  if (['carlosbonomi', 'carlossilvabonomi', 'carlossilvacarlobonomi', 'bonomi'].includes(s)) return GUION_CARLOS_BONOMI;
   return null;
 }
 
@@ -74,6 +113,7 @@ export function textoTurno(turno, cabecera) {
 export function mesaDeGuion(persona) {
   if (MESAS.leyendas.includes(persona)) return 'leyendas';
   if (MESAS.coetaneos.includes(persona)) return 'coetaneos';
+  if (PERSONAS_GUION[persona]) return PERSONAS_GUION[persona].mesa;
   return null;
 }
 

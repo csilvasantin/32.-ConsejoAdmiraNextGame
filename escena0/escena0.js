@@ -3,18 +3,20 @@ import {
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
 } from '/escena0-lib.mjs';
 import {
-  parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura,
-} from '/escena0-guion.mjs?v=20261114-cartoon';
+  parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
+} from '/escena0-guion.mjs?v=20261114-cb';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
 // Demo del Consejo (Lucas, 14-11-2026): ?flujo=pan → Leyendas, Coetáneos y la presentación
 // consejero vs consejero en una sola pantalla. ?guion=pan en las dos mesas usa el mismo relato.
 // ?cabecera=bonomi sienta a Carlo Bonomi en la cabecera de los Coetáneos.
-const flujo = parseGuion(q.get('flujo'));
-const guion = flujo || parseGuion(q.get('guion'));
-const cabecera = parseCabecera(q.get('cabecera'));
-const conIA = q.get('ia') === '1';
+// ?flujo=pan&guion=carlos-bonomi: el flujo de una pantalla con otro guion (Carlos Silva ↔ Carlo Bonomi).
+const guionQ = parseGuion(q.get('guion'));
+const flujo = parseGuion(q.get('flujo')) ? (guionQ || parseGuion(q.get('flujo'))) : null;
+const guion = flujo || guionQ;
+const cabecera = parseCabecera(q.get('cabecera')) || (guion && guion.cabecera ? parseCabecera(guion.cabecera) : null);
+const conIA = q.get('ia') === '1' && !(guion && guion.soloGuion);
 const mesa = flujo ? 'leyendas' : parseMesa(q.get('mesa') || q.get('gen') || q.get('generation'));
 let mesaVista = mesa;
 const silencio = q.get('silencio') === '1' || q.get('mute') === '1';
@@ -63,7 +65,7 @@ function cajaArte() {
 }
 
 function colocarGlobo(persona) {
-  const g = $('globo'); const ancla = (ANCLA[mesaVista] || {})[persona];
+  const g = $('globo'); const ancla = (ANCLA[mesaVista] || {})[persona] || anclaGuion(mesaVista, persona);
   const box = cajaArte();
   if (!g || !ancla || !box) return;
   g.style.left = (box.x + (ancla.x / 100) * box.w) + 'px';
@@ -434,7 +436,7 @@ function esperar(ms, t) {
 
 function hablarFlujo(persona, texto) {
   return new Promise((resolve) => {
-    if (silencio || !texto || !(window.AdmiraVoces && typeof AdmiraVoces.speak === 'function')) {
+    if (silencio || !texto || guion.sinVoz || !(window.AdmiraVoces && typeof AdmiraVoces.speak === 'function')) {
       setTimeout(resolve, msLectura(texto)); return;
     }
     let hecho = false;

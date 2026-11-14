@@ -19,13 +19,14 @@ test('t1293u: el mismo proyecto con o sin guion cuenta una vez', () => {
   assert.match(src, /seen\['n:' \+ sk\]/);
 });
 
-test('t1293u: botón Misiones a la izquierda de Conversación, encendido por defecto y recordado', () => {
+test('t1293u/t1341u: botón Misiones a la izquierda de Conversación, apagado por defecto y recordado', () => {
   const i = prev.indexOf('data-misiones-toggle');
   const j = prev.indexOf('data-view="conversation"');
   assert.ok(i > 0 && j > i, 'Misiones va antes que Conversación');
-  assert.match(prev, /data-misiones-toggle aria-pressed="true"/);
+  assert.match(prev, /data-misiones-toggle aria-pressed="false"/);
   assert.match(src, /html\.misiones-off #papel-halos \.consejero-marker/);
-  assert.match(src, /localStorage\.getItem\(MISIONES_KEY\) === '0'/);
+  assert.match(src, /localStorage\.getItem\(MISIONES_KEY\) === '1'/);
+  assert.match(src, /MISIONES_KEY = 'admira\.live\.misiones\.visibles\.v2'/);
 });
 
 test('t1293u: la capa de cajas queda por encima de las siluetas clicables (las flechas reciben el clic)', () => {

@@ -680,6 +680,8 @@
         bhEl.classList.add("ficha-active");
         // /consejero · casillas «Presente»: placa de sillas vacías + recortes (assets/council-presencia.js).
         if (window.CouncilPresencia) window.CouncilPresencia.sync(currentGen);
+        // /cabecera · invitado en la cabecera de los Coetáneos (assets/consejo-cabecera.js, Lucas 14-11-2026).
+        if (window.CouncilCabecera) window.CouncilCabecera.sync(currentGen);
 
         // Bocas v2 (FLT-100228): soft-oval blend sheets on Leyendas only.
         _mouthMachineAlive = new Set(
@@ -1883,6 +1885,7 @@
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/consejero</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table') +
             li('<strong>/ceo</strong>', 'aparece o desaparece Carlos (tú) en la silla central', 'shows or hides Carlos (you) in the centre chair') +
+            li('<strong>/cabecera [bonomi | off]</strong>', 'sienta a un invitado en la cabecera de los Coetáneos (p. ej. /cabecera Carlo Bonomi); /cabecera off la deja vacía', 'seats a guest at the head of the Contemporaries table (e.g. /cabecera Carlo Bonomi); /cabecera off empties it') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
             li('<strong>/importar &lt;url&gt;</strong>', 'descarga vídeo y lo sube a Drive', 'downloads a video and uploads it to Drive') +
             li('<strong>/nombres on|off|toggle</strong>', 'enseña u oculta los consejeros', 'shows or hides the councillors') +
@@ -2225,7 +2228,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/consejero', '/ceo', '/agentes', '/comandos', '/sendto',
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/consejero', '/ceo', '/cabecera', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca',
         // Pieles de cine (FLT-101666 c): /81 … /89 = /marca 81 … /marca 89
         '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89',
@@ -2417,6 +2420,16 @@
                 setActionLine("\u26a0\ufe0f El editor de recorte no ha cargado; recarga la p\u00e1gina");
             }
             return true;
+        }
+        // ── /cabecera [bonomi|off] (Carlos, 14-11-2026): invitado en la cabecera de los Coetáneos ──
+        if (/^\/(cabecera|cabeza|head)(\s|$)/i.test(text) && window.CouncilCabecera) {
+            const r = window.CouncilCabecera.comando(text);
+            if (r) {
+                addUserEntry(text);
+                if (r.ok && r.gen && r.gen !== currentGen) setGen(r.gen); else window.CouncilCabecera.sync(currentGen);
+                setActionLine(r.msg);
+                return true;
+            }
         }
         // ── /consejero [todos|ninguno|<nombre>] y /ceo (Carlos, 06-11-2026): presencia en la mesa ──
         if (/^\/(consejeros?|advisors?|councill?ors?|ceo|yo)(\s|$)/i.test(text) && window.CouncilPresencia) {

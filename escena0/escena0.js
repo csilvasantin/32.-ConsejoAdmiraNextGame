@@ -173,6 +173,7 @@ function avisoCmd(texto, ms) {
   if (ms) avisoCmd.t = setTimeout(() => { el.hidden = true; }, ms);
 }
 function ejecutarExperto(texto) {
+  if (/^\/?(help|ayuda|\?)$/i.test(String(texto || '').trim())) { avisoCmd(AYUDA_EXPERTO, 9000); return; }
   const r = comandoExperto(texto);
   if (!r) { avisoCmd('Comando no reconocido: ' + texto, 3500); return; }
   if (r.error) { avisoCmd(r.error, 4500); return; }
@@ -187,6 +188,47 @@ if (canalExpertos) canalExpertos.onmessage = (e) => {
   const d = e.data || {};
   if ((d.quien === 'carlos' || d.quien === 'bonomi') && typeof d.on === 'boolean') { expertos[d.quien] = d.on; aplicarExpertos(); }
 };
+// Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
+// completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
+// Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.
+const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · añade «desaparece» o «fuera» para quitarlo, «aparece» para sacarlo · sin verbo, alterna · /help';
+function abrirLinea() {
+  let box = $('experto-linea');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'experto-linea';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'experto-input';
+    inp.setAttribute('aria-label', 'Modo experto de Escena 0'); inp.autocomplete = 'off'; inp.spellcheck = false;
+    inp.placeholder = '/consejero carlos silva · /consejero carlo bonomi · /help';
+    inp.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') { e.preventDefault(); cerrarLinea(); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const c = inp.value.trim(); inp.value = '';
+        if (!c) return;
+        ejecutarExperto(c.startsWith('/') ? c : '/' + c);
+      }
+    });
+    ['keyup', 'keypress'].forEach((ev) => inp.addEventListener(ev, (e) => e.stopPropagation()));
+    box.appendChild(inp);
+  }
+  // Siempre dentro del elemento a pantalla completa (si lo hay), para que se vea.
+  const fs = document.fullscreenElement || document.webkitFullscreenElement;
+  const destino = fs && fs !== document.documentElement ? fs : document.body;
+  if (box.parentNode !== destino) destino.appendChild(box);
+  box.hidden = false;
+  const inp = $('experto-input'); inp.focus(); inp.select();
+}
+function cerrarLinea() { const b = $('experto-linea'); if (b) b.hidden = true; try { document.activeElement && document.activeElement.blur(); } catch (e) {} }
+window.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (e.key === '\\' || e.code === 'Backslash' || e.code === 'IntlBackslash') {
+    e.preventDefault(); e.stopImmediatePropagation(); abrirLinea();
+  }
+}, true);
+
 // Teclas: «/» abre el comando; mientras se escribe, ni la F ni el espacio llegan a la escena.
 let bufCmd = null, tCmd = 0;
 window.addEventListener('keydown', (e) => {

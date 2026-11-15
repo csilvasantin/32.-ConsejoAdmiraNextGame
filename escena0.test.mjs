@@ -90,3 +90,12 @@ test('prompt nombra el tema, a los de su mesa y a la otra pantalla', () => {
   assert.equal(TEMA_DEFECTO.includes('AdmiraNeXT'), true);
   assert.ok(MESAS.leyendas.length === 4 && MESAS.coetaneos.length === 2);
 });
+
+test('escena0 · Carlos 15-11 19:42: «\\» abre la línea de modo experto dentro de la pantalla completa; /help', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /e\.key === '\\\\' \|\| e\.code === 'Backslash' \|\| e\.code === 'IntlBackslash'/);
+  assert.match(js, /document\.fullscreenElement \|\| document\.webkitFullscreenElement/);
+  assert.match(js, /inp\.addEventListener\('keydown', \(e\) => \{\n\s+e\.stopPropagation\(\);/, 'las teclas de la escena no llegan mientras se escribe');
+  assert.match(js, /AYUDA_EXPERTO/);
+});

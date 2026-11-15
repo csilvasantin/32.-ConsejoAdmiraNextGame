@@ -1,7 +1,7 @@
 import {
-  parseMesa, MESAS, ROLES, IMG, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
+  parseMesa, MESAS, ROLES, IMG, IMG_SIN_CARLOS, comandoExperto, ANCLA, TEMA_DEFECTO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261114-mesa4';
+} from '/escena0-lib.mjs?v=20261115-expertos';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -16,7 +16,14 @@ const q = new URLSearchParams(location.search);
 const guionQ = parseGuion(q.get('guion'));
 const flujo = parseGuion(q.get('flujo')) ? (guionQ || parseGuion(q.get('flujo'))) : null;
 const guion = flujo || guionQ;
-const cabecera = parseCabecera(q.get('cabecera')) || (guion && guion.cabecera ? parseCabecera(guion.cabecera) : null);
+const cabeceraPedida = parseCabecera(q.get('cabecera')) || (guion && guion.cabecera ? parseCabecera(guion.cabecera) : null);
+let cabecera = cabeceraPedida;
+// Modo experto (Carlos 15-11 19:34): Carlos Silva y Carlo Bonomi solo si se les llama o si la URL/guion los pide.
+const expertos = {
+  carlos: !!(guion && (guion.turnos || []).some((t) => t && t.persona === 'Carlos Silva')),
+  bonomi: !!cabeceraPedida,
+};
+const imgDe = (m) => (m === 'leyendas' && !expertos.carlos ? IMG_SIN_CARLOS.leyendas : IMG[m]);
 const conIA = q.get('ia') === '1' && !(guion && guion.soloGuion);
 // ?lang=es|en|both (por defecto both) en los guiones bilingües (Carlos Silva ↔ Carlo Bonomi).
 const lang = parseLang(q.get('lang'), guion);
@@ -86,7 +93,7 @@ function colocarGlobo(persona) {
 function mesaCargada() {
   const img = $('mesa-img');
   if (!img) return true;
-  const want = (IMG[mesaVista] || '').split('?')[0];
+  const want = (imgDe(mesaVista) || '').split('?')[0];
   return img.complete && img.naturalWidth > 0 && (!want || (img.currentSrc || img.src).indexOf(want) >= 0);
 }
 
@@ -141,14 +148,63 @@ function verMesa(m) {
   mesaVista = m;
   document.body.setAttribute('data-mesa', m);
   const img = $('mesa-img');
-  if (img.getAttribute('data-mesa') !== m) {
+  if (img.getAttribute('data-mesa') !== m || img.getAttribute('src') !== imgDe(m)) {
     img.setAttribute('data-mesa', m);
-    img.src = IMG[m];
+    img.src = imgDe(m);
     img.alt = 'Mesa de ' + nombreMesa(m) + ' del Consejo AdmiraNeXT';
   }
   colocarCabecera();
   colocarLogo();
 }
+
+// ---- Modo experto: «/consejero carlos silva», «/consejero carlo bonomi» (tecleado en la propia Escena 0) ----
+// Se sincroniza entre las dos pantallas (BroadcastChannel): Carlos sale en las Leyendas, Bonomi en la cabecera de
+// los Coetáneos, se teclee donde se teclee. Al recargar, vuelven a no estar (nunca en el set por defecto).
+const canalExpertos = (() => { try { return new BroadcastChannel('admira-escena0-expertos'); } catch (e) { return null; } })();
+function aplicarExpertos() {
+  cabecera = expertos.bonomi ? (cabeceraPedida || parseCabecera('carlo-bonomi')) : null;
+  if (cabecera) montarCabecera(); else { const c = $('cabecera'); if (c) c.hidden = true; }
+  if (mesaVista) verMesa(mesaVista);
+}
+function avisoCmd(texto, ms) {
+  const el = $('cmd-experto'); if (!el) return;
+  el.textContent = texto; el.hidden = !texto;
+  clearTimeout(avisoCmd.t);
+  if (ms) avisoCmd.t = setTimeout(() => { el.hidden = true; }, ms);
+}
+function ejecutarExperto(texto) {
+  const r = comandoExperto(texto);
+  if (!r) { avisoCmd('Comando no reconocido: ' + texto, 3500); return; }
+  if (r.error) { avisoCmd(r.error, 4500); return; }
+  const on = r.on === null ? !expertos[r.quien] : r.on;
+  expertos[r.quien] = on;
+  aplicarExpertos();
+  try { canalExpertos && canalExpertos.postMessage({ quien: r.quien, on }); } catch (e) {}
+  avisoCmd(r.quien === 'carlos' ? (on ? '🪑 Carlos Silva aparece en las Leyendas' : '🪑 Carlos Silva desaparece de las Leyendas — queda su silla')
+    : (on ? '🪑 Carlo Bonomi aparece en la cabecera de los Coetáneos' : '🪑 Carlo Bonomi desaparece de la cabecera de los Coetáneos'), 3500);
+}
+if (canalExpertos) canalExpertos.onmessage = (e) => {
+  const d = e.data || {};
+  if ((d.quien === 'carlos' || d.quien === 'bonomi') && typeof d.on === 'boolean') { expertos[d.quien] = d.on; aplicarExpertos(); }
+};
+// Teclas: «/» abre el comando; mientras se escribe, ni la F ni el espacio llegan a la escena.
+let bufCmd = null, tCmd = 0;
+window.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (bufCmd === null) {
+    if (e.key !== '/') return;
+    bufCmd = '/';
+  } else if (e.key === 'Escape') { bufCmd = null; avisoCmd('', 0); e.preventDefault(); e.stopImmediatePropagation(); return; }
+  else if (e.key === 'Enter') { const c = bufCmd; bufCmd = null; avisoCmd('', 0); e.preventDefault(); e.stopImmediatePropagation(); ejecutarExperto(c); return; }
+  else if (e.key === 'Backspace') { bufCmd = bufCmd.slice(0, -1); if (!bufCmd) { bufCmd = null; avisoCmd('', 0); e.preventDefault(); e.stopImmediatePropagation(); return; } }
+  else if (e.key.length === 1) bufCmd += e.key;
+  else return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  avisoCmd('› ' + bufCmd, 0);
+  clearTimeout(tCmd); tCmd = setTimeout(() => { bufCmd = null; avisoCmd('', 0); }, 10000);
+}, true);
 
 function mostrarGlobo(persona, texto, pensando) {
   const g = $('globo');

@@ -170,7 +170,7 @@ test('escena0: una sola caja por turno en el flujo (sin barra), funde antes de l
   assert.match(js, /parseLang\(q\.get\('lang'\), guion\)/);
   const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
   assert.match(html, /id="globo-en" lang="en"/);
-  assert.match(html, /escena0\.js\?v=20261114-[a-z]+/);
+  assert.match(html, /escena0\.js\?v=2026111[4-9]-[a-z0-9]+/);
   const css = readFileSync(new URL('./escena0/escena0.css', import.meta.url), 'utf8');
   assert.match(css, /#globo\.flujo-caja\.fuera \{ opacity:0/);
 });

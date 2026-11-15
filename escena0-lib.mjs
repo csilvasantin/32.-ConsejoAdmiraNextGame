@@ -30,6 +30,26 @@ export const IMG = Object.freeze({
   coetaneos: '/assets/council-coetaneos.jpg?v=20261114-mesa4',
 });
 
+/** Carlos 15-11 19:34: en Escena 0 Carlos Silva (figura Y-3 del centro de las Leyendas) y Carlo Bonomi (cabecera de
+ *  los Coetáneos) NO están por defecto: solo salen si se les llama en modo experto (/consejero carlos silva,
+ *  /consejero carlo bonomi) o si la URL los pide (?cabecera=bonomi, guion con ellos). Arte de las Leyendas con su
+ *  silla vacía: council-leyendas.jpg con la placa de consejo-vacio/leyendas.jpg en su caja (598,185,197×234). */
+export const IMG_SIN_CARLOS = Object.freeze({ leyendas: '/assets/council-leyendas-sin-carlos.jpg?v=20261115-expertos' });
+
+/** Comando de modo experto tecleado en Escena 0: «/consejero <nombre> [aparecer|desaparecer]».
+ *  Sin verbo, invierte. Devuelve {quien: 'carlos'|'bonomi', on: true|false|null} o {error} o null si no es suyo. */
+export function comandoExperto(texto) {
+  const s = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const m = s.match(/^\/?consejero\s+(.+)$/);
+  if (!m) return null;
+  let resto = m[1], on = null;
+  const v = resto.match(/\s+(aparecer|aparece|aparezca|entra|si|on|desaparecer|desaparece|desaparezca|fuera|sale|no|off)$/);
+  if (v) { on = !/^(desaparec|fuera|sale|no|off)/.test(v[1]); resto = resto.slice(0, v.index).trim(); }
+  if (['carlos', 'carlos silva', 'silva', 'ceo', 'yo'].includes(resto)) return { quien: 'carlos', on };
+  if (['carlo bonomi', 'carlo bononi', 'bonomi', 'bononi', 'carlo', 'carlo-bonomi'].includes(resto)) return { quien: 'bonomi', on };
+  return { error: 'En Escena 0 solo se llama a Carlos Silva o a Carlo Bonomi: /consejero carlos silva · /consejero carlo bonomi' };
+}
+
 /** Punta de la flecha (cabeza) en % del arte, de PAPEL_POS. */
 export const ANCLA = Object.freeze({
   leyendas: Object.freeze({

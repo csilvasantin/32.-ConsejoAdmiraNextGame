@@ -125,7 +125,7 @@ export const CABECERAS = Object.freeze({
     foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa4',
     alias: Object.freeze(['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi']),
     // Carlos 23:39: sin placas por defecto; en el sitio de su placa, una maqueta de Ferrari Land (% del arte 1280×720).
-    objeto: Object.freeze({ foto: '/assets/cabecera/carlo-bonomi-ferrariland.webp?v=20261114-mesa4', alt: 'Maqueta de Ferrari Land', cx: 53.125, y: 51.61, h: 10.4167 }),
+    objeto: Object.freeze({ foto: '/assets/cabecera/carlo-bonomi-ferrariland.webp?v=20261115-ferrariland', alt: 'Maqueta de Ferrari Land', cx: 53.125, y: 51.61, h: 12.5 }),
   }),
 });
 

@@ -1,6 +1,15 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="misiones-off">
 <head>
+<style id="misiones-off-first-paint">
+/* t559u: las cajas de misión van ocultas desde el primer paint, como en Leyendas.
+   council-globo.js refuerza la misma regla al cargar. Solo el botón Misiones (localStorage = 1) las enseña. */
+html.misiones-off #papel-halos .consejero-marker,
+html.misiones-off #papel-halos .consejero-marker *,
+html.misiones-off .consejo-globo.globo-proyectos,
+html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;pointer-events:none!important}
+</style>
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">

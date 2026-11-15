@@ -1,6 +1,15 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="misiones-off">
 <head>
+<style id="misiones-off-first-paint">
+/* t559u: las cajas de misión van ocultas desde el primer paint, como en Leyendas.
+   council-globo.js refuerza la misma regla al cargar. Solo el botón Misiones (localStorage = 1) las enseña. */
+html.misiones-off #papel-halos .consejero-marker,
+html.misiones-off #papel-halos .consejero-marker *,
+html.misiones-off .consejo-globo.globo-proyectos,
+html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;pointer-events:none!important}
+</style>
+
 <meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r9.08:30" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <script src="/admira-idioma.js"></script>
@@ -4591,19 +4600,19 @@ body.rail-open{overflow:hidden}
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
 <script defer src="council-estado.js?v=20261111-mascaras"></script>
 <script type="module" src="consejo-caja-prefs.mjs?v=20261112-r176-cajas-anchas"></script>
-<script defer src="council-globo.js?v=20261115-contadores"></script>
+<script defer src="council-globo.js?v=20261115-ferrariland"></script>
 <script defer src="assets/council-silhouettes.js?v=20261112-holgado"></script>
 <script defer src="assets/council-recorte.js?v=20261112-holgado"></script>
 <script defer src="/assets/cli-bilingue.js?v=20261006-r19-bilingue"></script>
 <script defer src="/assets/interface-cli.js?v=20261011-5707-selector2"></script>
 <script defer src="/assets/diario-cli.js?v=20261012-5796"></script>
-<script defer src="/assets/cli-ayuda.js?v=20261011-5707-selector"></script>
+<script defer src="/assets/cli-ayuda.js?v=20261115-help-consejo"></script>
 <link rel="stylesheet" href="/assets/webcam.css?v=20261014-5863">
 <script defer src="/assets/webcam.js?v=20261014-5863"></script>
 <script defer src="assets/council-presencia.js?v=20261114-mesa4"></script>
-<script defer src="assets/consejo-cabecera.js?v=20261114-mesa4"></script>
+<script defer src="assets/consejo-cabecera.js?v=20261115-ferrariland"></script>
 <script defer src="assets/consejo-demo.js?v=20261114-logo"></script>
-<script defer src="app.flt-100529.js?v=20261114-mesa4"></script>
+<script defer src="app.flt-100529.js?v=20261115-ferrariland"></script>
 <script defer src="assets/consejero-mesa.js?v=20261114-consejero-mesa"></script>
 <script defer src="council-preview.js?v=20261114-r180-misiones-off"></script>
 <script defer src="council-composer.js?v=20261114-r181-conversacion"></script>

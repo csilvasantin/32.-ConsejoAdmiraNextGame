@@ -29,11 +29,14 @@
 <body>
 <div class="wrap">
   <h1>⌨️ Comandos del Consejo AdmiraNext</h1>
-  <p class="sub">Se escriben en la barra de comandos de la home (<a href="/">admira.live</a>). Esta página es la referencia pública · también para agentes vía <a href="/mcp/">MCP</a>.</p>
+  <p class="sub">Se escriben en la barra de comandos de la home (<a href="/">admira.live</a>) y en el CLI experto. La lista completa, con lo que pueden hacer los consejeros, está en <a href="/help/">/help/</a>. Para que otros DeepAgents trabajen con ellos: <a href="/mcp/">/mcp/</a>.</p>
 
   <h2>🧭 Consejo y navegación</h2>
   <table>
-    <tr><td class="cmd">/help</td><td class="desc">Muestra u oculta la ayuda de comandos.</td></tr>
+    <tr><td class="cmd">/help</td><td class="desc">Muestra u oculta la ayuda de comandos. En el CLI experto lista todo lo que pueden hacer los consejeros. <code>/help pagina</code> y <code>/ayuda</code> abren o apuntan a <a href="/help/">/help/</a>.</td></tr>
+    <tr><td class="cmd">/mcp</td><td class="desc">Abre <a href="/mcp/">/mcp/</a>, la guía MCP para Neo, Trinity, Oráculo, Morfeo, Smith, Merovingio y Claude o Codex.</td></tr>
+    <tr><td class="cmd">/conversacion <span class="arg">a vs b tema</span></td><td class="desc">Dos consejeros hablan de un tema (también /conversation). Una mención @consejero en Conversación le habla a ese consejero.</td></tr>
+    <tr><td class="cmd">/counselor</td><td class="desc">Alias en inglés de /consejero (también /advisor, /counselors, /advisors).</td></tr>
     <tr><td class="cmd">/comandos</td><td class="desc">Abre esta página con todos los comandos.</td></tr>
     <tr><td class="cmd">/idioma <span class="arg">ESP·ENG</span></td><td class="desc">Cambia la interfaz a castellano o inglés sin recargar (alias <code>/language</code>; vale también <code>es</code>/<code>en</code>, en mayúsculas o minúsculas). Se recuerda en este navegador (<code>xtanco_lang</code>) y en la URL (<code>?lang=es|en</code>), y pone <code>&lt;html lang&gt;</code>. <code>/idioma</code> solo dice el idioma actual. Mismo contrato que admira.store. Traducido: todo el sitio — la barra común, ⌘ Experto (/help e intérprete), la portada y cada página. También en la consola local de la barra (Players, Navegadores).</td></tr>
     <tr><td class="cmd">/consejero [todos · ninguno · nombre]</td><td class="desc">Aparece o desaparece consejeros en la mesa de la portada: <b>todos</b>, <b>ninguno</b> (solo sillas), por nombre (jobs, woz, musk, jensen…) alterna; sin argumento invierte la mesa. Mismo estado que las casillas «Presente».</td></tr>

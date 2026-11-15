@@ -1876,18 +1876,21 @@
         document.getElementById('win-racional').innerHTML =
             '<div class="window-overlay-title">' + T('CLI · GENERAL', 'CLI · GENERAL') + '</div>' +
             '<ol class="analizar-list">' +
-            li('<strong>/help</strong>', 'muestra u oculta esta ayuda', 'shows or hides this help') +
+            li('<strong>/help · /ayuda</strong>', 'muestra u oculta esta ayuda. La lista completa de comandos y de lo que pueden hacer los consejeros está en https://www.admira.live/help/ · /help pagina (o /ayuda pagina) abre esa página', 'shows or hides this help. The full list of commands and what the counsellors can do is at https://www.admira.live/help/ · /help page (or /ayuda pagina) opens that page') +
+            li('<strong>/mcp</strong>', 'abre la página para que Neo, Trinity, Oráculo, Morfeo, Smith, Merovingio y las sesiones de Claude o Codex trabajen con los consejeros por MCP (https://www.admira.live/mcp/)', 'opens the page for Neo, Trinity, Oracle, Morpheus, Smith, Merovingio and Claude or Codex sessions to work with the counsellors over MCP (https://www.admira.live/mcp/)') +
             li('<strong>/idioma [ESP | ENG]</strong>', 'alterna o fija castellano/inglés sin recargar (también /language, /languague, /idiomaESP)', 'toggles or sets Spanish/English without reloading (also /language, /languague, /idiomaENG)') +
             li('<strong>/marca &lt;id&gt; | off | lista</strong>', 'marca blanca del catálogo de admiranext.com (p. ej. /marca starbucks), como en las plataformas', 'white label from the admiranext.com catalogue (e.g. /marca starbucks), as on the platforms') +
             li('<strong>ES ⇄ EN</strong>', 'cada verbo vale en castellano o en inglés y pone la web en ese idioma: /ayuda · /help, /comandos · /commands, /marca · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /marcador · /scoreboard, /flota · /fleet, /recorte · /crop, /recortar · /cut, /leyendas · /legends, /coetaneos · /peers, /agentes · /agents, /tareas · /tasks, /tarea · /task, /finalizada · /done, /olvidar · /forget, /motor · /engine, /bocas · /mouths, /nombres · /names, /diario · /journal, /importar · /import, /verbos · /verbs, /sitios · /sites, /oraculo · /oracle', 'every verb works in Spanish or English and switches the site to that language: /ayuda · /help, /comandos · /commands, /marca · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /marcador · /scoreboard, /flota · /fleet, /recorte · /crop, /recortar · /cut, /leyendas · /legends, /coetaneos · /peers, /agentes · /agents, /tareas · /tasks, /tarea · /task, /finalizada · /done, /olvidar · /forget, /motor · /engine, /bocas · /mouths, /nombres · /names, /diario · /journal, /importar · /import, /verbos · /verbs, /sitios · /sites, /oraculo · /oracle') +
             li('<strong>/81 · /82 · /83 · /84 · /85 · /86 · /87 · /88 · /89</strong>', 'pieles de cine 1981–1989 (atajo de /marca 81 … /marca 89); /marca off vuelve a Admira', '1981–1989 movie skins (shortcut for /marca 81 … /marca 89); /marca off returns to Admira') +
-            li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
-            li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
+            li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help y /ayuda listan todos los comandos del consejo y lo que pueden hacer los consejeros, y apuntan a https://www.admira.live/help/ · también /marca, /idioma, /estado, /version, /demo', 'AdmiraNeXT suite console docked at the bottom: /help and /ayuda list every council command and what the counsellors can do, and point to https://www.admira.live/help/ · also /marca, /idioma, /estado, /version, /demo') +
+            li('<strong>/comandos · /commands</strong>', 'abre la página con todos los comandos (https://www.admira.live/comandos y la lista completa en /help/)', 'opens the page with every command (https://www.admira.live/comandos and the full list at /help/)') +
             li('<strong>/interface terminal 4 | 2 [dispositivo] · /interface 6 · /interface 2 claude|codex|grok · /interface 2 Neo Trinity · /interfaz</strong>', 'terminales en vivo de los deepagents (4 = Neo·Morfeo·Trinity·Oráculo · 2 = Smith·Merovingio · 6 = los seis en 3x2 · 2 claude|codex|grok = los 2 vivos de ese modelo · 2 Neo Trinity = esos dos): sin dispositivo aquí; Fold, Iphone, Air, MBP16, MBP14 allí · /interface off [dispositivo] · /interface help', 'live deepagent terminals (4 = Neo·Morph·Trinity·Oracle · 2 = Smith·Merovingio · 6 = all six in 3x2 · 2 claude|codex|grok = the 2 live on that model · 2 Neo Trinity = those two): no device = here; Fold, Iphone, Air, MBP16, MBP14 there · /interface off [device] · /interface help') +
-            li('<strong>/hablar [consejero] [mensaje] · /talk</strong>', 'habla con un consejero (Jobs en Leyendas, Elon en Coetáneos si no pones nombre). /hablar off cuelga. El literal no se envía al consejero', 'talk to a counsellor (Jobs on Legends, Elon on Contemporaries if you omit the name). /talk off hangs up. The literal is never sent to the counsellor') +
+            li('<strong>/hablar [consejero] [mensaje] · /talk</strong>', 'habla con un consejero (Jobs en Leyendas, Elon en Coetáneos si no pones nombre). /hablar off cuelga. El literal no se envía al consejero. El mismo canal que /hola', 'talk to a counsellor (Jobs on Legends, Elon on Contemporaries if you omit the name). /talk off hangs up. The literal is never sent to the counsellor. Same channel as /hola') +
+            li('<strong>/conversacion &lt;a&gt; vs &lt;b&gt; &lt;tema&gt; · /conversation</strong>', 'hace hablar a dos consejeros sobre un tema (p. ej. /conversacion jobs vs elon PortAventuraNeXT). También /conversación. Una mención @consejero en Conversación le habla a ese consejero', 'has two counsellors talk about a topic (e.g. /conversation jobs vs elon PortAventuraNeXT). An @counsellor mention in Conversation talks to that counsellor') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
-            li('<strong>/consejero</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table') +
+            li('<strong>/consejero · /counselor · /advisor</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa. También /consejeros, /counselors, /advisors y /consejero &lt;nombre&gt; aparecer|desaparecer', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table. Also /consejeros, /counselors, /advisors and /consejero &lt;name&gt; show|hide') +
             li('<strong>/consejeros placas [on | off]</strong>', 'enseña u oculta las placas con el nombre en la mesa de los Coetáneos (por defecto ocultas: cada consejero tiene su objeto en ese sitio — Model X, DGX, portátil, Ferrari Land); sin argumento alterna', 'shows or hides the name plates on the Contemporaries table (hidden by default: each councillor has their object there — Model X, DGX, laptop, Ferrari Land); with no argument it toggles') +
+            li('<strong>Misiones (botón)</strong>', 'las cajas de misión de la mesa van ocultas por defecto, igual en Leyendas y en Coetáneos (Ferrari Land); el botón Misiones las enseña u oculta y lo recuerda. El tablero de misiones Yokup está en https://www.admira.live/misiones', 'the table mission boxes are hidden by default, the same on Legends and on Contemporaries (Ferrari Land); the Missions button shows or hides them and remembers the choice. The Yokup mission board is at https://www.admira.live/misiones') +
             li('<strong>/ceo</strong>', 'aparece o desaparece Carlos (tú) en la silla central', 'shows or hides Carlos (you) in the centre chair') +
             li('<strong>/cabecera [bonomi | off]</strong>', 'sienta a un invitado en la cabecera de los Coetáneos (p. ej. /cabecera Carlo Bonomi); /cabecera off la deja vacía', 'seats a guest at the head of the Contemporaries table (e.g. /cabecera Carlo Bonomi); /cabecera off empties it') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
@@ -2245,7 +2248,10 @@
         // /interface (r29 · Jensen Huang, 11-10-2026): terminales de los deepagents aquí o en otro dispositivo
         '/interface', '/interfaz',
         // /hablar (11-11-2026): mismo canal que /hola; se intercepta en el cliente, nunca se envía el literal
-        '/hablar', '/talk'
+        '/hablar', '/talk',
+        // t559u: conversación entre consejeros y alias EN de /consejero (hablar-cmd.js)
+        '/conversacion', '/conversation', '/counselor', '/counselors', '/advisor', '/advisors', '/consejeros',
+        '/mcp'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2370,6 +2376,20 @@
             addUserEntry(text);
             if (window.AdmiraInterface) window.AdmiraInterface.run(text, setActionLine);
             else setActionLine(cliT('⚠️ /interface no ha cargado; recarga la página', '⚠️ /interface did not load; reload the page'));
+            return true;
+        }
+        const helpPaginaMatch = text.match(/^\/(?:help|ayuda)\s+(pagina|p[aá]gina|page)$/i);
+        if (helpPaginaMatch) {
+            addUserEntry(text);
+            window.open('https://www.admira.live/help/', '_blank', 'noopener');
+            setActionLine(cliT('📖 Ayuda completa → https://www.admira.live/help/', '📖 Full help → https://www.admira.live/help/'));
+            return true;
+        }
+        const mcpPaginaMatch = text.match(/^\/mcp$/i);
+        if (mcpPaginaMatch) {
+            addUserEntry(text);
+            window.open('https://www.admira.live/mcp/', '_blank', 'noopener');
+            setActionLine(cliT('🔌 MCP de los consejeros → https://www.admira.live/mcp/', '🔌 Counsellor MCP → https://www.admira.live/mcp/'));
             return true;
         }
         const helpMatch = text.match(/^\/help$/i);

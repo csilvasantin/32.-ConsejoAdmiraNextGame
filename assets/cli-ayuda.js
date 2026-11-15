@@ -1,4 +1,4 @@
-/* assets/cli-ayuda.js — ayuda automática y catálogo de demos del ⌘ EXPERTO · CLI (r35 · Jensen Huang · Carlos 11-10-2026 14:20).
+/* assets/cli-ayuda.js — ayuda automática y catálogo de demos del ⌘ EXPERTO · CLI (r36 · Disney · Carlos 15-11-2026 09:27 (t559u): /help y /ayuda del experto listan el consejo).
  * Compartido por los CLI expertos de admira.live (la portada con la suite www.admiranext.com/suite/experto.js y la barra
  * de las demás páginas, admira-bar.js, que lo carga al vuelo):
  *   · orden mal escrita → la suite dice «Verbo desconocido» / «Demo desconocida»; aquí se añade «¿Quisiste decir …?»
@@ -95,6 +95,61 @@
   }
   function demosConocidas() { return CATALOGO.map(function (d) { return d[0].replace(/^\/demo /, ''); }).concat(['home', 'live', 'speed', 'interfaz', 'today', 'language', 'projects', 'brands', 'roadmap', 'marcas', 'lista', 'siguiente']); }
 
+
+  /** Catálogo del modo experto en admira.live (t559u): comandos reales del consejo y lo que pueden hacer los consejeros. */
+  var HELP_URL = 'https://www.admira.live/help/';
+  var MCP_URL = 'https://www.admira.live/mcp/';
+  function catalogoExperto(idiomaEn) {
+    var E = idiomaEn == null ? en() : !!idiomaEn;
+    var t = function (es, e) { return E ? e : es; };
+    var L = [];
+    function sec(es, e) { L.push(''); L.push('—— ' + t(es, e) + ' ——'); }
+    function row(cmd, es, e) { L.push(cmd + ' — ' + t(es, e)); }
+    L.push(t(
+      'CLI experto de admira.live · todo lo que puedes hacer en la mesa y lo que pueden hacer los consejeros.',
+      'admira.live expert CLI · everything you can do at the table and everything the counsellors can do.'
+    ));
+    L.push(t('Ayuda completa: ' + HELP_URL, 'Full help: ' + HELP_URL));
+    L.push(t('MCP para otros DeepAgents: ' + MCP_URL, 'MCP for other DeepAgents: ' + MCP_URL));
+    L.push(t('/help pagina abre la página de ayuda. /mcp abre la del MCP.', '/help page opens the help page. /mcp opens the MCP page.'));
+    sec('Comandos del consejo (mesa)', 'Council table commands');
+    row('/help · /ayuda', 'muestra esta lista (en la mesa, el overlay); /help pagina la abre en /help/', 'shows this list (overlay at the table); /help page opens /help/');
+    row('/comandos · /commands', 'abre https://www.admira.live/comandos', 'opens https://www.admira.live/comandos');
+    row('/mcp', 'abre https://www.admira.live/mcp/ para Neo, Trinity, Oráculo, Morfeo, Smith, Merovingio y Claude o Codex', 'opens https://www.admira.live/mcp/ for Neo, Trinity, Oracle, Morpheus, Smith, Merovingio and Claude or Codex');
+    row('/hablar [consejero] [mensaje] · /talk', 'habla con un consejero (Jobs en Leyendas, Elon en Coetáneos si omites el nombre). /hablar off cuelga. El literal no se envía al consejero. Mismo canal que /hola', 'talk to a counsellor (Jobs on Legends, Elon on Contemporaries if you omit the name). /talk off hangs up. The literal is never sent. Same channel as /hola');
+    row('/conversacion <a> vs <b> <tema> · /conversation', 'dos consejeros hablan de un tema (p. ej. /conversacion jobs vs elon PortAventuraNeXT). También /conversación. @consejero en Conversación le habla a ese consejero', 'two counsellors talk about a topic (e.g. /conversation jobs vs elon PortAventuraNeXT). An @counsellor mention in Conversation talks to that counsellor');
+    row('/consejero · /counselor · /advisor', '/consejero todos · ninguno · jobs|woz|musk… (alterna) · a secas invierte la mesa. También /consejeros, /counselors, /advisors y /consejero <nombre> aparecer|desaparecer', '/consejero todos · ninguno · jobs|woz|musk… (toggles) · bare inverts the table. Also /consejeros, /counselors, /advisors and /consejero <name> show|hide');
+    row('/consejeros placas [on|off]', 'cartelas de los Coetáneos (por defecto ocultas: cada uno tiene su objeto — Model X, DGX, portátil, Ferrari Land)', 'Contemporaries name plates (hidden by default: each one has an object — Model X, DGX, laptop, Ferrari Land)');
+    row('/cabecera [bonomi|off]', 'sienta a un invitado en la cabecera de Coetáneos (p. ej. /cabecera Carlo Bonomi)', 'seats a guest at the head of the Contemporaries table (e.g. /cabecera Carlo Bonomi)');
+    row('/ceo', 'atajo de presencia del CEO de la mesa activa', 'shortcut for the sitting CEO of the active table');
+    row('/leyendas · /legends · /coetaneos · /peers', 'cambia de mesa', 'switches table');
+    row('/idioma · /language', 'castellano o inglés, sin recargar', 'Spanish or English, without reloading');
+    row('/marca · /brand · /81…/89', 'marca blanca y pieles de cine; /marca off vuelve a Admira', 'white label and movie skins; /marca off returns to Admira');
+    row('/marcador · /scoreboard · /flota · /fleet · /highscore', 'marcador y flota', 'scoreboard and fleet');
+    row('/interface · /interfaz', 'terminales en vivo de los deepagents (ver /interface help)', 'live deepagent terminals (see /interface help)');
+    row('/orquestar · /orchestrate', 'pide una orquestación al motor', 'asks the engine for an orchestration');
+    row('/agentes · /agents · /tareas · /tasks · /tarea · /task · /diario · /journal', 'agentes, tablero y diario', 'agents, board and journal');
+    row('/sites · /sitios', 'atajos a las webs de AdmiraNeXT', 'shortcuts to the AdmiraNeXT sites');
+    row('/scumm · /verbos · /top · /bocas · /mouths · /nombres · /names · /motor · /engine · /olvidar · /forget', 'interfaz de la mesa', 'table interface');
+    sec('Lo que pueden hacer los consejeros', 'What the counsellors can do');
+    L.push(t(
+      'Los 16 consejeros (8 roles × Leyendas y Coetáneos) viven en GrokBot. En la mesa puedes invocarlos (/hablar, /consejero, /cabecera), hacerlos conversar entre ellos, oírles (micrófono de /hablar) y ver u ocultar sus cajas de misión (ocultas por defecto, botón Misiones).',
+      'The 16 counsellors (8 roles × Legends and Contemporaries) live in GrokBot. At the table you can invoke them (/talk, /counselor, /cabecera), have them converse, hear them (the /talk microphone) and show or hide their mission boxes (hidden by default, Missions button).'
+    ));
+    L.push(t(
+      'Por MCP (https://mcp.admira.live/mcp, clave en secretos del servidor) otro DeepAgent (Neo, Trinity, Oráculo, Morfeo, Smith, Merovingio, o una sesión de Claude o Codex) puede: listar consejeros y modelos; preguntar a la mesa o a uno (consejo_preguntar, consejero_preguntar); escribirse en privado (consejero_mensaje, consejero_bandeja, consejero_responder) y registrar webhooks; encargar y seguir trabajo (agente_encargar, encargos_listar, encargo_estado, encargo_responder, encargo_anular); publicar en AgoraMatrix (agora_decir); ver flota, latidos y velocidad (agentes_vivos, flota_estado, consejero_latido, consumos_velocidad, consumo_reportar); handON/handOFF y ahorro; misiones Yokup (yokup_*); y Telegram (telegram_bandeja, telegram_responder). Lista completa en ' + MCP_URL,
+      'Over MCP (https://mcp.admira.live/mcp, key in the server secrets) another DeepAgent (Neo, Trinity, Oracle, Morpheus, Smith, Merovingio, or a Claude or Codex session) can: list counsellors and models; ask the table or one counsellor (consejo_preguntar, consejero_preguntar); send private messages (consejero_mensaje, consejero_bandeja, consejero_responder) and register webhooks; assign and follow work (agente_encargar, encargos_listar, encargo_estado, encargo_responder, encargo_anular); post to AgoraMatrix (agora_decir); read fleet, heartbeats and speed (agentes_vivos, flota_estado, consejero_latido, consumos_velocidad, consumo_reportar); handON/handOFF and power-saving; Yokup missions (yokup_*); and Telegram (telegram_bandeja, telegram_responder). Full list at ' + MCP_URL
+    ));
+    sec('Suite EXPERTO (admira.live y plataformas)', 'EXPERTO suite (admira.live and platforms)');
+    row('/marca · /idioma · /estado · /version', 'verbos de la suite anclada abajo', 'verbs of the suite docked at the bottom');
+    row('/demo · /demo help', 'catálogo de demos (también /demo ayuda, /demo ?)', 'demo catalogue (also /demo help, /demo ?)');
+    L.push('');
+    L.push(t('No se listan aquí capacidades inventadas: solo lo que el código de admira.live entiende hoy.', 'Nothing invented is listed here: only what admira.live’s code understands today.'));
+    return L.join('\n').replace(/^\n/, '');
+  }
+  var RE_HELP_EXPERTO = /^\/?(help|ayuda)(?:\s+(pagina|p[aá]gina|page|all|todo)?)?$/i;
+  var RE_MCP_EXPERTO = /^\/?mcp$/i;
+
   // ── enganche al ⌘ EXPERTO · CLI de la suite ─────────────────────────────
   var RE_DEMO_HELP = /^\/?demo\s+(help|ayuda|\?)(?:\s+(.*))?$/i;
   function li(log, t, cls) {
@@ -117,9 +172,7 @@
             setTimeout(function () {
               if (s) li(log, T('¿Quisiste decir /', 'Did you mean /') + s + '?', 'err');
               li(log, T('Esto es lo que entiende el CLI:', 'This is what the CLI understands:'));
-              var E = root.AdmiraExperto;
-              // /ayuda o /help según el idioma actual: así la ayuda no cambia el idioma de la web
-              if (E && E.exec) E.exec(en() ? '/help' : '/ayuda', log, { echo: false });
+              li(log, catalogoExperto());
             }, 0);
             return;
           }
@@ -146,6 +199,29 @@
       vigilar(log);
       var input = form.querySelector('input, textarea');
       var t = String((input && input.value) || '').trim();
+      var mh = RE_HELP_EXPERTO.exec(t);
+      if (mh) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input) input.value = '';
+        li(log, '› ' + t, 'cmd');
+        li(log, catalogoExperto());
+        if (mh[2] && /pagina|p[aá]gina|page|all|todo/i.test(mh[2])) {
+          li(log, T('Abriendo ' + HELP_URL + ' …', 'Opening ' + HELP_URL + ' …'));
+          setTimeout(function () { window.open(HELP_URL, '_blank', 'noopener'); }, 200);
+        }
+        return;
+      }
+      if (RE_MCP_EXPERTO.test(t)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input) input.value = '';
+        li(log, '› ' + t, 'cmd');
+        li(log, T('MCP de los consejeros para el resto de DeepAgents: ' + MCP_URL + ' · servidor https://mcp.admira.live/mcp · clave en secretos del servidor.',
+          'Counsellor MCP for the other DeepAgents: ' + MCP_URL + ' · server https://mcp.admira.live/mcp · key in the server secrets.'));
+        setTimeout(function () { window.open(MCP_URL, '_blank', 'noopener'); }, 200);
+        return;
+      }
       if (/^\/?demo$/i.test(t)) { setTimeout(function () { li(log, T('Hay ', 'There are ') + CATALOGO.length + T(' demos · /demo help las lista de la más reciente a la más antigua (la última: /demo interruptores)', ' demos · /demo help lists them newest first (latest: /demo interruptores)')); }, 0); return; }
       if (RE_DEMO_INT.test(t)) { e.preventDefault(); e.stopPropagation(); if (input) input.value = ''; li(log, T('Abriendo /demo/interruptores/ …', 'Opening /demo/interruptores/ …')); setTimeout(function () { location.href = '/demo/interruptores/?auto=1'; }, 400); return; }
       var m = RE_DEMO_HELP.exec(t);
@@ -158,7 +234,7 @@
     var busca = 0;
     (function mira() { var l = document.querySelector('.ax-dock .ax-cli-out, .ax-cli-out'); if (l) vigilar(l); else if (busca++ < 80) setTimeout(mira, 250); })();
   }
-  var api = { version: 'r35', CATALOGO: CATALOGO, demoHelp: demoHelp, sugerir: sugerir, dist: dist, RE_DEMO_HELP: RE_DEMO_HELP };
+  var api = { version: 'r36', CATALOGO: CATALOGO, demoHelp: demoHelp, catalogoExperto: catalogoExperto, sugerir: sugerir, dist: dist, RE_DEMO_HELP: RE_DEMO_HELP, RE_HELP_EXPERTO: RE_HELP_EXPERTO, RE_MCP_EXPERTO: RE_MCP_EXPERTO, HELP_URL: HELP_URL, MCP_URL: MCP_URL };
   root.AdmiraCliAyuda = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root.document) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enganchar); else enganchar(); }

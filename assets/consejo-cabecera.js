@@ -14,7 +14,7 @@
   var CABECERAS = {
     'carlo-bonomi': { id: 'carlo-bonomi', nombre: 'Carlo Bonomi', foto: '/assets/cabecera/carlo-bonomi-sentado.webp?v=20261114-mesa4', alias: ['bonomi', 'carlo', 'carlo bonomi', 'carlo-bonomi', 'carlobonomi'],
       // Maqueta de Ferrari Land (PortAventura) en el sitio de su placa, cuando las placas están ocultas. % del arte 1280×720.
-      objeto: { foto: '/assets/cabecera/carlo-bonomi-ferrariland.webp?v=20261114-mesa4', alt: 'Maqueta de Ferrari Land', cx: 53.125, y: 51.61, h: 10.4167 } }
+      objeto: { foto: '/assets/cabecera/carlo-bonomi-ferrariland.webp?v=20261115-ferrariland', alt: 'Maqueta de Ferrari Land', cx: 53.125, y: 51.61, h: 12.5 } }
   };
   var KEY_PLACAS = 'admira:coetaneos-placas';
   // Arte de la mesa de Coetáneos: sin placas (por defecto, con los objetos) o con placas (sin objetos).

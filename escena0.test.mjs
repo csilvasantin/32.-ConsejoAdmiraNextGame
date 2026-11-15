@@ -99,3 +99,14 @@ test('escena0 · Carlos 15-11 19:42: «\\» abre la línea de modo experto dentr
   assert.match(js, /inp\.addEventListener\('keydown', \(e\) => \{\n\s+e\.stopPropagation\(\);/, 'las teclas de la escena no llegan mientras se escribe');
   assert.match(js, /AYUDA_EXPERTO/);
 });
+
+test('escena0 · Carlos 15-11 21:47: mando remoto solo con la sala firmada (&mando=) y acuse con el resultado del modo experto', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /const MANDO_API = 'https:\/\/www\.portaventuranext\.com\/api\/mando\/escena0';/);
+  assert.match(js, /\/\^\[a-z0-9\]\{2,16\}\\\.\[0-9a-f\]\{32\}\$\/\.test\(q\.get\('mando'\)/, 'sin sala firmada no escucha');
+  assert.match(js, /if \(salaMando && \(mesa === 'leyendas' \|\| mesa === 'coetaneos'\)\) \{/);
+  assert.match(js, /res = ejecutarExperto\(String\(o\.comando \|\| ''\)\);/, 'lo mismo que teclear en modo experto');
+  assert.match(js, /return \{ ok: false, texto: 'Comando no reconocido: ' \+ texto \};/, 'el error real va en el acuse');
+  assert.match(js, /credentials: 'omit'/, 'nunca manda cookies de admira.live al relé');
+});

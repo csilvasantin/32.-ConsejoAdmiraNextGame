@@ -173,21 +173,56 @@ function avisoCmd(texto, ms) {
   if (ms) avisoCmd.t = setTimeout(() => { el.hidden = true; }, ms);
 }
 function ejecutarExperto(texto) {
-  if (/^\/?(help|ayuda|\?)$/i.test(String(texto || '').trim())) { avisoCmd(AYUDA_EXPERTO, 9000); return; }
+  // Devuelve {ok, texto}: lo mismo que se enseña en pantalla, para el acuse del mando remoto.
+  if (/^\/?(help|ayuda|\?)$/i.test(String(texto || '').trim())) { avisoCmd(AYUDA_EXPERTO, 9000); return { ok: true, texto: 'ayuda mostrada' }; }
   const r = comandoExperto(texto);
-  if (!r) { avisoCmd('Comando no reconocido: ' + texto, 3500); return; }
-  if (r.error) { avisoCmd(r.error, 4500); return; }
+  if (!r) { avisoCmd('Comando no reconocido: ' + texto, 3500); return { ok: false, texto: 'Comando no reconocido: ' + texto }; }
+  if (r.error) { avisoCmd(r.error, 4500); return { ok: false, texto: r.error }; }
   const on = r.on === null ? !expertos[r.quien] : r.on;
   expertos[r.quien] = on;
   aplicarExpertos();
   try { canalExpertos && canalExpertos.postMessage({ quien: r.quien, on }); } catch (e) {}
-  avisoCmd(r.quien === 'carlos' ? (on ? '🪑 Carlos Silva aparece en las Leyendas' : '🪑 Carlos Silva desaparece de las Leyendas — queda su silla')
-    : (on ? '🪑 Carlo Bonomi aparece en la cabecera de los Coetáneos' : '🪑 Carlo Bonomi desaparece de la cabecera de los Coetáneos'), 3500);
+  const msg = r.quien === 'carlos' ? (on ? '🪑 Carlos Silva aparece en las Leyendas' : '🪑 Carlos Silva desaparece de las Leyendas — queda su silla')
+    : (on ? '🪑 Carlo Bonomi aparece en la cabecera de los Coetáneos' : '🪑 Carlo Bonomi desaparece de la cabecera de los Coetáneos');
+  avisoCmd(msg, 3500);
+  return { ok: true, texto: msg, quien: r.quien, on };
 }
 if (canalExpertos) canalExpertos.onmessage = (e) => {
   const d = e.data || {};
   if ((d.quien === 'carlos' || d.quien === 'bonomi') && typeof d.on === 'boolean') { expertos[d.quien] = d.on; aplicarExpertos(); }
 };
+// ---- Mando remoto (Carlos 15-11 21:47): «hacer aparecer a Carlos Silva o Carlo Bononi desde otro ordenador» ----
+// Solo si la URL trae la sala firmada que pone el receptor del lanzador (&mando=<máquina>.<firma>): esta Escena 0
+// recoge sus órdenes del relé de portaventuranext.com (lanzador → «Mando remoto»), las ejecuta exactamente como si se
+// tecleasen aquí en modo experto y devuelve el acuse (aplicada / error con el texto que sale en pantalla). La otra mesa
+// la sigue por el BroadcastChannel de expertos. Sin &mando= no hace ninguna petición: nada cambia sin mando.
+const MANDO_API = 'https://www.portaventuranext.com/api/mando/escena0';
+const salaMando = /^[a-z0-9]{2,16}\.[0-9a-f]{32}$/.test(q.get('mando') || '') ? q.get('mando') : '';
+function mandoAcuse(id, r) {
+  const body = JSON.stringify({ sala: salaMando, id, ok: !!(r && r.ok), detalle: String((r && r.texto) || '').slice(0, 280) + ' · escena0 ' + mesa });
+  return fetch(MANDO_API, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'text/plain' }, body }).catch(() => {});
+}
+if (salaMando && (mesa === 'leyendas' || mesa === 'coetaneos')) {
+  let esperaMando = 1200;
+  const sondearMando = async () => {
+    try {
+      const r = await fetch(MANDO_API + '?sala=' + encodeURIComponent(salaMando) + '&mesa=' + mesa + '&v=20261115-mando',
+        { credentials: 'omit', cache: 'no-store' });
+      if (r.status === 401) { esperaMando = 60000; throw new Error('sala'); }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      for (const o of d.ordenes || []) {
+        let res;
+        try { res = ejecutarExperto(String(o.comando || '')); } catch (e) { res = { ok: false, texto: 'excepción: ' + ((e && e.message) || e) }; }
+        await mandoAcuse(o.id, res || { ok: false, texto: 'sin resultado' });
+      }
+      esperaMando = document.visibilityState === 'hidden' ? 3000 : 1200;
+    } catch (e) { if (esperaMando < 60000) esperaMando = 8000; }
+    setTimeout(sondearMando, esperaMando);
+  };
+  sondearMando();
+  document.documentElement.dataset.mando = salaMando.split('.')[0];
+}
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.

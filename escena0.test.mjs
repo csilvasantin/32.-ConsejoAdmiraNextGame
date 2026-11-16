@@ -110,3 +110,13 @@ test('escena0 · Carlos 15-11 21:47: mando remoto solo con la sala firmada (&man
   assert.match(js, /return \{ ok: false, texto: 'Comando no reconocido: ' \+ texto \};/, 'el error real va en el acuse');
   assert.match(js, /credentials: 'omit'/, 'nunca manda cookies de admira.live al relé');
 });
+
+test('escena0 · Carlos 16-11: mando directo en el mismo ordenador (postMessage del lanzador que la abrió, sin relé)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /const ORIGENES_LANZADOR = \['https:\/\/www\.portaventuranext\.com', 'https:\/\/portaventuranext\.com'\];/);
+  assert.match(js, /e\.source !== window\.opener\) return;/, 'solo la ventana que la abrió');
+  assert.match(js, /d\.tipo !== 'escena0-mando'/);
+  assert.match(js, /res = ejecutarExperto\(d\.comando\);/, 'lo mismo que teclear en modo experto');
+  assert.match(js, /tipo: 'escena0-acuse'/, 'acuse con el resultado real');
+});

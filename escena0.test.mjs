@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseMesa, mesaDe, canalVacio, marcarPresente, mesasVivas, siguienteSpeaker,
-  reservar, decir, promptDe, publicState, TEMA_DEFECTO, PRESENTE_MS, MESAS,
+  reservar, decir, promptDe, publicState, TEMA_DEFECTO, TEMA_AUTONOMO,
+  CONTEXTO_PRESENTACION, esTemaPresentacion, PRESENTE_MS, MESAS,
 } from './escena0-lib.mjs';
 
 const T0 = 1_000_000;
@@ -126,4 +127,63 @@ test('escena0 · Carlos 16-11 09:59: ask-one por el proxy del Mini primero y sin
   const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
   assert.match(js, /'https:\/\/macmini\.tail48b61c\.ts\.net\/demo\/consejo\/ask-one',\n  'https:\/\/macmini\.tail48b61c\.ts\.net\/council\/api\/council\/ask-one'/, 'proxy antes que la API directa');
   assert.doesNotMatch(js, /Dejadme encajar lo que acabáis de decir/, 'nada de la misma frase para todos');
+});
+
+import { comandoSilencio, comandoAutonomo } from './escena0-lib.mjs';
+
+test('comandos /silencio y /autonomo, con on/off o alternar', () => {
+  assert.deepEqual(comandoSilencio('/silencio'), { tipo: 'silencio', on: null });
+  assert.deepEqual(comandoSilencio('/silenciar on'), { tipo: 'silencio', on: true });
+  assert.deepEqual(comandoSilencio('/mute off'), { tipo: 'silencio', on: false });
+  assert.deepEqual(comandoSilencio('/voz'), { tipo: 'silencio', on: false });
+  assert.equal(comandoSilencio('/consejero carlos silva'), null);
+  assert.deepEqual(comandoAutonomo('/autónomo'), { tipo: 'autonomo', on: null });
+  assert.deepEqual(comandoAutonomo('/consejo autonomo on'), { tipo: 'autonomo', on: true });
+  assert.deepEqual(comandoAutonomo('/autonomo off'), { tipo: 'autonomo', on: false });
+  assert.equal(comandoAutonomo('/consejero carlo bonomi'), null);
+  assert.match(TEMA_AUTONOMO, /PortAventuraNeXT/);
+  assert.match(TEMA_AUTONOMO, /Carlo Bononi/);
+});
+
+test('escena0 · Carlos 16-11 13:39: botones de silenciar y consejo autónomo junto a aparecer Carlos/Carlo', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  for (const s of ['btn-silencio', 'btn-autonomo', 'btn-carlos', 'btn-bonomi', 'Silenciar consejo', 'Consejo autónomo', 'Aparecer Carlos Silva', 'Aparecer Carlo Bonomi']) {
+    assert.ok(html.includes(s), s);
+  }
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /LS_SILENCIO/);
+  assert.match(js, /localStorage\.setItem\(LS_SILENCIO/);
+  assert.match(js, /comandoSilencio/);
+  assert.match(js, /comandoAutonomo/);
+  assert.match(js, /TEMA_AUTONOMO/);
+  assert.match(js, /arrancarConversacion/);
+  assert.match(js, /cortarVoz/);
+  assert.match(js, /\/silencio/);
+  assert.match(js, /\/autonomo/);
+});
+
+test('el consejo autónomo debate la presentación de PortAventuraNeXT, no un tema genérico', () => {
+  assert.equal(esTemaPresentacion(TEMA_AUTONOMO), true);
+  assert.equal(esTemaPresentacion(TEMA_DEFECTO), false);
+  assert.match(CONTEXTO_PRESENTACION, /World models/i);
+  assert.match(CONTEXTO_PRESENTACION, /Retail Media\+/);
+  assert.match(CONTEXTO_PRESENTACION, /Domain-specific language models/i);
+  assert.match(CONTEXTO_PRESENTACION, /XperiencIA/);
+  assert.match(CONTEXTO_PRESENTACION, /PortAventura University/);
+  assert.match(CONTEXTO_PRESENTACION, /Imagineers/);
+  assert.match(CONTEXTO_PRESENTACION, /Admira University/);
+  assert.match(CONTEXTO_PRESENTACION, /5,3/);
+  assert.match(CONTEXTO_PRESENTACION, /2,5/);
+  assert.match(CONTEXTO_PRESENTACION, /Legado/);
+  const p = promptDe('Steve Jobs', canalVacio(TEMA_AUTONOMO));
+  assert.match(p, /CEO/);
+  assert.match(p, /World models/i);
+  assert.match(p, /Publi Data/);
+  assert.match(p, /no inventéis otras cifras/i);
+  const p2 = promptDe('Elon Musk', canalVacio(TEMA_AUTONOMO));
+  assert.match(p2, /CEO/);
+  assert.match(p2, /los Coetáneos/);
+  const g = promptDe('Steve Jobs', canalVacio('¿Qué pintamos en la sala?'));
+  assert.doesNotMatch(g, /Publi Data/);
 });

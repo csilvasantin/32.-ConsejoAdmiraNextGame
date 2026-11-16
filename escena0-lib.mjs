@@ -64,6 +64,61 @@ export const ANCLA = Object.freeze({
   }),
 });
 
+export const TEMA_AUTONOMO = 'la presentación de PortAventuraNeXT de hoy ante Carlo Bononi y Arturo Mas Sardà';
+
+/** Contexto fijo de la conversación autónoma: la presentación de hoy, no un debate genérico. */
+export const CONTEXTO_PRESENTACION = `Estáis en la sala, durante la presentación de PortAventuraNeXT de Carlos Silva a Carlo Bononi y Arturo Mas Sardà. El tema NO es genérico: es ESTA presentación. Hablad de lo que está sobre la mesa.
+
+Tesis: un parque, todas las historias. PortAventura se vuelve apetecible para cualquier major sin construir otro recinto: se tokeniza el que ya existe (átomos y bits; el mismo staff y los mismos datos) y se le pone la piel de cada universo. Eso es XperiencIA PortAventuraNeXT. Tokenizar NO es criptomoneda ni blockchain: es la identidad compartida entre lo físico y su gemelo digital.
+
+Tres focos:
+1) World models / gemelo digital: un modelo del parque y una maqueta de 4 universos (Netflix, Universal, Sony y Skydance como CONCEPTO, no como acuerdos firmados). Simular y decidir antes de tocar el recinto real.
+2) Multi-agent systems que emulan a los visitantes y operan el recinto, más Retail Media+ como vía de ingreso por marca.
+3) Domain-specific language models para la experiencia del parque: el visitante habla con el universo de la marca con rigor de operación, no con un chatbot genérico.
+
+También están: el parque tokenizado / XperiencIA; PortAventura University, al estilo de los Imagineers, con Physical AI, ligada a Admira University / Bits and Atoms (no es la PAW Academy de la URV); la calculadora Publi Data (hipótesis de ejemplo: 5,3 millones de impresiones al año y aproximadamente 2,5 millones de euros de inventario vendido; no inventéis otras cifras); y el cierre «Legado»: «Damos continuidad al legado. Y lo multiplicamos.» (1963, Walt Disney y el Enchanted Tiki Room; ahora, Physical AI).
+
+Normas: 1-2 frases, en tu estilo, desde TU rol y oficio. No te presentes. No inventes cifras, acuerdos de marca ni títulos como «el primer parque tokenizado» como si ya fueran un hecho. Si falta un dato, no lo fabriques.`;
+
+export function esTemaPresentacion(tema) {
+  return /portaventuranext|carlo bononi|publi data|xperienc/i.test(String(tema || ''));
+}
+
+export const LS_SILENCIO = 'admira_escena0_silencio';
+
+function normCmd(texto) {
+  return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+function verboOnOff(resto) {
+  const s = String(resto || '').trim();
+  if (!s) return null;
+  if (/^(on|si|activar|activa|aparece|start|play|unmute|hablar)$/.test(s)) return true;
+  if (/^(off|no|desactivar|desactiva|fuera|stop|pausa|pause|mute|callar|silencio)$/.test(s)) return false;
+  return undefined;
+}
+
+/** /silencio · /silenciar · /mute [on|off]. Sin verbo, alterna. /voz o /sonido reactivan. */
+export function comandoSilencio(texto) {
+  const s = normCmd(texto);
+  const m = s.match(/^\/?(silencio|silenciar|mute|mutear|callar|voz|sonido)(?:\s+(.+))?$/);
+  if (!m) return null;
+  const cmd = m[1];
+  const on = verboOnOff(m[2]);
+  if (on === undefined) return { error: 'Usa /silencio, /silencio on u /silencio off' };
+  if (on === null && (cmd === 'voz' || cmd === 'sonido')) return { tipo: 'silencio', on: false };
+  return { tipo: 'silencio', on };
+}
+
+/** /autonomo · /consejo autonomo [on|off]. Sin verbo, alterna. */
+export function comandoAutonomo(texto) {
+  const s = normCmd(texto);
+  const m = s.match(/^\/?((?:consejo|hablar|conversacion)\s+)?(autonomo|autonoma)(?:\s+(.+))?$/);
+  if (!m) return null;
+  const on = verboOnOff(m[3]);
+  if (on === undefined) return { error: 'Usa /autonomo, /autonomo on u /autonomo off' };
+  return { tipo: 'autonomo', on };
+}
+
 export function parseMesa(v) {
   const s = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
     .replace(/[^a-z]/g, '');
@@ -178,14 +233,16 @@ export function promptDe(speaker, doc) {
   const mesa = mesaDe(speaker);
   const nombreMesa = mesa === 'leyendas' ? 'las Leyendas' : 'los Coetáneos';
   const otra = mesa === 'leyendas' ? 'los Coetáneos' : 'las Leyendas';
-  const companeros = MESAS[mesa].filter((p) => p !== speaker).join(', ');
-  const cruz = MESAS[mesa === 'leyendas' ? 'coetaneos' : 'leyendas'].join(', ');
+  const companeros = (MESAS[mesa] || []).filter((p) => p !== speaker).join(', ');
+  const cruz = (MESAS[mesa === 'leyendas' ? 'coetaneos' : 'leyendas'] || []).join(', ');
+  const rol = ROLES[speaker] ? (' Eres ' + speaker + ', ' + ROLES[speaker] + ' del Consejo: opina desde ese oficio.') : (' Eres ' + speaker + ': opina desde tu carácter.');
+  const brief = esTemaPresentacion(tema) ? ('\n\nContexto de la presentación:\n' + CONTEXTO_PRESENTACION) : '';
   if (!history.length) {
-    return `Estás en la Escena 0 del Consejo AdmiraNeXT, la mesa de ${nombreMesa} (${companeros} y tú). En la otra pantalla de la sala está la mesa de ${otra} (${cruz}). Tema: "${tema}". Arranca TÚ el debate en 1-2 frases, en tu estilo característico, con tu punto de vista. No te presentes ni saludes con formalidad: ve al grano.`;
+    return `Estás en la Escena 0 del Consejo AdmiraNeXT, la mesa de ${nombreMesa} (${companeros} y tú). En la otra pantalla de la sala está la mesa de ${otra} (${cruz}). Tema: "${tema}".${rol}${brief} Arranca TÚ el debate en 1-2 frases, en tu estilo característico, con tu punto de vista. No te presentes ni saludes con formalidad: ve al grano.`;
   }
   const recent = history.slice(-5).map((h) => `${h.persona}: ${h.texto}`).join('\n');
   const last = history[history.length - 1];
-  return `Sigues en la Escena 0 del Consejo AdmiraNeXT (mesa de ${nombreMesa}; al otro lado de la sala, ${cruz}) sobre "${tema}". Lo último dicho:\n${recent}\n\nResponde TÚ ahora en 1-2 frases, en tu estilo, aportando tu visión: puedes coincidir, matizar o rebatir, y dirigirte a quien quieras (sobre todo a ${last.persona}). Habla en primera persona, sin acotaciones.`;
+  return `Sigues en la Escena 0 del Consejo AdmiraNeXT (mesa de ${nombreMesa}; al otro lado de la sala, ${cruz}) sobre "${tema}".${rol}${brief}\nLo último dicho:\n${recent}\n\nResponde TÚ ahora en 1-2 frases, en tu estilo, aportando tu visión: puedes coincidir, matizar o rebatir, y dirigirte a quien quieras (sobre todo a ${last.persona}). Habla en primera persona, sin acotaciones.`;
 }
 
 export function limpiarTema(v) {

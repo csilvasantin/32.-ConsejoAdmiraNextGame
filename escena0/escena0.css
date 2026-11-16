@@ -107,3 +107,8 @@ body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transfo
 #experto-input{width:100%;box-sizing:border-box;padding:10px 12px;border:0;border-radius:8px;background:#1b140a;color:#ffe2b0;font:600 18px/1.3 ui-monospace,Menlo,monospace;outline:none}
 #experto-input::placeholder{color:#a8865a}
 #cmd-experto{white-space:normal}
+
+/* Carlos 16-11 13:39: silenciar y consejo autónomo, junto a aparecer Carlos / Carlo. */
+#hud .controles-consejo { display:flex; flex-direction:column; align-items:flex-end; gap:6px; margin-top:4px; }
+#hud .controles-consejo button { font-weight:700; }
+#hud .controles-consejo button.activo { background:#3a2208; border-color:var(--oro2); color:#fff; }

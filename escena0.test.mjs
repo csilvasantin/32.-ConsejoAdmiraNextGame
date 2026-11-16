@@ -120,3 +120,10 @@ test('escena0 · Carlos 16-11: mando directo en el mismo ordenador (postMessage 
   assert.match(js, /res = ejecutarExperto\(d\.comando\);/, 'lo mismo que teclear en modo experto');
   assert.match(js, /tipo: 'escena0-acuse'/, 'acuse con el resultado real');
 });
+
+test('escena0 · Carlos 16-11 09:59: ask-one por el proxy del Mini primero y sin relleno fijo en bucle', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /'https:\/\/macmini\.tail48b61c\.ts\.net\/demo\/consejo\/ask-one',\n  'https:\/\/macmini\.tail48b61c\.ts\.net\/council\/api\/council\/ask-one'/, 'proxy antes que la API directa');
+  assert.doesNotMatch(js, /Dejadme encajar lo que acabáis de decir/, 'nada de la misma frase para todos');
+});

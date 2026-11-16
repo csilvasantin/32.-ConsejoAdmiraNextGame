@@ -33,9 +33,14 @@ const silencio = q.get('silencio') === '1' || q.get('mute') === '1';
 const demo = q.get('demo') === '1';
 const temaQ = (q.get('tema') || '').trim() || (guion ? guion.tema : '');
 const API = '/api/consejo/escena0';
-const COUNCIL_API_URLS = location.protocol === 'https:'
-  ? ['https://macmini.tail48b61c.ts.net/council', 'https://three2-consejoadmiranextgame.onrender.com']
-  : ['http://localhost:8420', 'https://macmini.tail48b61c.ts.net/council', 'https://three2-consejoadmiranextgame.onrender.com'];
+// Carlos 16-11 09:59: la API directa del Consejo exige token (401/403) y el navegador no lo lleva, así que cada turno
+// caía al relleno «Dejadme encajar…» en bucle. Primero el proxy del Mini (/demo/consejo, pone su clave y fuerza
+// grok-4.6, CORS admira.live), igual que app.js; la API directa queda de reserva. URLs completas de ask-one.
+const COUNCIL_API_URLS = (location.protocol === 'https:' ? [] : ['http://localhost:8420/api/council/ask-one']).concat([
+  'https://macmini.tail48b61c.ts.net/demo/consejo/ask-one',
+  'https://macmini.tail48b61c.ts.net/council/api/council/ask-one',
+  'https://three2-consejoadmiranextgame.onrender.com/api/council/ask-one',
+]);
 
 const DEMO = {
   'Steve Jobs': ['El producto se entiende en un vistazo, o no es producto.', 'Que la otra mesa nos diga qué fricción ven ellos, y lo cortamos.'],
@@ -400,9 +405,9 @@ async function askConsejero(persona, message) {
   for (const base of urls) {
     for (let i = 0; i < 2; i++) {
       try {
-        const r = await fetch(base + '/api/council/ask-one', {
+        const r = await fetch(base, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Council-Token': '' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message,
             agent_name: ROLES[persona] || persona,
@@ -456,7 +461,10 @@ async function unTurno(st) {
       texto = await askConsejero(sig.persona, promptDe(sig.persona, hist));
     } catch (e) {
       estado('Sin respuesta de ' + sig.persona + ' (' + (e.message || e) + '). Paso.');
-      texto = 'Dejadme encajar lo que acabáis de decir; sigo con vosotros.';
+      // Sin backend: una línea propia del consejero (rota), nunca la misma frase en bucle para todos.
+      const bag = DEMO[sig.persona] || ['Seguimos.'];
+      const i = demoIdx[sig.persona] || 0; demoIdx[sig.persona] = i + 1;
+      texto = bag[i % bag.length];
     }
     const pub = await publicar(sig.persona, texto);
     const dicho = (pub && pub.turno && pub.turno.texto) || texto;

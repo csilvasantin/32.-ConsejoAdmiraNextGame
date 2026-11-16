@@ -1,10 +1,14 @@
 /* VOCES DEL CONSEJO (Lasseter · CCO, 11-11-2026, misión de Carlos):
  * una voz propia y estable para cada uno de los 16 consejeros.
  *
- * Motor: la síntesis de voz del propio navegador (Web Speech API). Gratis, sin
- * claves y sin servidor (máxima «gratis primero»). NO se clona ni se imita la voz
- * real de nadie: cada consejero recibe una voz de serie distinta del sistema
- * (macOS, Chrome, Edge, Windows, Android…) más su tono y su ritmo.
+ * Motor preferido (16-11-2026, Carlos: «utiliza las voces de GrokBot»):
+ * Grok TTS (xAI) vía /api/consejo/tts, una voz distinta por consejero, en
+ * español. Si el endpoint falla, se cae a la síntesis del navegador (Web Speech
+ * API) sin bloquear la escena. NO se clona ni se imita la voz real de nadie.
+ *
+ * Motor de reserva: la síntesis de voz del propio navegador. Cada consejero
+ * recibe una voz de serie distinta del sistema (macOS, Chrome, Edge, Windows,
+ * Android…) más su tono y su ritmo.
  *
  * Orden de resolución de la voz de un consejero:
  *   1. personalización LOCAL de este navegador  (localStorage admira_voces_v1)
@@ -361,15 +365,83 @@
   }
 
   var current = null;
+  var currentAudio = null;
   function hayLocucion() {
+    try {
+      if (currentAudio && !currentAudio.paused && !currentAudio.ended) return true;
+    } catch (e) {}
     try { return !!(synth && (synth.speaking || synth.pending)); } catch (e) { return false; }
+  }
+  function pararAudio() {
+    var a = currentAudio; currentAudio = null;
+    if (!a) return;
+    try { a.onended = null; a.onerror = null; a.onplay = null; a.pause(); } catch (e) {}
+    try { if (a.src && a.src.indexOf("blob:") === 0) URL.revokeObjectURL(a.src); } catch (e) {}
   }
   function stop() {
     current = null;
+    pararAudio();
     try { if (synth) synth.cancel(); } catch (e) {}
   }
-  function speak(persona, text, opts) {
-    opts = opts || {};
+  function puedeGrok() {
+    // En tests de node no hay document: se conserva el motor del navegador.
+    return !!(root.document && typeof root.fetch === "function" && root.Audio);
+  }
+  function ttsUrl() {
+    try {
+      if (root.location && root.location.origin && root.location.protocol !== "file:") {
+        return root.location.origin + "/api/consejo/tts";
+      }
+    } catch (e) {}
+    return "/api/consejo/tts";
+  }
+  function hablarGrok(persona, texto, opts, token) {
+    var ac = typeof root.AbortController === "function" ? new root.AbortController() : null;
+    var to = root.setTimeout(function () { try { if (ac) ac.abort(); } catch (e) {} }, 8000);
+    var cuerpo = { persona: persona, text: texto, lang: "es-ES" };
+    return root.fetch(ttsUrl(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(cuerpo),
+      signal: ac ? ac.signal : undefined,
+    }).then(function (r) {
+      if (current !== token) return null;
+      if (!r.ok) throw new Error("tts " + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      root.clearTimeout(to);
+      if (current !== token || !blob || !blob.size) throw new Error("audio vacío");
+      if (!/^audio\//.test(blob.type || "audio/mpeg") && blob.size < 200) throw new Error("no audio");
+      return new Promise(function (resolve, reject) {
+        var a = new root.Audio();
+        currentAudio = a;
+        var url = URL.createObjectURL(blob);
+        a.src = url;
+        a.onplay = function () { if (current === token && opts.onstart) opts.onstart(profile(persona)); };
+        a.onended = function () {
+          if (currentAudio === a) currentAudio = null;
+          try { URL.revokeObjectURL(url); } catch (e) {}
+          if (current !== token) return resolve();
+          current = null;
+          if (opts.onend) opts.onend();
+          resolve();
+        };
+        a.onerror = function (e) {
+          if (currentAudio === a) currentAudio = null;
+          try { URL.revokeObjectURL(url); } catch (err) {}
+          reject(e || new Error("audio"));
+        };
+        var play = a.play();
+        if (play && typeof play.catch === "function") play.catch(reject);
+      });
+    }).catch(function () {
+      root.clearTimeout(to);
+      if (current !== token) return;
+      pararAudio();
+      hablarNavegador(persona, texto, opts, token);
+    });
+  }
+  function hablarNavegador(persona, text, opts, tokenYa) {
     var p = profile(persona);
     if (!synth || !root.SpeechSynthesisUtterance) { if (opts.onerror) opts.onerror(new Error("sin síntesis de voz")); return false; }
     var trozos = chunks(text, opts.max);
@@ -377,11 +449,13 @@
       if (opts.onerror) opts.onerror(new Error("sin voz del consejero"));
       return false;
     }
-    // Si la locución anterior ya terminó, no llamar a cancel(): en Chrome
-    // (macOS) produce un clic o un ruido de acople al acabar, incluso en silencio.
-    if (current || hayLocucion()) stop();
-    else current = null;
-    var token = {}; current = token;
+    var token = tokenYa || {};
+    if (!tokenYa) {
+      if (current || hayLocucion()) stop();
+      current = token;
+    } else {
+      current = tokenYa;
+    }
     var i = 0, started = false;
     function next() {
       if (current !== token) return;
@@ -421,12 +495,36 @@
     next();
     return true;
   }
+  function speak(persona, text, opts) {
+    opts = opts || {};
+    var trozos = chunks(text, opts.max || (puedeGrok() ? 1200 : 220));
+    if (!trozos.length) {
+      if (opts.onerror) opts.onerror(new Error("texto vacío"));
+      return false;
+    }
+    var c = casting(persona);
+    // Invitados de Escena 0 (Carlos Silva, Carlo Bonomi) no están en el CASTING
+    // de los 16, pero sí tienen voz Grok en el servidor.
+    if (!c && !puedeGrok()) {
+      if (opts.onerror) opts.onerror(new Error("persona desconocida"));
+      return false;
+    }
+    if (current || hayLocucion()) stop();
+    else current = null;
+    var token = {}; current = token;
+    var texto = trozos.join(" ");
+    if (puedeGrok()) {
+      hablarGrok(c ? c.persona : persona, texto, opts, token);
+      return true;
+    }
+    return hablarNavegador(c.persona, texto, opts, token);
+  }
   function preview(persona, opts) {
     var c = casting(persona); if (!c) return false;
     return speak(c.persona, c.frase, opts);
   }
   function speaking() { return !!current; }
-  function supported() { return !!(synth && root.SpeechSynthesisUtterance); }
+  function supported() { return puedeGrok() || !!(synth && root.SpeechSynthesisUtterance); }
   function available() { return voices.slice(); }
 
   function portadaOn() { try { return root.localStorage.getItem(LS_PORTADA) === "1"; } catch (e) { return false; } }
@@ -455,7 +553,12 @@
     setOverride: setOverride, resetOverride: resetOverride, localOverrides: localOverrides,
     sharedOverrides: function () { return JSON.parse(JSON.stringify(shared)); },
     portadaOn: portadaOn, setPortada: setPortada, chunks: chunks, generoDe: generoDe,
-    puedeHablar: function (persona) { var p = profile(persona); return !!(p && p.voice); },
+    puedeHablar: function (persona) {
+      if (!casting(persona)) return false;
+      if (puedeGrok()) return true;
+      var p = profile(persona); return !!(p && p.voice);
+    },
+    motor: function () { return puedeGrok() ? "grok" : "navegador"; },
     _instalarParadaAlSalir: instalarParadaAlSalir, _pararAlSalir: pararAlSalir,
     _setVoicesForTest: setVoicesForTest, JOBS_SELLO: JOBS_SELLO,
   };

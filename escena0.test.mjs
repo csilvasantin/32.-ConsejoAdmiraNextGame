@@ -129,7 +129,7 @@ test('escena0 · Carlos 16-11 09:59: ask-one por el proxy del Mini primero y sin
   assert.doesNotMatch(js, /Dejadme encajar lo que acabáis de decir/, 'nada de la misma frase para todos');
 });
 
-import { comandoSilencio, comandoAutonomo } from './escena0-lib.mjs';
+import { comandoSilencio, comandoAutonomo, comandoCerrar } from './escena0-lib.mjs';
 
 test('comandos /silencio y /autonomo, con on/off o alternar', () => {
   assert.deepEqual(comandoSilencio('/silencio'), { tipo: 'silencio', on: null });
@@ -141,6 +141,12 @@ test('comandos /silencio y /autonomo, con on/off o alternar', () => {
   assert.deepEqual(comandoAutonomo('/consejo autonomo on'), { tipo: 'autonomo', on: true });
   assert.deepEqual(comandoAutonomo('/autonomo off'), { tipo: 'autonomo', on: false });
   assert.equal(comandoAutonomo('/consejero carlo bonomi'), null);
+  assert.deepEqual(comandoCerrar('/cerrar'), { tipo: 'cerrar' });
+  assert.deepEqual(comandoCerrar('/cerrar todo'), { tipo: 'cerrar' });
+  assert.deepEqual(comandoCerrar('/close all'), { tipo: 'cerrar' });
+  assert.deepEqual(comandoCerrar('/salir'), { tipo: 'cerrar' });
+  assert.equal(comandoCerrar('/consejero carlos silva'), null);
+  assert.equal(comandoCerrar('/silencio on'), null);
   assert.match(TEMA_AUTONOMO, /PortAventuraNeXT/);
   assert.match(TEMA_AUTONOMO, /Carlo Bononi/);
 });
@@ -156,11 +162,14 @@ test('escena0 · Carlos 16-11 13:39: botones de silenciar y consejo autónomo ju
   assert.match(js, /localStorage\.setItem\(LS_SILENCIO/);
   assert.match(js, /comandoSilencio/);
   assert.match(js, /comandoAutonomo/);
+  assert.match(js, /comandoCerrar/);
+  assert.match(js, /cerrarVentanaShow/);
   assert.match(js, /TEMA_AUTONOMO/);
   assert.match(js, /arrancarConversacion/);
   assert.match(js, /cortarVoz/);
   assert.match(js, /\/silencio/);
   assert.match(js, /\/autonomo/);
+  assert.match(js, /\/cerrar/);
 });
 
 test('el consejo autónomo debate la presentación de PortAventuraNeXT, no un tema genérico', () => {

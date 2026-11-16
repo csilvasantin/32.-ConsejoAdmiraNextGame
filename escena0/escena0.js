@@ -1,8 +1,8 @@
 import {
-  parseMesa, MESAS, ROLES, IMG, IMG_SIN_CARLOS, comandoExperto, comandoSilencio, comandoAutonomo,
+  parseMesa, MESAS, ROLES, IMG, IMG_SIN_CARLOS, comandoExperto, comandoSilencio, comandoAutonomo, comandoCerrar,
   ANCLA, TEMA_DEFECTO, TEMA_AUTONOMO, LS_SILENCIO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261116-silencio';
+} from '/escena0-lib.mjs?v=20261116-cerrar';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -261,6 +261,30 @@ function pintarControles() {
     b.classList.toggle('activo', !!expertos.bonomi);
   }
 }
+
+function mostrarCerrada() {
+  if (document.getElementById('escena0-cerrada')) return;
+  const c = document.createElement('div');
+  c.id = 'escena0-cerrada';
+  c.setAttribute('role', 'status');
+  c.textContent = 'Cerrada';
+  c.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#000;color:#888;display:flex;align-items:center;justify-content:center;font:600 42px/1.2 Arial,sans-serif;letter-spacing:.06em';
+  (document.body || document.documentElement).appendChild(c);
+  try { document.documentElement.style.background = '#000'; } catch (e) {}
+  try { document.body.style.background = '#000'; } catch (e) {}
+}
+/** El lanzador pide cerrar esta ventana (/cerrar, postMessage o mando). Si window.close no puede (no la abrió un script), sale de pantalla completa y queda en negro. */
+function cerrarVentanaShow() {
+  try { setAutonomo(false); } catch (e) {}
+  try { setSilencio(true); } catch (e) {}
+  try { window.AdmiraVoces && AdmiraVoces.stop(); } catch (e) {}
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+  let cerrada = false;
+  try { window.close(); cerrada = !!window.closed; } catch (e) {}
+  setTimeout(() => { if (!window.closed) mostrarCerrada(); }, 250);
+  return cerrada ? 'Ventana cerrada' : 'Cerrada';
+}
+
 function ejecutarExperto(texto) {
   // Devuelve {ok, texto}: lo mismo que se enseña en pantalla, para el acuse del mando remoto.
   if (/^\/?(help|ayuda|\?)$/i.test(String(texto || '').trim())) { avisoCmd(AYUDA_EXPERTO, 9000); return { ok: true, texto: 'ayuda mostrada' }; }
@@ -281,6 +305,11 @@ function ejecutarExperto(texto) {
     const msg = autonomo ? '🎙 Consejo autónomo: conversan sobre ' + (temaQ || TEMA_AUTONOMO) : '⏹ Consejo autónomo en pausa';
     avisoCmd(msg, 3500);
     return { ok: true, texto: msg, autonomo };
+  }
+  const cer = comandoCerrar(texto);
+  if (cer) {
+    const msg = cerrarVentanaShow();
+    return { ok: true, texto: msg };
   }
   const r = comandoExperto(texto);
   if (!r) { avisoCmd('Comando no reconocido: ' + texto, 3500); return { ok: false, texto: 'Comando no reconocido: ' + texto }; }
@@ -349,14 +378,14 @@ if (window.opener) { try { window.opener.postMessage({ tipo: 'escena0-lista', me
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.
-const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
+const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
 function abrirLinea() {
   let box = $('experto-linea');
   if (!box) {
     box = document.createElement('div'); box.id = 'experto-linea';
     const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'experto-input';
     inp.setAttribute('aria-label', 'Modo experto de Escena 0'); inp.autocomplete = 'off'; inp.spellcheck = false;
-    inp.placeholder = '/consejero carlos silva · /silencio · /autonomo · /help';
+    inp.placeholder = '/consejero carlos silva · /silencio · /autonomo · /cerrar · /help';
     inp.addEventListener('keydown', (e) => {
       e.stopPropagation();
       if (e.key === 'Escape') { e.preventDefault(); cerrarLinea(); }

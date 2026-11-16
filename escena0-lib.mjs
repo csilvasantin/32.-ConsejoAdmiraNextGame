@@ -119,6 +119,14 @@ export function comandoAutonomo(texto) {
   return { tipo: 'autonomo', on };
 }
 
+/** /cerrar · /cerrar todo · /close · /salir: la ventana se cierra (si el lanzador la abrió) o pasa a negro. */
+export function comandoCerrar(texto) {
+  const s = normCmd(texto);
+  if (/^\/?(cerrar(?:se|ventana|todo)?|close(?:window|all)?|salir)$/.test(s)) return { tipo: 'cerrar' };
+  if (/^\/?(cerrar|close)\s+(todo|all|ventana|window)$/.test(s)) return { tipo: 'cerrar' };
+  return null;
+}
+
 export function parseMesa(v) {
   const s = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
     .replace(/[^a-z]/g, '');

@@ -223,6 +223,19 @@ if (salaMando && (mesa === 'leyendas' || mesa === 'coetaneos')) {
   sondearMando();
   document.documentElement.dataset.mando = salaMando.split('.')[0];
 }
+// Mando directo en el MISMO ordenador (Carlos 16-11 09:30): si esta Escena 0 la abrió el lanzador de
+// portaventuranext.com con «Este ordenador» (window.open, sin &mando=), el lanzador le habla por postMessage y no
+// hace falta el relé de 30 s. Solo se acepta del origen del lanzador y solo de la ventana que la abrió (opener).
+const ORIGENES_LANZADOR = ['https://www.portaventuranext.com', 'https://portaventuranext.com'];
+window.addEventListener('message', (e) => {
+  if (!ORIGENES_LANZADOR.includes(e.origin) || !e.source || e.source !== window.opener) return;
+  const d = e.data || {};
+  if (d.tipo !== 'escena0-mando' || typeof d.comando !== 'string' || !/^\/[\p{L}\p{N} ,.\-]{1,118}$/u.test(d.comando)) return;
+  let res;
+  try { res = ejecutarExperto(d.comando); } catch (err) { res = { ok: false, texto: 'excepción: ' + ((err && err.message) || err) }; }
+  try { e.source.postMessage({ tipo: 'escena0-acuse', id: String(d.id || '').slice(0, 40), ok: !!(res && res.ok), texto: String((res && res.texto) || '').slice(0, 280), mesa }, e.origin); } catch (err) {}
+});
+if (window.opener) { try { window.opener.postMessage({ tipo: 'escena0-lista', mesa }, 'https://www.portaventuranext.com'); } catch (e) {} }
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.

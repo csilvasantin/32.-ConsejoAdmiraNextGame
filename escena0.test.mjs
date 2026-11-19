@@ -238,3 +238,15 @@ test('Carlos 19-11 (t111u): textos en inglés y mostrar/ocultar la interfaz', as
   assert.match(js, /DEMO_EN/);
   assert.match(js, /T\('Pantalla completa y empezar', 'Full screen and start'\)/);
 });
+
+// t112u: instrucción de idioma también al principio + botón de plegar al final del panel
+{
+  const L = await import('./escena0-lib.mjs');
+  assert.equal(L.prefijoIdioma('es'), '');
+  assert.match(L.prefijoIdioma('en'), /^LANGUAGE: ENGLISH ONLY/);
+  const fs = await import('node:fs');
+  const h = fs.readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  const hud = h.slice(h.indexOf('<div id="hud"'), h.indexOf('<div id="cmd-experto"'));
+  assert.ok(hud.indexOf('id="btn-ui"') > hud.indexOf('id="tema-otro"'), 'btn-ui debe ser lo último del panel');
+  assert.ok(hud.indexOf('id="btn-ui"') > hud.indexOf('id="btn-fs"'));
+}

@@ -132,11 +132,11 @@ body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transfo
 #hud .controles-consejo #idea-url { width:300px; max-width:300px; background:#1a140a; color:#ffd75e; border:1px solid var(--oro, #c9a227); padding:5px 8px; font:600 12px/1.2 system-ui,sans-serif; }
 #hud .controles-consejo #idea-url[hidden] { display:none; }
 /* Carlos 19-11 (t111u): mostrar/ocultar la interfaz (botón discreto + tecla H) */
-#btn-ui { position:fixed; right:12px; bottom:10px; z-index:31; appearance:none; background:rgba(26,20,10,.75); color:#cbb98a;
-  border:1px solid rgba(201,162,39,.5); padding:4px 9px; font:600 11px/1.2 system-ui,sans-serif; cursor:pointer; opacity:.55; transition:opacity .2s; }
-#btn-ui:hover, #btn-ui:focus-visible { opacity:1; }
-body.ui-off #hud, body.ui-off #barra-escucha { display:none !important; }
-body.ui-off #btn-ui { opacity:.12; padding:3px 7px; }
-body.ui-off.kiosk-idle #btn-ui { opacity:0; }
-body.ui-off #btn-ui:hover { opacity:.9; }
+/* t112u: el botón va al FINAL del panel y pliega/despliega todo (de Pantalla completa a la última opción) */
+#hud #btn-ui { margin-top:4px; background:rgba(26,20,10,.8); color:#cbb98a; border:1px solid rgba(201,162,39,.6); padding:5px 10px; font:700 11px/1.2 system-ui,sans-serif; opacity:.8; }
+#hud #btn-ui:hover, #hud #btn-ui:focus-visible { opacity:1; }
+body.ui-off #hud > :not(#btn-ui) { display:none !important; }
+body.ui-off #barra-escucha { display:none !important; }
+body.ui-off #hud #btn-ui { margin-top:0; opacity:.45; padding:3px 8px; }
+body.ui-off #hud #btn-ui:hover { opacity:1; }
 body.flujo #btn-ui { display:none; }

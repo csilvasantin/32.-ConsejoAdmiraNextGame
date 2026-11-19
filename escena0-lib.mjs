@@ -216,6 +216,14 @@ export function parseIdioma(v) {
   return null;
 }
 /** Instrucción de idioma que se añade al prompt cuando la mesa habla en inglés. */
+// Carlos 19-11 (t112u): el backend recorta/ignora la instrucción si sólo va al final de un prompt largo en español.
+// Con inglés la ponemos también AL PRINCIPIO.
+export function prefijoIdioma(idioma) {
+  return idioma === 'en'
+    ? 'LANGUAGE: ENGLISH ONLY. You are speaking at an English-language panel. Reply ONLY in natural spoken English; translate any idea from the Spanish context below. Never answer in Spanish.\n\n'
+    : '';
+}
+
 export function sufijoIdioma(idioma) {
   return idioma === 'en'
     ? '\n\nIMPORTANT: answer ONLY in natural spoken English (1-2 sentences), even if the topic or the previous lines are in Spanish. Keep names as they are.'

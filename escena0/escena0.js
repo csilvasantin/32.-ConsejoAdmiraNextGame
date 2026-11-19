@@ -2,9 +2,9 @@ import {
   parseMesa, MESAS, ROLES, IMG, IMG_SIN_CARLOS, comandoExperto, comandoSilencio, comandoAutonomo, comandoCerrar,
   ANCLA, TEMA_DEFECTO, TEMA_AUTONOMO, LS_SILENCIO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-  quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma,
+  quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma, prefijoIdioma,
   IDEAS_PRESET, LS_IDEA, resolverIdea,
-} from '/escena0-lib.mjs?v=20261119-debates';
+} from '/escena0-lib.mjs?v=20261119-debates3';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -363,7 +363,7 @@ function pintarControles() {
   const sb = $('btn-start'); if (sb && !flujo) sb.textContent = T('Empezar conversación', 'Start conversation');
   const gb = $('btn-gesto'); if (gb && !flujo) gb.textContent = T('Pantalla completa y empezar', 'Full screen and start');
   const gh = document.querySelector('#gesto .hint'); if (gh && !flujo) gh.textContent = T('Los navegadores piden un gesto para la voz y para el modo pantalla completa. Pulsa el botón (o la tecla F).', 'Browsers need a click for voice and full screen. Press the button (or the F key).');
-  const ub = $('btn-ui'); if (ub) { ub.textContent = uiVisible ? T('Ocultar interfaz (H)', 'Hide interface (H)') : '☰'; ub.title = uiVisible ? T('Ocultar la interfaz (tecla H)', 'Hide the interface (H key)') : T('Mostrar la interfaz (tecla H)', 'Show the interface (H key)'); }
+  const ub = $('btn-ui'); if (ub) { ub.textContent = uiVisible ? T('▲ Contraer opciones (H)', '▲ Collapse options (H)') : T('▼ Opciones', '▼ Options'); ub.title = uiVisible ? T('Contraer todas las opciones (tecla H)', 'Collapse all options (H key)') : T('Expandir las opciones (tecla H)', 'Expand the options (H key)'); ub.setAttribute('aria-expanded', uiVisible ? 'true' : 'false'); }
   const c = $('btn-carlos');
   if (c) {
     c.textContent = expertos.carlos ? T('🪑 Quitar Carlos Silva', '🪑 Remove Carlos Silva') : T('🪑 Aparecer Carlos Silva', '🪑 Bring in Carlos Silva');
@@ -800,7 +800,7 @@ async function unTurno(st) {
     const hist = { tema: (snap && snap.tema) || temaActual || TEMA_DEFECTO, turnos: (snap && snap.turnos) || [] };
     let texto;
     try {
-      texto = await askConsejero(sig.persona, promptDe(sig.persona, hist) + sufijoIdioma(idioma));
+      texto = await askConsejero(sig.persona, prefijoIdioma(idioma) + promptDe(sig.persona, hist) + sufijoIdioma(idioma));
     } catch (e) {
       estado(T('Sin respuesta de ', 'No answer from ') + sig.persona + ' (' + (e.message || e) + ').');
       // Sin backend: una línea propia del consejero (rota), nunca la misma frase en bucle para todos.

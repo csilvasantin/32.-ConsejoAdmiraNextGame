@@ -57,12 +57,52 @@
     var k = Object.keys(n);
     return k.length === 1 ? k[0] : null;
   }
-  /** porAgente de /api/consumos/velocidad + nombre elegido ('' = flota) → { agente|null, fila|null } */
+  /** 19-11 (Carlos: «Merovingio · GrokBotBox · sin datos»): /api/flota/trabajando llama «Merovingio» a la bolsa de
+   *  Cursor/Grok Bot que el pulso guarda como «Grok Bot (Consejo)» (o «Grok Bot»). Mismo agente, dos nombres. */
+  var ALIAS = { 'merovingio': ['Grok Bot (Consejo)', 'Grok Bot'], 'grok bot (consejo)': ['Merovingio', 'Grok Bot'], 'grok bot': ['Grok Bot (Consejo)', 'Merovingio'], 'jensen': ['Huang'], 'huang': ['Jensen'] };
+  function filaDe(porAgente, nombre) {
+    if (!nombre) return null;
+    var lista = porAgente || [], fila = null, cands = [nombre].concat(ALIAS[String(nombre).toLowerCase()] || []);
+    cands.forEach(function (n) { if (fila) return; lista.forEach(function (a) { if (!fila && a && a.agente === n) fila = a; }); });
+    return fila;
+  }
+  /** porAgente de /api/consumos/velocidad + nombre elegido ('' = flota) → { agente|null, fila|null } (con alias) */
   function elegirAgente(porAgente, nombre) {
     if (!nombre) return { agente: null, fila: null };
-    var fila = null;
-    (porAgente || []).forEach(function (a) { if (a && a.agente === nombre && !fila) fila = a; });
-    return { agente: nombre, fila: fila };
+    return { agente: nombre, fila: filaDe(porAgente, nombre) };
+  }
+  /** Actividad de una fila de agente: tok/h en vivo, o el estimado de Cursor, o la última hora. */
+  function actividad(a) {
+    if (!a) return 0;
+    return num(a.tokHora) || num(a.tokHoraCursor) || num(a.tokHoraRetraso) || num(a.tokUltimaHora);
+  }
+  /** 19-11 (Carlos: «inventántelos si quieres pero nunca sin datos»): cadena de respaldo de un velocímetro.
+   *  o = { tokHora, cursor, tokHoy, horasDia, ultimo:{tokHora,tokHoy}, plausible }
+   *  pulso en vivo → Cursor con retraso → media del día → último valor conocido → estimado plausible.
+   *  → { tokHora, tokHoy, estimado, fuente }  (tokHora y tokHoy SIEMPRE números ≥ 0). */
+  function respaldo(o) {
+    o = o || {};
+    var fin = function (x) { return x !== null && x !== undefined && x !== '' && isFinite(Number(x)) && Number(x) >= 0; };
+    var ult = o.ultimo || {}, horas = Math.max(0.25, Number(o.horasDia) || 0.25);
+    var tokHora, fuente = null;
+    if (fin(o.tokHora)) tokHora = Number(o.tokHora);
+    else if (fin(o.cursor)) { tokHora = Number(o.cursor); fuente = 'cursor'; }
+    else if (num(o.tokHoy) > 0) { tokHora = Math.round(num(o.tokHoy) / horas); fuente = 'media'; }
+    else if (fin(ult.tokHora)) { tokHora = Number(ult.tokHora); fuente = 'ultimo'; }
+    else { tokHora = Math.round(num(o.plausible) || 50000); fuente = 'plausible'; }
+    var tokHoy;
+    if (fin(o.tokHoy) && (Number(o.tokHoy) > 0 || !fuente)) tokHoy = Number(o.tokHoy);
+    else if (num(ult.tokHoy) > 0) { tokHoy = num(ult.tokHoy); if (!fuente) fuente = 'ultimo'; }
+    else if (fin(o.tokHoy)) tokHoy = Number(o.tokHoy);
+    else { tokHoy = Math.round(tokHora * horas); if (!fuente) fuente = 'plausible'; }
+    if (!(tokHoy > 0) && tokHora > 0 && fuente) tokHoy = Math.round(tokHora * horas);
+    return { tokHora: Math.round(tokHora), tokHoy: Math.round(tokHoy), estimado: !!fuente, fuente: fuente };
+  }
+  /** Líneas de código: reales si las hay; si 0 y hay tokens, tokens / (tok por línea de la flota o el último conocido o 5000). */
+  function lineasRespaldo(lineas, tok, ratioFlota, ratioUltimo) {
+    if (num(lineas) > 0 || !(num(tok) > 0)) return { lineas: Math.round(num(lineas)), estimado: false };
+    var r = num(ratioFlota) || num(ratioUltimo) || 5000;
+    return { lineas: Math.max(1, Math.round(num(tok) / r)), estimado: true };
   }
   /** r23: estado de una fila (proyecto o agente): verde = tok/h > 0 ahora · amarillo = tokens hoy pero 0 tok/h · rojo = sin datos hoy. */
   function estadoFila(tokHora, tokHoy) {
@@ -93,6 +133,6 @@
     return null;
   }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos };
+  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos, filaDe: filaDe, actividad: actividad, respaldo: respaldo, lineasRespaldo: lineasRespaldo };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

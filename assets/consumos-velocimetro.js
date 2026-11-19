@@ -230,6 +230,32 @@
     return dias + ' (Madrid) · ' + per.cobertura.conDatos + '/' + per.cobertura.total + T(' días con datos', ' days with data') + (Object.keys(fu).length ? ' · ' + esc(Object.keys(fu).join(' + ')) : '');
   }
   /** Ritmo medio del día en tokens/s (tokens de hoy / segundos desde la medianoche de Madrid; mínimo 10 min). */
+  /** 19-11: horas desde la medianoche de Madrid (mínimo 15 min) para la media del día del respaldo. */
+  function horasDia() { return Math.max(0.25, relojMadrid(Date.now()).s / 3600); }
+  function txtFuente(f) {
+    return f === 'cursor' ? T('Cursor con retraso', 'delayed Cursor data') : f === 'media' ? T('media del día', 'day average') :
+      f === 'ultimo' ? T('último valor conocido', 'last known value') : T('cifra aproximada', 'approximate figure');
+  }
+  /** Último valor REAL de cada velocímetro (flota, agente, proyecto), para el respaldo cuando falta el pulso. */
+  var LS_ULT = 'consumos.vel.ultimo';
+  function ultimos() { try { return JSON.parse((root.localStorage && root.localStorage.getItem(LS_ULT)) || '{}') || {}; } catch (e) { return {}; } }
+  function ultimoDe(k) { var u = ultimos()[k]; return u && Date.now() - (u.ts || 0) < 36 * 3600e3 ? u : {}; }
+  function guardaUltimo(k, tokHora, tokHoy) {
+    if (tokHora == null || !isFinite(Number(tokHora))) return;
+    try { var u = ultimos(); u[k] = { tokHora: Number(tokHora), tokHoy: Number(tokHoy) || 0, ts: Date.now() }; root.localStorage && root.localStorage.setItem(LS_ULT, JSON.stringify(u)); } catch (e) {}
+  }
+  /** Respaldo de un velocímetro: guarda lo real y, si falta, cadena Cursor → media del día → último → aproximado. */
+  function resp(k, o) {
+    o.horasDia = horasDia(); o.ultimo = ultimoDe(k);
+    var r = E.respaldo(o);
+    if (!r.estimado) guardaUltimo(k, r.tokHora, r.tokHoy);
+    return r;
+  }
+  /** Cifra aproximada para un agente o proyecto sin nada propio: su parte de la flota (o la última flota conocida). */
+  function plausibleDe(d, n) {
+    var fl = d && d.tokHora != null ? d.tokHora : ultimoDe('flota').tokHora;
+    return fl > 0 ? Math.round(fl / Math.max(1, n || 1)) : 0;
+  }
   function ritmoMedio(tokHoy) { if (tokHoy == null || !isFinite(tokHoy)) return 0; return Math.max(0, tokHoy) / Math.max(600, relojMadrid(Date.now()).s); }
   /** ¿Hay algún agente trabajando (tarjeta verde en «Trabajando ahora»)? */
   function hayVerdes() { try { return !!document.querySelector('#trabajando-lista .tr-verde, #trabajando-chips .tr-verde'); } catch (e) { return false; } }
@@ -329,8 +355,14 @@
     var self = this;
     requestAnimationFrame(function (t) { self.cuadro(t); });
   };
-  Dial.prototype.pinta = function (tokHora, max, tokHoy, sin, tokHoyVivo) {
+  Dial.prototype.pinta = function (tokHora, max, tokHoy, sin, tokHoyVivo, est) {
     var b = this.box;
+    // 19-11 (Carlos: «nunca sin datos»): si aún llega sin cifra, se rellena con el último valor del dial, etiquetado.
+    if (sin || tokHora == null || !isFinite(Number(tokHora))) {
+      var rr = E.respaldo({ tokHora: null, tokHoy: tokHoy, horasDia: horasDia(), ultimo: { tokHora: this.v, tokHoy: tokHoy }, plausible: 0 });
+      tokHora = rr.tokHora; if (tokHoy == null) tokHoy = rr.tokHoy; est = est || rr.fuente || 'plausible'; sin = false;
+    }
+    b.classList.toggle('estimado', !!est);
     b.classList.toggle('sin-datos', !!sin);
     if (max !== this.max || !b.querySelector('.vel-svg')) {
       var fracVieja = this.max ? (this.frac * this.max) / max : 0;
@@ -349,7 +381,7 @@
     odometro(b.querySelector('.odo'), tokHoy, fresco ? v : 0, fresco && (v > 0 || hayVerdes()), tokHoyVivo, this.periodo, !fresco);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
-    if (que) que.innerHTML = sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour');
+    if (que) que.innerHTML = (est ? '<small class="vel-est">' + T('estimado', 'estimated') + ' · ' + esc(txtFuente(est)) + '</small> · ' : '') + (sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour'));
   };
   root.ConsumosVelocimetroAguja = { amplitud: amplitud };
 
@@ -430,11 +462,16 @@
     var agV = agenteVer(v);
     if (agV) {
       var a = (d.hoy.porAgente || []).find(function (x) { return canonAg(x.agente) === canonAg(agV); });
-      var f = (v.porAgente || []).find(function (x) { return x.agente === agV; });
-      lin = a ? a.lineas : 0; tok = f ? f.tokHoy : null;
+      var f = E.filaDe(v.porAgente, agV);
+      if (!a && f) a = (d.hoy.porAgente || []).find(function (x) { return canonAg(x.agente) === canonAg(vis(f.agente)); });
+      lin = a ? a.lineas : 0; tok = f ? f.tokHoy : (estado.estAg && estado.estAg.agente === agV ? estado.estAg.tokHoy : null);
     } else { lin = d.hoy.total; tok = v.tokHoy; }
-    var ratio = tok > 0 && lin > 0 ? Math.round(tok / lin) : null;
-    el.innerHTML = T('Hoy', 'Today') + ': <b>' + fmt(lin) + '</b> ' + T('líneas de código', 'lines of code') + (ratio ? ' · <b>' + fmt(ratio) + '</b> tok/' + T('línea', 'line') : '');
+    // 19-11 (Carlos): con tokens y 0 líneas, líneas estimadas (tok/línea de la flota, el último conocido o 5000), etiquetadas.
+    var ratioFlota = d.hoy.total > 0 && v.tokHoy > 0 ? v.tokHoy / d.hoy.total : null;
+    if (ratioFlota) guardaUltimo('ratio-lineas', ratioFlota, 0);
+    var L = E.lineasRespaldo(lin, tok, ratioFlota, ultimoDe('ratio-lineas').tokHora);
+    var ratio = tok > 0 && L.lineas > 0 ? Math.round(tok / L.lineas) : null;
+    el.innerHTML = T('Hoy', 'Today') + ': <b>' + fmt(L.lineas) + '</b> ' + T('líneas de código', 'lines of code') + (L.estimado ? ' <small class="vel-est">' + T('estimado', 'estimated') + '</small>' : '') + (ratio ? ' · <b>' + fmt(ratio) + '</b> tok/' + T('línea', 'line') : '');
   }
   /* r31: resumen de una línea de la zona plegada «Velocidad por agente · gráficas». */
   function pintaResumen() {
@@ -478,7 +515,16 @@
     return E.elegirProyecto((d && d.porProyecto) || [], estado.proyecto);
   }
   /** #6991 (Carlos, 21-10-2026): agente que enseña el dial: el elegido a mano o, si solo hay UNO operativo, ese. */
-  function agUnico(d) { return estado.agente ? '' : (E.agenteUnicoActivo((d && d.porAgente) || [], ACT ? ACT.agentes : null) || ''); }
+  function agUnico(d) {
+    if (estado.agente) return '';
+    var pa = (d && d.porAgente) || [], u = E.agenteUnicoActivo(pa, ACT ? ACT.agentes : null);
+    if (!u) return '';
+    // 19-11: con el nombre del pulso (alias Merovingio ↔ Grok Bot (Consejo)) y solo si tiene actividad; si no, el más activo.
+    var f = E.filaDe(pa, u);
+    if (f && E.actividad(f) > 0) return f.agente;
+    var mejor = pa.slice().sort(function (a, b) { return E.actividad(b) - E.actividad(a); })[0];
+    return mejor && E.actividad(mejor) > 0 ? mejor.agente : '';
+  }
   function agenteVer(d) { return estado.agente || agUnico(d); }
   function proyectoActual(d) { return eleccion(d).proyecto; }
   function nomP(p) { return p === 'otros' ? T('otros (sin proyecto)', 'others (no project)') : p; }
@@ -498,7 +544,7 @@
   }
   // r18: familia visible «GrokBot» (igual que consumos-trabajando.js / consumos-matriz.js).
   /** #6961 (Carlos, 21-10-2026): etiqueta visible «Jensen» para la silla Huang (la silla interna sigue siendo Huang). */
-  function vis(n) { return n === 'Huang' ? 'Jensen' : n; }
+  function vis(n) { return n === 'Huang' ? 'Jensen' : n === 'Grok Bot (Consejo)' ? 'Merovingio' : n; }
   function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot').replace(/(^|· )grok(?= ·|$)/g, '$1GrokBot CLI'); }
   function nombreMotor(m) { return m === 'claude' ? 'Claude' : m === 'codex' ? 'Codex' : m === 'cursor' ? 'Cursor' : m === 'grok' ? 'GrokBot CLI' : (m || ''); }
   function txtEstado(est) { return est === 'verde' ? T('activo ahora', 'active now') : est === 'amarillo' ? T('hoy sí, ahora parado', 'today yes, idle now') : T('sin datos hoy', 'no data today'); }
@@ -559,7 +605,7 @@
     var activos = ACT ? ACT.nAgentes : nAgActivos(d), conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
     var estF = d && d.tokHora != null ? E.estadoFila(d.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
-      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('estimado', 'estimated') + (ultimoDe('flota').tokHora != null ? ' ' + fmt(ultimoDe('flota').tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : '')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     var unico = agUnico(d);
     if (unico && !ags.some(function (a) { return a.agente === unico; })) ags.push({ agente: unico, tokHora: null, tokHoy: 0, sinDatos: true });
@@ -606,8 +652,9 @@
     estado.d1.periodo = per;
     if (!r.agente) {
       max = sin ? (estado.d1.max || 2e6) : (d.escalaMax || 2e6);
-      var nOdo = per === 'hoy' ? (sin ? null : d.tokHoy) : (pd && pd.tok != null ? pd.tok : null);
-      estado.d1.pinta(sin ? 0 : d.tokHora, max, nOdo, sin, sin ? null : tokHoyVivo(d));
+      var rF = resp('flota', { tokHora: sin ? null : d.tokHora, tokHoy: sin ? null : d.tokHoy, plausible: 0 });
+      var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
+      estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
       if (tit) tit.textContent = rotAg(); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       if (rot) rot.textContent = rotuloPeriodo(per) + (per !== 'hoy' && nOdo == null ? ' · —' : '');
       if (met) met.innerHTML = per === 'hoy' ? '' : textoPeriodo(pd);
@@ -616,7 +663,8 @@
     if (per !== 'hoy') {
       // Histórico solo de la flota: con un agente elegido, fuera de HOY no hay cifra honesta → «—».
       var maxA = escala(((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0), 5e6);
-      estado.d1.pinta(r.fila ? (r.fila.tokHora || 0) : 0, maxA, null, sin || !r.fila, null);
+      var rP = resp('ag:' + r.agente, { tokHora: r.fila && r.fila.tokHora != null ? r.fila.tokHora : null, cursor: r.fila ? (tasaVista(r.fila) != null ? tasaVista(r.fila) : r.fila.tokHoraRetraso) : null, tokHoy: r.fila ? r.fila.tokHoy : null, plausible: plausibleDe(d, ((d && d.porAgente) || []).length) });
+      estado.d1.pinta(rP.tokHora, maxA, null, false, null, rP.fuente);
       if (tit) tit.textContent = rotAg();
       if (rot) rot.textContent = vis(r.agente) + ' · ' + rotuloPeriodo(per) + ' · —';
       if (met) met.textContent = T('Sin histórico por agente: AYER/SEMANA/MES solo para «Toda la flota».', 'No per-agent history: YESTERDAY/WEEK/MONTH only for «Whole fleet».');
@@ -625,13 +673,18 @@
     var f = r.fila;
     var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0);
     max = escala(maxAg, 5e6);
-    var sinA = sin || !f;
-    estado.d1.pinta(f ? (tasaVista(f) != null ? tasaVista(f) : f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA, f ? (f.conRetraso ? 0 : f.tokHoy) : null);
+    // 19-11 (Carlos: «nunca sin datos»): pulso en vivo → Cursor con retraso → media del día → último → aproximado.
+    var rA = resp('ag:' + r.agente, {
+      tokHora: f && !f.conRetraso ? (f.stale ? 0 : f.tokHora) : null,
+      cursor: f && f.conRetraso ? (tasaVista(f) != null ? tasaVista(f) : f.tokHoraRetraso) : null,
+      tokHoy: f ? f.tokHoy : null, plausible: plausibleDe(d, ((d && d.porAgente) || []).length) });
+    estado.estAg = { agente: r.agente, tokHoy: rA.tokHoy, estimado: rA.estimado };
+    estado.d1.pinta(rA.tokHora, max, rA.tokHoy, false, f && !f.conRetraso && !rA.estimado ? f.tokHoy : 0, rA.fuente);
     if (tit) tit.textContent = rotAg();
     if (rot) rot.textContent = vis(r.agente) + ' · ' + T('tokens hoy', 'tokens today');
-    if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
+    if (met) met.innerHTML = !f ? T('No aparece ahora en el pulso ni en Yokup: cifra estimada.', 'Not in the pulse or Yokup right now: estimated figure.') :
       (f.conRetraso && tasaVista(f) != null ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T(f.tokHoraCursorFuente === 'media_hoy' ? 'media de hoy' : 'última ventana publicada', f.tokHoraCursorFuente === 'media_hoy' ? 'today average' : 'last published window') + ' <b>' + fmt(tasaVista(f)) + '</b> ' + T('tokens/hora', 'tokens/hour') :
-       f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: la aguja no la cuenta', 'no live figure: not on the needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
+       f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: aguja estimada', 'no live figure: estimated needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
        f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') +
         (f.conRetraso ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('tokens/hora de la última hora con datos', 'tokens/hour of the last hour with data') : f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
     return d && d.escalaMax || max;
@@ -649,13 +702,16 @@
     // tok/h del proyecto: medido (p.tokHora), 0 si hay pulso fresco y el proyecto no aparece (medido: nadie trabaja en él), si no «sin datos».
     var rate = p ? p.tokHora : (hayPulso ? 0 : null);
     var hoy = p ? p.tokHoy : (lista.length ? 0 : null);
-    var sinP = sin || rate == null;
-    estado.d2.pinta(rate, escala(maxRate, 5e6), hoy, sinP, hoy == null ? null : Math.max(0, hoy - retrasoEnProyecto(d, nombre)));
+    // 19-11 (Carlos: «nunca sin datos»): sin pulso fresco, media del día → último → su parte de la flota, etiquetado.
+    var rPr = resp('p:' + (nombre || ''), { tokHora: sin ? null : rate, tokHoy: sin ? null : hoy, plausible: plausibleDe(d, Math.max(1, lista.length)) });
+    var estP = rPr.fuente || (p && p.estimado ? 'cursor' : null);
+    var sinP = false;
+    estado.d2.pinta(rPr.tokHora, escala(maxRate, 5e6), rPr.tokHoy, false, rPr.estimado ? 0 : Math.max(0, (hoy || 0) - retrasoEnProyecto(d, nombre)), estP);
     var nom = document.getElementById('vel-proy-nombre');
     if (nom) nom.textContent = (nombre && nomP(nombre)) || T('ningún proyecto con datos', 'no project with data');
     var met = document.getElementById('vel-proy-metodo');
     if (met) met.innerHTML = !nombre ? T('Aún no llega el desglose por proyecto de ningún Mac.', 'No per-project breakdown from any Mac yet.') :
-      sinP ? T('Sin pulso fresco que lo mida: no se enseña ninguna cifra.', 'No fresh pulse measuring it: no number is shown.') :
+      rPr.estimado ? T('Sin pulso fresco: cifra estimada', 'No fresh pulse: estimated figure') + ' (' + esc(txtFuente(rPr.fuente)) + ')' + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
       (p && p.estimado && !(p.tokUltimos15min > 0) ? T('estimado', 'estimated') + ' · ' + T('Cursor con retraso', 'delayed Cursor data') + (p.retrasoS ? ' (~' + Math.max(1, Math.round(p.retrasoS / 60)) + ' min)' : '') +
         (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
        p ? T('15 min', '15 min') + ': <b>' + fmt(p.tokUltimos15min) + '</b> tok' + (p.maquinas && p.maquinas.length ? ' · ' + esc(p.maquinas.join(', ')) : '') +
@@ -715,7 +771,7 @@
     var tpr = document.getElementById('vel-proy-titulo'); if (tpr) tpr.textContent = rotProy();
     var tag = document.getElementById('vel-ag-titulo'); if (tag) tag.textContent = rotAg();
     var met = document.getElementById('vel-metodo');
-    if (sin) met.textContent = T('Sin pulso en tiempo real y sin partes de Yokup. No se enseña ninguna cifra.', 'No real-time pulse and no Yokup reports. No number is shown.');
+    if (sin) met.textContent = T('Sin pulso en tiempo real y sin partes de Yokup: cifras estimadas (último valor conocido o aproximado).', 'No real-time pulse and no Yokup reports: estimated figures (last known or approximate).');
     else if (d.metodo === 'tiempo real') met.innerHTML = textoMetodo();
     else if (d.metodo === 'ultima-hora') met.innerHTML = '<b>' + T('Última hora', 'Last hour') + '</b> · ' + T('medido en ', 'measured over ') + esc(d.ventanaMin) + ' min';
     else met.innerHTML = '<b>' + T('Media de hoy', 'Today\'s average') + '</b> · ' + T('estimado: total de hoy / horas desde las 00:00 (Madrid)', 'estimated: today\'s total / hours since 00:00 (Madrid)');

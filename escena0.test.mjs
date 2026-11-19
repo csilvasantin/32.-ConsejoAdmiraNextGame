@@ -250,3 +250,15 @@ test('Carlos 19-11 (t111u): textos en inglés y mostrar/ocultar la interfaz', as
   assert.ok(hud.indexOf('id="btn-ui"') > hud.indexOf('id="tema-otro"'), 'btn-ui debe ser lo último del panel');
   assert.ok(hud.indexOf('id="btn-ui"') > hud.indexOf('id="btn-fs"'));
 }
+
+// t114u: una sola voz a la vez (mutex en la pestaña + aviso entre pestañas) y TTS «en»
+{
+  const fs = await import('node:fs');
+  const js = fs.readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(js, /new BroadcastChannel\('admira-escena0-voz'\)/);
+  assert.match(js, /cortarVoz\(\);\s+\/\/ mutex/);
+  assert.match(js, /avisarVoz\('arranco'\)/);
+  assert.match(js, /idioma === idiomaTurno/);
+  const tts = fs.readFileSync(new URL('./functions/api/consejo/tts.js', import.meta.url), 'utf8');
+  assert.match(tts, /lang = "en"/);
+}

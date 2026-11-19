@@ -4,7 +4,7 @@ import {
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
   quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma, prefijoIdioma,
   IDEAS_PRESET, LS_IDEA, resolverIdea,
-} from '/escena0-lib.mjs?v=20261119-debates3';
+} from '/escena0-lib.mjs?v=20261119-debates4';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -258,6 +258,22 @@ function avisoCmd(texto, ms) {
   clearTimeout(avisoCmd.t);
   if (ms) avisoCmd.t = setTimeout(() => { el.hidden = true; }, ms);
 }
+// Carlos 19-11 (t114u): «o uno u otro pero no uno encima del otro». UNA sola voz a la vez, también entre
+// pestañas/ventanas del mismo navegador: quien empieza a hablar avisa y las demás se callan; y si otra pestaña
+// arranca el consejo, esta se pone en pausa (sólo una pestaña conduce el debate).
+const TAB_VOZ = Math.random().toString(36).slice(2) + Date.now().toString(36);
+const canalVoz = (() => { try { return new BroadcastChannel('admira-escena0-voz'); } catch (e) { return null; } })();
+function avisarVoz(t) { try { if (canalVoz) canalVoz.postMessage({ t, id: TAB_VOZ, ts: Date.now() }); } catch (e) {} }
+if (canalVoz) canalVoz.onmessage = (ev) => {
+  const m = (ev && ev.data) || {};
+  if (!m.id || m.id === TAB_VOZ) return;
+  if (m.t === 'hablo') cortarVoz();
+  if (m.t === 'arranco' && enCurso) {
+    cortarVoz();
+    pararConversacion();
+    estado(T('En pausa: el consejo sigue en otra pestaña', 'Paused: the council is running in another tab'));
+  }
+};
 function cortarVoz() {
   try { if (vozFin) vozFin(); } catch (e) {}
   try { if (window.AdmiraVoces && AdmiraVoces.stop) AdmiraVoces.stop(); } catch (e) {}
@@ -778,6 +794,8 @@ function hablar(persona, texto) {
   return new Promise((resolve) => {
     const fin = () => { if (fin.done) return; fin.done = true; if (vozFin === fin) vozFin = null; resolve(); };
     if (silencio || !texto) { fin(); return; }
+    cortarVoz();          // mutex: nunca dos locuciones a la vez en esta pestaña
+    avisarVoz('hablo');   // ni en otra pestaña del mismo navegador
     vozFin = fin;
     if (window.AdmiraVoces && typeof AdmiraVoces.speak === 'function') {
       const ok = AdmiraVoces.speak(persona, String(texto).slice(0, 600), { onend: fin, onerror: fin, lang: idioma === 'en' ? 'en-US' : 'es-ES' });
@@ -799,6 +817,7 @@ async function unTurno(st) {
     const snap = local ? publicState(docLocal, Date.now()) : st;
     const hist = { tema: (snap && snap.tema) || temaActual || TEMA_DEFECTO, turnos: (snap && snap.turnos) || [] };
     let texto;
+    const idiomaTurno = idioma;
     try {
       texto = await askConsejero(sig.persona, prefijoIdioma(idioma) + promptDe(sig.persona, hist) + sufijoIdioma(idioma));
     } catch (e) {
@@ -814,7 +833,8 @@ async function unTurno(st) {
     lastSeenId = pub && pub.turno && pub.turno.id;
     pintarEscucha(pub);
     estado(sig.persona + T(' habla', ' speaking'));
-    await hablar(sig.persona, dicho);
+    // Si cambiaron el idioma mientras se escribía la frase, no se locuta (nada en el idioma viejo).
+    if (idioma === idiomaTurno && enCurso) await hablar(sig.persona, dicho);
     await new Promise((r) => setTimeout(r, 800));
   } catch (e) {
     if (e.status !== 409) estado(e.message || String(e));
@@ -864,6 +884,7 @@ function desbloquearVoz() {
 
 async function arrancarConversacion() {
   if (enCurso) { pintarControles(); return; }
+  avisarVoz('arranco');
   enCurso = true;
   autonomo = true;
   document.body.classList.add('en-curso');
@@ -883,6 +904,7 @@ async function arrancarConversacion() {
   tickTimer = setInterval(() => { if (enCurso && autonomo) tick(); }, 2000);
 }
 function pararConversacion() {
+  cortarVoz();
   autonomo = false;
   enCurso = false;
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
@@ -1132,6 +1154,7 @@ function hablarFlujo(persona, texto, idioma) {
     if (silencio || !texto || guion.sinVoz || !(window.AdmiraVoces && typeof AdmiraVoces.speak === 'function')) {
       setTimeout(fin, msLectura(texto)); return;
     }
+    cortarVoz(); avisarVoz('hablo');
     vozFin = fin;
     const ok = AdmiraVoces.speak(persona, String(texto).slice(0, 600), { onend: fin, onerror: fin });
     if (!ok) { setTimeout(fin, msLectura(texto)); return; }

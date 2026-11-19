@@ -75,7 +75,9 @@ export async function sintetizar({ request, env, waitUntil }) {
   const key = env && env.XAI_API_KEY;
   if (!key) return json({ ok: false, error: "tts no configurado" }, 503, origin);
 
-  const lang = String(pedido.lang || TTS_LANG).trim() || TTS_LANG;
+  // xAI TTS acepta «en» (no «en-US»): normalizamos para que la voz salga en inglés de verdad (Carlos 19-11, t112u).
+  let lang = String(pedido.lang || TTS_LANG).trim() || TTS_LANG;
+  if (/^en([-_]|$)/i.test(lang)) lang = "en";
   const firma = await hashKey([voz.voice_id, voz.speed, lang, texto].join("|"));
   const cacheUrl = new Request("https://tts.admira.live/grok/v1/" + firma);
   try {

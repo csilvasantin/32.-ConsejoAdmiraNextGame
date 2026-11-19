@@ -345,7 +345,24 @@ export function proyectosDePulso(docs, ahora) {
       p.tokHoy += Number(tok) || 0;
       if (doc.maquina && !p.agentes.includes(doc.maquina)) p.agentes.push(doc.maquina);
     }
-    if (m.tokHora === null) continue;
+    if (m.tokHora === null) {
+      // 19-11 (Carlos: «PROYECTOS · admiranext.com · sin datos»): un agente de Cursor (con retraso) no tiene tok/h en vivo,
+      // pero la flota ya lo cuenta como ESTIMADO (tokHoraRetraso, FLT-102599). Se reparte igual en sus proyectos (según su
+      // desglose de hoy) y se marca estimado → Σ proyectos == flota. Sin export fresco (stale) sigue «sin datos».
+      if (m.conRetraso && !m.stale) {
+        const est = Number.isFinite(m.tokHoraRetraso) ? m.tokHoraRetraso : 0;
+        const tot = Object.values(hoy).reduce((s, t) => s + (Number(t) || 0), 0);
+        for (const [proy, tok] of Object.entries(hoy)) {
+          const p = de(proy);
+          p.tokHora = (p.tokHora || 0) + (tot > 0 ? est * (Number(tok) || 0) / tot : 0);
+          p.estimado = true;
+          if (p.tokUltimaHora === null) p.tokUltimaHora = 0;
+          if (Number.isFinite(m.tokUltimaHora)) p.tokUltimaHora += tot > 0 ? m.tokUltimaHora * (Number(tok) || 0) / tot : 0;
+          p.retrasoS = Math.max(p.retrasoS || 0, m.retrasoS || 0);
+        }
+      }
+      continue;
+    }
     for (const proy of Object.keys(hoy)) { const p = de(proy); if (p.tokHora === null) p.tokHora = 0; }
     const v = ventanaAgente(a, ahora);
     // r47 (Carlos: «sale 0 proyectos»): «activo» = consumo en la ÚLTIMA HORA (como AGENTES); antes solo había tok/h de 15 min.

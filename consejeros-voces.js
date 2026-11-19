@@ -398,7 +398,7 @@
   function hablarGrok(persona, texto, opts, token) {
     var ac = typeof root.AbortController === "function" ? new root.AbortController() : null;
     var to = root.setTimeout(function () { try { if (ac) ac.abort(); } catch (e) {} }, 8000);
-    var cuerpo = { persona: persona, text: texto, lang: "es-ES" };
+    var cuerpo = { persona: persona, text: texto, lang: (opts && opts.lang) || "es-ES" };  // Escena 0 (Carlos 19-11): opts.lang "en-US" para voces en inglés
     return root.fetch(ttsUrl(), {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -465,8 +465,11 @@
       for (k = 0; k < i; k++) offset += trozos[k].length + 1;
       i++;
       var u = new root.SpeechSynthesisUtterance(trozo);
-      u.voice = p.voice;
-      u.lang = p.lang || "es-ES";
+      var enIngles = /^en/i.test(String(opts.lang || ""));
+      var vozEn = null;
+      if (enIngles) { try { vozEn = (synth.getVoices() || []).filter(function (v) { return /^en([-_]|$)/i.test(v.lang || ""); })[0] || null; } catch (e) {} }
+      u.voice = enIngles ? vozEn : p.voice;
+      u.lang = enIngles ? String(opts.lang) : (p.lang || "es-ES");
       u.rate = p.rate; u.pitch = p.pitch;
       if (opts.volume != null) u.volume = opts.volume;
       u.onstart = function () { if (!started) { started = true; if (opts.onstart) opts.onstart(p); } };

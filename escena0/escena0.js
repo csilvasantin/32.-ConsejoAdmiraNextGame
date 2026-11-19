@@ -2,7 +2,9 @@ import {
   parseMesa, MESAS, ROLES, IMG, IMG_SIN_CARLOS, comandoExperto, comandoSilencio, comandoAutonomo, comandoCerrar,
   ANCLA, TEMA_DEFECTO, TEMA_AUTONOMO, LS_SILENCIO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
-} from '/escena0-lib.mjs?v=20261116-cerrar';
+  quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma,
+  IDEAS_PRESET, LS_IDEA, resolverIdea,
+} from '/escena0-lib.mjs?v=20261119-debates';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -28,7 +30,7 @@ const imgDe = (m) => (m === 'leyendas' && !expertos.carlos ? IMG_SIN_CARLOS.leye
 const conIA = q.get('ia') === '1' && !(guion && guion.soloGuion);
 // ?lang=es|en|both (por defecto both) en los guiones bilingües (Carlos Silva ↔ Carlo Bonomi).
 const lang = parseLang(q.get('lang'), guion);
-const mesa = flujo ? 'leyendas' : parseMesa(q.get('mesa') || q.get('gen') || q.get('generation'));
+let mesa = flujo ? 'leyendas' : parseMesa(q.get('mesa') || q.get('gen') || q.get('generation'));
 let mesaVista = mesa;
 function silencioInicial() {
   if (q.get('silencio') === '1' || q.get('mute') === '1') return true;
@@ -41,6 +43,12 @@ let tickTimer = null;
 let vozFin = null;
 const demo = q.get('demo') === '1';
 const temaQ = (q.get('tema') || '').trim() || (guion ? guion.tema : '');
+// Carlos 19-11 (t108u/t109u): voces en inglés, saltar a Coetáneos y escoger el tema (el actual, por defecto).
+let idioma = parseIdioma(q.get('idioma') || q.get('voz')) || (() => { try { return parseIdioma(localStorage.getItem(LS_IDIOMA)); } catch (e) { return null; } })() || 'es';
+let ideaVal = (q.get('idea') || '').trim() || (() => { try { return localStorage.getItem(LS_IDEA) || ''; } catch (e) { return ''; } })();
+let idea = resolverIdea(ideaVal);
+let ideaGrande = false;
+let temaActual = temaQ || (() => { try { return (localStorage.getItem(LS_TEMA) || '').trim(); } catch (e) { return ''; } })() || TEMA_AUTONOMO;
 const API = '/api/consejo/escena0';
 // Carlos 16-11 09:59: la API directa del Consejo exige token (401/403) y el navegador no lo lleva, así que cada turno
 // caía al relleno «Dejadme encajar…» en bucle. Primero el proxy del Mini (/demo/consejo, pone su clave y fuerza
@@ -158,6 +166,38 @@ function montarCabecera() {
   colocarCabecera();
 }
 
+// ---- «La idea» encima de la mesa (Carlos 19-11, t110u) ----
+function colocarIdea() {
+  const el = $('idea'); if (!el) return;
+  const box = cajaArte();
+  if (!idea.on || !box || !mesaCargada() || document.body.classList.contains('flujo')) { el.hidden = true; return; }
+  el.hidden = false;
+  const img = $('idea-img');
+  if (img.getAttribute('src') !== idea.src) img.src = idea.src;
+  $('idea-pie').textContent = idioma === 'en' ? (idea.pieEn || '') : (idea.pie || '');
+  // Sobre el tablero, bajo las caras: centrada en x y desde ~52 % del arte; ampliada, casi todo el arte.
+  const ancho = ideaGrande ? 0.72 : 0.34;
+  el.style.width = (box.w * ancho) + 'px';
+  el.style.left = (box.x + box.w / 2) + 'px';
+  el.style.top = (box.y + box.h * (ideaGrande ? 0.08 : 0.52)) + 'px';
+  el.classList.toggle('grande', ideaGrande);
+}
+function setIdea(v, opts) {
+  opts = opts || {};
+  ideaVal = String(v || '').trim();
+  idea = resolverIdea(ideaVal);
+  if (!opts.noGuardar) {
+    try {
+      if (!ideaVal || ideaVal === IDEAS_PRESET[0].id) localStorage.removeItem(LS_IDEA);
+      else if (ideaVal.length < 1_500_000) localStorage.setItem(LS_IDEA, ideaVal);
+    } catch (e) {}
+  }
+  if (!idea.on) ideaGrande = false;
+  colocarIdea();
+  pintarControles();
+  return idea;
+}
+
 function verMesa(m) {
   mesaVista = m;
   document.body.setAttribute('data-mesa', m);
@@ -169,6 +209,7 @@ function verMesa(m) {
   }
   colocarCabecera();
   colocarLogo();
+  colocarIdea();
 }
 
 // ---- Modo experto: «/consejero carlos silva», «/consejero carlo bonomi» (tecleado en la propia Escena 0) ----
@@ -248,6 +289,48 @@ function pintarControles() {
     a.setAttribute('aria-pressed', autonomo ? 'true' : 'false');
     a.classList.toggle('activo', autonomo);
   }
+  const li = $('btn-idioma');
+  if (li) {
+    li.textContent = idioma === 'en' ? '🌐 Voices: English → ES' : '🌐 Voces: español → EN';
+    li.setAttribute('aria-pressed', idioma === 'en' ? 'true' : 'false');
+    li.classList.toggle('activo', idioma === 'en');
+  }
+  const bm = $('btn-mesa');
+  if (bm) {
+    const otra = mesa === 'coetaneos' ? 'leyendas' : 'coetaneos';
+    bm.textContent = idioma === 'en'
+      ? ('🔀 Go to ' + (otra === 'coetaneos' ? 'Peers (Coetáneos)' : 'Legends (Leyendas)'))
+      : ('🔀 Ir a ' + nombreMesa(otra));
+    bm.hidden = !mesa || document.body.classList.contains('flujo');
+  }
+  const st = $('sel-tema');
+  if (st) {
+    const preset = TEMAS_PRESET.find((t) => (t.tema || TEMA_AUTONOMO) === temaActual);
+    st.value = preset ? preset.id : 'otro';
+    Array.from(st.options).forEach((o) => {
+      const t = TEMAS_PRESET.find((x) => x.id === o.value);
+      if (t) o.textContent = (idioma === 'en' ? t.en : t.es);
+      else if (o.value === 'otro') o.textContent = preset ? (idioma === 'en' ? 'Other topic…' : 'Otro tema…') : ('✎ ' + temaActual.slice(0, 60));
+    });
+    const lab = $('lbl-tema'); if (lab) lab.textContent = idioma === 'en' ? 'Topic' : 'Tema';
+  }
+  const bi = $('btn-idea');
+  if (bi) {
+    bi.textContent = idea.on ? (idioma === 'en' ? '💡 Hide the idea' : '💡 Ocultar la idea') : (idioma === 'en' ? '💡 Show the idea' : '💡 Mostrar la idea');
+    bi.setAttribute('aria-pressed', idea.on ? 'true' : 'false');
+    bi.classList.toggle('activo', idea.on);
+  }
+  const si = $('sel-idea');
+  if (si) {
+    si.value = idea.id === 'url' ? 'url' : idea.id;
+    Array.from(si.options).forEach((o) => {
+      const t = IDEAS_PRESET.find((x) => x.id === o.value);
+      if (t) o.textContent = idioma === 'en' ? t.en : t.es;
+      else if (o.value === 'url') o.textContent = idea.id === 'url' ? (idioma === 'en' ? '✎ Custom image' : '✎ Imagen propia') : (idioma === 'en' ? 'Image URL…' : 'URL de imagen…');
+      else if (o.value === 'subir') o.textContent = idioma === 'en' ? 'Upload image…' : 'Subir imagen…';
+    });
+    const l = $('lbl-idea'); if (l) l.textContent = idioma === 'en' ? 'Idea' : 'Idea';
+  }
   const c = $('btn-carlos');
   if (c) {
     c.textContent = expertos.carlos ? '🪑 Quitar Carlos Silva' : '🪑 Aparecer Carlos Silva';
@@ -285,6 +368,86 @@ function cerrarVentanaShow() {
   return cerrada ? 'Ventana cerrada' : 'Cerrada';
 }
 
+// ---- Idioma, mesa y tema (Carlos 19-11, t108u/t109u) ----
+function setIdioma(v) {
+  const n = parseIdioma(v); if (!n) return idioma;
+  idioma = n;
+  try { localStorage.setItem(LS_IDIOMA, idioma); } catch (e) {}
+  cortarVoz();
+  pintarControles();
+  colocarIdea();
+  return idioma;
+}
+async function setTema(t) {
+  const tema = String(t || '').replace(/\s+/g, ' ').trim().slice(0, 240) || TEMA_AUTONOMO;
+  temaActual = tema;
+  try { if (tema === TEMA_AUTONOMO) localStorage.removeItem(LS_TEMA); else localStorage.setItem(LS_TEMA, tema); } catch (e) {}
+  if (local) docLocal.tema = tema;
+  else { try { await api('POST', { accion: 'tema', tema }); } catch (e) {} }
+  if (enCurso) estado('Consejo autónomo · ' + tema);
+  avisoCmd((idioma === 'en' ? '🗣 Topic: ' : '🗣 Tema: ') + tema, 4000);
+  pintarControles();
+  return tema;
+}
+async function cambiarMesa(m) {
+  const nueva = parseMesa(m);
+  if (!nueva || nueva === mesa || flujo) return mesa;
+  const vieja = mesa;
+  const seguia = enCurso;
+  if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  enCurso = false;
+  cortarVoz();
+  if (local) docLocal = quitarPresente(docLocal, vieja, Date.now());
+  else { try { await api('POST', { accion: 'salir', mesa: vieja }); } catch (e) {} }
+  mesa = nueva;
+  lastSeenId = null;
+  ocupado = false;
+  const g = $('globo'); if (g) g.hidden = true;
+  try { const u = new URL(location.href); u.searchParams.set('mesa', mesa); history.replaceState(null, '', u.toString()); } catch (e) {}
+  verMesa(mesa);
+  $('gesto-mesa').textContent = 'Mesa de ' + nombreMesa(mesa);
+  $('hud-mesa').textContent = 'Escena 0 · ' + nombreMesa(mesa);
+  pintarControles();
+  if (seguia) { autonomo = false; await arrancarConversacion(); }
+  return mesa;
+}
+function comandoNuevo(texto) {
+  const s = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  let m = s.match(/^\/?(idioma|lang|language|voces|voices)\s+(\S+)$/i);
+  if (m) {
+    const n = parseIdioma(m[2]);
+    if (!n) return { ok: false, texto: 'Usa /idioma en o /idioma es' };
+    setIdioma(n);
+    return { ok: true, texto: n === 'en' ? '🌐 Voices and debate in English' : '🌐 Voces y debate en español', idioma: n };
+  }
+  m = s.match(/^\/?(mesa|sala|table|room)\s+(\S+)$/i);
+  if (m) {
+    const n = parseMesa(m[2]);
+    if (!n) return { ok: false, texto: 'Usa /mesa leyendas o /mesa coetaneos' };
+    cambiarMesa(n);
+    return { ok: true, texto: '🔀 Mesa de ' + nombreMesa(n), mesa: n };
+  }
+  m = String(texto || '').trim().match(/^\/?(idea)(?:\s+(.+))?$/i);
+  if (m) {
+    const a = (m[2] || '').trim();
+    if (!a) setIdea(idea.on ? 'off' : (ideaVal && ideaVal !== 'off' ? ideaVal : IDEAS_PRESET[0].id));
+    else if (/^(off|no|fuera|ocultar|hide)$/i.test(a)) setIdea('off');
+    else if (/^(on|si|sí|mostrar|show|defecto|default)$/i.test(a)) setIdea(ideaVal && ideaVal !== 'off' && !/^(defecto|default)$/i.test(a) ? ideaVal : IDEAS_PRESET[0].id);
+    else if (/^https:\/\//i.test(a) || IDEAS_PRESET.some((x) => x.id === a)) setIdea(a);
+    else return { ok: false, texto: 'Usa /idea, /idea on|off o /idea https://…' };
+    return { ok: true, texto: idea.on ? '💡 Idea encima de la mesa' : '💡 Idea oculta', idea: idea.on };
+  }
+  m = String(texto || '').trim().match(/^\/?(tema|topic)\s+(.+)$/i);
+  if (m) {
+    const t = m[2].trim();
+    const p = TEMAS_PRESET.find((x) => x.id === t.toLowerCase());
+    const tema = /^(defecto|default|presentacion|presentación)$/i.test(t) ? TEMA_AUTONOMO : (p ? (p.tema || TEMA_AUTONOMO) : t);
+    setTema(tema);
+    return { ok: true, texto: '🗣 Tema: ' + tema };
+  }
+  return null;
+}
+
 function ejecutarExperto(texto) {
   // Devuelve {ok, texto}: lo mismo que se enseña en pantalla, para el acuse del mando remoto.
   if (/^\/?(help|ayuda|\?)$/i.test(String(texto || '').trim())) { avisoCmd(AYUDA_EXPERTO, 9000); return { ok: true, texto: 'ayuda mostrada' }; }
@@ -302,10 +465,12 @@ function ejecutarExperto(texto) {
     if (aut.error) { avisoCmd(aut.error, 4500); return { ok: false, texto: aut.error }; }
     const on = aut.on === null ? !autonomo : aut.on;
     setAutonomo(on);
-    const msg = autonomo ? '🎙 Consejo autónomo: conversan sobre ' + (temaQ || TEMA_AUTONOMO) : '⏹ Consejo autónomo en pausa';
+    const msg = autonomo ? '🎙 Consejo autónomo: conversan sobre ' + temaActual : '⏹ Consejo autónomo en pausa';
     avisoCmd(msg, 3500);
     return { ok: true, texto: msg, autonomo };
   }
+  const nuevo = comandoNuevo(texto);
+  if (nuevo) { avisoCmd(nuevo.texto, nuevo.ok ? 3500 : 4500); return nuevo; }
   const cer = comandoCerrar(texto);
   if (cer) {
     const msg = cerrarVentanaShow();
@@ -378,7 +543,7 @@ if (window.opener) { try { window.opener.postMessage({ tipo: 'escena0-lista', me
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.
-const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
+const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /idea on|off|https://… · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
 function abrirLinea() {
   let box = $('experto-linea');
   if (!box) {
@@ -574,7 +739,7 @@ function hablar(persona, texto) {
     if (silencio || !texto) { fin(); return; }
     vozFin = fin;
     if (window.AdmiraVoces && typeof AdmiraVoces.speak === 'function') {
-      const ok = AdmiraVoces.speak(persona, String(texto).slice(0, 600), { onend: fin, onerror: fin });
+      const ok = AdmiraVoces.speak(persona, String(texto).slice(0, 600), { onend: fin, onerror: fin, lang: idioma === 'en' ? 'en-US' : 'es-ES' });
       if (!ok) fin();
       return;
     }
@@ -591,10 +756,10 @@ async function unTurno(st) {
     mostrarGlobo(sig.persona, '', true);
     estado(sig.persona + ' pensando…');
     const snap = local ? publicState(docLocal, Date.now()) : st;
-    const hist = { tema: (snap && snap.tema) || temaQ || TEMA_DEFECTO, turnos: (snap && snap.turnos) || [] };
+    const hist = { tema: (snap && snap.tema) || temaActual || TEMA_DEFECTO, turnos: (snap && snap.turnos) || [] };
     let texto;
     try {
-      texto = await askConsejero(sig.persona, promptDe(sig.persona, hist));
+      texto = await askConsejero(sig.persona, promptDe(sig.persona, hist) + sufijoIdioma(idioma));
     } catch (e) {
       estado('Sin respuesta de ' + sig.persona + ' (' + (e.message || e) + '). Paso.');
       // Sin backend: una línea propia del consejero (rota), nunca la misma frase en bucle para todos.
@@ -663,7 +828,7 @@ async function arrancarConversacion() {
   if ($('gesto')) $('gesto').hidden = true;
   $('hud').hidden = false;
   desbloquearVoz();
-  const tema = temaQ || TEMA_AUTONOMO;
+  const tema = temaActual || TEMA_AUTONOMO;
   if (!local) {
     try { await api('POST', { accion: 'tema', tema }); } catch (e) {}
   } else {
@@ -700,6 +865,7 @@ function activarMesa() {
   $('hud').hidden = false;
   img.addEventListener('load', () => {
     colocarCabecera();
+    colocarIdea();
     const g = $('globo');
     if (g && !g.hidden) {
       const n = $('globo-nombre').textContent.split(' · ')[0];
@@ -724,6 +890,70 @@ function instalarControles() {
   const bind = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
   bind('btn-silencio', () => ejecutarExperto(silencio ? '/silencio off' : '/silencio on'));
   bind('btn-autonomo', () => ejecutarExperto(autonomo ? '/autonomo off' : '/autonomo on'));
+  bind('btn-idioma', () => ejecutarExperto(idioma === 'en' ? '/idioma es' : '/idioma en'));
+  bind('btn-mesa', () => ejecutarExperto('/mesa ' + (mesa === 'coetaneos' ? 'leyendas' : 'coetaneos')));
+  const st = $('sel-tema');
+  if (st && !st.options.length) {
+    TEMAS_PRESET.forEach((t) => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.es; st.appendChild(o); });
+    const o = document.createElement('option'); o.value = 'otro'; o.textContent = 'Otro tema…'; st.appendChild(o);
+    st.addEventListener('change', () => {
+      if (st.value === 'otro') {
+        // Sin window.prompt: un diálogo nativo sacaría de la pantalla completa.
+        const inp = $('tema-otro');
+        if (inp) { inp.hidden = false; inp.value = temaActual; inp.placeholder = idioma === 'en' ? 'Type a topic and press Enter' : 'Escribe el tema y pulsa Enter'; inp.focus(); inp.select(); }
+        return;
+      } else {
+        const p = TEMAS_PRESET.find((x) => x.id === st.value);
+        setTema((p && p.tema) || TEMA_AUTONOMO);
+      }
+      try { st.blur(); } catch (e) {}
+    });
+    ['keydown', 'keyup', 'keypress'].forEach((ev) => st.addEventListener(ev, (e) => e.stopPropagation()));
+    const inp = $('tema-otro');
+    if (inp) {
+      inp.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); const t = inp.value.trim(); inp.hidden = true; if (t) setTema(t); else pintarControles(); }
+        else if (e.key === 'Escape') { e.preventDefault(); inp.hidden = true; pintarControles(); }
+      });
+      ['keyup', 'keypress'].forEach((ev) => inp.addEventListener(ev, (e) => e.stopPropagation()));
+    }
+  }
+  bind('btn-idea', () => ejecutarExperto(idea.on ? '/idea off' : '/idea on'));
+  const ci = $('idea-cerrar'); if (ci) ci.addEventListener('click', (e) => { e.stopPropagation(); ejecutarExperto('/idea off'); });
+  const fi = $('idea'); if (fi) fi.addEventListener('click', () => { ideaGrande = !ideaGrande; colocarIdea(); });
+  const si = $('sel-idea');
+  if (si && !si.options.length) {
+    IDEAS_PRESET.forEach((t) => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.es; si.appendChild(o); });
+    [['url', 'URL de imagen…'], ['subir', 'Subir imagen…']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; si.appendChild(o); });
+    si.addEventListener('change', () => {
+      if (si.value === 'url') {
+        const inp = $('idea-url');
+        if (inp) { inp.hidden = false; inp.value = idea.id === 'url' && !/^data:/.test(idea.src) ? idea.src : ''; inp.placeholder = idioma === 'en' ? 'https://… image URL + Enter' : 'https://… URL de la imagen + Enter'; inp.focus(); }
+        return;
+      }
+      if (si.value === 'subir') { const f = $('idea-file'); if (f) f.click(); pintarControles(); return; }
+      setIdea(si.value);
+      try { si.blur(); } catch (e) {}
+    });
+    ['keydown', 'keyup', 'keypress'].forEach((ev) => si.addEventListener(ev, (e) => e.stopPropagation()));
+    const inp = $('idea-url');
+    if (inp) {
+      inp.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); const u = inp.value.trim(); inp.hidden = true; if (/^https:\/\//i.test(u)) setIdea(u); else pintarControles(); }
+        else if (e.key === 'Escape') { e.preventDefault(); inp.hidden = true; pintarControles(); }
+      });
+      ['keyup', 'keypress'].forEach((ev) => inp.addEventListener(ev, (e) => e.stopPropagation()));
+    }
+    const f = $('idea-file');
+    if (f) f.addEventListener('change', () => {
+      const file = f.files && f.files[0]; if (!file || !/^image\//.test(file.type)) return;
+      const rd = new FileReader();
+      rd.onload = () => { setIdea(String(rd.result || '')); f.value = ''; };
+      rd.readAsDataURL(file);
+    });
+  }
   bind('btn-carlos', () => ejecutarExperto(expertos.carlos ? '/consejero carlos silva fuera' : '/consejero carlos silva aparece'));
   bind('btn-bonomi', () => ejecutarExperto(expertos.bonomi ? '/consejero carlo bonomi fuera' : '/consejero carlo bonomi aparece'));
   pintarControles();
@@ -750,6 +980,7 @@ function arrancar() {
   });
   window.addEventListener('resize', () => {
     colocarCabecera();
+    colocarIdea();
     const n = $('globo-nombre').textContent.split(' · ')[0];
     if (n && !$('globo').hidden) colocarGlobo(n);
   });

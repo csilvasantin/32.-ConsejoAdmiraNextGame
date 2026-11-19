@@ -112,3 +112,22 @@ body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transfo
 #hud .controles-consejo { display:flex; flex-direction:column; align-items:flex-end; gap:6px; margin-top:4px; }
 #hud .controles-consejo button { font-weight:700; }
 #hud .controles-consejo button.activo { background:#3a2208; border-color:var(--oro2); color:#fff; }
+/* Carlos 19-11: idioma, mesa y tema en el HUD de Escena 0 */
+#hud .controles-consejo .tema-ctl { display:flex; align-items:center; gap:6px; font:700 12px/1 system-ui,sans-serif; color:var(--oro2); }
+#hud .controles-consejo select, #hud .controles-consejo #tema-otro {
+  max-width:300px; background:#1a140a; color:#ffd75e; border:1px solid var(--oro, #c9a227); padding:5px 8px; font:600 12px/1.2 system-ui,sans-serif; }
+#hud .controles-consejo #tema-otro { width:300px; }
+#hud .controles-consejo #tema-otro[hidden] { display:none; }
+/* «La idea» encima de la mesa (Carlos 19-11, t110u) */
+#idea { position:absolute; z-index:12; margin:0; transform:translateX(-50%); background:#0d0a05; border:2px solid var(--oro, #c9a227);
+  box-shadow:0 10px 40px rgba(0,0,0,.65), 4px 4px 0 #000; cursor:zoom-in; transition:width .25s ease, top .25s ease; }
+#idea[hidden] { display:none; }
+#idea img { display:block; width:100%; height:auto; }
+#idea figcaption { position:absolute; left:0; right:0; bottom:0; padding:3px 8px; background:rgba(10,8,4,.78); color:#ffd75e;
+  font:600 clamp(9px,.7vw,13px)/1.3 system-ui,sans-serif; letter-spacing:.03em; }
+#idea figcaption:empty { display:none; }
+#idea.grande { cursor:zoom-out; z-index:28; }
+#idea-cerrar { position:absolute; top:-12px; right:-12px; width:26px; height:26px; border-radius:50%; border:1px solid var(--oro, #c9a227);
+  background:#1a140a; color:#ffd75e; font:700 15px/1 system-ui,sans-serif; cursor:pointer; padding:0; }
+#hud .controles-consejo #idea-url { width:300px; max-width:300px; background:#1a140a; color:#ffd75e; border:1px solid var(--oro, #c9a227); padding:5px 8px; font:600 12px/1.2 system-ui,sans-serif; }
+#hud .controles-consejo #idea-url[hidden] { display:none; }

@@ -1,13 +1,13 @@
 /**
  * /api/consejo/escena0 — canal compartido de la Escena 0 (comunicación entre mesas).
  * GET  → estado público (tema, turnos, siguiente, si hay cruce).
- * POST { accion:"latido"|"reservar"|"decir"|"tema", mesa, persona?, texto?, tema? }
+ * POST { accion:"latido"|"reservar"|"decir"|"tema"|"salir", mesa, persona?, texto?, tema? }
  * Sin secretos en el cliente (kiosco). KV: CONSUMOS_KV || RECORTE_KV, clave escena0:canal:v1.
  * Escritura limitada a orígenes de admira.live y a consejeros con línea de /hablar.
  */
 import {
   KEY_CANAL, canalVacio, marcarPresente, publicState, reservar, decir, parseMesa,
-  mesaDe, limpiarTema, TEMA_DEFECTO,
+  mesaDe, limpiarTema, TEMA_DEFECTO, quitarPresente,
 } from "../../../escena0-lib.mjs";
 
 const ALLOW = new Set([
@@ -78,6 +78,12 @@ export async function onRequestPost({ request, env }) {
     await store.put(KEY_CANAL, JSON.stringify(doc), { expirationTtl: 60 * 60 * 6 });
     return json(publicState(doc, ahora), 200, origin);
   }
+  if (accion === "salir") {
+    if (!mesa) return json({ ok: false, error: "mesa inválida (leyendas|coetaneos)" }, 400, origin);
+    doc = quitarPresente(doc, mesa, ahora);
+    await store.put(KEY_CANAL, JSON.stringify(doc), { expirationTtl: 60 * 60 * 6 });
+    return json(publicState(doc, ahora), 200, origin);
+  }
   if (accion === "tema") {
     doc = { ...doc, tema: limpiarTema(body && body.tema), actualizado: ahora };
     await store.put(KEY_CANAL, JSON.stringify(doc), { expirationTtl: 60 * 60 * 6 });
@@ -102,5 +108,5 @@ export async function onRequestPost({ request, env }) {
     await store.put(KEY_CANAL, JSON.stringify(r.doc), { expirationTtl: 60 * 60 * 6 });
     return json({ ...publicState(r.doc, ahora), turno: r.turno }, 200, origin);
   }
-  return json({ ok: false, error: "acción inválida (latido|reservar|decir|tema)" }, 400, origin);
+  return json({ ok: false, error: "acción inválida (latido|reservar|decir|tema|salir)" }, 400, origin);
 }

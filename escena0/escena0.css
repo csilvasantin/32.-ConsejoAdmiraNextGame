@@ -131,3 +131,12 @@ body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transfo
   background:#1a140a; color:#ffd75e; font:700 15px/1 system-ui,sans-serif; cursor:pointer; padding:0; }
 #hud .controles-consejo #idea-url { width:300px; max-width:300px; background:#1a140a; color:#ffd75e; border:1px solid var(--oro, #c9a227); padding:5px 8px; font:600 12px/1.2 system-ui,sans-serif; }
 #hud .controles-consejo #idea-url[hidden] { display:none; }
+/* Carlos 19-11 (t111u): mostrar/ocultar la interfaz (botón discreto + tecla H) */
+#btn-ui { position:fixed; right:12px; bottom:10px; z-index:31; appearance:none; background:rgba(26,20,10,.75); color:#cbb98a;
+  border:1px solid rgba(201,162,39,.5); padding:4px 9px; font:600 11px/1.2 system-ui,sans-serif; cursor:pointer; opacity:.55; transition:opacity .2s; }
+#btn-ui:hover, #btn-ui:focus-visible { opacity:1; }
+body.ui-off #hud, body.ui-off #barra-escucha { display:none !important; }
+body.ui-off #btn-ui { opacity:.12; padding:3px 7px; }
+body.ui-off.kiosk-idle #btn-ui { opacity:0; }
+body.ui-off #btn-ui:hover { opacity:.9; }
+body.flujo #btn-ui { display:none; }

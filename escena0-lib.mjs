@@ -13,7 +13,8 @@ export const TEXTO_MAX = 600;
 
 export const MESAS = Object.freeze({
   leyendas: Object.freeze(['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas']),
-  coetaneos: Object.freeze(['Elon Musk', 'Jensen Huang']),
+  // Carlos 19-11: «saltar a coetáneos para ver a los otros consejeros» — los seis de la foto de los Coetáneos.
+  coetaneos: Object.freeze(['Elon Musk', 'Jensen Huang', 'Mira Murati', 'Jony Ive', 'John Lasseter', 'Ryan Reynolds']),
 });
 
 export const ROLES = Object.freeze({
@@ -23,6 +24,10 @@ export const ROLES = Object.freeze({
   'George Lucas': 'CSO',
   'Elon Musk': 'CEO',
   'Jensen Huang': 'CTO',
+  'Mira Murati': 'COO',
+  'Jony Ive': 'CDO',
+  'John Lasseter': 'CCO',
+  'Ryan Reynolds': 'CSO',
 });
 
 export const IMG = Object.freeze({
@@ -61,6 +66,11 @@ export const ANCLA = Object.freeze({
   coetaneos: Object.freeze({
     'Elon Musk': { x: 12.5, y: 44.722 },
     'Jensen Huang': { x: 24.375, y: 43.333 },
+    // Puntas de flecha de PAPEL_POS (consejo-globo-lib.mjs) sobre council-coetaneos.jpg.
+    'Mira Murati': { x: 37.3, y: 36.8 },
+    'Jony Ive': { x: 68.594, y: 39.444 },
+    'John Lasseter': { x: 77.188, y: 44.166 },
+    'Ryan Reynolds': { x: 89.531, y: 43.333 },
   }),
 });
 
@@ -158,6 +168,41 @@ export function marcarPresente(doc, mesa, ahora) {
   const presentes = { ...(doc.presentes || {}) };
   presentes[mesa] = ahora;
   return { ...doc, presentes, actualizado: ahora };
+}
+
+/** Carlos 19-11: al saltar de mesa en la misma pantalla, la mesa que se deja deja de contar como presente
+ *  (si no, el turno alternaría 45 s hacia una mesa que ya nadie pinta). */
+export function quitarPresente(doc, mesa, ahora) {
+  if (mesa !== 'leyendas' && mesa !== 'coetaneos') return doc;
+  const presentes = { ...(doc.presentes || {}) };
+  delete presentes[mesa];
+  const reservado = doc.reservado && doc.reservado.mesa === mesa ? null : (doc.reservado || null);
+  return { ...doc, presentes, reservado, actualizado: ahora };
+}
+
+/** Temas para el selector de Escena 0 (Carlos 19-11: «escoger el tema; el que está ahora, por defecto»). */
+export const TEMAS_PRESET = Object.freeze([
+  Object.freeze({ id: 'presentacion', es: 'Presentación PortAventuraNeXT (por defecto)', en: 'PortAventuraNeXT presentation (default)', tema: null }),
+  Object.freeze({ id: 'colaboracion', es: 'Leyendas y Coetáneos: qué hacer ahora', en: 'Legends and Peers: what to do now', tema: 'La colaboración entre las Leyendas y los Coetáneos del Consejo AdmiraNeXT: qué debemos hacer ahora.' }),
+  Object.freeze({ id: 'physical-ai', es: 'Physical AI y el legado de los Imagineers', en: 'Physical AI and the Imagineers legacy', tema: 'Physical AI en los parques: cómo continuar el legado de los Imagineers (del Enchanted Tiki Room de 1963 a hoy).' }),
+  Object.freeze({ id: 'retail-media', es: 'Retail Media+ y publicidad en el parque', en: 'Retail Media+ and advertising in the park', tema: 'Retail Media+ en un parque temático: publicidad útil para el visitante y nueva vía de ingreso por marca.' }),
+  Object.freeze({ id: 'admira-live', es: 'admira.live: equipo de silicio y de carbono', en: 'admira.live: silicon and carbon team', tema: 'Cómo hacer de admira.live la herramienta de comunicación entre el equipo de silicio (consejeros y agentes) y el de carbono.' }),
+]);
+
+/** Idioma de las voces y del texto de Escena 0: 'es' (por defecto) o 'en'. */
+export const LS_IDIOMA = 'admira_escena0_idioma';
+export const LS_TEMA = 'admira_escena0_tema';
+export function parseIdioma(v) {
+  const s = String(v || '').toLowerCase().trim();
+  if (/^(en|eng|english|ingles|inglés|en-us|en-gb)$/.test(s)) return 'en';
+  if (/^(es|esp|spanish|espanol|español|castellano|es-es)$/.test(s)) return 'es';
+  return null;
+}
+/** Instrucción de idioma que se añade al prompt cuando la mesa habla en inglés. */
+export function sufijoIdioma(idioma) {
+  return idioma === 'en'
+    ? '\n\nIMPORTANT: answer ONLY in natural spoken English (1-2 sentences), even if the topic or the previous lines are in Spanish. Keep names as they are.'
+    : '';
 }
 
 export function mesasVivas(doc, ahora, ventana = PRESENTE_MS) {

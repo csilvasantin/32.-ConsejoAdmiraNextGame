@@ -112,3 +112,9 @@ body.flujo #globo.flujo-caja.fuera, #globo.flujo-caja.fuera { opacity:0; transfo
 #hud .controles-consejo { display:flex; flex-direction:column; align-items:flex-end; gap:6px; margin-top:4px; }
 #hud .controles-consejo button { font-weight:700; }
 #hud .controles-consejo button.activo { background:#3a2208; border-color:var(--oro2); color:#fff; }
+/* Carlos 19-11: idioma, mesa y tema en el HUD de Escena 0 */
+#hud .controles-consejo .tema-ctl { display:flex; align-items:center; gap:6px; font:700 12px/1 system-ui,sans-serif; color:var(--oro2); }
+#hud .controles-consejo select, #hud .controles-consejo #tema-otro {
+  max-width:300px; background:#1a140a; color:#ffd75e; border:1px solid var(--oro, #c9a227); padding:5px 8px; font:600 12px/1.2 system-ui,sans-serif; }
+#hud .controles-consejo #tema-otro { width:300px; }
+#hud .controles-consejo #tema-otro[hidden] { display:none; }

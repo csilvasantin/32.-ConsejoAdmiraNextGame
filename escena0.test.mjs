@@ -19,7 +19,8 @@ test('parseMesa acepta leyendas/coetáneos y alias, y rechaza basura', () => {
   assert.equal(parseMesa('jobs'), null);
   assert.equal(mesaDe('Steve Jobs'), 'leyendas');
   assert.equal(mesaDe('Elon Musk'), 'coetaneos');
-  assert.equal(mesaDe('Mira Murati'), null);
+  assert.equal(mesaDe('Mira Murati'), 'coetaneos');
+  assert.equal(mesaDe('Tim Cook'), null);
 });
 
 test('una sola mesa viva: rotan entre ellos (nunca cruza a la otra)', () => {
@@ -89,7 +90,7 @@ test('prompt nombra el tema, a los de su mesa y a la otra pantalla', () => {
   assert.match(p1, /Steve Jobs: Abrimos la sala\./);
   assert.match(p1, /primera persona/);
   assert.equal(TEMA_DEFECTO.includes('AdmiraNeXT'), true);
-  assert.ok(MESAS.leyendas.length === 4 && MESAS.coetaneos.length === 2);
+  assert.ok(MESAS.leyendas.length === 4 && MESAS.coetaneos.length === 6);
 });
 
 test('escena0 · Carlos 15-11 19:42: «\\» abre la línea de modo experto dentro de la pantalla completa; /help', async () => {
@@ -195,4 +196,22 @@ test('el consejo autónomo debate la presentación de PortAventuraNeXT, no un te
   assert.match(p2, /los Coetáneos/);
   const g = promptDe('Steve Jobs', canalVacio('¿Qué pintamos en la sala?'));
   assert.doesNotMatch(g, /Publi Data/);
+});
+
+test('Carlos 19-11: quitarPresente, idioma y temas del selector', async () => {
+  const lib = await import('./escena0-lib.mjs');
+  const T1 = 1_795_000_000_000;
+  let d = lib.marcarPresente(lib.canalVacio(), 'leyendas', T1);
+  d = lib.marcarPresente(d, 'coetaneos', T1);
+  assert.deepEqual(lib.mesasVivas(d, T1 + 1), ['leyendas', 'coetaneos']);
+  d = lib.quitarPresente(d, 'leyendas', T1 + 2);
+  assert.deepEqual(lib.mesasVivas(d, T1 + 3), ['coetaneos']);
+  assert.equal(lib.siguienteSpeaker(d, T1 + 3).mesa, 'coetaneos');
+  assert.equal(lib.parseIdioma('EN'), 'en');
+  assert.equal(lib.parseIdioma('español'), 'es');
+  assert.equal(lib.parseIdioma('fr'), null);
+  assert.match(lib.sufijoIdioma('en'), /English/);
+  assert.equal(lib.sufijoIdioma('es'), '');
+  assert.equal(lib.TEMAS_PRESET[0].tema, null, 'el primero es el tema actual (TEMA_AUTONOMO) por defecto');
+  assert.ok(lib.MESAS.coetaneos.every((p) => lib.ANCLA.coetaneos[p] && lib.ROLES[p]));
 });

@@ -189,6 +189,23 @@ export const TEMAS_PRESET = Object.freeze([
   Object.freeze({ id: 'admira-live', es: 'admira.live: equipo de silicio y de carbono', en: 'admira.live: silicon and carbon team', tema: 'Cómo hacer de admira.live la herramienta de comunicación entre el equipo de silicio (consejeros y agentes) y el de carbono.' }),
 ]);
 
+/** «La idea» encima de la mesa (Carlos 19-11, t110u): gráfico flotante sobre la mesa; por defecto, el mapa
+ *  ilustrativo de PortAventura con IP (Netflix, Universal, Sony, Skydance como CONCEPTO, no acuerdos firmados). */
+export const IDEAS_PRESET = Object.freeze([
+  Object.freeze({ id: 'ip-portaventura', es: 'PortAventura con IP (4 parques)', en: 'IP-led PortAventura (4 parks)',
+    src: '/assets/escena0/idea-ip-portaventura.webp?v=20261119', pie: 'Ilustrativo · PortAventura con IP: Netflix, Universal, Sony, Skydance', pieEn: 'Illustrative · IP-led PortAventura: Netflix, Universal, Sony, Skydance' }),
+]);
+export const LS_IDEA = 'admira_escena0_idea';
+/** Valor guardado de la idea: 'off' | id de preset | URL https/ruta propia. Devuelve {on, src, pie, id}. */
+export function resolverIdea(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (s === 'off' || s === '0' || s === 'no') return { on: false, ...IDEAS_PRESET[0] };
+  const p = IDEAS_PRESET.find((x) => x.id === s);
+  if (p) return { on: true, ...p };
+  if (/^(https:\/\/|\/[^/]|data:image\/)/i.test(s)) return { on: true, id: 'url', src: s, es: 'Imagen propia', en: 'Custom image', pie: '', pieEn: '' };
+  return { on: true, ...IDEAS_PRESET[0] };
+}
+
 /** Idioma de las voces y del texto de Escena 0: 'es' (por defecto) o 'en'. */
 export const LS_IDIOMA = 'admira_escena0_idioma';
 export const LS_TEMA = 'admira_escena0_tema';

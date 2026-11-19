@@ -215,3 +215,16 @@ test('Carlos 19-11: quitarPresente, idioma y temas del selector', async () => {
   assert.equal(lib.TEMAS_PRESET[0].tema, null, 'el primero es el tema actual (TEMA_AUTONOMO) por defecto');
   assert.ok(lib.MESAS.coetaneos.every((p) => lib.ANCLA.coetaneos[p] && lib.ROLES[p]));
 });
+
+test('Carlos 19-11 (t110u): la idea encima de la mesa, por defecto PortAventura con IP', async () => {
+  const lib = await import('./escena0-lib.mjs');
+  const fs = await import('node:fs');
+  const d = lib.resolverIdea('');
+  assert.equal(d.on, true);
+  assert.equal(d.id, 'ip-portaventura');
+  assert.ok(fs.existsSync('.' + d.src.split('?')[0]), 'el gráfico por defecto está en el repo');
+  assert.ok(fs.statSync('.' + d.src.split('?')[0]).size < 500_000);
+  assert.equal(lib.resolverIdea('off').on, false);
+  assert.equal(lib.resolverIdea('https://example.com/a.png').id, 'url');
+  assert.equal(lib.resolverIdea('javascript:alert(1)').id, 'ip-portaventura');
+});

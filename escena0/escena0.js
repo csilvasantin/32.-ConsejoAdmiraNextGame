@@ -3,6 +3,7 @@ import {
   ANCLA, TEMA_DEFECTO, TEMA_AUTONOMO, LS_SILENCIO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
   quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma,
+  IDEAS_PRESET, LS_IDEA, resolverIdea,
 } from '/escena0-lib.mjs?v=20261119-debates';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
@@ -44,6 +45,9 @@ const demo = q.get('demo') === '1';
 const temaQ = (q.get('tema') || '').trim() || (guion ? guion.tema : '');
 // Carlos 19-11 (t108u/t109u): voces en inglés, saltar a Coetáneos y escoger el tema (el actual, por defecto).
 let idioma = parseIdioma(q.get('idioma') || q.get('voz')) || (() => { try { return parseIdioma(localStorage.getItem(LS_IDIOMA)); } catch (e) { return null; } })() || 'es';
+let ideaVal = (q.get('idea') || '').trim() || (() => { try { return localStorage.getItem(LS_IDEA) || ''; } catch (e) { return ''; } })();
+let idea = resolverIdea(ideaVal);
+let ideaGrande = false;
 let temaActual = temaQ || (() => { try { return (localStorage.getItem(LS_TEMA) || '').trim(); } catch (e) { return ''; } })() || TEMA_AUTONOMO;
 const API = '/api/consejo/escena0';
 // Carlos 16-11 09:59: la API directa del Consejo exige token (401/403) y el navegador no lo lleva, así que cada turno
@@ -162,6 +166,38 @@ function montarCabecera() {
   colocarCabecera();
 }
 
+// ---- «La idea» encima de la mesa (Carlos 19-11, t110u) ----
+function colocarIdea() {
+  const el = $('idea'); if (!el) return;
+  const box = cajaArte();
+  if (!idea.on || !box || !mesaCargada() || document.body.classList.contains('flujo')) { el.hidden = true; return; }
+  el.hidden = false;
+  const img = $('idea-img');
+  if (img.getAttribute('src') !== idea.src) img.src = idea.src;
+  $('idea-pie').textContent = idioma === 'en' ? (idea.pieEn || '') : (idea.pie || '');
+  // Sobre el tablero, bajo las caras: centrada en x y desde ~52 % del arte; ampliada, casi todo el arte.
+  const ancho = ideaGrande ? 0.72 : 0.34;
+  el.style.width = (box.w * ancho) + 'px';
+  el.style.left = (box.x + box.w / 2) + 'px';
+  el.style.top = (box.y + box.h * (ideaGrande ? 0.08 : 0.52)) + 'px';
+  el.classList.toggle('grande', ideaGrande);
+}
+function setIdea(v, opts) {
+  opts = opts || {};
+  ideaVal = String(v || '').trim();
+  idea = resolverIdea(ideaVal);
+  if (!opts.noGuardar) {
+    try {
+      if (!ideaVal || ideaVal === IDEAS_PRESET[0].id) localStorage.removeItem(LS_IDEA);
+      else if (ideaVal.length < 1_500_000) localStorage.setItem(LS_IDEA, ideaVal);
+    } catch (e) {}
+  }
+  if (!idea.on) ideaGrande = false;
+  colocarIdea();
+  pintarControles();
+  return idea;
+}
+
 function verMesa(m) {
   mesaVista = m;
   document.body.setAttribute('data-mesa', m);
@@ -173,6 +209,7 @@ function verMesa(m) {
   }
   colocarCabecera();
   colocarLogo();
+  colocarIdea();
 }
 
 // ---- Modo experto: «/consejero carlos silva», «/consejero carlo bonomi» (tecleado en la propia Escena 0) ----
@@ -277,6 +314,23 @@ function pintarControles() {
     });
     const lab = $('lbl-tema'); if (lab) lab.textContent = idioma === 'en' ? 'Topic' : 'Tema';
   }
+  const bi = $('btn-idea');
+  if (bi) {
+    bi.textContent = idea.on ? (idioma === 'en' ? '💡 Hide the idea' : '💡 Ocultar la idea') : (idioma === 'en' ? '💡 Show the idea' : '💡 Mostrar la idea');
+    bi.setAttribute('aria-pressed', idea.on ? 'true' : 'false');
+    bi.classList.toggle('activo', idea.on);
+  }
+  const si = $('sel-idea');
+  if (si) {
+    si.value = idea.id === 'url' ? 'url' : idea.id;
+    Array.from(si.options).forEach((o) => {
+      const t = IDEAS_PRESET.find((x) => x.id === o.value);
+      if (t) o.textContent = idioma === 'en' ? t.en : t.es;
+      else if (o.value === 'url') o.textContent = idea.id === 'url' ? (idioma === 'en' ? '✎ Custom image' : '✎ Imagen propia') : (idioma === 'en' ? 'Image URL…' : 'URL de imagen…');
+      else if (o.value === 'subir') o.textContent = idioma === 'en' ? 'Upload image…' : 'Subir imagen…';
+    });
+    const l = $('lbl-idea'); if (l) l.textContent = idioma === 'en' ? 'Idea' : 'Idea';
+  }
   const c = $('btn-carlos');
   if (c) {
     c.textContent = expertos.carlos ? '🪑 Quitar Carlos Silva' : '🪑 Aparecer Carlos Silva';
@@ -321,6 +375,7 @@ function setIdioma(v) {
   try { localStorage.setItem(LS_IDIOMA, idioma); } catch (e) {}
   cortarVoz();
   pintarControles();
+  colocarIdea();
   return idioma;
 }
 async function setTema(t) {
@@ -371,6 +426,16 @@ function comandoNuevo(texto) {
     if (!n) return { ok: false, texto: 'Usa /mesa leyendas o /mesa coetaneos' };
     cambiarMesa(n);
     return { ok: true, texto: '🔀 Mesa de ' + nombreMesa(n), mesa: n };
+  }
+  m = String(texto || '').trim().match(/^\/?(idea)(?:\s+(.+))?$/i);
+  if (m) {
+    const a = (m[2] || '').trim();
+    if (!a) setIdea(idea.on ? 'off' : (ideaVal && ideaVal !== 'off' ? ideaVal : IDEAS_PRESET[0].id));
+    else if (/^(off|no|fuera|ocultar|hide)$/i.test(a)) setIdea('off');
+    else if (/^(on|si|sí|mostrar|show|defecto|default)$/i.test(a)) setIdea(ideaVal && ideaVal !== 'off' && !/^(defecto|default)$/i.test(a) ? ideaVal : IDEAS_PRESET[0].id);
+    else if (/^https:\/\//i.test(a) || IDEAS_PRESET.some((x) => x.id === a)) setIdea(a);
+    else return { ok: false, texto: 'Usa /idea, /idea on|off o /idea https://…' };
+    return { ok: true, texto: idea.on ? '💡 Idea encima de la mesa' : '💡 Idea oculta', idea: idea.on };
   }
   m = String(texto || '').trim().match(/^\/?(tema|topic)\s+(.+)$/i);
   if (m) {
@@ -478,7 +543,7 @@ if (window.opener) { try { window.opener.postMessage({ tipo: 'escena0-lista', me
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.
-const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
+const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /idea on|off|https://… · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
 function abrirLinea() {
   let box = $('experto-linea');
   if (!box) {
@@ -800,6 +865,7 @@ function activarMesa() {
   $('hud').hidden = false;
   img.addEventListener('load', () => {
     colocarCabecera();
+    colocarIdea();
     const g = $('globo');
     if (g && !g.hidden) {
       const n = $('globo-nombre').textContent.split(' · ')[0];
@@ -853,6 +919,41 @@ function instalarControles() {
       ['keyup', 'keypress'].forEach((ev) => inp.addEventListener(ev, (e) => e.stopPropagation()));
     }
   }
+  bind('btn-idea', () => ejecutarExperto(idea.on ? '/idea off' : '/idea on'));
+  const ci = $('idea-cerrar'); if (ci) ci.addEventListener('click', (e) => { e.stopPropagation(); ejecutarExperto('/idea off'); });
+  const fi = $('idea'); if (fi) fi.addEventListener('click', () => { ideaGrande = !ideaGrande; colocarIdea(); });
+  const si = $('sel-idea');
+  if (si && !si.options.length) {
+    IDEAS_PRESET.forEach((t) => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.es; si.appendChild(o); });
+    [['url', 'URL de imagen…'], ['subir', 'Subir imagen…']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; si.appendChild(o); });
+    si.addEventListener('change', () => {
+      if (si.value === 'url') {
+        const inp = $('idea-url');
+        if (inp) { inp.hidden = false; inp.value = idea.id === 'url' && !/^data:/.test(idea.src) ? idea.src : ''; inp.placeholder = idioma === 'en' ? 'https://… image URL + Enter' : 'https://… URL de la imagen + Enter'; inp.focus(); }
+        return;
+      }
+      if (si.value === 'subir') { const f = $('idea-file'); if (f) f.click(); pintarControles(); return; }
+      setIdea(si.value);
+      try { si.blur(); } catch (e) {}
+    });
+    ['keydown', 'keyup', 'keypress'].forEach((ev) => si.addEventListener(ev, (e) => e.stopPropagation()));
+    const inp = $('idea-url');
+    if (inp) {
+      inp.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); const u = inp.value.trim(); inp.hidden = true; if (/^https:\/\//i.test(u)) setIdea(u); else pintarControles(); }
+        else if (e.key === 'Escape') { e.preventDefault(); inp.hidden = true; pintarControles(); }
+      });
+      ['keyup', 'keypress'].forEach((ev) => inp.addEventListener(ev, (e) => e.stopPropagation()));
+    }
+    const f = $('idea-file');
+    if (f) f.addEventListener('change', () => {
+      const file = f.files && f.files[0]; if (!file || !/^image\//.test(file.type)) return;
+      const rd = new FileReader();
+      rd.onload = () => { setIdea(String(rd.result || '')); f.value = ''; };
+      rd.readAsDataURL(file);
+    });
+  }
   bind('btn-carlos', () => ejecutarExperto(expertos.carlos ? '/consejero carlos silva fuera' : '/consejero carlos silva aparece'));
   bind('btn-bonomi', () => ejecutarExperto(expertos.bonomi ? '/consejero carlo bonomi fuera' : '/consejero carlo bonomi aparece'));
   pintarControles();
@@ -879,6 +980,7 @@ function arrancar() {
   });
   window.addEventListener('resize', () => {
     colocarCabecera();
+    colocarIdea();
     const n = $('globo-nombre').textContent.split(' · ')[0];
     if (n && !$('globo').hidden) colocarGlobo(n);
   });

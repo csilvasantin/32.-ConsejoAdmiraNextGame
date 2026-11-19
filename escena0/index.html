@@ -40,6 +40,7 @@ html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;p
     <img id="mesa-img" alt="Mesa del Consejo">
     <img id="logo-demo" alt="PortAventuraNeXT" hidden>
     <div id="cabecera" hidden><img id="cabecera-img" alt=""><img id="cabecera-objeto" alt="" hidden><span id="cabecera-placa" hidden></span></div>
+    <figure id="idea" hidden><img id="idea-img" alt="La idea"><figcaption id="idea-pie"></figcaption><button type="button" id="idea-cerrar" aria-label="Ocultar la idea">×</button></figure>
     <div id="globo" hidden><b id="globo-nombre"></b><p id="globo-texto"></p><p id="globo-en" lang="en" hidden></p></div>
   </div>
   <div id="barra-escucha" hidden></div>
@@ -57,6 +58,10 @@ html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;p
       <button type="button" id="btn-idioma" aria-pressed="false">🌐 Voces: español → EN</button>
       <button type="button" id="btn-mesa">🔀 Ir a Coetáneos</button>
       <label class="tema-ctl"><span id="lbl-tema">Tema</span> <select id="sel-tema" aria-label="Tema de la conversación"></select></label>
+      <button type="button" id="btn-idea" aria-pressed="true">💡 Ocultar la idea</button>
+      <label class="tema-ctl"><span id="lbl-idea">Idea</span> <select id="sel-idea" aria-label="Imagen de la idea"></select></label>
+      <input type="text" id="idea-url" maxlength="2000" autocomplete="off" spellcheck="false" hidden aria-label="URL de la imagen de la idea">
+      <input type="file" id="idea-file" accept="image/*" hidden>
       <input type="text" id="tema-otro" maxlength="240" autocomplete="off" spellcheck="false" hidden aria-label="Otro tema">
     </div>
   </div>

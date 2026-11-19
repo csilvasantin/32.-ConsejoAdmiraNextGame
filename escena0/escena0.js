@@ -44,7 +44,10 @@ let vozFin = null;
 const demo = q.get('demo') === '1';
 const temaQ = (q.get('tema') || '').trim() || (guion ? guion.tema : '');
 // Carlos 19-11 (t108u/t109u): voces en inglés, saltar a Coetáneos y escoger el tema (el actual, por defecto).
-let idioma = parseIdioma(q.get('idioma') || q.get('voz')) || (() => { try { return parseIdioma(localStorage.getItem(LS_IDIOMA)); } catch (e) { return null; } })() || 'es';
+let idioma = parseIdioma(q.get('idioma') || q.get('voz') || (guion ? '' : q.get('lang'))) || (() => { try { return parseIdioma(localStorage.getItem(LS_IDIOMA)); } catch (e) { return null; } })() || 'es';
+// Carlos 19-11 (t111u): mostrar u ocultar la interfaz (selección) para una pantalla completa limpia. ?ui=0|1, tecla H.
+const LS_UI = 'admira_escena0_ui';
+let uiVisible = (() => { const u = q.get('ui'); if (u === '0' || u === 'off') return false; if (u === '1' || u === 'on') return true; try { return localStorage.getItem(LS_UI) !== '0'; } catch (e) { return true; } })();
 let ideaVal = (q.get('idea') || '').trim() || (() => { try { return localStorage.getItem(LS_IDEA) || ''; } catch (e) { return ''; } })();
 let idea = resolverIdea(ideaVal);
 let ideaGrande = false;
@@ -59,6 +62,15 @@ const COUNCIL_API_URLS = (location.protocol === 'https:' ? [] : ['http://localho
   'https://three2-consejoadmiranextgame.onrender.com/api/council/ask-one',
 ]);
 
+const DEMO_EN = {
+  _: ['Keep it simple: one park, every story.', 'What does the visitor actually feel here? Start there.'],
+  'Steve Jobs': ['If people do not get it in one glance, it is not a product.', 'Cut everything that does not make the visitor smile.'],
+  'Steve Wozniak': ['If we cannot measure it, it is just a story.', 'Show me what is live and what is not.'],
+  'Walt Disney': ['The park has to make people feel something first.', 'Every universe needs its own magic, not just a new coat of paint.'],
+  'George Lucas': ['The hero walks in, changes, and walks out different. That is the ride.', 'If the audience loses the thread, the cut is wrong.'],
+  'Elon Musk': ['Less ceremony, more iteration. What do we ship today?', 'Simulate it first, then build it in a week.'],
+  'Jensen Huang': ['Inference has to be cheap and everywhere, not a demo.', 'The digital twin is where we decide before we touch the park.'],
+};
 const DEMO = {
   'Steve Jobs': ['El producto se entiende en un vistazo, o no es producto.', 'Que la otra mesa nos diga qué fricción ven ellos, y lo cortamos.'],
   'Steve Wozniak': ['Si no se puede medir en el Mac, es cuento.', 'Yo dejo un latido claro: qué está vivo y qué no.'],
@@ -81,7 +93,25 @@ let hideCursorT = 0;
 let ticking = false;
 
 function estado(t) { const el = $('estado'); if (el) el.textContent = t || ''; }
-function nombreMesa(m) { return m === 'coetaneos' ? 'Coetáneos' : 'Leyendas'; }
+function nombreMesa(m) { return idioma === 'en' ? (m === 'coetaneos' ? 'Peers' : 'Legends') : (m === 'coetaneos' ? 'Coetáneos' : 'Leyendas'); }
+// Carlos 19-11 (t111u): con inglés, TODOS los textos en inglés. T(es, en) elige según el idioma activo.
+const T = (es, en) => (idioma === 'en' ? en : es);
+const pareceEspanol = (t) => /[ñ¿¡áéíóú]|\b(que|los|las|del|para|una|pero|esto|como|sin|más|parque)\b/i.test(String(t || ''));
+function etiquetaTema(t) {
+  const p = TEMAS_PRESET.find((x) => (x.tema || TEMA_AUTONOMO) === t);
+  return p ? T(p.es, p.en) : t;
+}
+function setUi(on) {
+  uiVisible = !!on;
+  try { localStorage.setItem(LS_UI, uiVisible ? '1' : '0'); } catch (e) {}
+  document.body.classList.toggle('ui-off', !uiVisible);
+  pintarControles();
+  return uiVisible;
+}
+function rotularMesa() {
+  const gm = $('gesto-mesa'); if (gm && !flujo) gm.textContent = T('Mesa de ', 'Table of the ') + nombreMesa(mesa);
+  const hm = $('hud-mesa'); if (hm && !flujo && mesa) hm.textContent = 'Escena 0 · ' + nombreMesa(mesa);
+}
 
 function cajaArte() {
   const stage = $('stage'); const img = $('mesa-img');
@@ -279,28 +309,26 @@ function setAutonomo(on, opts) {
 function pintarControles() {
   const s = $('btn-silencio');
   if (s) {
-    s.textContent = silencio ? '🔊 Reactivar voces' : '🔇 Silenciar consejo';
+    s.textContent = silencio ? T('🔊 Reactivar voces', '🔊 Unmute voices') : T('🔇 Silenciar consejo', '🔇 Mute council');
     s.setAttribute('aria-pressed', silencio ? 'true' : 'false');
     s.classList.toggle('activo', silencio);
   }
   const a = $('btn-autonomo');
   if (a) {
-    a.textContent = autonomo ? '⏹ Parar consejo autónomo' : '🎙 Consejo autónomo';
+    a.textContent = autonomo ? T('⏹ Parar consejo autónomo', '⏹ Stop autonomous council') : T('🎙 Consejo autónomo', '🎙 Autonomous council');
     a.setAttribute('aria-pressed', autonomo ? 'true' : 'false');
     a.classList.toggle('activo', autonomo);
   }
   const li = $('btn-idioma');
   if (li) {
-    li.textContent = idioma === 'en' ? '🌐 Voices: English → ES' : '🌐 Voces: español → EN';
+    li.textContent = idioma === 'en' ? '🌐 Language: English · ES' : '🌐 Idioma: español · EN';
     li.setAttribute('aria-pressed', idioma === 'en' ? 'true' : 'false');
     li.classList.toggle('activo', idioma === 'en');
   }
   const bm = $('btn-mesa');
   if (bm) {
     const otra = mesa === 'coetaneos' ? 'leyendas' : 'coetaneos';
-    bm.textContent = idioma === 'en'
-      ? ('🔀 Go to ' + (otra === 'coetaneos' ? 'Peers (Coetáneos)' : 'Legends (Leyendas)'))
-      : ('🔀 Ir a ' + nombreMesa(otra));
+    bm.textContent = T('🔀 Ir a ', '🔀 Go to the ') + nombreMesa(otra);
     bm.hidden = !mesa || document.body.classList.contains('flujo');
   }
   const st = $('sel-tema');
@@ -331,15 +359,20 @@ function pintarControles() {
     });
     const l = $('lbl-idea'); if (l) l.textContent = idioma === 'en' ? 'Idea' : 'Idea';
   }
+  const fsb = $('btn-fs'); if (fsb) fsb.textContent = T('Pantalla completa (F)', 'Full screen (F)');
+  const sb = $('btn-start'); if (sb && !flujo) sb.textContent = T('Empezar conversación', 'Start conversation');
+  const gb = $('btn-gesto'); if (gb && !flujo) gb.textContent = T('Pantalla completa y empezar', 'Full screen and start');
+  const gh = document.querySelector('#gesto .hint'); if (gh && !flujo) gh.textContent = T('Los navegadores piden un gesto para la voz y para el modo pantalla completa. Pulsa el botón (o la tecla F).', 'Browsers need a click for voice and full screen. Press the button (or the F key).');
+  const ub = $('btn-ui'); if (ub) { ub.textContent = uiVisible ? T('Ocultar interfaz (H)', 'Hide interface (H)') : '☰'; ub.title = uiVisible ? T('Ocultar la interfaz (tecla H)', 'Hide the interface (H key)') : T('Mostrar la interfaz (tecla H)', 'Show the interface (H key)'); }
   const c = $('btn-carlos');
   if (c) {
-    c.textContent = expertos.carlos ? '🪑 Quitar Carlos Silva' : '🪑 Aparecer Carlos Silva';
+    c.textContent = expertos.carlos ? T('🪑 Quitar Carlos Silva', '🪑 Remove Carlos Silva') : T('🪑 Aparecer Carlos Silva', '🪑 Bring in Carlos Silva');
     c.setAttribute('aria-pressed', expertos.carlos ? 'true' : 'false');
     c.classList.toggle('activo', !!expertos.carlos);
   }
   const b = $('btn-bonomi');
   if (b) {
-    b.textContent = expertos.bonomi ? '🪑 Quitar Carlo Bonomi' : '🪑 Aparecer Carlo Bonomi';
+    b.textContent = expertos.bonomi ? T('🪑 Quitar Carlo Bonomi', '🪑 Remove Carlo Bonomi') : T('🪑 Aparecer Carlo Bonomi', '🪑 Bring in Carlo Bonomi');
     b.setAttribute('aria-pressed', expertos.bonomi ? 'true' : 'false');
     b.classList.toggle('activo', !!expertos.bonomi);
   }
@@ -374,8 +407,11 @@ function setIdioma(v) {
   idioma = n;
   try { localStorage.setItem(LS_IDIOMA, idioma); } catch (e) {}
   cortarVoz();
+  const g = $('globo'); if (g && idioma === 'en' && pareceEspanol($('globo-texto').textContent)) g.hidden = true;
+  rotularMesa();
   pintarControles();
   colocarIdea();
+  if (enCurso) estado(T('Consejo autónomo · ', 'Autonomous council · ') + etiquetaTema(temaActual));
   return idioma;
 }
 async function setTema(t) {
@@ -384,8 +420,8 @@ async function setTema(t) {
   try { if (tema === TEMA_AUTONOMO) localStorage.removeItem(LS_TEMA); else localStorage.setItem(LS_TEMA, tema); } catch (e) {}
   if (local) docLocal.tema = tema;
   else { try { await api('POST', { accion: 'tema', tema }); } catch (e) {} }
-  if (enCurso) estado('Consejo autónomo · ' + tema);
-  avisoCmd((idioma === 'en' ? '🗣 Topic: ' : '🗣 Tema: ') + tema, 4000);
+  if (enCurso) estado(T('Consejo autónomo · ', 'Autonomous council · ') + etiquetaTema(tema));
+  avisoCmd(T('🗣 Tema: ', '🗣 Topic: ') + etiquetaTema(tema), 4000);
   pintarControles();
   return tema;
 }
@@ -405,8 +441,7 @@ async function cambiarMesa(m) {
   const g = $('globo'); if (g) g.hidden = true;
   try { const u = new URL(location.href); u.searchParams.set('mesa', mesa); history.replaceState(null, '', u.toString()); } catch (e) {}
   verMesa(mesa);
-  $('gesto-mesa').textContent = 'Mesa de ' + nombreMesa(mesa);
-  $('hud-mesa').textContent = 'Escena 0 · ' + nombreMesa(mesa);
+  rotularMesa();
   pintarControles();
   if (seguia) { autonomo = false; await arrancarConversacion(); }
   return mesa;
@@ -425,7 +460,13 @@ function comandoNuevo(texto) {
     const n = parseMesa(m[2]);
     if (!n) return { ok: false, texto: 'Usa /mesa leyendas o /mesa coetaneos' };
     cambiarMesa(n);
-    return { ok: true, texto: '🔀 Mesa de ' + nombreMesa(n), mesa: n };
+    return { ok: true, texto: T('🔀 Mesa de ', '🔀 Table of the ') + nombreMesa(n), mesa: n };
+  }
+  m = s.match(/^\/?(ui|interfaz|interface|controles|hud)(?:\s+(\S+))?$/i);
+  if (m) {
+    const a = (m[2] || '').toLowerCase();
+    setUi(!a ? !uiVisible : /^(on|si|1|mostrar|show)$/.test(a));
+    return { ok: true, texto: uiVisible ? T('☰ Interfaz visible', '☰ Interface shown') : T('☰ Interfaz oculta (H para volver)', '☰ Interface hidden (H to show)') };
   }
   m = String(texto || '').trim().match(/^\/?(idea)(?:\s+(.+))?$/i);
   if (m) {
@@ -435,7 +476,7 @@ function comandoNuevo(texto) {
     else if (/^(on|si|sí|mostrar|show|defecto|default)$/i.test(a)) setIdea(ideaVal && ideaVal !== 'off' && !/^(defecto|default)$/i.test(a) ? ideaVal : IDEAS_PRESET[0].id);
     else if (/^https:\/\//i.test(a) || IDEAS_PRESET.some((x) => x.id === a)) setIdea(a);
     else return { ok: false, texto: 'Usa /idea, /idea on|off o /idea https://…' };
-    return { ok: true, texto: idea.on ? '💡 Idea encima de la mesa' : '💡 Idea oculta', idea: idea.on };
+    return { ok: true, texto: idea.on ? T('💡 Idea encima de la mesa', '💡 Idea on the table') : T('💡 Idea oculta', '💡 Idea hidden'), idea: idea.on };
   }
   m = String(texto || '').trim().match(/^\/?(tema|topic)\s+(.+)$/i);
   if (m) {
@@ -443,7 +484,7 @@ function comandoNuevo(texto) {
     const p = TEMAS_PRESET.find((x) => x.id === t.toLowerCase());
     const tema = /^(defecto|default|presentacion|presentación)$/i.test(t) ? TEMA_AUTONOMO : (p ? (p.tema || TEMA_AUTONOMO) : t);
     setTema(tema);
-    return { ok: true, texto: '🗣 Tema: ' + tema };
+    return { ok: true, texto: T('🗣 Tema: ', '🗣 Topic: ') + etiquetaTema(tema) };
   }
   return null;
 }
@@ -456,7 +497,7 @@ function ejecutarExperto(texto) {
     if (sil.error) { avisoCmd(sil.error, 4500); return { ok: false, texto: sil.error }; }
     const on = sil.on === null ? !silencio : sil.on;
     setSilencio(on);
-    const msg = silencio ? '🔇 Consejo silenciado — el texto sigue, sin voz' : '🔊 Voces del consejo reactivadas';
+    const msg = silencio ? T('🔇 Consejo silenciado — el texto sigue, sin voz', '🔇 Council muted — text continues, no voice') : T('🔊 Voces del consejo reactivadas', '🔊 Council voices back on');
     avisoCmd(msg, 3500);
     return { ok: true, texto: msg, silencio };
   }
@@ -465,7 +506,7 @@ function ejecutarExperto(texto) {
     if (aut.error) { avisoCmd(aut.error, 4500); return { ok: false, texto: aut.error }; }
     const on = aut.on === null ? !autonomo : aut.on;
     setAutonomo(on);
-    const msg = autonomo ? '🎙 Consejo autónomo: conversan sobre ' + temaActual : '⏹ Consejo autónomo en pausa';
+    const msg = autonomo ? T('🎙 Consejo autónomo: conversan sobre ', '🎙 Autonomous council: talking about ') + etiquetaTema(temaActual) : T('⏹ Consejo autónomo en pausa', '⏹ Autonomous council paused');
     avisoCmd(msg, 3500);
     return { ok: true, texto: msg, autonomo };
   }
@@ -483,8 +524,8 @@ function ejecutarExperto(texto) {
   expertos[r.quien] = on;
   aplicarExpertos();
   try { canalExpertos && canalExpertos.postMessage({ quien: r.quien, on }); } catch (e) {}
-  const msg = r.quien === 'carlos' ? (on ? '🪑 Carlos Silva aparece en las Leyendas' : '🪑 Carlos Silva desaparece de las Leyendas — queda su silla')
-    : (on ? '🪑 Carlo Bonomi aparece en la cabecera de los Coetáneos' : '🪑 Carlo Bonomi desaparece de la cabecera de los Coetáneos');
+  const msg = r.quien === 'carlos' ? (on ? T('🪑 Carlos Silva aparece en las Leyendas', '🪑 Carlos Silva joins the Legends') : T('🪑 Carlos Silva desaparece de las Leyendas — queda su silla', '🪑 Carlos Silva leaves the Legends — his chair stays'))
+    : (on ? T('🪑 Carlo Bonomi aparece en la cabecera de los Coetáneos', '🪑 Carlo Bonomi joins the head of the Peers table') : T('🪑 Carlo Bonomi desaparece de la cabecera de los Coetáneos', '🪑 Carlo Bonomi leaves the head of the Peers table'));
   avisoCmd(msg, 3500);
   pintarControles();
   return { ok: true, texto: msg, quien: r.quien, on };
@@ -543,7 +584,7 @@ if (window.opener) { try { window.opener.postMessage({ tipo: 'escena0-lista', me
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.
-const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /idea on|off|https://… · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
+const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /idea on|off|https://… · /ui on|off (tecla H) · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
 function abrirLinea() {
   let box = $('experto-linea');
   if (!box) {
@@ -603,7 +644,7 @@ window.addEventListener('keydown', (e) => {
 function mostrarGlobo(persona, texto, pensando) {
   const g = $('globo');
   $('globo-nombre').textContent = persona + (ROLES[persona] ? ' · ' + ROLES[persona] : '');
-  $('globo-texto').textContent = texto || (pensando ? 'pensando…' : '');
+  $('globo-texto').textContent = texto || (pensando ? T('pensando…', 'thinking…') : '');
   g.classList.toggle('pensando', !!pensando);
   g.hidden = false;
   colocarGlobo(persona);
@@ -618,7 +659,7 @@ function pintarEscucha(st) {
     bar.innerHTML = '<b>' + last.persona + ' · ' + nombreMesa(last.mesa) + '</b> — ' + escapeHtml(last.texto);
   } else if (st && st.cruce) {
     bar.hidden = false;
-    bar.innerHTML = 'Cruce activo: esta mesa responde a la otra pantalla.';
+    bar.innerHTML = T('Cruce activo: esta mesa responde a la otra pantalla.', 'Crossing active: this table answers the other screen.');
   } else {
     bar.hidden = true;
   }
@@ -653,7 +694,7 @@ async function latido() {
     if (e.local || e.status === 503) {
       local = true;
       docLocal = marcarPresente(docLocal, mesa, Date.now());
-      estado('Sin canal compartido: esta mesa habla entre ella.');
+      estado(T('Sin canal compartido: esta mesa habla entre ella.', 'No shared channel: this table talks among itself.'));
       return publicState(docLocal, Date.now());
     }
     throw e;
@@ -693,7 +734,7 @@ async function leer() {
 
 async function askConsejero(persona, message) {
   if (demo) {
-    const bag = DEMO[persona] || ['Seguimos.'];
+    const bag = idioma === 'en' ? (DEMO_EN[persona] || DEMO_EN._) : (DEMO[persona] || ['Seguimos.']);
     const i = demoIdx[persona] || 0;
     demoIdx[persona] = i + 1;
     await new Promise((r) => setTimeout(r, 400));
@@ -754,16 +795,16 @@ async function unTurno(st) {
   try {
     await pedirReservar(sig.persona);
     mostrarGlobo(sig.persona, '', true);
-    estado(sig.persona + ' pensando…');
+    estado(sig.persona + T(' pensando…', ' thinking…'));
     const snap = local ? publicState(docLocal, Date.now()) : st;
     const hist = { tema: (snap && snap.tema) || temaActual || TEMA_DEFECTO, turnos: (snap && snap.turnos) || [] };
     let texto;
     try {
       texto = await askConsejero(sig.persona, promptDe(sig.persona, hist) + sufijoIdioma(idioma));
     } catch (e) {
-      estado('Sin respuesta de ' + sig.persona + ' (' + (e.message || e) + '). Paso.');
+      estado(T('Sin respuesta de ', 'No answer from ') + sig.persona + ' (' + (e.message || e) + ').');
       // Sin backend: una línea propia del consejero (rota), nunca la misma frase en bucle para todos.
-      const bag = DEMO[sig.persona] || ['Seguimos.'];
+      const bag = idioma === 'en' ? (DEMO_EN[sig.persona] || DEMO_EN._) : (DEMO[sig.persona] || ['Seguimos.']);
       const i = demoIdx[sig.persona] || 0; demoIdx[sig.persona] = i + 1;
       texto = bag[i % bag.length];
     }
@@ -772,7 +813,7 @@ async function unTurno(st) {
     mostrarGlobo(sig.persona, dicho, false);
     lastSeenId = pub && pub.turno && pub.turno.id;
     pintarEscucha(pub);
-    estado(sig.persona + ' habla');
+    estado(sig.persona + T(' habla', ' speaking'));
     await hablar(sig.persona, dicho);
     await new Promise((r) => setTimeout(r, 800));
   } catch (e) {
@@ -792,10 +833,11 @@ async function tick() {
     const last = (st.turnos || []).slice(-1)[0];
     if (last && last.id !== lastSeenId) {
       lastSeenId = last.id;
-      if (last.mesa === mesa) mostrarGlobo(last.persona, last.texto, false);
+      // En inglés no se pinta una línea en español que llegue del canal compartido (otra pantalla / historial).
+      if (last.mesa === mesa && !(idioma === 'en' && pareceEspanol(last.texto))) mostrarGlobo(last.persona, last.texto, false);
     }
-    const cruce = st.cruce ? ' · cruce con la otra mesa' : ' · solo esta mesa';
-    if (!ocupado) estado((st.siguiente ? ('Siguiente: ' + st.siguiente.persona) : 'Esperando turno') + cruce);
+    const cruce = st.cruce ? T(' · cruce con la otra mesa', ' · crossing with the other table') : T(' · solo esta mesa', ' · this table only');
+    if (!ocupado) estado((st.siguiente ? (T('Siguiente: ', 'Next: ') + st.siguiente.persona) : T('Esperando turno', 'Waiting for a turn')) + cruce);
     if (st.siguiente && st.siguiente.mesa === mesa) await unTurno(st);
   } finally {
     ticking = false;
@@ -834,7 +876,7 @@ async function arrancarConversacion() {
   } else {
     docLocal.tema = tema;
   }
-  estado('Consejo autónomo · ' + tema);
+  estado(T('Consejo autónomo · ', 'Autonomous council · ') + etiquetaTema(tema));
   pintarControles();
   await tick();
   if (tickTimer) clearInterval(tickTimer);
@@ -846,7 +888,7 @@ function pararConversacion() {
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
   ocupado = false;
   document.body.classList.remove('en-curso');
-  estado('Consejo autónomo en pausa');
+  estado(T('Consejo autónomo en pausa', 'Autonomous council paused'));
 }
 async function empezar() {
   if (enCurso) { entrarFullscreen(); return; }
@@ -858,8 +900,7 @@ function activarMesa() {
   verMesa(mesa);
   montarCabecera();
   const img = $('mesa-img');
-  $('gesto-mesa').textContent = 'Mesa de ' + nombreMesa(mesa);
-  $('hud-mesa').textContent = 'Escena 0 · ' + nombreMesa(mesa);
+  rotularMesa();
   $('gesto').hidden = false;
   $('elige').hidden = true;
   $('hud').hidden = false;
@@ -890,6 +931,14 @@ function instalarControles() {
   const bind = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
   bind('btn-silencio', () => ejecutarExperto(silencio ? '/silencio off' : '/silencio on'));
   bind('btn-autonomo', () => ejecutarExperto(autonomo ? '/autonomo off' : '/autonomo on'));
+  bind('btn-ui', () => setUi(!uiVisible));
+  document.body.classList.toggle('ui-off', !uiVisible);
+  window.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    if (e.key === 'h' || e.key === 'H') { e.preventDefault(); setUi(!uiVisible); }
+  });
   bind('btn-idioma', () => ejecutarExperto(idioma === 'en' ? '/idioma es' : '/idioma en'));
   bind('btn-mesa', () => ejecutarExperto('/mesa ' + (mesa === 'coetaneos' ? 'leyendas' : 'coetaneos')));
   const st = $('sel-tema');

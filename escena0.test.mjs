@@ -228,3 +228,13 @@ test('Carlos 19-11 (t110u): la idea encima de la mesa, por defecto PortAventura 
   assert.equal(lib.resolverIdea('https://example.com/a.png').id, 'url');
   assert.equal(lib.resolverIdea('javascript:alert(1)').id, 'ip-portaventura');
 });
+
+test('Carlos 19-11 (t111u): textos en inglés y mostrar/ocultar la interfaz', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="btn-ui"/);
+  assert.match(js, /e\.key === 'h' \|\| e\.key === 'H'/);
+  assert.match(js, /DEMO_EN/);
+  assert.match(js, /T\('Pantalla completa y empezar', 'Full screen and start'\)/);
+});

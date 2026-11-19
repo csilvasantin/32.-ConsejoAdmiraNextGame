@@ -59,6 +59,7 @@
   // Siguen a un clic desde cualquier página; sus páginas no se tocan.
   var ADV = [
     { t: "🖥️ Control",  en: "🖥️ Control", h: "https://www.admira.live/control/" },
+    { t: "🕶️ Hackeo",   en: "🕶️ Hack",    h: "https://www.admira.live/hackeo" },
     { t: "📺 Players",  en: "📺 Players", h: "https://www.admira.live/players/" },
     { t: "📓 Diario",   en: "📓 Journal", h: "https://www.admira.live/diario.html" }
   ];

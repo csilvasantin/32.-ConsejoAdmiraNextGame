@@ -12,6 +12,10 @@
 <html lang="es">
 <head>
 <meta name="admiranext-version" content="AdmiraNeXT v.07.11.2026.r124.18:40" />
+    <script>/* RUTA /hackeo (Carlos 19-11-2026): www.admira.live/hackeo → /control/?hackeo=1. Abre el panel
+       «Opciones» (donde vive 🕶️ HACKEO) antes de que admira-bar.js monte los iconos. Solo enseña y
+       resalta el botón: el hackeo NO arranca solo al cargar la URL, se lanza con un clic. */
+    (function(){try{if(/[?&]hackeo(=|&|$)/.test(location.search)){localStorage.setItem("pf_left","1");document.documentElement.classList.add("hk-ruta");document.title="Hackeo · AdmiraNext Fleet";}}catch(e){}})();</script>
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20260811-r14-a6946f922157"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -479,6 +483,10 @@
   /* ===== HACKEO (portado desde la home de admira.live) ===== */
   #hackOpen{border-color:#1f6f4a}
   #hackOpen:hover{border-color:#00ff41;color:#9effb0}
+  /* Ruta /hackeo: el botón se resalta para la demo (sin arrancar nada) */
+  .hk-ruta #hackOpen{border-color:#00ff41;color:#9effb0;box-shadow:0 0 0 2px rgba(0,255,65,.35),0 0 14px rgba(0,255,65,.45);animation:hkRuta 1.6s ease-in-out infinite}
+  @keyframes hkRuta{50%{box-shadow:0 0 0 2px rgba(0,255,65,.15),0 0 4px rgba(0,255,65,.2)}}
+  @media (prefers-reduced-motion:reduce){.hk-ruta #hackOpen{animation:none}}
   #consejerosOpen{border-color:#6b5a2a}
   #consejerosOpen:hover,#consejerosOpen.active{border-color:#e8c547;color:#ffe9a0}
   #deepagentOpen{border-color:#1a4a6b}
@@ -4023,6 +4031,10 @@ function collapseAllToggle(){
   if(sessionStorage.getItem("hk_autoopen")){ sessionStorage.removeItem("hk_autoopen"); setTimeout(startHack,600); }
   else sessionStorage.removeItem("hk_recargado");
   document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", hkOpenFresh);
+  // Ruta /hackeo: lleva el botón a la vista y le da el foco. No llama a hkOpenFresh/startHack.
+  if(document.documentElement.classList.contains("hk-ruta")){ const hb=document.getElementById("hackOpen");
+    if(hb){ setTimeout(()=>{ try{ hb.scrollIntoView({block:"center"}); hb.focus({preventScroll:true}); }catch(e){} },400);
+      hb.addEventListener("click",()=>document.documentElement.classList.remove("hk-ruta"),{once:true}); } }
   document.getElementById("hackBack") && document.getElementById("hackBack").addEventListener("click", stopHack);
   { const ti=document.querySelector(".hack-title"); if(ti) ti.addEventListener("click",()=>{ if(hackMode) hkToggleAllPause(); }); }
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&hackMode) stopHack(); });

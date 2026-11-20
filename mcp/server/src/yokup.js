@@ -117,6 +117,7 @@ export async function identidadPorClaveAsync(clave, env = {}) {
 
 export function crearYokup(env = {}, identidad, deps = {}) {
   const doFetch = deps.fetch || globalThis.fetch;
+  const hubPara = (u) => (env.HUB_GUARDIA && /^https:\/\/macmini\.tail48b61c\.ts\.net\//.test(String(u))) ? { 'x-admira-hub': env.HUB_GUARDIA } : {};
   const api = limpiar(env.YOKUP_API || 'https://api.yokup.com');
   // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
   const telegram = limpiar(env.ADMIRA_TELEGRAM_URL || 'https://bot.yokup.com');
@@ -133,7 +134,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeoutMs);
     let r;
-    try { r = await enviar(url, { ...init, signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}) } }); }
+    try { r = await enviar(url, { ...init, signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}), ...hubPara(url) } }); }
     catch (e) { throw new Error(`no se pudo llegar a ${url}: ${e && e.message || e}`); }
     finally { clearTimeout(t); }
     if (binario) {

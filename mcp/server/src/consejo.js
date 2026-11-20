@@ -35,10 +35,12 @@ export function consejeros(generacion) {
   return out;
 }
 
+// Guardia del Mac Mini: el Funnel exige X-Admira-Hub (secreto HUB_GUARDIA del worker).
 const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 
 export function crearCliente(env = {}, deps = {}) {
   const doFetch = deps.fetch || globalThis.fetch;
+  const hubPara = (u) => (env.HUB_GUARDIA && /^https:\/\/macmini\.tail48b61c\.ts\.net\//.test(String(u))) ? { 'x-admira-hub': env.HUB_GUARDIA } : {};
   const councilBase = limpiar(env.COUNCIL_BASE || 'https://macmini.tail48b61c.ts.net/council');
   const fleetBase = limpiar(env.FLEET_BASE || 'https://macmini.tail48b61c.ts.net/api');
   // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
@@ -52,7 +54,7 @@ export function crearCliente(env = {}, deps = {}) {
     let response;
     try {
       response = await enviar(url, { ...init, signal: ctl.signal,
-        headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}) } });
+        headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}), ...hubPara(url) } });
     } catch (e) {
       throw new Error(`no se pudo llegar a ${url}: ${e && e.message || e}`);
     } finally { clearTimeout(t); }

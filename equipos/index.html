@@ -103,7 +103,7 @@
 </div>
 
 <script>
-const API_BASES = ["https://macmini.tail48b61c.ts.net/council", "https://three2-consejoadmiranextgame.onrender.com"];
+const API_BASES = ["/hub/council", "https://three2-consejoadmiranextgame.onrender.com"];
 const USER_COLORS = ["#7aa2ff","#5bd6c0","#ffb454","#ff8fab","#b59cff","#8ef06c","#ff6b6b","#6ee7f5"];
 const $ = s => document.querySelector(s);
 let TOKEN = localStorage.getItem("council_hack_token") || "";
@@ -128,7 +128,7 @@ async function refreshTasks(){
   const btn=$("#reftasks"); if(btn) btn.disabled=true;
   // 1) pedir a los agentes que reporten su estado/tarea actual (origin-gated, sin token)
   $("#status").textContent="📡 pidiendo estado a los agentes…";
-  try{ await fetch("https://macmini.tail48b61c.ts.net/api/agora/request-status",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal:AbortSignal.timeout(15000)}); }catch(e){}
+  try{ await fetch("/hub/api/agora/request-status",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal:AbortSignal.timeout(15000)}); }catch(e){}
   // 2) dar unos segundos a que respondan
   $("#status").textContent="⏳ esperando respuesta de los agentes…";
   await new Promise(r=>setTimeout(r,6000));

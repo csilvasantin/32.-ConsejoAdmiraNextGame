@@ -22,7 +22,7 @@ let isStaticMode = false;
 let latestSnapshots = {};
 let claudeStatus = { byId: {}, byName: {} };
 let historyEntries = [];
-const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
+const FUNNEL_URL = "/hub";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
 const DEFAULT_ONBOARDING_PROMPT =
   "Haz onboarding leyendo el repositorio onboarding de Admira Next primero. Carga el contexto compartido, identifica los repositorios activos y queda listo para continuar sin pedir de nuevo el contexto base.";

@@ -57,8 +57,8 @@ const API = '/api/consejo/escena0';
 // caía al relleno «Dejadme encajar…» en bucle. Primero el proxy del Mini (/demo/consejo, pone su clave y fuerza
 // grok-4.6, CORS admira.live), igual que app.js; la API directa queda de reserva. URLs completas de ask-one.
 const COUNCIL_API_URLS = (location.protocol === 'https:' ? [] : ['http://localhost:8420/api/council/ask-one']).concat([
-  'https://macmini.tail48b61c.ts.net/demo/consejo/ask-one',
-  'https://macmini.tail48b61c.ts.net/council/api/council/ask-one',
+  '/hub/demo/consejo/ask-one',
+  '/hub/council/api/council/ask-one',
   'https://three2-consejoadmiranextgame.onrender.com/api/council/ask-one',
 ]);
 

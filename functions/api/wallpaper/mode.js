@@ -1,3 +1,4 @@
+import { conHub } from "../../_hub.js";
 /**
  * POST /api/wallpaper/mode — proxy de mismo origen al demo-server del Mini.
  *
@@ -35,7 +36,7 @@ export function onRequestOptions({ request }) {
   return new Response(null, { status: 204, headers: corsHeaders(request.headers.get("Origin") || "") });
 }
 
-export async function onRequestPost({ request }) {
+export async function onRequestPost({ request, env }) {
   const origin = request.headers.get("Origin") || "";
   let body = "{}";
   try {
@@ -49,7 +50,7 @@ export async function onRequestPost({ request }) {
   try {
     const r = await fetch(UPSTREAM, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: conHub(env, { "content-type": "application/json", accept: "application/json" }),
       body: body || '{"mode":"consejeros","only_ids":[]}',
       signal: AbortSignal.timeout(55000),
     });

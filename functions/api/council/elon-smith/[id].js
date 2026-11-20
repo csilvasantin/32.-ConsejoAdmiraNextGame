@@ -1,3 +1,4 @@
+import { conHub } from "../../../_hub.js";
 /** GET /api/council/elon-smith/:id — compatibilidad: lee un encargo Smith ya abierto. Las preguntas nuevas a Elon van por la silla Musk (GrokBot), no por este relay. */
 const UPSTREAM = "https://macmini.tail48b61c.ts.net/api/council/elon-smith";
 
@@ -9,7 +10,7 @@ function corsHeaders(origin) {
   };
 }
 
-export async function onRequestGet({ request, params }) {
+export async function onRequestGet({ request, params, env }) {
   const id = String(params.id || "").replace(/[^\d]/g, "");
   const origin = request.headers.get("Origin") || "";
   if (!id) {
@@ -22,7 +23,7 @@ export async function onRequestGet({ request, params }) {
   const token = request.headers.get("X-Council-Token");
   if (token) headers["x-council-token"] = token;
   try {
-    const r = await fetch(`${UPSTREAM}/${id}`, { headers, signal: AbortSignal.timeout(20000) });
+    const r = await fetch(`${UPSTREAM}/${id}`, { headers: conHub(env, headers), signal: AbortSignal.timeout(20000) });
     const texto = await r.text();
     return new Response(texto, {
       status: r.status,

@@ -610,7 +610,7 @@
      5. NARRATIVA · el LLM redacta, nosotros verificamos
      ───────────────────────────────────────────────────────────────── */
 
-  const COUNCIL = 'https://macmini.tail48b61c.ts.net/council';
+  const COUNCIL = '/hub/council';
   const COUNCIL_TOKEN = '';
 
   function factsPayload(analyses) {

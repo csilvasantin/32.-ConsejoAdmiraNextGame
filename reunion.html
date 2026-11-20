@@ -175,8 +175,8 @@
     // (mixed-content) → solo HTTPS. Se prueba el primario y, si falla, los respaldos; se recuerda el que va.
     const _secure = location.protocol === 'https:';
     const COUNCIL_API_URLS = _secure
-      ? ['https://macmini.tail48b61c.ts.net/council','https://three2-consejoadmiranextgame.onrender.com']
-      : ['http://localhost:8420','http://macmini.tail48b61c.ts.net:8420','https://macmini.tail48b61c.ts.net/council','https://three2-consejoadmiranextgame.onrender.com'];
+      ? ['/hub/council','https://three2-consejoadmiranextgame.onrender.com']
+      : ['http://localhost:8420','http://macmini.tail48b61c.ts.net:8420','/hub/council','https://three2-consejoadmiranextgame.onrender.com'];
     let activeApiUrl = null;
     const API = COUNCIL_API_URLS[0];   // compat para llamadas sueltas (telegram); ask-one usa el failover
     let parts=[], moderated=false, M={history:[],turn:0,running:false,max:8,acta:null,actaBusy:false,tgSent:false};

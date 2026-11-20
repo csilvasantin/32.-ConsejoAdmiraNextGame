@@ -154,7 +154,7 @@
     function ageMin(ts){ if(!ts) return Infinity; const t=Date.parse(ts); if(isNaN(t)) return Infinity; return (Date.now()-t)/60000; }
     function agoLabel(m){ if(m===Infinity) return ""; if(m<1) return "ahora"; if(m<60) return Math.round(m)+"m"; if(m<1440) return Math.round(m/60)+"h"; return Math.round(m/1440)+"d"; }
 
-    const API="https://macmini.tail48b61c.ts.net/council";
+    const API="/hub/council";
     async function fetchOperatorToken(){
       try{ const r=await fetch("https://macmini.tail48b61c.ts.net:8443/optoken/token",{signal:AbortSignal.timeout(2500)}); if(!r.ok)return null; const d=await r.json(); return d&&d.token?d.token:null; }catch(e){ return null; }
     }

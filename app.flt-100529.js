@@ -131,11 +131,11 @@
             });
         })();
 
-    const CONTROL_API = "https://macmini.tail48b61c.ts.net/api/machines";
-    const TEAMWORK_SNAPSHOTS_API = "https://macmini.tail48b61c.ts.net/api/teamwork/snapshots";
+    const CONTROL_API = "/hub/api/machines";
+    const TEAMWORK_SNAPSHOTS_API = "/hub/api/teamwork/snapshots";
     const GITHUB_FALLBACK = "https://raw.githubusercontent.com/csilvasantin/03.-ControlCodexClaude/main/data/machines.json";
-    const DEMO_API = "https://macmini.tail48b61c.ts.net/demo/status";
-    const DEMO_PING = "https://macmini.tail48b61c.ts.net/demo/ping";
+    const DEMO_API = "/hub/demo/status";
+    const DEMO_PING = "/hub/demo/ping";
     // En GitHub Pages nunca tocar Tailscale — abre la app en macOS al resolver el DNS
     const ON_GITHUB_PAGES = location.hostname.endsWith("github.io");
 
@@ -573,7 +573,7 @@
             let thumbHtml;
             if (demoMode && machineIdAttr) {
                 const cachedSrc = lastThumbSrc[machineIdAttr];
-                const thumbSrc = cachedSrc || `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineIdAttr}?t=${Date.now()}`;
+                const thumbSrc = cachedSrc || `/hub/demo/screenshot/${machineIdAttr}?t=${Date.now()}`;
                 const liveCls = isOnline ? ' live' : '';
                 const now = new Date().toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"});
                 thumbHtml = `<div class="screen-wrap">
@@ -735,7 +735,7 @@
 
     let lastCheckTime = null;
 
-    const DEMO_TOGGLE = "https://macmini.tail48b61c.ts.net/demo/toggle/";
+    const DEMO_TOGGLE = "/hub/demo/toggle/";
     // Cache last known good thumbnail src per machine (survives offline)
     const lastThumbSrc = {};
     // Timestamp de la ultima captura buena por maquina
@@ -806,7 +806,7 @@
         const machine = machineStatus[machineId];
         const isOnline = machine && machine.online;
 
-        img.src = `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
+        img.src = `/hub/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
 
         // Build label: always show a timestamp
         function buildLabel() {
@@ -836,7 +836,7 @@
         if (isOnline) {
             overlay._refreshInterval = setInterval(() => {
                 if (overlay.classList.contains("visible")) {
-                    img.src = `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
+                    img.src = `/hub/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
                     lbl.innerHTML = buildLabel();
                 }
             }, 5000);
@@ -1706,7 +1706,7 @@
     }
     async function sendToMachine(machineName, message, target) {
         target = (target === "terminal" || target === "claude") ? target : "claude";  // por defecto la app Claude (Claude Code de escritorio)
-        const base = "https://macmini.tail48b61c.ts.net";
+        const base = "/hub";
         const body = { machineId: machineName, prompt: message, target: target };
         setActionLine("📨 Enviando a " + machineName + " (" + target + ") — escribiéndolo en su Claude Code…");
         try {
@@ -3926,7 +3926,7 @@
     const isSecure = location.protocol === 'https:';
     const COUNCIL_API_URLS = isSecure
         ? [
-            'https://macmini.tail48b61c.ts.net/council',          // Tailscale Funnel HTTPS
+            '/hub/council',          // Tailscale Funnel HTTPS
             'https://three2-consejoadmiranextgame.onrender.com',  // Render HTTPS
         ]
         : [
@@ -3935,8 +3935,8 @@
             'https://three2-consejoadmiranextgame.onrender.com',
         ];
     const AGORA_COUNCIL_API_URLS = isSecure
-        ? ['https://macmini.tail48b61c.ts.net']
-        : ['http://localhost:3030', 'https://macmini.tail48b61c.ts.net'];
+        ? ['/hub']
+        : ['http://localhost:3030', '/hub'];
         const YAR_DONE_BLOCK_START = '[YAR_DONE]';
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
@@ -4935,8 +4935,8 @@
     // ── MIRAR: el vídeo está superpuesto a la imagen del consejo, su poster (primer
     //          fotograma) ya muestra el Apple II en la mesa. MIRAR + click reproduce
     //          el vídeo en su sitio, sin abrir nada nuevo.
-    const VIDEO_SRC    = "https://macmini.tail48b61c.ts.net/council/presentations/ConsejoAppleII.mp4";
-    const VIDEO_POSTER = "https://macmini.tail48b61c.ts.net/council/presentations/ConsejoAppleII.mp4.png";
+    const VIDEO_SRC    = "/hub/council/presentations/ConsejoAppleII.mp4";
+    const VIDEO_POSTER = "/hub/council/presentations/ConsejoAppleII.mp4.png";
 
     function enterMirarMode() {
         const hotspot = document.getElementById("apple-ii-hotspot");
@@ -6707,7 +6707,7 @@
     {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
     {name:"Carlos Ratti",persona:"Link"}
   ];
-  var API = "https://macmini.tail48b61c.ts.net/api/agora/coetaneos?limit=24";
+  var API = "/hub/api/agora/coetaneos?limit=24";
   var panel=document.getElementById('agm-panel'), head=document.getElementById('agm-head'),
       feedEl=document.getElementById('agm-feed'), presEl=document.getElementById('agm-presence'),
       briefEl=document.getElementById('agm-brief'), askBtn=document.getElementById('agm-ask-status'),
@@ -6760,7 +6760,7 @@
     _wrT2=setTimeout(function(){ if(_wrPending){ wrText.textContent='sin respuesta de '+target+' aún — quizá esté ocupado'; _wrT2=setTimeout(agmClearWaiting,8000); } }, 75000);
   }
   async function postAgora(t, restoreInput){ if(!t) return false;
-    try{ var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/say",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,from:'Consejo'})}); var d=await r.json();
+    try{ var r=await fetch("/hub/api/agora/say",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,from:'Consejo'})}); var d=await r.json();
       if(!(r.ok&&d.ok)){ if(restoreInput!==undefined) input.value=restoreInput; alert('No se pudo enviar: '+((d&&d.error)||r.status)); return false; }
       setTimeout(tick,900); return true; }
     catch(e){ if(restoreInput!==undefined) input.value=restoreInput; alert('Sin conexion con AgoraMatrix'); }
@@ -6789,7 +6789,7 @@
     askBtn.disabled=true;
     var msg='Agentes, reportad estado ahora con este formato exacto: <Persona> · <maquina> · <estado/tarea actual>. Ejemplo: Neo · MacBook-Pro-16.local · en curso: publicando web. Responde cada uno en AgoraMatrix.';
     try{
-      var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/request-status",{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      var r=await fetch("/hub/api/agora/request-status",{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
       var d=await r.json();
       if(!(r.ok&&d&&d.ok)) await postAgora(msg);
       else setTimeout(tick,900);
@@ -6880,7 +6880,7 @@
 })();
 
 (function(){
-  var API="https://macmini.tail48b61c.ts.net";
+  var API="/hub";
   // Token de ESCRITURA: las tareas mandan comandos a las máquinas, así que crear/dispatch/
   // finalizar exigen token (no va en el código; se pide una vez y se guarda en localStorage).
   function ctoken(force){

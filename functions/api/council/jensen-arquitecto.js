@@ -1,3 +1,4 @@
+import { conHub } from "../../_hub.js";
 /**
  * /api/council/jensen-arquitecto — alias de compatibilidad.
  * Preguntar a Jensen ya no pasa por aquí: la silla es Huang en GrokBot (igual que
@@ -34,7 +35,7 @@ export function onRequestOptions({ request }) {
   return new Response(null, { status: 204, headers: corsHeaders(request.headers.get("Origin") || "") });
 }
 
-async function relay(request, upstream) {
+async function relay(request, upstream, env) {
   const origin = request.headers.get("Origin") || "";
   const headers = { accept: "application/json" };
   const token = request.headers.get("X-Council-Token");
@@ -48,7 +49,7 @@ async function relay(request, upstream) {
   try {
     const r = await fetch(upstream, {
       method: request.method,
-      headers,
+      headers: conHub(env, headers),
       body: request.method === "POST" ? (body || "{}") : undefined,
       signal: AbortSignal.timeout(25000),
     });
@@ -72,8 +73,8 @@ async function relay(request, upstream) {
   }
 }
 
-export function onRequestPost({ request }) {
-  return relay(request, UPSTREAM);
+export function onRequestPost({ request, env }) {
+  return relay(request, UPSTREAM, env);
 }
 
 export function onRequestGet() {

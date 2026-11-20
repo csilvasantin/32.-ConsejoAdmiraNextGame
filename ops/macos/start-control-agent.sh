@@ -38,13 +38,16 @@ heal_tailscale_route() {
 
   local current=""
   current="$("$TAILSCALE_BIN" funnel status 2>/dev/null || true)"
-  if grep -Fq "proxy http://127.0.0.1:3030" <<<"$current"; then
-    echo "Tailscale Funnel ya apunta a 127.0.0.1:3030"
+  # 2026-11-20: /api puede ir por la guardia 127.0.0.1:9161 (→3030); también vale.
+  if grep -Eq "/api +proxy http://127\.0\.0\.1:(3030|9161)" <<<"$current"; then
+    echo "Tailscale Funnel ya sirve /api (directo o por la guardia)"
     return 0
   fi
 
-  echo "Reparando Tailscale Funnel -> 127.0.0.1:3030"
-  "$TAILSCALE_BIN" funnel --bg 3030 >/dev/null
+  # NUNCA `funnel --bg 3030` ni `serve` sobre :443: el primero sustituye TODO el mapa
+  # (borra /fleet) y el segundo apaga el Funnel del puerto. Solo se añade /api por la guardia.
+  echo "Funnel sin /api; se añade por la guardia sin pisar el resto"
+  "$TAILSCALE_BIN" funnel --bg --https=443 --set-path /api http://127.0.0.1:9161/api >/dev/null 2>&1 || true
 }
 
 wait_for_local_api() {

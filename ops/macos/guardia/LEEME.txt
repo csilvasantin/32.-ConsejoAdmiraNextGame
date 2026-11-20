@@ -1,0 +1,9 @@
+Guardia del Funnel del Mac Mini (2026-11-20)
+- guardia.js escucha en 127.0.0.1:9161 (LaunchAgent com.admiranext.guardia).
+- Peticiones del Funnel (cabecera Tailscale-Funnel-Request) exigen X-Admira-Hub = ~/.fleet/hub-guardia.key (600).
+  La tailnet pasa sin cabecera. /fleet, /webcam y /terminales no pasan por la guardia.
+- Rutas por la guardia: / (→18789), /claw-gateway, /api y /proofs (→3030), /demo (→3032),
+  /council y /pixtube (→8420), /suno (→3777), /admira (→9132).
+- Navegador: admira.live/hub/* (detrás de la puerta) añade la cabecera (secreto Pages HUB_GUARDIA).
+- Usar SIEMPRE `tailscale funnel --bg --https=443 --set-path ...`. `serve` o `... off` sobre :443 apagan el Funnel entero.
+- Copia del serve previo: ~/guardia/backup/serve-*.json en el Mac Mini.

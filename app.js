@@ -1026,23 +1026,25 @@
     // Alineado con data/machines.json. El backend abre Terminal en las Macs con
     // ssh.enabled; los PC Windows (platform:"win") salen en el overlay (la acción
     // real por SSH requiere OpenSSH activado en cada PC — hoy off en la flota).
+    // Puerta de servidor (20-11-2026): el HACKEO es decorado. Sin IP ni usuarios SSH reales
+    // en el navegador; el backend actúa por id con data/machines.json privado.
     const HACK_MACHINES = [
-        { id: "admira-macmini",           role: "Coordinación central", persona: "Mac Mini",           ip: "100.74.101.14",        host: "macmini",             user: "csilvasantin" },
-        { id: "admira-macbookairnines",   role: "Operaciones",          persona: "MacBook Air Nines",  ip: "macbookairnines",      host: "macbookairnines",     user: "csilvasantin" },
-        { id: "admira-macbookpronegro14", role: "Desarrollo y pruebas", persona: "MacBook Pro 14",     ip: "100.101.192.1",        host: "macbookpronegro14",   user: "csilvasantin" },
-        { id: "admira-macbookpro16",      role: "Agente operativo",     persona: "MacBook Pro 16",     ip: "100.114.181.54",       host: "macbook-pro-16",      user: "csilvasantin" },
-        { id: "admira-macbookair16",      role: "Dirección",            persona: "MacBook Air 16",     ip: "macbookair16",         host: "macbookair16",        user: "csilvasantin" },
-        { id: "admira-macbookairluna",    role: "Coordinación",         persona: "MacBook Air Luna",   ip: "macbookairluna",       host: "macbookairluna",      user: "csilvasantin" },
-        { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "csilvasantin" },
-        { id: "admira-macbookairrosa",    role: "Equipo nuevo",         persona: "MacBook Air Rosa",   ip: "macbookairrosa",       host: "macbookairrosa",      user: "csilvasantin" },
-        { id: "admira-macbookairazul",    role: "Equipo nuevo",         persona: "MacBook Air Azul",   ip: "macbookairazul",       host: "macbookairazul",      user: "csilvasantin" },
+        { id: "admira-macmini",           role: "Coordinación central", persona: "Mac Mini",           ip: "macmini",        host: "macmini",             user: "admira" },
+        { id: "admira-macbookairnines",   role: "Operaciones",          persona: "MacBook Air Nines",  ip: "macbookairnines",      host: "macbookairnines",     user: "admira" },
+        { id: "admira-macbookpronegro14", role: "Desarrollo y pruebas", persona: "MacBook Pro 14",     ip: "macbookpronegro14",        host: "macbookpronegro14",   user: "admira" },
+        { id: "admira-macbookpro16",      role: "Agente operativo",     persona: "MacBook Pro 16",     ip: "macbook-pro-16",       host: "macbook-pro-16",      user: "admira" },
+        { id: "admira-macbookair16",      role: "Dirección",            persona: "MacBook Air 16",     ip: "macbookair16",         host: "macbookair16",        user: "admira" },
+        { id: "admira-macbookairluna",    role: "Coordinación",         persona: "MacBook Air Luna",   ip: "macbookairluna",       host: "macbookairluna",      user: "admira" },
+        { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "admira" },
+        { id: "admira-macbookairrosa",    role: "Equipo nuevo",         persona: "MacBook Air Rosa",   ip: "macbookairrosa",       host: "macbookairrosa",      user: "admira" },
+        { id: "admira-macbookairazul",    role: "Equipo nuevo",         persona: "MacBook Air Azul",   ip: "macbookairazul",       host: "macbookairazul",      user: "admira" },
         // PC Windows de la flota (platform:"win" → guion cmd/PowerShell en el overlay)
-        { id: "admira-pcsitges3monitores", role: "Operación · Sitges",   persona: "PC Sitges 3 Mon.",   ip: "192.168.0.118",        host: "OmenGdG",             user: "csilvasantin", platform: "win" },
-        { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
-        { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
-        { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
-        { id: "admira-pccocina",           role: "Cocina · Morfeo (Windows)", persona: "PC Cocina",    ip: "pc-cocina",            host: "PC-COCINA",           user: "carla", platform: "win" },
-        { id: "admira-metaverso",          role: "Metaverso · Windows",  persona: "PC Metaverso",       ip: "metaverso",            host: "METAVERSO",           user: "metaverso", platform: "win" },
+        { id: "admira-pcsitges3monitores", role: "Operación · Sitges",   persona: "PC Sitges 3 Mon.",   ip: "omengdg",        host: "OmenGdG",             user: "admira", platform: "win" },
+        { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "admira", platform: "win" },
+        { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "admira", platform: "win" },
+        { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "admira", platform: "win" },
+        { id: "admira-pccocina",           role: "Cocina · Morfeo (Windows)", persona: "PC Cocina",    ip: "pc-cocina",            host: "PC-COCINA",           user: "admira", platform: "win" },
+        { id: "admira-metaverso",          role: "Metaverso · Windows",  persona: "PC Metaverso",       ip: "metaverso",            host: "METAVERSO",           user: "admira", platform: "win" },
     ];
 
     function fillHackLine(line, machine) {

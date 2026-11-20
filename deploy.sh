@@ -170,9 +170,19 @@ rm -rf "$TMP"
 # VERIFICACION POST-DESPLIEGUE (NeoMBP14, 01-09-2026). Publicar no es funcionar: se comprueba
 # por el camino del usuario (www, no pages.dev) que la barra recien sellada responde 200, y se
 # avisa si la zona sigue pisando el Cache-Control de _headers.
+# PUERTA DE SERVIDOR (20-11-2026): sin sesión www da 401. Las comprobaciones entran con la llave
+# de kiosco de la flota si este equipo la tiene (~/.fleet/admira-live-kiosco.llave, 600; nunca se imprime).
+PUERTA_JAR="$(mktemp)"; trap 'rm -f "$PUERTA_JAR"' EXIT
+if [ -r "$HOME/.fleet/admira-live-kiosco.llave" ]; then
+  curl -s -o /dev/null -c "$PUERTA_JAR" --max-time 20 -G "https://www.admira.live/puerta/kiosco" \
+    --data-urlencode "k@$HOME/.fleet/admira-live-kiosco.llave" --data-urlencode "a=/" || true
+  sleep 1
+fi
+SIN_SESION="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://www.admira.live/failover.js?comprobar=$(date +%s)")"
+if [ "$SIN_SESION" = "401" ]; then echo "  ✓ puerta de servidor: sin sesión responde 401"; else echo "  ✗ puerta de servidor: sin sesión responde $SIN_SESION (debería ser 401)" >&2; fi
 VER_URL="https://www.admira.live/admira-bar.js?v=$(printf '%s' "$SELLO" | sed 's/^v\.//; s/://g')"
 sleep 5
-VER="$(curl -sI -A "Mozilla/5.0" --max-time 20 "$VER_URL" | tr -d '\r')"
+VER="$(curl -sI -b "$PUERTA_JAR" -A "Mozilla/5.0" --max-time 20 "$VER_URL" | tr -d '\r')"
 VER_CODE="$(printf '%s' "$VER" | sed -n 's|^HTTP/[0-9.]* \([0-9]*\).*|\1|p' | head -1)"
 VER_CC="$(printf '%s' "$VER" | sed -n 's/^[Cc]ache-[Cc]ontrol: //p' | head -1)"
 if [ "$VER_CODE" = "200" ]; then
@@ -191,13 +201,13 @@ fi
 # este proyecto de Pages, Cloudflare devuelve el HTML de la home (200, ~250 KB)
 # y el navegador no ejecuta controlIdFor. GitHub Pages no es este origen.
 MID_BODY="$(mktemp)"
-MID_META="$(curl -sS -A "Mozilla/5.0" --max-time 20 -D - -o "$MID_BODY" "https://www.admira.live/fleet-control/machine-id.js" || true)"
+MID_META="$(curl -sS -b "$PUERTA_JAR" -A "Mozilla/5.0" --max-time 20 -D - -o "$MID_BODY" "https://www.admira.live/fleet-control/machine-id.js" || true)"
 MID_CODE="$(printf '%s' "$MID_META" | sed -n 's|^HTTP/[0-9.]* \([0-9]*\).*|\1|p' | head -1)"
 MID_TYPE="$(printf '%s' "$MID_META" | sed -n 's/^[Cc]ontent-[Tt]ype: //p' | head -1 | tr -d '\r')"
 MID_HEAD="$(head -c 80 "$MID_BODY" 2>/dev/null || true)"
 rm -f "$MID_BODY"
 if [ "$MID_CODE" = "200" ] && printf '%s' "$MID_TYPE" | grep -qi javascript && ! printf '%s' "$MID_HEAD" | grep -q '<!DOCTYPE'; then
-  if curl -fsS -A "Mozilla/5.0" --max-time 20 "https://www.admira.live/fleet-control/machine-id.js" | grep -q 'controlIdFor'; then
+  if curl -fsS -b "$PUERTA_JAR" -A "Mozilla/5.0" --max-time 20 "https://www.admira.live/fleet-control/machine-id.js" | grep -q 'controlIdFor'; then
     echo "  ✓ machine-id.js es JavaScript y define controlIdFor"
   else
     echo "  ✗ machine-id.js respondió como JS pero no contiene controlIdFor" >&2

@@ -424,7 +424,7 @@
       if(!token){ token=await fetchOperatorToken()||""; if(token) localStorage.setItem("council_hack_token",token); }
       if(!token) return;  // sin token: se quedan los valores estáticos
       try{
-        const r=await fetch("https://macmini.tail48b61c.ts.net/council/api/council/teams",{headers:{"X-Council-Hack-Token":token},signal:AbortSignal.timeout(9000)});
+        const r=await fetch("/hub/council/api/council/teams",{headers:{"X-Council-Hack-Token":token},signal:AbortSignal.timeout(9000)});
         if(!r.ok) return;
         const d=await r.json();
         const asgs=d.assignments||{};
@@ -451,7 +451,7 @@
     // Chat con el consejero: enruta por AgoraMatrix a su agente (Codex/Claude/OpenCode)
     // en su máquina; el agente responde en persona y se refleja en Telegram. El hilo se
     // lee del council-api. Si el backend (fase 2) aún no responde, queda en "pendiente".
-    const CHAT_API="https://macmini.tail48b61c.ts.net/council";
+    const CHAT_API="/hub/council";
     function setupChat(c, ctx){
       const st=document.getElementById("chatStatus"), inp=document.getElementById("chatInput"),
             btn=document.getElementById("chatSend"), form=document.getElementById("chatForm"),

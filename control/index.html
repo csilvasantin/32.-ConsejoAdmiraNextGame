@@ -3420,7 +3420,7 @@ function collapseAllToggle(){
 (function(){
   const isSecure = location.protocol === 'https:';
   const COUNCIL_API_URLS = isSecure
-    ? ['https://macmini.tail48b61c.ts.net/council','https://three2-consejoadmiranextgame.onrender.com']
+    ? ['/hub/council','https://three2-consejoadmiranextgame.onrender.com']
     : ['http://localhost:8420','http://macmini.tail48b61c.ts.net:8420','https://three2-consejoadmiranextgame.onrender.com'];
   const COUNCIL_API_TOKEN = "";
   let activeApiUrl = null, hackMode = false, hackIntervals = [], MY_TAILNET_IP = "";
@@ -3560,7 +3560,7 @@ function collapseAllToggle(){
   // equipos elegidos para el hackeo (vacío = toda la flota, como siempre)
   const HK_SEL=new Set();
   window.__HK_SEL=HK_SEL;
-  const HACKEO_API = "https://macmini.tail48b61c.ts.net/demo";
+  const HACKEO_API = "/hub/demo";
 
   // Velocidad y guion del hackeo. Persisten entre sesiones y se pueden cambiar en
   // caliente: la velocidad multiplica el ritmo de tecleo de TODOS los paneles a la vez.

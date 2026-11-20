@@ -1,3 +1,4 @@
+import { conHub } from "../../../_hub.js";
 /** GET /api/council/jensen-arquitecto/:id — compatibilidad: lee un run de ArquitectoCursorCloud ya abierto. Las preguntas nuevas a Jensen van por la silla Huang (GrokBot), no por este relay. */
 const UPSTREAM = "https://macmini.tail48b61c.ts.net/api/council/jensen-arquitecto";
 
@@ -9,7 +10,7 @@ function corsHeaders(origin) {
   };
 }
 
-export async function onRequestGet({ request, params }) {
+export async function onRequestGet({ request, params, env }) {
   const id = String(params.id || "");
   const origin = request.headers.get("Origin") || "";
   if (!/^bc-[0-9a-f-]{8,80}$/i.test(id)) {
@@ -22,7 +23,7 @@ export async function onRequestGet({ request, params }) {
   const token = request.headers.get("X-Council-Token");
   if (token) headers["x-council-token"] = token;
   try {
-    const r = await fetch(`${UPSTREAM}/${id}`, { headers, signal: AbortSignal.timeout(20000) });
+    const r = await fetch(`${UPSTREAM}/${id}`, { headers: conHub(env, headers), signal: AbortSignal.timeout(20000) });
     const texto = await r.text();
     return new Response(texto, {
       status: r.status,

@@ -4,7 +4,7 @@ import {
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
   quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma, prefijoIdioma,
   IDEAS_PRESET, LS_IDEA, resolverIdea,
-} from '/escena0-lib.mjs?v=20261119-debates4';
+} from '/escena0-lib.mjs?v=20261120-idea-off';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -218,7 +218,7 @@ function setIdea(v, opts) {
   idea = resolverIdea(ideaVal);
   if (!opts.noGuardar) {
     try {
-      if (!ideaVal || ideaVal === IDEAS_PRESET[0].id) localStorage.removeItem(LS_IDEA);
+      if (!ideaVal || ideaVal === 'off') localStorage.removeItem(LS_IDEA); // por defecto ya es «sin idea» (t117u)
       else if (ideaVal.length < 1_500_000) localStorage.setItem(LS_IDEA, ideaVal);
     } catch (e) {}
   }

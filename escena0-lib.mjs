@@ -203,7 +203,8 @@ export function resolverIdea(v) {
   const p = IDEAS_PRESET.find((x) => x.id === s);
   if (p) return { on: true, ...p };
   if (/^(https:\/\/|\/[^/]|data:image\/)/i.test(s)) return { on: true, id: 'url', src: s, es: 'Imagen propia', en: 'Custom image', pie: '', pieEn: '' };
-  return { on: true, ...IDEAS_PRESET[0] };
+  // Carlos 20-11 (t117u): «por defecto es sin idea». Vacío o desconocido → apagada (sigue disponible como opción).
+  return { on: false, ...IDEAS_PRESET[0] };
 }
 
 /** Idioma de las voces y del texto de Escena 0: 'es' (por defecto) o 'en'. */

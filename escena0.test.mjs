@@ -220,13 +220,14 @@ test('Carlos 19-11 (t110u): la idea encima de la mesa, por defecto PortAventura 
   const lib = await import('./escena0-lib.mjs');
   const fs = await import('node:fs');
   const d = lib.resolverIdea('');
-  assert.equal(d.on, true);
+  assert.equal(d.on, false, 't117u: por defecto sin idea');
   assert.equal(d.id, 'ip-portaventura');
+  assert.equal(lib.resolverIdea('ip-portaventura').on, true);
   assert.ok(fs.existsSync('.' + d.src.split('?')[0]), 'el gráfico por defecto está en el repo');
   assert.ok(fs.statSync('.' + d.src.split('?')[0]).size < 500_000);
   assert.equal(lib.resolverIdea('off').on, false);
   assert.equal(lib.resolverIdea('https://example.com/a.png').id, 'url');
-  assert.equal(lib.resolverIdea('javascript:alert(1)').id, 'ip-portaventura');
+  assert.equal(lib.resolverIdea('javascript:alert(1)').on, false);
 });
 
 test('Carlos 19-11 (t111u): textos en inglés y mostrar/ocultar la interfaz', async () => {

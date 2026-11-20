@@ -15,6 +15,14 @@ rm -f "$TMP/machines.json" "$TMP/docs/machines.json" "$TMP"/data/machines.json* 
       "$TMP"/fleet-control/fleet.json* "$TMP"/*.py "$TMP"/*.sh "$TMP/HANDOFF.md" "$TMP/docs/CONSEJO-TOKEN.md"
 rm -rf "$TMP/ops" "$TMP/src" "$TMP/workers" "$TMP/.wrangler" "$TMP/chatgpt-bridge"
 rm -f "$TMP"/fleet/*.py "$TMP"/fleet/*.sh
+# PUERTA DE SERVIDOR (Jony, 20-11-2026 · OK Carlos): tampoco salen copias de seguridad (el censo
+# viejo con IP/MAC/SSH estaba en backups/), el código de servidor de FleetControl (el navegador solo
+# usa machine-id.js), el código del servidor MCP, los diarios y notas .md, ni los tests.
+rm -rf "$TMP/backups" "$TMP/mcp/server" "$TMP/fleet-control/dgx" "$TMP/fleet-control/windows-capture-agent"
+find "$TMP/fleet-control" -type f ! -name 'machine-id.js' -delete 2>/dev/null || true
+find "$TMP" -type f \( -name '*.test.js' -o -name '*.test.mjs' -o -name '*.spec.js' -o -name '*.bak' \) -delete
+find "$TMP/diario" "$TMP/docs" -type f -name '*.md' ! -name 'mcp-evidencia-encargos.md' -delete 2>/dev/null || true
+rm -f "$TMP/README.md" "$TMP"/*.md
 # El censo se publica SANEADO (solo lo que pintan los paneles: nada de IP, MAC, SSH, FQDN ni notas).
 python3 - "$TMP" <<'CENSO'
 import json, pathlib, sys

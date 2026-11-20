@@ -29,7 +29,10 @@
   window.admiraGateCredential = function () { return ""; };
   window.admiraGateLogout = function () {
     return fetch(AUTH_API + "/auth/logout", { method:"POST", credentials:"include", cache:"no-store", headers:{"X-Fleet-CSRF":gateCsrf} })
-      .catch(function () {}).then(function () { gateUser=null; location.reload(); });
+      .catch(function () {})
+      // Puerta de servidor (20-11-2026): también se cierra la cookie de www.
+      .then(function () { return fetch("/puerta/salir", { method:"POST", credentials:"same-origin", cache:"no-store", redirect:"manual" }).catch(function () {}); })
+      .then(function () { gateUser=null; location.reload(); });
   };
 
   // ===== estado =====
@@ -423,9 +426,38 @@
   // Una cookie válida desbloquea sin exponer el token a JavaScript.
   // Persona: hace falta csrf. Agente: solo si agent && readOnly, y sin csrf.
   // Si no hay sesión, se monta el login de Google. Nunca One Tap/FedCM silencioso.
+  // ===== PUERTA DE SERVIDOR (Jony, 20-11-2026 · OK Carlos) =====
+  // Sin la cookie de www el servidor solo entrega esta verja (window.ADMIRA_PUERTA). Con sesión
+  // humana válida en FleetControl se pide un ticket de un minuto y se canjea en /puerta/entrar;
+  // el servidor lo comprueba contra FleetControl y firma la cookie. Luego se recarga la página
+  // real. Las pantallas que ya tenían sesión entran solas, sin tocar nada.
+  function avisoVerja(msg) {
+    ready(function () { setTimeout(function () { var el = document.getElementById("admira-err"); if (el) el.textContent = "✖ " + msg; }, (CONNECT_SECONDS + 0.4) * 1000); });
+  }
+  function abrirPuerta(csrf) {
+    // Freno de bucle: un contador de intentos (no es credencial) en una cookie de 2 minutos.
+    var n = Number((document.cookie.match(/(?:^|;\s*)admira_puerta_intentos=(\d+)/) || [])[1] || 0);
+    if (n >= 3) { loadGoogle(); avisoVerja("NO SE PUDO ABRIR LA PUERTA. RECARGA EN DOS MINUTOS."); return; }
+    document.cookie = "admira_puerta_intentos=" + (n + 1) + "; Max-Age=120; Path=/; Secure; SameSite=Lax";
+    fetch(AUTH_API + "/auth/yokup-ticket", { method:"POST", credentials:"include", cache:"no-store", headers:{"Content-Type":"application/json","X-Fleet-CSRF":csrf}, body:"{}" })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("ticket")); })
+      .then(function (d) {
+        if (!d || !d.ticket) throw new Error("ticket");
+        return fetch("/puerta/entrar", { method:"POST", credentials:"same-origin", cache:"no-store", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ ticket:String(d.ticket) }) });
+      })
+      .then(function (r) { if (!r.ok) throw new Error("puerta"); location.reload(); })
+      .catch(function () { loadGoogle(); avisoVerja("NO SE PUDO ABRIR LA PUERTA. VUELVE A ENTRAR."); });
+  }
+
   fetch(AUTH_API + "/auth/session", { credentials:"include", cache:"no-store" })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
+      if (window.ADMIRA_PUERTA) {
+        if (sesionPersona(d)) { abrirPuerta(String(d.csrf)); return; }
+        loadGoogle();
+        if (sesionAgenteLectura(d)) avisoVerja("AGENTE: ENTRA CON POST /puerta/agente (CLAVE DE AGENTE).");
+        return;
+      }
       if (sesionAgenteLectura(d)) { entrarAgente(d); return; }
       if (d && d.ok === true && d.agent === true) { loadGoogle(); return; }
       if (sesionPersona(d)) {

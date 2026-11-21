@@ -139,14 +139,14 @@ test("página: lo primero son los cuatro deepagents fijos, sin rótulos de motor
   assert.ok(!js.includes("flota leída") && !js.includes('motor: "Claude"'));
   assert.ok(js.includes("/api/flota/trabajando"));
   // Leyendas → MacStudio, Coetáneos → MacMini; la máquina principal va por defecto.
-  assert.ok(/agente: "Trinity", maquina: "MacStudio", proyecto: "Admira.Studio", url: "https:\/\/admira.studio"/.test(js));
-  assert.ok(/agente: "Neo", maquina: "MacStudio", proyecto: "Admira.live", url: "https:\/\/admira.live"/.test(js));
+  assert.ok(js.includes('{ agente: "Trinity", maquina: "MacStudio", proyecto: "admira.studio", lado: "izquierda" }'));
+  assert.ok(js.includes('{ agente: "Neo", maquina: "MacStudio", proyecto: "admira.live", lado: "derecha" }'));
   assert.ok(/agente: "Oraculo", maquina: "MacMini"/.test(js) && /agente: "Morfeo", maquina: "MacMini"/.test(js));
   assert.ok(js.indexOf('agente: "Trinity"') < js.indexOf('agente: "Neo"') && js.indexOf('agente: "Neo"') < js.indexOf('agente: "Oraculo"'));
   // Desplegable solo con más de un equipo; luz verde/rojo/amarillo; la pastilla abre la captura en vivo.
   assert.ok(js.includes("maqs.length > 1") && js.includes('el("select", "ag-maq")'));
   assert.ok(js.includes('verde: "Trabajando", rojo: "Sin hacer nada", amarillo: "No se sabe"'));
-  assert.ok(js.includes('"/control/?rc="') && js.includes('"&ver=1"'));
+  assert.ok(js.includes('"/control/?rc="') && js.includes('"&ver=1"') && js.includes('"&lado="') && !js.includes('"&pantalla="'));
   assert.ok(js.includes("Sin tarea declarada"));
 });
 
@@ -166,4 +166,39 @@ test("menú: DeepAgents y Consumo llevan el menú de la plataforma, y la secció
   assert.ok(!home.includes("💬 Comunicaciones"));
   assert.equal((home.match(/🤖 DeepAgents<\/a>/g) || []).length, 2);
   assert.ok(lee("./deepagents/index.html").includes("<h1>DeepAgents</h1>"));
+});
+
+test("r230: la pastilla enseña el proyecto real (foco/latido) y el de por defecto solo como respaldo marcado", () => {
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  const ini = js.indexOf("  var FUENTE_REAL"), fin = js.indexOf("  function fichaAgente(");
+  const { proyectoActual, nombreProy } = new Function(js.slice(ini, fin) + "return { proyectoActual, nombreProy };")();
+  const neo = { proyecto: "admira.live" };
+  assert.deepEqual(proyectoActual({ foco: { proyecto: "admira.store", fuente: "ahora", defecto: false }, proyecto: "admira.store" }, neo), { k: "admira.store", defecto: false, fuente: "latido / pulso de ahora" });
+  assert.equal(proyectoActual({ foco: { proyecto: "https://www.admira.store/admira-xp", fuente: "agente", defecto: false } }, neo).k, "admira.store");
+  assert.deepEqual(proyectoActual({ foco: null, proyecto: "otros" }, neo), { k: "admira.live", defecto: true, fuente: "por defecto" });
+  assert.equal(proyectoActual({ foco: { proyecto: "admira.tv", fuente: "reparto", defecto: false }, proyecto: null }, neo).defecto, true);
+  assert.equal(proyectoActual({ foco: null, proyecto: null }, { proyecto: "" }), null);
+  assert.equal(nombreProy("admira.store"), "Admira.Store");
+  assert.equal(nombreProy("admira.live"), "Admira.live");
+  assert.equal(nombreProy("admira.studio"), "Admira.Studio");
+});
+
+test("r230: /control elige el monitor por posición (etiqueta del equipo o geometría), nunca adivina", () => {
+  const html = readFileSync(new URL("./control/index.html", import.meta.url), "utf8");
+  const ini = html.indexOf("function rcIndicePorLado("), fin = html.indexOf("let _rcDeepDone=false;");
+  const f = new Function(html.slice(ini, fin) + "return rcIndicePorLado;")();
+  // Como lo lista el MacStudio de Carlos: el índice no sigue el orden físico.
+  const studio = [
+    { indice: 0, nombre: "Monitor 2 · centro 5120x2880" },
+    { indice: 1, nombre: "Monitor 3 · derecha 1440x2560" },
+    { indice: 2, nombre: "Monitor 1 · izquierda 1440x2560" },
+  ];
+  assert.equal(f(studio, "derecha"), 1);
+  assert.equal(f(studio, "izquierda"), 2);
+  assert.equal(f(studio, "centro"), 0);
+  const geo = [{ indice: 0, nombre: "Principal", x: 0, w: 5120 }, { indice: 1, nombre: "Pantalla 2", x: 5120, w: 1440 }, { indice: 2, nombre: "Pantalla 3", x: -1440, w: 1440 }];
+  assert.equal(f(geo, "derecha"), 1);
+  assert.equal(f(geo, "izquierda"), 2);
+  assert.equal(f([{ indice: 0, nombre: "Principal · 1920x1080" }, { indice: 1, nombre: "Pantalla 2 · 1920x1080" }], "derecha"), null);
+  assert.ok(html.includes("q.get('lado')"));
 });

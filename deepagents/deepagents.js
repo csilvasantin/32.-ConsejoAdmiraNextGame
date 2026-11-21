@@ -171,10 +171,12 @@
    * La máquina principal sale SIEMPRE por defecto; solo si el agente vive además en otro equipo de AdmiraNeXT aparece,
    * en el mismo sitio, un desplegable con las otras (nunca elegidas por defecto). */
   var FIJOS = [
-    { agente: "Trinity", maquina: "MacStudio", proyecto: "Admira.Studio", url: "https://admira.studio", pantalla: 1 },
-    { agente: "Neo", maquina: "MacStudio", proyecto: "Admira.live", url: "https://admira.live", pantalla: 3 },
-    { agente: "Oraculo", maquina: "MacMini", proyecto: "", url: "", pantalla: 0 },
-    { agente: "Morfeo", maquina: "MacMini", proyecto: "", url: "", pantalla: 0 }
+    // proyecto = SOLO el de por defecto (respaldo marcado «por defecto»); manda el que el agente trabaja de verdad.
+    // lado = monitor físico del agente en su equipo principal (r230: por posición, no por índice).
+    { agente: "Trinity", maquina: "MacStudio", proyecto: "admira.studio", lado: "izquierda" },
+    { agente: "Neo", maquina: "MacStudio", proyecto: "admira.live", lado: "derecha" },
+    { agente: "Oraculo", maquina: "MacMini", proyecto: "", lado: "" },
+    { agente: "Morfeo", maquina: "MacMini", proyecto: "", lado: "" }
   ];
   var maqElegida = {}; // agente → máquina elegida en el desplegable (por defecto, la principal)
   var NOMBRE = { Oraculo: "Oráculo" };
@@ -242,8 +244,30 @@
   // Pastilla del proyecto → captura en tiempo real de ese agente en su equipo (control remoto de admira.live en «solo ver»).
   function enlaceCaptura(maq, fijo, principal) {
     var u = "/control/?rc=" + encodeURIComponent(claveMaq(maq)) + "&name=" + encodeURIComponent(maq) + "&ver=1";
-    if (fijo && fijo.pantalla && claveMaq(maq) === claveMaq(principal)) u += "&pantalla=" + fijo.pantalla;
+    if (fijo && fijo.lado && claveMaq(maq) === claveMaq(principal)) u += "&lado=" + fijo.lado;
     return u;
+  }
+  /* r230 (Carlos, 21-11-2026 20:02: «Neo está con admira.store, no con admira.live»). La pastilla enseña el proyecto en
+   * el que el agente trabaja AHORA, con evidencia de /api/flota/trabajando: foco declarado por el agente
+   * (POST /api/consejo/foco → fuente «agente»), proyecto de su latido/pulso (fuente «ahora»/«latido»: campo project del
+   * latido en bot.yokup.com o proyecto medido en el pulso). Sin dato real → el de por defecto, marcado «por defecto». */
+  var FUENTE_REAL = { agente: "declarado por el agente", ahora: "latido / pulso de ahora", latido: "latido", consejero: "declarado" };
+  function limpioProy(p) {
+    var k = String(p || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+    return k && k !== "otros" && k !== "training" ? k : "";
+  }
+  function nombreProy(k) {
+    var partes = k.split(".");
+    if (partes.length < 2) return k.charAt(0).toUpperCase() + k.slice(1);
+    var ext = partes.slice(1).join(".");
+    return partes[0].charAt(0).toUpperCase() + partes[0].slice(1) + "." + (ext === "live" ? ext : ext.charAt(0).toUpperCase() + ext.slice(1));
+  }
+  function proyectoActual(t, fijo) {
+    var f = t && t.foco;
+    if (f && !f.defecto && FUENTE_REAL[f.fuente] && limpioProy(f.proyecto)) return { k: limpioProy(f.proyecto), defecto: false, fuente: FUENTE_REAL[f.fuente] };
+    if (t && limpioProy(t.proyecto)) return { k: limpioProy(t.proyecto), defecto: false, fuente: "latido" };
+    if (fijo && fijo.proyecto) return { k: fijo.proyecto, defecto: true, fuente: "por defecto" };
+    return null;
   }
 
   function fichaAgente(nombre) {
@@ -277,12 +301,13 @@
     cab.appendChild(led);
     art.appendChild(cab);
 
-    // Proyecto por defecto del deepagent; la pastilla abre su captura en tiempo real en el equipo elegido.
-    if (fijo && fijo.proyecto) {
-      var pr = el("a", "ag-proy", fijo.proyecto);
+    // Proyecto en el que trabaja ahora (o el de por defecto, marcado); la pastilla abre su captura en tiempo real.
+    var pa = proyectoActual(t, fijo);
+    if (pa) {
+      var pr = el("a", "ag-proy" + (pa.defecto ? " defecto" : ""), nombreProy(pa.k) + (pa.defecto ? " · por defecto" : ""));
       pr.href = enlaceCaptura(sel, fijo, principal);
       pr.target = "_blank"; pr.rel = "noopener";
-      pr.title = "Ver en tiempo real la pantalla de " + visible + " en " + sel + " · proyecto " + fijo.url;
+      pr.title = "https://" + pa.k + " · " + pa.fuente + " · pulsa para ver en tiempo real la pantalla de " + visible + " en " + sel;
       art.appendChild(pr);
     }
     if (!t) { art.appendChild(el("p", "ag-tarea nada", "La flota no informa de este agente ahora.")); return art; }

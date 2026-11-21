@@ -3695,7 +3695,6 @@ body.rail-open{overflow:hidden}
 .top-bar .pf-ico:hover{border-color:#f0c040}
 .top-bar .pf-toggles{display:flex;gap:5px;align-items:stretch;flex:0 0 auto;margin-left:auto}
 .top-bar #pf-ic-opcion{margin-left:2px}
-#badge-comunicaciones .admira-da-n{display:inline-block;margin-left:5px;padding:2px 4px;font-size:0.45rem;line-height:1;color:#1b130a;background:#ffb454;border:1px solid #000}
 /* ════ BARRA ÚNICA (Carlos, 21-11-2026) ════
    Misma barra en TODAS las páginas: mismas medidas que admira-bar.js (subpáginas) y que
    yk-frame.css (plataforma). [opciones] a la izquierda del todo · marca · pestañas (DeepAgents
@@ -3735,8 +3734,8 @@ body.rail-open{overflow:hidden}
                 <a href="/tareas" class="version-badge" title="Tareas · pendiente y en curso" data-en-title="Tasks · pending and in progress" data-en="✅ Tasks">✅ Tareas</a>
                 <a href="/highscore" class="version-badge" title="Highscore completo · actividad y puntuación de la flota" data-en-title="Full highscore · fleet activity and score" data-en="🏆 Highscore">🏆 Highscore</a>
                 <a href="/asignaciones/" class="version-badge" title="Asignaciones · reparto del trabajo" data-en-title="Assignments · who does what" data-en="🧩 Assignments">🧩 Asignaciones</a>
-                <!-- Barra única (Carlos, 21-11-2026): DeepAgents va justo ANTES de Consumo, con el contador como insignia. -->
-                <a id="badge-comunicaciones" href="/deepagents" class="version-badge" title="DeepAgents · qué hace cada agente y qué se dicen con los consejeros" data-en-title="DeepAgents · what each agent is doing and what they say to the board" data-en="🤖 DeepAgents">🤖 DeepAgents</a>
+                <!-- Barra única (Carlos, 21-11-2026): DeepAgents va justo ANTES de Consumo, sin número. -->
+                <a href="/deepagents" class="version-badge" title="DeepAgents · qué hace cada agente y qué se dicen con los consejeros" data-en-title="DeepAgents · what each agent is doing and what they say to the board" data-en="🤖 DeepAgents">🤖 DeepAgents</a>
                 <a href="/consumos" class="version-badge" title="Consumo · cuánto gastan los agentes" data-en-title="Usage · what the agents spend" data-en="💸 Usage">💸 Consumo</a>
                 <!-- Control, Players y Diario van al riel AVANZADO (grupo «Sistema»), no al top-bar (Carlos, 18-09-2026). -->
                 <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)" data-en-title="Users · whitelist (superusers only)" data-en="👥 Users">👥 Usuarios</a>
@@ -4677,7 +4676,6 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/barra-agentes.js?v=20261011-r41-agentes"></script>
 <script defer src="/assets/consejo-rotulo.js?v=20261015-r5-chat"></script>
 <script defer src="council-conversacion.js?v=20261016-bocadillos"></script>
-<script defer src="/comunicaciones-widget.js?v=20261121-barra-unica"></script>
 </body>
 </html>
 

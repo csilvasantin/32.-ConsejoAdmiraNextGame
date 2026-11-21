@@ -235,10 +235,18 @@
     ["DECISIONES",   "/decisiones",    "⚖️ Decisiones",   "⚖️ Decisions"],
     ["MISIONES",     "/misiones",      "🚀 Misiones",     "🚀 Missions"],
     ["TAREAS",       "/tareas",        "✅ Tareas",       "✅ Tasks"],
-    ["HIGHSCORE",    "/highscore",     "🏆 Highscore",    "🏆 Highscore"],
     ["ASIGNACIONES", "/asignaciones",  "🧩 Asignaciones", "🧩 Assignments"],
     ["DEEPAGENTS",   "/deepagents",    "🤖 DeepAgents",   "🤖 DeepAgents"],
     ["CONSUMO",      "/consumos",      "💸 Consumo",      "💸 Usage"]
+  ];
+  // r245: subnavegación de Consumo, en el raíl AVANZADO (antes, fila de enlaces bajo la barra en /consumos).
+  // [ruta, icono, rótulo, rótulo en inglés]
+  var ADV_SUBNAV = [
+    ["/",                   "🏠", "INICIO",             "HOME"],
+    ["/consumo",            "🤖", "AGENTES",            "AGENTS"],
+    ["/pendiente",          "🗓️", "CUADRANTE DE CARGA", "LOAD GRID"],
+    ["/consumos-proyectos", "💰", "GASTO POR PROYECTO", "SPEND BY PROJECT"],
+    ["/orquestar/",         "🧭", "ORQUESTADOR",        "ORCHESTRATOR"]
   ];
   // Fuera de la fila, dentro del raíl OPCIONES (siempre visible al abrirlo).
   // FLT-1020/FLT-1321 pedían NOTIFICACIONES e INFORMES a la vista: siguen en el raíl con su
@@ -2212,6 +2220,17 @@
       highscore.href = "/highscore";
       nav.appendChild(highscore);
     }
+    // r245 (Carlos, 21-11-2026 23:37: «vamos a meter en avanzado las opciones que aparecen arriba y ganamos ese espacio
+    // para la interface … y sacar Highscore del menu superior»): la subnavegación que /consumos pintaba bajo la barra
+    // (Inicio · Agentes · Cuadrante de carga · Gasto por proyecto · Orquestador) vive ahora aquí, en AVANZADO.
+    ADV_SUBNAV.forEach(function (r) {
+      var on = path === r[0].replace(/\/+$/, "") || path === r[0].replace(/\/+$/, "") + ".html";
+      if (on && r[0] !== "/") return;
+      var a = el("a", "yk-set-btn yk-adv-link", '<span aria-hidden="true">' + r[1] + '</span> ' + r[2]);
+      a.href = r[0];
+      a.setAttribute("data-en", r[1] + " " + r[3]);
+      nav.appendChild(a);
+    });
     return nav;
   }
 

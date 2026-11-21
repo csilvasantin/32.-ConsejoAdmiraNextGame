@@ -10,10 +10,17 @@ HttpOnly. La respuesta conserva todas las cabeceras `Set-Cookie` y aplica CORS
 con origen exacto, credenciales y `Vary: Origin`; nunca usa `*` ni inventa un
 origen para clientes headless.
 
-El failover cubre `502`, `504` y los fallos de conectividad Cloudflare
-`521/522/523/525/526`, pero sólo repite lecturas, el handoff idempotente o
+El failover cubre `502`, `504`, `530` (error de origen DNS/Tunnel de
+Cloudflare) y los fallos de conectividad `521/522/523/525/526`. También
+conmuta si el cuerpo es una página de error de Cloudflare `1016` o `1033`
+aunque el estado no esté en esa lista (por ejemplo un `503` con
+`error code: 1016`). Sólo repite lecturas, el handoff idempotente o
 `/api/run` y `/api/action` cuando llevan `X-Fleet-Command-Id`. Una mutación
-ambigua nunca se reenvía a otro relay después de un timeout.
+ambigua nunca se reenvía a otro relay después de un timeout o de un `530`.
+
+Un relay que devolvió un fallo de conectividad queda en enfriamiento 30 s:
+las peticiones siguientes prueban antes los relays sanos, y sólo vuelven al
+enfriado si el resto también falla.
 
 Verificación local:
 

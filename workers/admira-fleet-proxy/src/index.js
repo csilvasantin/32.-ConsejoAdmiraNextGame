@@ -1,5 +1,9 @@
 const RELAYS = [
-  { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net/fleet' },
+  // 9-nov-2026 18:25 Madrid: el Funnel del Mini en :443 quedó "tailnet only" (525 desde el borde)
+  // y ese puerto expone también /terminales, /claw-gateway… Se publica SOLO /fleet por
+  // Funnel en :10000 (tailscale funnel --bg --https=10000 --set-path=/fleet 127.0.0.1:9140).
+  // Esta URL ya estaba en el Worker publicado; main la había perdido. Cloudflare es la referencia.
+  { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net:10000/fleet' },
   // 9-nov-2026: el Mac Mini y el MBP16 caídos dejaban /control en solo lectura.
   // El Mac Studio ya sirve FleetControl por su Funnel (/fleet → 127.0.0.1:9140).
   { id: 'macstudio', base: 'https://macstudio.tail48b61c.ts.net/fleet' },
@@ -8,8 +12,41 @@ const RELAYS = [
 
 // Estos estados los genera la capa de conectividad (Cloudflare/origen), no la
 // aplicacion FleetControl. Sólo permiten probar otro relay cuando repetir la
-// peticion no puede duplicar una mutacion.
-export const RETRYABLE_RELAY_STATUSES = new Set([502, 504, 521, 522, 523, 525, 526]);
+// peticion no puede duplicar una mutacion. 530 es el HTTP de los errores de
+// origen 1016 (DNS inexistente) y 1033 (Tunnel) de Cloudflare.
+export const RETRYABLE_RELAY_STATUSES = new Set([502, 504, 521, 522, 523, 525, 526, 530]);
+
+export const RELAY_COOLDOWN_MS = 30_000;
+
+export function isCloudflareErrorPage(bodyText) {
+  return /\berror(?:\s+code)?\s*:?\s*10(16|33)\b/i.test(String(bodyText || ''));
+}
+
+export async function isRetryableRelayResponse(response) {
+  if (RETRYABLE_RELAY_STATUSES.has(response.status)) return true;
+  if (response.status < 400) return false;
+  const type = String(response.headers.get('content-type') || '').toLowerCase();
+  if (!type.includes('text/html') && !type.includes('text/plain')) return false;
+  try {
+    return isCloudflareErrorPage(await response.clone().text());
+  } catch {
+    return false;
+  }
+}
+
+export function orderRelays(relays, cooldownUntil, now = Date.now()) {
+  const ready = [];
+  const cooling = [];
+  for (const relay of relays) {
+    if ((cooldownUntil.get(relay.id) || 0) > now) cooling.push(relay);
+    else ready.push(relay);
+  }
+  return ready.concat(cooling);
+}
+
+export function markRelayCooldown(id, cooldownUntil, now = Date.now(), ms = RELAY_COOLDOWN_MS) {
+  cooldownUntil.set(id, now + ms);
+}
 
 export const ALLOWED_ORIGINS = new Set([
   'https://www.admira.live',
@@ -104,7 +141,7 @@ function retrySafe(request, path, handoffRequest) {
   return (path === '/api/run' || path === '/api/action') && /^[A-Za-z0-9._:-]{8,120}$/.test(commandId);
 }
 
-export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
+export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch, cooldownUntil = new Map(), now = () => Date.now(), cooldownMs = RELAY_COOLDOWN_MS } = {}) {
   return {
     async fetch(request, env = {}) {
       const url = new URL(request.url);
@@ -202,7 +239,7 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
         } else if (opaqueHandoff) outgoingHeaders.set('Origin', 'null');
         outgoingHeaders.delete('Cookie');
       }
-      for (const relay of relays) {
+      for (const relay of orderRelays(relays, cooldownUntil, now())) {
         try {
           // Ningún handoff reenvía query strings: el único código aceptado ya
           // fue validado en el body (o transformado desde el GET de rescate).
@@ -217,7 +254,10 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
             redirect: 'manual',
             signal: AbortSignal.timeout(20000),
           });
-          if (RETRYABLE_RELAY_STATUSES.has(response.status)) {
+          if (await isRetryableRelayResponse(response)) {
+            // 530/1016/1033 y el resto de fallos de conectividad: este relay
+            // espera un rato para no ser el primero en la siguiente petición.
+            markRelayCooldown(relay.id, cooldownUntil, now(), cooldownMs);
             // No necesitamos el cuerpo de la respuesta de infraestructura y
             // cancelarlo libera pronto la conexion antes del siguiente relay.
             try { await response.body?.cancel(); } catch (_) {}

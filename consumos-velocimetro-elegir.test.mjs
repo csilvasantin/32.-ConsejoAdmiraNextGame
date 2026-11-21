@@ -71,16 +71,33 @@ test("/api/consumos/velocidad expone proyectoAhora", async () => {
   assert.ok("proyectoAhora" in r || r.sinDatos === true);
 });
 
-// r225 (21-11, Carlos: «estan las agujas moviendose» con 0 tok/h): la aguja ya no vibra nunca; marca la cifra exacta.
-test("aguja analógica: sin vibración a ningún ritmo (aguja = cifra)", () => {
+// r228 (21-11, Carlos: «la flecha … tiene que tener una vibración que representa el calculo y el refresco»).
+test("aguja analógica: quieta a 0 o sin dato; temblor ±0,9° → ±1,8° (0,5–1 % de escala) proporcional al ritmo, media 0, pulso al refrescar", () => {
   const w = { document: { readyState: "complete", getElementById: () => null, documentElement: { lang: "es" } } };
   w.window = w;
   vm.runInNewContext(readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8"), w);
-  const amp = w.ConsumosVelocimetroAguja.amplitud;
-  assert.equal(amp(0, false), 0);
-  assert.equal(amp(0.5, true), 0);
-  assert.equal(amp(0.01, false), 0);
-  assert.equal(amp(1, false), 0);
+  const A = w.ConsumosVelocimetroAguja;
+  assert.equal(A.amplitud(0, false), 0);
+  assert.equal(A.amplitud(0.5, true), 0);
+  assert.ok(Math.abs(A.amplitud(0.01, false) - 0.909) < 0.01);
+  assert.equal(A.amplitud(1, false), 1.8);
+  assert.equal(A.temblor(1234, 0, 0, 0), 0, "ritmo 0: quieta");
+  let sum = 0, max = 0; for (let t = 0; t < 1000; t++) { const x = A.temblor(t, 1.8, 0, 0.3); sum += x; max = Math.max(max, Math.abs(x)); }
+  assert.ok(Math.abs(sum / 1000) < 0.05, "centrado en la cifra"); assert.ok(max <= 1.8 + 1e-9);
+  const conPulso = Math.max(...Array.from({ length: 100 }, (_, i) => Math.abs(A.temblor(10000 + i, 1.8, 10000, 0))));
+  assert.ok(conPulso > 1.8, "pulso visible al refrescar");
+  assert.equal(A.temblor(10500, 1.8, 10000, 0), A.temblor(10500, 1.8, 0, 0), "el pulso acaba antes de 500 ms");
+  assert.equal(A.POLL_MS, 10000);
+});
+
+test("odómetro: suma ritmo/3600 por segundo, salta al real si va por delante y nunca retrocede", () => {
+  const w = { document: { readyState: "complete", getElementById: () => null, documentElement: { lang: "es" } } };
+  w.window = w;
+  vm.runInNewContext(readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8"), w);
+  const f = w.ConsumosVelocimetroAguja.odoSiguiente;
+  assert.equal(f(3266177, 3266177, 1.2e6, 1), 3266177 + 1.2e6 / 3600);
+  assert.equal(f(3266177, 3300000, 0, 1), 3300000, "el real va por delante: salta");
+  assert.equal(f(3400000, 3300000, 0, 1), 3400000, "acumulado por encima: no retrocede");
 });
 
 // r23: desplegables con estado (verde / amarillo / rojo) y agentes conocidos sin datos.

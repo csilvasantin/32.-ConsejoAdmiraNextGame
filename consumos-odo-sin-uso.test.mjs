@@ -29,8 +29,10 @@ test("Odometro: sin ritmo ni actividad no avanza: se queda en el real", () => {
   assert.equal(O.velocidadOdometro({ mostrado: 1397427, real: 1397427, objetivo: 1397427, segundosRestantes: 1200, ritmo: 0, activo: false }), 0);
 });
 
-test("pinta: con uso no fresco pasa tokHora 0, sin actividad, y recorta lo adelantado al real", () => {
+// r228 (Carlos, 21-11: «el contador no está sumando?»): el odómetro suma al ritmo de la cifra grande y nunca retrocede.
+test("pinta: el odómetro de hoy suma al ritmo mostrado (v), monótono, con clave por dial y selección", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
-  assert.match(js, /odometro\(b\.querySelector\('\.odo'\), tokHoy, fresco \? v : 0, fresco && \(v > 0 \|\| hayVerdes\(\)\)/);
-  assert.match(js, /if \(quieto && o\.mostrado != null && n != null && o\.mostrado > n\) o\.mostrado = n;/);
+  assert.match(js, /odometro\(b\.querySelector\('\.odo'\), tokHoy, v, this\.pfx \+ ':' \+ \(this\.clave \|\| ''\), this\.periodo\);/);
+  assert.ok(!/o\.mostrado = n;\s*\n/.test(js.slice(js.indexOf("function odometro(el"), js.indexOf("function odometro(el") + 600)), "ya no recorta hacia atrás");
+  assert.match(js, /incluye estimado en curso/);
 });

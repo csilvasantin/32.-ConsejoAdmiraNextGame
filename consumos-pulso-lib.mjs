@@ -171,7 +171,9 @@ export function normalizarSuperficies(l) {
     } else if (x.tipo === "app") {
       const app = texto(x.app, 20);
       if (!/^(Claude|Codex|GrokBot|OpenCode)$/.test(app)) continue;
-      out.push({ agente: texto(x.agente, 40) || null, tipo: "app", app, alFrente: x.alFrente === true, enUso: x.enUso === true, cuenta: correo(x.cuenta) });
+      // r233: %cpu del proceso de la app y sus hijos (señal de actividad aunque la app no deje ficheros legibles).
+      const cpu = Number(x.cpu);
+      out.push({ agente: texto(x.agente, 40) || null, tipo: "app", app, alFrente: x.alFrente === true, enUso: x.enUso === true, cuenta: correo(x.cuenta), ...(x.cpu != null && isFinite(cpu) && cpu >= 0 ? { cpu: Math.round(Math.min(cpu, 6400) * 10) / 10 } : {}) });
     }
   }
   return out;

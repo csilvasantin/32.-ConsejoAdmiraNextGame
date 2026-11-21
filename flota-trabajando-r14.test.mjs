@@ -32,7 +32,8 @@ test("r14: Musk y Huang en el MBA16 (app abierta, no al frente → sin «con Car
 test("r14: sin app de su cuenta, se queda como estaba", () => {
   const out = colocarPorAppGrokBot(fichas(), [apps[1]]);
   assert.equal(out.find((t) => t.agente === "Jobs").maquina, "MacMini");
-  assert.deepEqual(Object.keys(CUENTA_GROKBOT).sort(), ["Huang", "Jobs", "Musk", "Wozniak"]);
+  // r243: Lucas y Disney viven en la cuenta Leyendas (csilva@admira.com) con Jobs y Wozniak.
+  assert.deepEqual(Object.keys(CUENTA_GROKBOT).sort(), ["Disney", "Huang", "Jobs", "Lucas", "Musk", "Wozniak"]);
 });
 
 test("r14: el pulso acepta grokbotApp (también sin agentes) y lo guarda con ts; appsGrokBot solo frescas", () => {

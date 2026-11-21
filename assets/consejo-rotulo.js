@@ -68,7 +68,7 @@
   function estado(t, np) {
     var maquina = np && np.classList.contains("gold") ? "máquina encendida" : "máquina apagada";
     if (!t) return "sin latido · " + maquina;
-    var vivo = t.estado === "verde" ? "trabajando" : t.estado === "amarillo" ? "con Carlos" : "parado";
+    var vivo = t.estado === "verde" ? (t.abiertoApp ? "abierto" : "trabajando") : t.estado === "amarillo" ? "con Carlos" : "parado";
     return vivo + " · " + maquina;
   }
 

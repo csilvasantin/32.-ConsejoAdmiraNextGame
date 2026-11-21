@@ -79,7 +79,10 @@ export const DUALIDAD = { Musk: "Merovingio", Huang: "Merovingio", Jobs: "Smith"
 // manda el suyo.
 
 /** r14: cuenta de Grok Bot de cada consejero principal (la app de escritorio donde Carlos los tiene abiertos). */
-export const CUENTA_GROKBOT = { Jobs: "csilva@admira.com", Wozniak: "csilva@admira.com", Musk: "csilvasantin@gmail.com", Huang: "csilvasantin@gmail.com" };
+// r243 (Carlos, 21-11-2026 23:17: «arregla los Consejeros que aparecen 0 de 6 y estan todos»): Lucas y Disney también
+// viven en la cuenta «leyendas» (csilva@admira.com, la app Grok Bot del Mini/Studio: Jobs, Wozniak, Disney, Lucas —
+// orquestar-config.mjs y fleet-control/grokbot-encargo.js). Antes faltaban y nunca salían «con app abierta».
+export const CUENTA_GROKBOT = { Jobs: "csilva@admira.com", Wozniak: "csilva@admira.com", Lucas: "csilva@admira.com", Disney: "csilva@admira.com", Musk: "csilvasantin@gmail.com", Huang: "csilvasantin@gmail.com" };
 export const REPOSO_CON_CARLOS_S = 300;
 /** r51: consejeros que son el titular de su cuenta de Grok Bot (la cuenta compartida no enciende a los demás). */
 export const TITULAR_APP_GROKBOT = ["Jobs", "Musk"];
@@ -812,6 +815,37 @@ export function soloVerdeReal(ts, ahoraS) {
   return ts;
 }
 
+/** r243: ventana de frescura de una app Grok Bot vista por el pulso y de «actividad reciente» de un consejero. */
+export const APP_GROKBOT_FRESCA_S = 900;
+export const ACTIVIDAD_CONSEJERO_S = 900;
+/**
+ * r243 (Carlos, 21-11-2026 23:17): los consejeros son bots en la nube; con la app Grok Bot de SU cuenta abierta en algún
+ * Mac (pulso fresco, < 15 min) están accesibles → VERDE «abierto» (t.abiertoApp), igual que los DeepAgents abiertos
+ * (r235). Con actividad propia reciente (mensaje / encargo / acción del consejero < 15 min) → VERDE «trabajando».
+ * Sin app abierta ni actividad reciente: no se toca (aplicarRojo lo deja rojo si hubo actividad hoy, gris si no).
+ * Amarillo («con Carlos») no se toca. Pura sobre ts.
+ */
+export function aplicarConsejerosAbiertos(ts, apps, ahoraS) {
+  if (!Array.isArray(ts)) return ts;
+  for (const t of ts) {
+    if (!t || !CONSEJEROS_GROK.includes(t.agente) || t.estado === "verde" || t.estado === "amarillo") continue;
+    const act = t.actividad && isFinite(t.actividad.ts) ? ahoraS - t.actividad.ts : null;
+    if (act != null && act >= 0 && act <= ACTIVIDAD_CONSEJERO_S) {
+      t.estado = "verde"; t.motivo = (t.actividad.fuente || "actividad") + " hace " + Math.round(act / 60) + " min"; continue;
+    }
+    const cuenta = CUENTA_GROKBOT[t.agente];
+    const vistos = new Set();
+    const abiertas = (apps || []).filter((a) => a && cuenta && a.cuenta === cuenta && a.maquina && (a.haceS == null || Number(a.haceS) <= APP_GROKBOT_FRESCA_S)
+      && !vistos.has(claveMaquina(a.maquina)) && vistos.add(claveMaquina(a.maquina)));
+    if (!abiertas.length) continue;
+    const donde = abiertas.map((a) => maquinaCorta(a.maquina)).join(" + ");
+    t.estado = "verde";
+    t.abiertoApp = "Grok Bot abierto en " + donde + " (cuenta " + (cuenta === "csilva@admira.com" ? "Leyendas" : "Coetáneos") + ")";
+    t.motivo = "abierto: " + t.abiertoApp + (t.motivo ? " · antes: " + t.motivo : "");
+  }
+  return ts;
+}
+
 /**
  * r57 (Carlos, 23-10-2026 08:21): tokens AUTODECLARADOS (mcp consumo_reportar → api.yokup.com/fleet/consumo) de hoy
  * por persona. Es la única fuente atribuible para los consejeros de GrokBot (el CSV de Cursor no dice quién gastó). Las
@@ -893,6 +927,8 @@ export function porqueColor(t, ahoraS) {
     if (tok != null && ahoraS - tok <= UMBRAL_ROJO_S) p.push("último token hace " + haceTxt(Math.max(0, ahoraS - tok)));
     else if (/app GrokBot trabajando/.test(t.motivo || "")) p.push("app GrokBot en uso hace " + haceTxt(t.haceS || 0));
     else if (/latido del consejero/.test(t.motivo || "")) p.push("latido del consejero «trabajando»");
+    else if (t.abiertoApp) p.push("abierto: " + t.abiertoApp + " · sin actividad propia reciente");
+    else if (/^(mensaje|encargo|acci[oó]n)/.test(t.motivo || "")) p.push(t.motivo);
     else if (t.via) p.push("activo vía " + t.via);
     else p.push("tokens en la última hora");
   } else if (t.estado === "amarillo") p.push("con Carlos" + (t.conCarlosEn ? " en " + t.conCarlosEn : ""));

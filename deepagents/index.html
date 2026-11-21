@@ -9,20 +9,24 @@
 <meta name="theme-color" content="#02080d">
 <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
 <link rel="stylesheet" href="/yk-frame.css?v=20261121-r224-sin-idioma">
-<link rel="stylesheet" href="/deepagents/deepagents.css?v=20261121-r3">
+<link rel="stylesheet" href="/deepagents/deepagents.css?v=20261121-r4">
 <script src="/admira-idioma.js"></script>
 </head>
 <body data-yk-title="DEEPAGENTS" data-yk-zone="app">
 <div class="wrap">
+  <!-- Carlos, 21-11-2026: fuera el rótulo de canal que iba sobre el título. Una línea: DeepAgents, la flecha
+       que despliega el texto (contraído por defecto) y, a la misma altura, la hora de lectura de los agentes. -->
   <header class="cab">
-    <div>
-      <p class="kicker">ADMIRA.LIVE · CANAL MCP</p>
+    <div class="cab-linea">
       <h1>DeepAgents</h1>
-      <p class="lead">Qué está haciendo ahora cada deepagent principal y, debajo, todo lo que se dicen con los consejeros.</p>
+      <button type="button" class="plegar" id="da-plegar" aria-expanded="false" aria-controls="da-lead"
+        title="Qué es DeepAgents" aria-label="Mostrar qué es DeepAgents">▸</button>
+      <span class="lectura" id="lectura-hora" aria-live="polite">Leyendo los agentes…</span>
     </div>
     <div class="estado" id="estado" aria-live="polite">
       <span class="led" id="led"></span><span id="estado-txt">Cargando…</span>
     </div>
+    <p class="lead" id="da-lead" hidden>Qué está haciendo ahora cada deepagent principal y, debajo, todo lo que se dicen con los consejeros.</p>
   </header>
 
   <section aria-label="Ahora">
@@ -53,7 +57,7 @@
 
   <footer class="pie" id="pie"></footer>
 </div>
-<script src="/deepagents/deepagents.js?v=20261121-r3"></script>
+<script src="/deepagents/deepagents.js?v=20261121-r4"></script>
 <script src="/yk-frame.js?v=20261121-r224-sin-idioma"></script>
 </body>
 </html>

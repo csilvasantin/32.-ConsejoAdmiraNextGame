@@ -59,3 +59,18 @@ test("la barra no lleva el número de DeepAgents ni el botón de idioma", () => 
   // el idioma elegido al entrar se sigue aplicando: el marco carga admira-idioma.js
   assert.match(marco, /expertScript\("\/admira-idioma\.js\?v=" \+ EXPERT_CMD_V, "AdmiraIdioma"\)/);
 });
+
+// Carlos, 21-11-2026 (r224): fuera «ADMIRA.LIVE · CANAL MCP»; DeepAgents con flecha que despliega el
+// texto (contraído por defecto) y, a su altura, la hora real de lectura de los agentes.
+test("DeepAgents: sin CANAL MCP, texto plegado tras la flecha y hora de lectura en la misma línea", () => {
+  const h = readFileSync("deepagents/index.html", "utf8");
+  const js = readFileSync("deepagents/deepagents.js", "utf8");
+  assert.doesNotMatch(h, /CANAL MCP/i);
+  const linea = h.slice(h.indexOf('<div class="cab-linea">'), h.indexOf("</div>", h.indexOf('<div class="cab-linea">')));
+  assert.match(linea, /<h1>DeepAgents<\/h1>/);
+  assert.match(linea, /<button type="button" class="plegar" id="da-plegar" aria-expanded="false" aria-controls="da-lead"/);
+  assert.match(linea, /id="lectura-hora"/);
+  assert.match(h, /<p class="lead" id="da-lead" hidden>/);
+  assert.match(js, /\$\("lectura-hora"\)\.textContent = flota\.generado \?/);
+  assert.match(js, /\$\("da-lead"\)\.hidden = !abrir/);
+});

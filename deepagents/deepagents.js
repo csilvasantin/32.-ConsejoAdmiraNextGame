@@ -258,6 +258,10 @@
       caja.appendChild(sec);
     });
     $("ahora-hora").textContent = flota.generado ? "flota leída a las " + fecha(HORA, flota.generado) : "";
+    // Cabecera (Carlos, 21-11-2026): la hora de lectura de los agentes, a la altura del título.
+    // Es el «generado» real de la lectura de la flota; sin dato no se inventa ninguna hora.
+    $("lectura-hora").textContent = flota.generado ? "agentes leídos a las " + fecha(HORA, flota.generado)
+      : (flota.error ? "sin lectura de los agentes" : "");
     var avisos = [];
     if (flota.error) avisos.push(flota.error);
     else if (flota.presencia && flota.presencia !== "ok") avisos.push(flota.presencia === "cache" ? "Presencia de hace unos segundos (Yokup tarda en contestar)." : "La presencia de la flota no responde: los estados pueden ir atrasados.");
@@ -295,6 +299,15 @@
       })
       .catch(function () { marcar(false, "No se pudo leer el registro. Se reintentará."); });
   }
+
+  // Texto de DeepAgents contraído por defecto; la flecha lo despliega y lo vuelve a plegar.
+  $("da-plegar").addEventListener("click", function () {
+    var b = $("da-plegar"), abrir = b.getAttribute("aria-expanded") !== "true";
+    b.setAttribute("aria-expanded", abrir ? "true" : "false");
+    b.textContent = abrir ? "▾" : "▸";
+    b.setAttribute("aria-label", abrir ? "Ocultar qué es DeepAgents" : "Mostrar qué es DeepAgents");
+    $("da-lead").hidden = !abrir;
+  });
 
   $("f-agente").addEventListener("change", function (e) { estado.agente = e.target.value; pintar(); });
   $("f-consejero").addEventListener("change", function (e) { estado.consejero = e.target.value; pintar(); });

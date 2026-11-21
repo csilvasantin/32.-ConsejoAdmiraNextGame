@@ -1,0 +1,132 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import * as lib from "./deepagents-lib.mjs";
+import * as api from "./functions/api/deepagents/registro.js";
+import { emitir, cookieDe } from "./functions/_puerta.js";
+
+const FIRMA = "f".repeat(40);
+const msg = (id, de, para, hora, extra = {}) => ({
+  id, de, para, texto: `texto ${id}`, maquina: "MacBookAirAzul", hora, leido: false, leido_en: null, responde_a: null,
+  de_tipo: lib.agente(de) ? "agente" : "consejero", para_tipo: lib.agente(para) ? "agente" : "consejero", ...extra,
+});
+const M1 = msg("cm1", "Neo", "Jobs", "2026-11-21T10:00:00.000Z");
+const M2 = msg("cm2", "Jobs", "Neo", "2026-11-21T10:05:00.000Z", { responde_a: "cm1", maquina: "GrokBot", maquina_para: "MacBookAirAzul" });
+const M3 = msg("cm3", "Musk", "Morfeo", "2026-10-30T09:00:00.000Z");
+const ENTRE = msg("cm9", "Musk", "Jobs", "2026-11-21T11:00:00.000Z");
+
+function kvFalso(inicial = {}) {
+  const d = new Map(Object.entries(inicial));
+  return { d, puts: 0, async get(k) { return d.has(k) ? d.get(k) : null; }, async put(k, v) { this.puts++; d.set(k, v); } };
+}
+/** Bandeja falsa: devuelve por ?con= lo que toque; registra las llamadas. */
+function bandejaFalsa(mensajes, vistos = [], roto = false) {
+  return async (u, i) => {
+    vistos.push({ u: String(u), i });
+    if (roto) return new Response("no", { status: 503 });
+    const con = new URL(String(u)).searchParams.get("con");
+    return new Response(JSON.stringify({ ok: true, mensajes: mensajes.filter((m) => m.de === con || m.para === con) }), { status: 200 });
+  };
+}
+async function conPuerta(tipo, q = "") {
+  const c = await emitir(FIRMA, tipo, "prueba");
+  return new Request("https://www.admira.live/api/deepagents/registro" + q, { headers: { cookie: cookieDe(c.valor, c.maxAge).split(";")[0] } });
+}
+
+test("lib: agente canónico, pareja y supervisor", () => {
+  assert.equal(lib.agente("oráculo"), "Oraculo");
+  assert.equal(lib.agente("Jobs"), null);
+  assert.deepEqual(lib.pareja(M2), { agente: "Neo", consejero: "Jobs", clave: "Neo↔Jobs" });
+  assert.equal(lib.pareja(ENTRE), null);
+  assert.equal(lib.SUPERVISOR.Neo, "Jobs");
+  assert.equal(lib.SUPERVISOR.Cypher, "Huang");
+});
+
+test("lib: unir no duplica, no borra y solo actualiza el acuse", () => {
+  const a = lib.unir([], [M2, M1, M1]);
+  assert.equal(a.nuevos, 2);
+  assert.deepEqual(a.lista.map((m) => m.id), ["cm1", "cm2"]);
+  const b = lib.unir(a.lista, [{ ...M1, leido: true, leido_en: "2026-11-21T10:01:00.000Z", texto: "cambiado" }]);
+  assert.equal(b.nuevos, 0); assert.equal(b.cambiados, 1);
+  assert.equal(b.lista[0].leido, true); assert.equal(b.lista[0].texto, "texto cm1");
+  // Lo que la bandeja ya recortó sigue en el archivo.
+  assert.equal(lib.unir(b.lista, []).lista.length, 2);
+  // Sin id o sin hora válida, fuera. Campos de más, fuera.
+  assert.equal(lib.unir([], [{ de: "Neo" }, { id: "x", hora: "ayer" }]).lista.length, 0);
+  assert.equal(lib.limpiar({ ...M1, secreto: "no" }).secreto, undefined);
+});
+
+test("lib: parejas cuenta por sentido y pendientes; filtrar por agente, consejero y texto", () => {
+  const p = lib.parejas([M1, M2, M3]);
+  assert.equal(p[0].agente, "Neo"); assert.equal(p[0].total, 2);
+  assert.equal(p[0].del_agente, 1); assert.equal(p[0].del_consejero, 1); assert.equal(p[0].pendientes, 2);
+  assert.equal(p[1].supervisor, "Musk");
+  assert.equal(lib.filtrar([M1, M2, M3], { agente: "morfeo" }).length, 1);
+  assert.equal(lib.filtrar([M1, M2, M3], { consejero: "Jobs", q: "CM2" }).length, 1);
+  assert.equal(lib.filtrar([M1, M2, M3], { desde: "2026-11-01" }).length, 2);
+});
+
+test("api: sin sesión 401 y no toca la bandeja; el kiosco tampoco entra", async () => {
+  const vistos = [];
+  const sin = await api.onRequestGet({ request: new Request("https://www.admira.live/api/deepagents/registro"), env: { PUERTA_FIRMA: FIRMA }, fetchImpl: bandejaFalsa([M1], vistos) });
+  assert.equal(sin.status, 401);
+  const kiosco = await api.onRequestGet({ request: await conPuerta("kiosco"), env: { PUERTA_FIRMA: FIRMA }, fetchImpl: bandejaFalsa([M1], vistos) });
+  assert.equal(kiosco.status, 401);
+  assert.equal(vistos.length, 0);
+});
+
+test("api: con la puerta lee la bandeja, deja fuera consejero↔consejero y archiva por mes", async () => {
+  const almacen = kvFalso(), vistos = [];
+  const env = { PUERTA_FIRMA: FIRMA, RECORTE_KV: almacen, CONSEJERO_MENSAJES_TOKEN: "t".repeat(32) };
+  const r = await api.onRequestGet({ request: await conPuerta("persona"), env, fetchImpl: bandejaFalsa([M1, M2, M3, ENTRE], vistos) });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.lector, "persona");
+  assert.deepEqual(d.mensajes.map((m) => m.id), ["cm2", "cm1", "cm3"]); // lo más reciente primero
+  assert.equal(d.total_registro, 3);
+  assert.equal(d.parejas.length, 2);
+  assert.deepEqual(d.archivo.meses, ["2026-10", "2026-11"]);
+  assert.equal(d.archivo.nuevos_en_esta_lectura, 3);
+  assert.equal(JSON.parse(almacen.d.get(lib.claveMes("2026-11"))).length, 2);
+  const w = vistos.find((v) => v.u.includes("con=Neo"));
+  assert.ok(w.u.startsWith("https://mcp.admira.live/consejero/mensajes?"));
+  assert.equal(w.i.headers["x-mensajes-token"], "t".repeat(32));
+  assert.equal(r.headers.get("cache-control"), "no-store");
+});
+
+test("api: lo archivado sobrevive a que la bandeja lo recorte o se caiga; sin cambios no reescribe", async () => {
+  const almacen = kvFalso();
+  const env = { PUERTA_FIRMA: FIRMA, RECORTE_KV: almacen };
+  await api.onRequestGet({ request: await conPuerta("agente"), env, fetchImpl: bandejaFalsa([M1, M2, M3]) });
+  const escrituras = almacen.puts;
+  // La bandeja ya solo conserva M2 (ahora leído).
+  const r2 = await api.onRequestGet({ request: await conPuerta("agente"), env, fetchImpl: bandejaFalsa([{ ...M2, leido: true, leido_en: "2026-11-21T10:06:00.000Z" }]) });
+  const d2 = await r2.json();
+  assert.equal(d2.total_registro, 3);
+  assert.equal(d2.mensajes.find((m) => m.id === "cm2").leido, true);
+  assert.equal(almacen.puts, escrituras + 1);
+  // Bandeja caída: se sirve el archivo, se avisa y no se escribe nada.
+  const r3 = await api.onRequestGet({ request: await conPuerta("agente"), env, fetchImpl: bandejaFalsa([], [], true) });
+  const d3 = await r3.json();
+  assert.equal(d3.bandeja.ok, false); assert.equal(d3.total_registro, 3);
+  assert.equal(almacen.puts, escrituras + 1);
+});
+
+test("api: filtros y validación; sin KV sirve lo vivo", async () => {
+  const env = { PUERTA_FIRMA: FIRMA };
+  const mal = await api.onRequestGet({ request: await conPuerta("persona", "?agente=Nadie"), env, fetchImpl: bandejaFalsa([M1]) });
+  assert.equal(mal.status, 400);
+  const r = await api.onRequestGet({ request: await conPuerta("persona", "?agente=Neo&limite=1"), env, fetchImpl: bandejaFalsa([M1, M2, M3]) });
+  const d = await r.json();
+  assert.equal(d.archivo.almacen, "ninguno");
+  assert.equal(d.total, 2); assert.equal(d.mensajes.length, 1); assert.equal(d.mensajes[0].id, "cm2");
+});
+
+test("página: va tras la verja, llama al API y no pinta HTML de los mensajes", () => {
+  const html = readFileSync(new URL("./deepagents/index.html", import.meta.url), "utf8");
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  assert.ok(html.includes("/auth-gate.js"));
+  assert.ok(html.includes("/deepagents/deepagents.js"));
+  assert.ok(js.includes("/api/deepagents/registro"));
+  assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(js));
+});

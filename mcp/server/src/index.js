@@ -663,7 +663,8 @@ export async function manejar(request, env, deps = {}) {
       return json(cuerpo, 200, cors);
     }
     if (!lecturaMensajesPermitida(request, env)) return json({ ok: false, error: 'privado: se lee en admira.live con tu cuenta de Google' }, 401, cors);
-    const cuerpo = await crearBandeja(env, deps).listar(url.searchParams.get('con') || '');
+    // 21-11-2026 (Neo): ?max= (hasta 500) para el registro de /deepagents; sin él, los 50 de siempre.
+    const cuerpo = await crearBandeja(env, deps).listar(url.searchParams.get('con') || '', Number(url.searchParams.get('max')) || undefined);
     return json(cuerpo, 200, cors);
   }
   /* Limpieza de pruebas: vacía SOLO la sandbox (instancia «sandbox» del Durable Object). */

@@ -5,6 +5,8 @@
  * que despierta el webhook («rutina»). Se guarda en una sola clave KV por persona.
  * Sin dependencias: lo usan las Functions de Pages y los tests de Node.
  */
+import { verificar as verificarPuerta, leerCookie as leerCookiePuerta } from "./functions/_puerta.js";
+
 export const PERSONAS = ["jobs", "wozniak", "disney", "lucas", "musk", "huang"];
 export const ORIGENES = ["app", "live", "rutina"];
 export const MAX_TEXTO = 8000;
@@ -213,16 +215,22 @@ function leerCookie(request, nombre) {
   }
   return "";
 }
-/** Email de la cookie de sesión si es válida (firma, caducidad, allowlist) y, si no es GET/HEAD, mismo origen. */
-export async function emailSesion(request, env, ahora = Date.now(), fetchImpl = fetch) {
+/** Cookie de la puerta de servidor (__Host-admira_puerta), solo tipo persona (email). No vale agente ni kiosco. */
+export async function emailPuertaPersona(request, env, ahora = Date.now(), fetchImpl = fetch) {
+  const secreto = env && env.PUERTA_FIRMA;
+  if (!secreto) return null;
+  const d = await verificarPuerta(secreto, leerCookiePuerta(request), Math.floor(ahora / 1000));
+  if (!d || d.t !== "persona") return null;
+  const email = String(d.s || "").toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+$/.test(email)) return null;
+  if (!(await autorizado(email, env, fetchImpl, ahora))) return null;
+  return email;
+}
+
+/** Email de la cookie de sesión del chat si es válida (firma, caducidad, allowlist). Sin fallback a la puerta. */
+export async function emailCookieChat(request, env, ahora = Date.now(), fetchImpl = fetch) {
   const v = leerCookie(request, COOKIE_SESION);
   if (!v || v.length > 1024 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(v)) return null;
-  const metodo = String(request.method || "GET").toUpperCase();
-  if (metodo !== "GET" && metodo !== "HEAD") {
-    // Anti-CSRF además de SameSite=Lax: las escrituras con cookie exigen Origin del mismo sitio.
-    let propio = ""; try { propio = new URL(request.url).origin; } catch (e) {}
-    if (!propio || request.headers.get("Origin") !== propio) return null;
-  }
   const [datos, f] = v.split(".");
   const esperada = await firma(env, datos);
   if (!esperada || !iguales(f, esperada)) return null;
@@ -231,6 +239,17 @@ export async function emailSesion(request, env, ahora = Date.now(), fetchImpl = 
   if (!c || c.v !== 1 || !(Number(c.x) > ahora) || Number(c.x) > ahora + SESION_TTL_MS + 60000) return null;
   if (!(await autorizado(email, env, fetchImpl, ahora))) return null;
   return email;
+}
+
+/** Email de la sesión: cookie del chat o, si no hay, la misma sesión de Google de la puerta de www. */
+export async function emailSesion(request, env, ahora = Date.now(), fetchImpl = fetch) {
+  const metodo = String(request.method || "GET").toUpperCase();
+  if (metodo !== "GET" && metodo !== "HEAD") {
+    // Anti-CSRF además de SameSite=Lax: las escrituras con cookie exigen Origin del mismo sitio.
+    let propio = ""; try { propio = new URL(request.url).origin; } catch (e) {}
+    if (!propio || request.headers.get("Origin") !== propio) return null;
+  }
+  return (await emailCookieChat(request, env, ahora, fetchImpl)) || emailPuertaPersona(request, env, ahora, fetchImpl);
 }
 
 // ── Entrega 2 (09-10-2026): enviar desde admira.live al consejero por el bot-inbox ──

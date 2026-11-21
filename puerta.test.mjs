@@ -70,3 +70,13 @@ test('la verja trae auth-gate fresco', async () => {
   const r = await onRequest(ctx('/auth-gate.js?v=puerta-abc'));
   assert.equal(r.status, 200); assert.equal(r.headers.get('cache-control'), 'no-store');
 });
+
+test('salir cierra la cookie de la puerta y la del chat', async () => {
+  const r = await onRequest(ctx('/puerta/salir', { method: 'POST' }));
+  assert.equal(r.status, 303);
+  assert.equal(r.headers.get('location'), '/');
+  const cookies = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : [r.headers.get('set-cookie')];
+  const txt = cookies.filter(Boolean).join('\n');
+  assert.match(txt, /__Host-admira_puerta=; Path=\/; Max-Age=0/);
+  assert.match(txt, /__Host-admira_chat=; Path=\/; Max-Age=0/);
+});

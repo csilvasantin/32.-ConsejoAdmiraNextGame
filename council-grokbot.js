@@ -532,12 +532,20 @@
       return Promise.resolve(true);
     }
     function entreFirma(list){return (list||[]).map(m=>String((m&&m.id)||'')+':'+(m&&m.hora||'')).join('|');}
-    function loadEntre(epoch){
+    function loadEntre(epoch, yaRestaurada){
       const persona=sharedOf(selected);
       if(!persona||destroyed||!current(epoch))return Promise.resolve();
       const jwt=hilo.credencial&&hilo.credencial();
       if(!jwt){
-        // Sin sesión: se ve el aviso; al entrar (chat-hilo-sesion) se vuelve a pedir.
+        // La puerta de www ya puede tener sesión: se restaura /api/chat/sesion antes de pedir otro Google.
+        if(!yaRestaurada && hilo.restaurarSesion){
+          return hilo.restaurarSesion().then(ok=>{
+            if(!current(epoch))return;
+            if(ok && hilo.credencial())return loadEntre(epoch, true);
+            if(!sh.entre.length)say('Entra con Google para ver la transcripción entre consejeros.');
+            scheduleEntre(epoch);
+          });
+        }
         if(current(epoch)&&!sh.entre.length)say('Entra con Google para ver la transcripción entre consejeros.');
         scheduleEntre(epoch);
         return Promise.resolve();
@@ -552,6 +560,7 @@
           const inicial=!sh.entreListos;
           sh.entre=msgs;
           locutarEntre(msgs,inicial);
+          say('');
           render();
         });
       }).catch(()=>{if(current(epoch))say('No se pudo leer la transcripción entre consejeros. Se reintentará.');})

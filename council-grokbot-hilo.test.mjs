@@ -32,24 +32,25 @@ class El {
   get childElementCount() { return this.children.filter(n => n.tagName !== '#TEXT').length; }
   get scrollHeight() { return this.textContent.length; }
 }
-function harness({ jwt = 'tok', entre = [] } = {}) {
+function harness({ jwt = 'tok', entre = [], restaurarSesion } = {}) {
   const doc = { hidden: false, details: null, createElement(t) { const n = new El(t, this); if (t === 'section') this.details = n; return n; }, createTextNode(t) { const n = new El('#text', this); n.textContent = t; return n; }, addEventListener() {} };
   const net = [], hiloCalls = [], authReady = [];
+  const state = { jwt };
   const fetch = async (url, init) => {
     const u = String(url);
     net.push(u);
     if (/entre-consejeros/.test(u)) {
-      return { ok: true, status: jwt ? 200 : 401, json: async () => ({ ok: true, con: (u.match(/con=([^&]+)/) || [])[1], mensajes: entre.slice(), pendientes: 0 }) };
+      return { ok: true, status: state.jwt ? 200 : 401, json: async () => ({ ok: true, con: (u.match(/con=([^&]+)/) || [])[1], mensajes: entre.slice(), pendientes: 0 }) };
     }
     return { ok: true, status: 200, json: async () => ({ ok: true, mode: 'desktop', bidirectional: true, available: true, messages: [] }) };
   };
   const w = {}; new Function('window', clienteSrc)(w);
   const C = w.ChatHiloClient;
-  const state = { jwt };
   // Histórico previo del hilo: NO debe aparecer en la home.
   const turnos = [{ id: 'a', rol: 'carlos', origen: 'app', texto: 'Hola desde la app', ts: '2026-10-09T05:00:00Z' }, { id: 'b', rol: 'persona', origen: 'rutina', texto: 'Hola, Carlos', ts: '2026-10-09T05:00:05Z' }];
   const hilo = { ...C,
     credencial: () => state.jwt,
+    restaurarSesion: restaurarSesion ? () => restaurarSesion(state) : async () => false,
     leerHilo: async (p) => { hiloCalls.push(['leer', p]); return state.jwt ? { status: 200, ok: true, turnos: turnos.slice() } : { status: 401, ok: false, turnos: [] }; },
     enviarTurno: async (p, texto, id) => { hiloCalls.push(['enviar', p, texto]); const ts = new Date().toISOString(); turnos.push({ id, rol: 'carlos', origen: 'live', texto, ts, entrega: 'entregado', encargo: 7 }); return { status: 201, turno: { id, ts, entrega: 'entregado', encargo: 7 } }; },
     cargarGoogle: (b, ok) => { hiloCalls.push(['google']); state.jwt = 'tok'; ok(); }
@@ -193,6 +194,16 @@ test('home · al seleccionar Elon se ve el mismo par con con=musk, intercalado p
 test('index.html de la portada carga consejero-mensajes.js y el council-grokbot nuevo', () => {
   const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
   assert.match(html, /consejero-mensajes.js\?v=20261112-sin-acople/);
-  assert.match(html, /council-grokbot.js\?v=20261114-r181-conversacion/);
+  assert.match(html, /council-grokbot.js\?v=20261121-sesion-unica/);
   assert.match(html, /consejeros-voces\.js/);
+});
+
+test('home · si la puerta ya tiene sesión, la transcripción se ve sin pedir otro Google', async () => {
+  const h = harness({ jwt: '', entre: PAR_JOBS_ELON, restaurarSesion: async (state) => { state.jwt = 'sesion'; return true; } });
+  assert.equal(await h.api.select('Steve Jobs'), true);
+  await flush();
+  await flush();
+  assert.ok(h.net.some(u => /entre-consejeros\?con=jobs/.test(u)));
+  assert.ok(!h.statuses.includes('Entra con Google para ver la transcripción entre consejeros.'));
+  assert.match(h.log().textContent, /Hola Elon, ¿me oyes\?/);
 });

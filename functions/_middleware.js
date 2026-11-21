@@ -6,6 +6,7 @@ import {
   FLEET, VIDA, esPublico, verificar, emitir, cookieDe, cookieFuera, leerCookie,
   secretoValido, sha256hex, igual, rutaSegura,
 } from './_puerta.js';
+import { emitirSesion, cookieSesion } from '../chat-hilo-lib.mjs';
 
 const SIN_CACHE = { 'Cache-Control': 'no-store, private', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' };
 
@@ -56,7 +57,11 @@ async function puerta(context, url, secreto) {
     } catch (_) { return json({ ok: false, error: 'fleet_no_disponible' }, 503); }
     if (!/^[^\s@]+@[^\s@]+$/.test(email)) return json({ ok: false, error: 'ticket' }, 401);
     const c = await emitir(secreto, 'persona', email);
-    return json({ ok: true, tipo: 'persona' }, 200, { 'Set-Cookie': cookieDe(c.valor, c.maxAge) });
+    const headers = { 'Set-Cookie': cookieDe(c.valor, c.maxAge) };
+    const chat = await emitirSesion(env, email);
+    const res = json({ ok: true, tipo: 'persona' }, 200, headers);
+    if (chat) res.headers.append('Set-Cookie', cookieSesion(chat.valor, Math.floor((chat.exp - Date.now()) / 1000)));
+    return res;
   }
   if (ruta === '/puerta/agente') {
     if (request.method !== 'POST') return json({ ok: false, error: 'method' }, 405, { Allow: 'POST' });
@@ -85,7 +90,10 @@ async function puerta(context, url, secreto) {
     return new Response(null, { status: 303, headers: { Location: rutaSegura(url.searchParams.get('a')), 'Set-Cookie': cookieDe(c.valor, c.maxAge), ...SIN_CACHE } });
   }
   if (ruta === '/puerta/salir') {
-    return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': cookieFuera(), ...SIN_CACHE } });
+    const h = { Location: '/', 'Set-Cookie': cookieFuera(), ...SIN_CACHE };
+    const res = new Response(null, { status: 303, headers: h });
+    res.headers.append('Set-Cookie', cookieSesion('', 0));
+    return res;
   }
   if (ruta === '/puerta/estado') {
     const d = await verificar(secreto, leerCookie(request));

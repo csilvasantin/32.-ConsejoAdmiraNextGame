@@ -250,9 +250,34 @@
   function txtRitmo(fuente, iso) {
     var h = horaMadrid(iso);
     if (fuente === 'hora') return T('ritmo de la última hora con datos', 'rate of the last hour with data') + (h ? ' · ' + T('último uso ', 'last use ') + h : '');
+    if (fuente === '15+cursor') return T('suma de la flota: últimos 15 min + última ventana de Cursor (con retraso)', 'fleet sum: last 15 min + last Cursor window (delayed)');
+    if (fuente === 'hora+cursor') return T('suma de la flota: última hora con datos', 'fleet sum: last hour with data') + (h ? ' (' + T('último uso ', 'last use ') + h + ')' : '') + T(' + última ventana de Cursor (con retraso)', ' + last Cursor window (delayed)');
     if (fuente === 'cursor') return T('ritmo de la última ventana publicada (Cursor, con retraso)', 'rate of the last published window (Cursor, delayed)');
     if (fuente === 'sinvivo') return T('sin dato en vivo: hay trabajo pero ningún token medido en la última hora', 'no live data: there is work but no tokens measured in the last hour') + (h ? ' · ' + T('último uso ', 'last use ') + h : '');
     return T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)');
+  }
+  /** r226: ritmo de la última ventana publicada de Cursor de toda la flota (solo agentes con retraso y datos ≤ 60 min). */
+  function cursorFlota(d) {
+    var t = ((d && d.porAgente) || []).reduce(function (s, a) { var v = tasaVista(a); return s + (v > 0 ? v : 0); }, 0);
+    return t > 0 ? t : null;
+  }
+  /** r226: escala del dial del total: caben el pico de 24 h real y la cifra que se enseña (mínimo 2 M). */
+  function escalaTotal(d, v) { return escala(Math.max(Number(d && d.pico24h) || 0, Number(v) || 0) / 1.5 * 1.25, 2e6); }
+  /** r226: ritmo honesto del TOTAL (todos los agentes y consejeros), «lo máximo posible» sin inventar: la parte en vivo
+   *  (15 min; si es 0, la última hora con datos de los agentes en vivo) + la última ventana publicada de Cursor de los que
+   *  llegan con retraso (Grok Bot (Consejo)), que la velocidad en vivo no incluye (r39) → no se cuenta dos veces.
+   *  Sin nada medido: «sin dato en vivo» si hay trabajo, 0 si no. */
+  function ritmoTotal(d, sin) {
+    if (sin || !d) return { tokHora: null, tokHoy: null, fuente: 'sinvivo', ultimoEvento: null, estimado: false };
+    var vivos = (d.porAgente || []).filter(function (a) { return a && !a.conRetraso; });
+    var v15 = Number(d.tokHora) > 0 ? Number(d.tokHora) : 0;
+    var vH = vivos.reduce(function (s, a) { return s + (Number(a.tokUltimaHora) > 0 ? Number(a.tokUltimaHora) : 0); }, 0);
+    var cur = cursorFlota(d) || 0;
+    var vivo = v15 > 0 ? v15 : vH, total = vivo + cur, fuente;
+    if (total > 0) fuente = v15 > 0 ? (cur ? '15+cursor' : null) : vH > 0 ? (cur ? 'hora+cursor' : 'hora') : 'cursor';
+    else { total = hayVerdes() ? null : 0; fuente = total == null ? 'sinvivo' : null; }
+    return { tokHora: total == null ? null : Math.round(total), tokHoy: d.tokHoy != null ? Math.round(Number(d.tokHoy)) : null, fuente: fuente,
+      ultimoEvento: ultimoUso(vivos), estimado: false, vivo: vivo, cursor: cur };
   }
   /** Ritmo honesto de una fila (agente o proyecto) para listas y desplegables: el mismo criterio que los diales. */
   function ritmoFila(o) {
@@ -403,11 +428,15 @@
   };
   root.ConsumosVelocimetroAguja = { amplitud: amplitud };
 
-  var LS_PROY = 'consumos.vel.proyecto', LS_AG = 'consumos.vel.agente', AUTO = '__auto__';
+  var LS_PROY = 'consumos.vel.proyecto', LS_AG = 'consumos.vel.agente', AUTO = '__auto__', TODOS = '__todos__';
   function lsGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) || '' : ''; } catch (e) { return ''; } }
+  // r226 (Carlos, 21-11: «por defecto siempre es Toda la Flota y Todos los Proyectos para que el número sea muy grande,
+  // siempre tenemos que hablar de lo máximo posible»): /consumos abre SIEMPRE en el total. La elección de agente o
+  // proyecto vale solo para esta visita: lo guardado de antes (auto o un agente) se borra al cargar y ya no se lee.
+  try { if (root.localStorage) { root.localStorage.removeItem('consumos.vel.proyecto'); root.localStorage.removeItem('consumos.vel.agente'); } } catch (e) {}
   function lsSet(k, v) { try { if (!root.localStorage) return; if (v) root.localStorage.setItem(k, v); else root.localStorage.removeItem(k); } catch (e) {} }
   var E = root.ConsumosElegir;
-  var estado = { periodo: 'hoy', datos: null, recibido: 0, proyecto: lsGet(LS_PROY) || null, agente: lsGet(LS_AG) || '', d1: null, d2: null };
+  var estado = { periodo: 'hoy', datos: null, recibido: 0, proyecto: TODOS, agente: '', d1: null, d2: null };
   function hace(s) {
     if (s == null || !isFinite(s)) return '';
     if (s < 90) return T('hace ', '') + Math.round(s) + ' s' + T('', ' ago');
@@ -528,24 +557,26 @@
 
   /** Proyecto a enseñar: el elegido a mano (guardado) o, en AUTO, el que más quema ahora (se reevalúa cada 10 s). */
   function eleccion(d) {
+    if (estado.proyecto === TODOS) return { proyecto: TODOS, auto: false, todos: true };
     // #6991: en AUTO con un solo proyecto activo, ese (fuente: /api/flota/trabajando si ya llegó).
     if (!estado.proyecto) { var u = E.proyectoUnicoActivo((d && d.porProyecto) || [], ACT ? ACT.proyectos : null); if (u) return { proyecto: u, auto: true, unico: true }; }
     return E.elegirProyecto((d && d.porProyecto) || [], estado.proyecto);
   }
   /** #6991 (Carlos, 21-10-2026): agente que enseña el dial: el elegido a mano o, si solo hay UNO operativo, ese. */
   function agUnico(d) {
-    if (estado.agente) return '';
+    if (estado.agente !== AUTO) return '';
     var pa = (d && d.porAgente) || [], u = E.agenteUnicoActivo(pa, ACT ? ACT.agentes : null);
-    if (!u) return '';
+    // r226: en «Automático» sin un único activo, el que más gasta ahora.
+    if (!u) { var top = pa.slice().sort(function (a, b) { return E.actividad(b) - E.actividad(a); })[0]; return top && E.actividad(top) > 0 ? top.agente : ''; }
     // 19-11: con el nombre del pulso (alias Merovingio ↔ Grok Bot (Consejo)) y solo si tiene actividad; si no, el más activo.
     var f = E.filaDe(pa, u);
     if (f && E.actividad(f) > 0) return f.agente;
     var mejor = pa.slice().sort(function (a, b) { return E.actividad(b) - E.actividad(a); })[0];
     return mejor && E.actividad(mejor) > 0 ? mejor.agente : '';
   }
-  function agenteVer(d) { return estado.agente || agUnico(d); }
+  function agenteVer(d) { return estado.agente === AUTO ? agUnico(d) : estado.agente; }
   function proyectoActual(d) { return eleccion(d).proyecto; }
-  function nomP(p) { return p === 'otros' ? T('otros (sin proyecto)', 'others (no project)') : p; }
+  function nomP(p) { return p === TODOS ? T('Todos los proyectos', 'All projects') : p === 'otros' ? T('otros (sin proyecto)', 'others (no project)') : p; }
   /* r23 (Carlos): desplegables propios (assets/consumos-desplegable.js) en vez de <select> nativos — el menú nativo de
    * macOS no deja colorear. Punto de estado por fila: verde = tok/h > 0 ahora · amarillo = tokens hoy, 0 tok/h ·
    * rojo = sin datos hoy (E.estadoFila). Agentes: tok/h, hoy, máquina, proyecto, modelo/cuenta, % de margen y «con Carlos». */
@@ -572,7 +603,15 @@
     lista.forEach(function (p) { vistos[p.proyecto] = 1; opts.push(p); });
     GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ proyecto: p, tokHoy: null, tokHora: null }); });
     var el = eleccion(d), elegido = opts.filter(function (o) { return o.proyecto === el.proyecto; })[0];
-    var items = [{ valor: AUTO, estado: elegido ? E.estadoFila(elegido.tokHora, elegido.tokHoy) : '',
+    var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null, tokHoy: null };
+    var estT = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
+    var nConHoy = lista.filter(function (p) { return p.tokHoy > 0; }).length;
+    var cifT = (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data'));
+    // r226: «Todos los proyectos» (la suma) es la 1.ª opción y la de partida; «Automático» queda 2.ª.
+    var items = [{ valor: TODOS, estado: estT,
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estT) + T('Todos los proyectos', 'All projects') + '</span><small><b>' + cifT + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + nConHoy + T(' proyectos con tokens hoy', ' projects with tokens today') + '</small></span>',
+      boton: punto(estT) + '<span class="dd-bt">' + T('Todos los proyectos', 'All projects') + (rT.tokHora != null ? ' · ' + fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : '') + '</span>' },
+      { valor: AUTO, estado: elegido ? E.estadoFila(elegido.tokHora, elegido.tokHoy) : '',
       html: '<span class="dd-fila"><span class="dd-tit"><i class="dd-punto dd-auto" aria-hidden="true"></i>' + T('Automático: el que más gasta ahora', 'Automatic: top spender right now') + '</span>' +
         (el.auto && el.proyecto ? '<small>' + T('ahora sigue a ', 'now following ') + '<b>' + esc(nomP(el.proyecto)) + '</b></small>' : '') + '</span>' }];
     opts.forEach(function (o) {
@@ -586,7 +625,7 @@
     DD.proy.pon(items, el.auto ? (elegido ? elegido.proyecto : AUTO) : el.proyecto);
     if (el.auto) DD.proy.valor = AUTO; // el botón enseña el proyecto seguido; la opción marcada es «Automático»
     var lis = DD.proy.l.children;
-    for (var k = 0; k < lis.length; k++) lis[k].setAttribute('aria-selected', String(el.auto ? k === 0 : DD.proy.items[k].valor === el.proyecto));
+    for (var k = 0; k < lis.length; k++) lis[k].setAttribute('aria-selected', String(el.auto ? DD.proy.items[k].valor === AUTO : DD.proy.items[k].valor === el.proyecto));
   }
   function perfilDe(d, nombre) { return ((d && d.conocidos) || []).filter(function (c) { return c.agente === nombre; })[0] || null; }
   function notaHtml(m) {
@@ -620,22 +659,26 @@
   function pintaSelectorAgente(d) {
     if (!DD.ag) return;
     var ags = E.agentesConConocidos((d && d.porAgente) || [], (d && d.conocidos) || []);
-    if (estado.agente && !ags.some(function (a) { return a.agente === estado.agente; })) ags.push({ agente: estado.agente, tokHora: null, tokHoy: 0, sinDatos: true });
+    if (estado.agente && estado.agente !== AUTO && !ags.some(function (a) { return a.agente === estado.agente; })) ags.push({ agente: estado.agente, tokHora: null, tokHoy: 0, sinDatos: true });
     var activos = ACT ? ACT.nAgentes : nAgActivos(d), conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
-    var estF = d && d.tokHora != null ? E.estadoFila(d.tokHora, d.tokHoy) : 'rojo';
+    var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null };
+    var estF = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
-      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('estimado', 'estimated') + (ultimoDe('flota').tokHora != null ? ' ' + fmt(ultimoDe('flota').tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : '')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     var unico = agUnico(d);
+    // r226: «Automático» (el único activo o el que más gasta) es la 2.ª opción, nunca la de partida.
+    items.push({ valor: AUTO, estado: '', html: '<span class="dd-fila"><span class="dd-tit"><i class="dd-punto dd-auto" aria-hidden="true"></i>' + T('Automático: el que más gasta ahora', 'Automatic: top spender right now') + '</span>' +
+      (estado.agente === AUTO && unico ? '<small>' + T('ahora sigue a ', 'now following ') + '<b>' + esc(vis(unico)) + '</b></small>' : '') + '</span>',
+      boton: '<i class="dd-punto dd-auto" aria-hidden="true"></i><span class="dd-bt">' + (unico ? esc(vis(unico)) + ' <em class="dd-autotag">auto</em>' : T('Automático', 'Automatic')) + '</span>' });
     if (unico && !ags.some(function (a) { return a.agente === unico; })) ags.push({ agente: unico, tokHora: null, tokHoy: 0, sinDatos: true });
     ags.forEach(function (a) {
       var f = filaAgenteInfo(a, perfilDe(d, a.agente));
       // #6991: con un solo agente operativo el botón dice su nombre y máquina («Morfeo · MacMini»), no «Toda la flota».
-      var maqU = a.agente === unico ? maqDe(a, perfilDe(d, a.agente)) : '';
-      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(vis(a.agente)) + (maqU ? ' · ' + esc(maqU) : '') + (a.agente === unico ? ' <em class="dd-autotag">auto</em>' : '') + '</span>' });
+      var maqU = '';
+      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(vis(a.agente)) + (maqU ? ' · ' + esc(maqU) : '') + '</span>' });
     });
-    DD.ag.pon(items, estado.agente || unico || '');
-    if (unico) DD.ag.valor = ''; // la opción marcada sigue siendo «Toda la flota» (auto); el botón enseña al único activo
+    DD.ag.pon(items, estado.agente || '');
   }
   function leerMargen() {
     return fetch('/api/orquestar', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (o) {
@@ -663,16 +706,16 @@
   function pintaIzquierdo(d, sin) {
     var g1 = document.getElementById('vel-g-total');
     if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
-    var r = E.elegirAgente(sin ? [] : d.porAgente, sin ? estado.agente : agenteVer(d));
+    var r = E.elegirAgente(sin ? [] : d.porAgente, sin ? (estado.agente === AUTO ? '' : estado.agente) : agenteVer(d));
     var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
     var max;
     estado.d1.fresco = usoFresco(sin ? [] : (r.agente ? (r.fila ? [r.fila] : []) : d.porAgente), Date.now());
     var per = estado.periodo, pd = per !== 'hoy' && !sin && d.periodos ? d.periodos[per] : null;
     estado.d1.periodo = per;
     if (!r.agente) {
-      max = sin ? (estado.d1.max || 2e6) : (d.escalaMax || 2e6);
-      var rF = resp('flota', { tokHora: sin ? null : d.tokHora, ultimaHora: sin ? null : d.tokUltimaHora, tokHoy: sin ? null : d.tokHoy,
-        trabajando: hayVerdes(), ultimoEvento: sin ? null : ultimoUso(d.porAgente) });
+      // r226: total de toda la flota (agentes + consejeros: Grok Bot (Consejo), Consejeros (Cloudflare)…), escala que lo abarca.
+      var rF = ritmoTotal(d, sin);
+      max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, rF.tokHora);
       var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
       estado.d1.ultimoEvento = rF.ultimoEvento;
       estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
@@ -720,6 +763,7 @@
     if (!estado.d2) estado.d2 = new Dial(box, 'vg2', T('Velocímetro de tokens por hora del proyecto', 'Project tokens per hour speedometer'));
     var nombre = proyectoActual(d);
     var lista = (d && d.porProyecto) || [];
+    if (nombre === TODOS) return pintaTodos(d, sin, lista);
     var p = null;
     for (var i = 0; i < lista.length; i++) if (lista[i].proyecto === nombre) p = lista[i];
     var maxRate = lista.reduce(function (m, x) { return Math.max(m, x.tokHora || 0, x.tokUltimaHora || 0); }, 0);
@@ -748,6 +792,18 @@
         (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
   }
 
+  /** r226: dial de PROYECTOS en «Todos los proyectos» = suma de todos (mismo total y mismas reglas que «Toda la flota»). */
+  function pintaTodos(d, sin, lista) {
+    var rT = ritmoTotal(d || {}, sin);
+    estado.d2.ultimoEvento = rT.ultimoEvento;
+    estado.d2.fresco = usoFresco(sin ? [] : (d && d.porAgente) || [], Date.now());
+    estado.d2.pinta(rT.tokHora, sin ? 2e6 : escalaTotal(d, rT.tokHora), rT.tokHoy, false, sin ? rT.tokHoy : tokHoyVivo(d), rT.fuente);
+    var nom = document.getElementById('vel-proy-nombre');
+    if (nom) nom.textContent = T('Todos los proyectos', 'All projects');
+    var met = document.getElementById('vel-proy-metodo');
+    var nHoy = lista.filter(function (p) { return p.tokHoy > 0; }).length;
+    if (met) met.innerHTML = sin ? T('Sin dato en vivo', 'No live data') : nHoy + T(' proyectos con tokens hoy', ' projects with tokens today') + ' · 15 min: <b>' + fmt(Number(d.tokUltimos15min) || 0) + '</b> tok · ' + T('última hora', 'last hour') + ': <b>' + fmt(Number(d.tokUltimaHora) || 0) + '</b> tok';
+  }
   /* r22 (Carlos: «falta la velocidad por hora por agente para ver qué agente trabaja más»): ranking en vivo por tok/h,
    * barra relativa al líder, tokens de hoy, máquina, proyecto actual y «con Carlos»; clic = elegir el agente en el dial. */
   function ordenAgentes(lista) {
@@ -795,7 +851,7 @@
     box.classList.toggle('rt', !sin && d.metodo === 'tiempo real');
     pintaSelectorAgente(d);
     pintaIzquierdo(d, sin);
-    var max = sin ? 2e6 : (d.escalaMax || 2e6);
+    var max = sin ? 2e6 : escalaTotal(d, ritmoTotal(d, false).tokHora); // r226: la escala que se dice = la del dial del total
     pintaSelector(d);
     pintaProyecto(d, sin);
     var tpr = document.getElementById('vel-proy-titulo'); if (tpr) tpr.textContent = rotProy();

@@ -169,7 +169,7 @@
   /* r234: el estado de los cuatro deepagents (abierto · actividad · proyecto) sale de /assets/deepagents-estado.js,
    * el MISMO módulo que usa Consumo para «Agentes (trabajando/abiertos)» y «Proyectos». */
   var DA = window.DeepAgentsEstado;
-  var FIJOS = DA.FIJOS, NOMBRE = DA.NOMBRE, claveMaq = DA.claveMaq, fijoDe = DA.fijoDe, maquinasDe = DA.maquinasDe;
+  var FIJOS = DA.FIJOS, NOMBRE = DA.NOMBRE, claveMaq = DA.claveMaq, fijoDe = DA.fijoDe, maquinasDe = DA.maquinasDe, conLatidoEn = DA.conLatidoEn;
   var nombreProy = DA.nombreProy, proyectoActual = DA.proyectoActual;
   var actividadGit = {}; // agente → { ts, accion, repo, rama, pr } (GET /api/deepagents/actividad o GitHub directo)
   function abiertoEn(t, maq) { return DA.abiertoEn(t, maq, flota.tarjetas); }
@@ -227,11 +227,17 @@
     cab.appendChild(bFoto);
     var quien = el("div");
     quien.appendChild(el("div", "ag-nom", visible));
-    // Bajo el nombre, solo el equipo: texto si vive en uno; desplegable si está en más de uno (principal elegido).
+    // Bajo el nombre, desplegable con los 4 pilares (más las reales); principal elegido. Sin latido de este agente → sufijo.
     if (maqs.length > 1) {
       var s = el("select", "ag-maq");
       s.setAttribute("aria-label", "Equipo de " + visible);
-      maqs.forEach(function (m) { var o = el("option", "", m); o.value = m; if (claveMaq(m) === claveMaq(sel)) o.selected = true; s.appendChild(o); });
+      maqs.forEach(function (m) {
+        var lat = conLatidoEn(t, m);
+        var o = el("option", lat ? "" : "sin-latido", lat ? m : m + " · sin latido");
+        o.value = m;
+        if (claveMaq(m) === claveMaq(sel) || (DA.claveLista && DA.claveLista(m) === DA.claveLista(sel))) o.selected = true;
+        s.appendChild(o);
+      });
       s.addEventListener("change", function (e) { maqElegida[nombre] = e.target.value; pintarAhora(); });
       quien.appendChild(s);
     } else if (principal) {

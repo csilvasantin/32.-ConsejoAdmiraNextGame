@@ -263,6 +263,48 @@ test("r234: Consumo y DeepAgents cuentan con el mismo módulo; Oráculo admira.t
   assert.ok(html.indexOf("/assets/deepagents-estado.js") > 0 && html.indexOf("/assets/deepagents-estado.js") < html.indexOf("/assets/consumos-velocimetro.js"));
 });
 
+test("r240: el desplegable de cada DeepAgent ofrece siempre los 4 pilares; sin latido se marca; Claude compartido no se finge", () => {
+  const D = cargaDA();
+  const morfeo = { agente: "Morfeo", maquina: "MacMini", maquinas: ["MacMini", "MacBookAirRosa"], superficies: [{ tipo: "app", maquina: "MacMini", app: "Claude", fuente: "pulso" }] };
+  const neo = { agente: "Neo", maquina: "MacStudio", maquinas: ["MacStudio", "MacBook Pro 16"], superficies: [
+    { tipo: "app", maquina: "MacStudio", app: "Claude", fuente: "pulso" },
+    { tipo: "app", maquina: "MacBook Pro 16", app: "Claude", enUso: false, fuente: "pulso" },
+  ] };
+  const trinity = { agente: "Trinity", maquina: "MacStudio", superficies: [
+    { tipo: "cli", maquina: "MacBookPro16", runtime: "Codex CLI", sesion: "trinity", fuente: "pulso" },
+    { tipo: "app", maquina: "MacStudio", app: "Codex", fuente: "pulso" },
+  ] };
+  const maqs = D.maquinasDe(morfeo, "MacMini");
+  assert.deepEqual(maqs.slice(0, 4), ["MacMini", "MacStudio", "MacBookPro16", "MacBookProNegro14"]);
+  assert.ok(maqs.includes("MacBookAirRosa"));
+  assert.equal(maqs.filter((m) => D.claveLista(m) === "MacBookPro16" || m === "MacBook Pro 16").length, 1);
+  assert.equal(D.conLatidoEn(morfeo, "MacMini"), true);
+  assert.equal(D.conLatidoEn(morfeo, "MacBookAirRosa"), true);
+  assert.equal(D.conLatidoEn(morfeo, "MacBookPro16"), false);
+  assert.equal(D.conLatidoEn(morfeo, "MacBookProNegro14"), false);
+  const ts = [morfeo, neo, trinity];
+  // Morfeo en su MacMini: Claude propio en el pulso → abierto.
+  assert.equal(D.abiertoEn(morfeo, "MacMini", ts).estado, "verde");
+  // Claude en el MBP16 lo firma el pulso como Neo: no se distingue si es Morfeo → amarillo, no rojo ni verde.
+  const amb = D.abiertoEn(morfeo, "MacBookPro16", ts);
+  assert.equal(amb.estado, "amarillo");
+  assert.match(amb.porque, /Claude/);
+  assert.match(amb.porque, /Neo/);
+  assert.match(amb.porque, /no se distingue/);
+  // Pulso vivo en el MBP16 (CLI de Trinity) pero sin Claude de nadie → cerrado de verdad.
+  const sinClaude = [morfeo, { ...neo, superficies: [{ tipo: "app", maquina: "MacStudio", app: "Claude", fuente: "pulso" }] }, trinity];
+  assert.equal(D.abiertoEn(morfeo, "MacBookPro16", sinClaude).estado, "rojo");
+  // Sin pulso de ese Mac → amarillo (p. ej. MBP14).
+  assert.equal(D.abiertoEn(morfeo, "MacBookProNegro14", ts).estado, "amarillo");
+  // Si el pulso atribuye Claude a Morfeo en el MBP16, abierto.
+  const propio = { ...morfeo, superficies: morfeo.superficies.concat([{ tipo: "app", maquina: "MacBookPro16", app: "Claude", fuente: "pulso" }]) };
+  assert.equal(D.abiertoEn(propio, "MacBook Pro 16", [propio, neo, trinity]).estado, "verde");
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  assert.ok(js.includes("sin latido") && js.includes("conLatidoEn"));
+  const html = readFileSync(new URL("./deepagents/index.html", import.meta.url), "utf8");
+  assert.ok(html.includes("r240-pilares-desplegable"));
+});
+
 test("r233: cerrar/arrancar app: lista cerrada en el relay y en admira.live, foto = botón, cerrar pide confirmación", async () => {
   const { createRequire } = await import("node:module");
   const require = createRequire(import.meta.url);

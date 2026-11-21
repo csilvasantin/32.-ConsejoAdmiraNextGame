@@ -6,6 +6,7 @@ import {
   esCruce,
   asMs,
   formatearDuracion,
+  textoInicioMision,
   fromInboxItem,
   fromSesion,
   fromMensaje,
@@ -60,6 +61,52 @@ test('#7637 Musk → Jobs entra con hora Madrid y duración real', () => {
   assert.match(row.inicio_madrid, /21\/11\/2026/);
   assert.match(row.inicio_madrid, /10:21:36/);
   assert.equal(row.en_curso, false);
+  assert.equal(row.mision_inicio_madrid, 'sin hora');
+  assert.equal(row.mision_inicio, 0);
+});
+
+test('la hora de la misión es un dato propio: hoy sin fecha, otro día con fecha, y created_at no cuenta', () => {
+  const conInicio = fromInboxItem({
+    id: 7700,
+    ts: 1795252896,
+    from_name: 'status-web · Elon Musk (por encargo de Carlos)',
+    target_persona: 'Jobs',
+    status: 'done',
+    done_at: 1795252985,
+    started_at: '2026-11-21T08:15:00Z',
+    created_at: '2026-11-01T00:00:00Z',
+    text: 'encabezados',
+  }, AHORA);
+  assert.equal(conInicio.mision_inicio_madrid, '09:15:00');
+  assert.notEqual(conInicio.mision_inicio, conInicio.inicio);
+  const otroDia = fromInboxItem({
+    id: 7701,
+    ts: 1795252896,
+    from_name: 'Jobs',
+    target_persona: 'Musk',
+    status: 'done',
+    mission_started: Date.parse('2026-11-20T09:00:00Z'),
+    text: 'otro día',
+  }, AHORA);
+  assert.match(otroDia.mision_inicio_madrid, /20\/11\/2026/);
+  assert.match(otroDia.mision_inicio_madrid, /10:00:00/);
+  const soloAlta = fromInboxItem({
+    id: 7702,
+    ts: 1795252896,
+    from_name: 'Elon Musk',
+    target_persona: 'Jobs',
+    status: 'done',
+    created_at: Date.parse('2026-11-21T08:00:00Z'),
+    ack_at: Date.parse('2026-11-21T08:05:00Z'),
+    text: 'sin inicio de misión',
+  }, AHORA);
+  assert.equal(soloAlta.mision_inicio_madrid, 'sin hora');
+  assert.equal(textoInicioMision(0, AHORA), 'sin hora');
+  const suelta = fromMensaje({
+    id: 'cm-suelto', de: 'Musk', para: 'Jobs', texto: 'sin número de encargo',
+    hora: '2026-11-21T11:07:00.000Z', leido: true, leido_en: '2026-11-21T11:09:00.000Z',
+  }, AHORA);
+  assert.equal(suelta.mision_inicio_madrid, null);
 });
 
 test('un encargo de Disney a Wozniak (misma generación) no aparece', () => {
@@ -131,12 +178,25 @@ test('la home y Conversación enlazan la sección visible', () => {
   assert.match(home, /comunicaciones-widget\.js/);
   const conv = fs.readFileSync('conversacion.html', 'utf8');
   assert.match(conv, /href="\/comunicaciones"/);
-  assert.match(fs.readFileSync('comunicaciones.html', 'utf8'), /id="contador"/);
+  const pagina = fs.readFileSync('comunicaciones.html', 'utf8');
+  assert.match(pagina, /id="contador"/);
+  assert.match(pagina, /data-yk-zone="app"/);
+  assert.match(pagina, /data-yk-title="COMUNICACIONES"/);
+  assert.doesNotMatch(pagina, /data-yk-parent/);
+  assert.match(pagina, /yk-frame\.js/);
+  assert.doesNotMatch(pagina, /APP_NAV|admira-topbar/);
+  const marco = fs.readFileSync('yk-frame.js', 'utf8');
+  assert.match(marco, /\["COMUNICACIONES", "\/comunicaciones"\]/);
+  assert.match(marco, /b\.id = "yk-lang"/);
+  assert.match(marco, /&gt;_/);
+  assert.match(fs.readFileSync('admira-bar.js', 'utf8'), /www\.admira\.live\/comunicaciones/);
   for (const file of ['comunicaciones-page.js', 'comunicaciones-widget.js', 'comunicaciones.html']) {
     const src = fs.readFileSync(file, 'utf8');
     assert.doesNotMatch(src, /CONSEJERO_MENSAJES_TOKEN|x-mensajes-token|Bearer |api[_-]?key/i);
   }
   assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /participantes/);
+  assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /mision_inicio_madrid/);
+  assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /sin hora/);
 });
 
 test('una sesión de la misma generación, o sin hablantes, no se inventa', () => {

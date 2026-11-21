@@ -12,6 +12,55 @@ export function horaMadrid(ts) {
   }).format(new Date(ts));
 }
 
+export function diaMadrid(ts) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(ts));
+}
+
+function horaSoloMadrid(ts) {
+  return new Intl.DateTimeFormat('es-ES', {
+    timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).format(new Date(ts));
+}
+
+/** Campos que son el inicio real de una misión. created_at, ts y ack_at no lo son. */
+const CAMPOS_INICIO_MISION = ['mission_started', 'started_at', 'active_since'];
+
+export function msInicioMision(registro) {
+  if (!registro || typeof registro !== 'object') return 0;
+  for (const campo of CAMPOS_INICIO_MISION) {
+    const ms = asMs(registro[campo]);
+    if (ms) return ms;
+  }
+  return 0;
+}
+
+/** Hoy: solo la hora. Otro día: fecha y hora. Sin dato real: «sin hora». */
+export function textoInicioMision(ms, ahora = Date.now()) {
+  if (!ms) return 'sin hora';
+  if (diaMadrid(ms) === diaMadrid(ahora)) return horaSoloMadrid(ms);
+  return horaMadrid(ms);
+}
+
+function anotarMision(row, registro, ligada, ahora) {
+  const ms = msInicioMision(registro);
+  if (!ligada && !ms) {
+    row.mision_inicio = 0;
+    row.mision_inicio_madrid = null;
+    return row;
+  }
+  row.mision_inicio = ms;
+  row.mision_inicio_madrid = textoInicioMision(ms, ahora);
+  return row;
+}
+
+function ligadaAMision(registro) {
+  if (!registro || typeof registro !== 'object') return false;
+  if (registro.materialize_mission || registro.mission_id || registro.mision_id || registro.encargo_id) return true;
+  return /(?:^|\s)#\d+(?:\.\d{2}\.\d{2})?\b|\bFLT-\d+\b/.test(String(registro.text || registro.texto || registro.tema || ''));
+}
+
 export const INBOX_PUBLICO = 'https://bot.yokup.com/api/public/inbox';
 export const MENSAJES_BASE = 'https://mcp.admira.live';
 /** Sillas cuya bandeja pública se lee (cada una trae sus 80 encargos más recientes). */
@@ -170,7 +219,7 @@ export function fromInboxItem(item, ahora = Date.now()) {
   const fin = done || (enCurso ? asMs(ahora) : inicio);
   const ga = generacionDe(de);
   const etiqueta = item.etiqueta ? String(item.etiqueta) : (item.id != null ? `#${item.id}` : '');
-  return {
+  return anotarMision({
     id: etiqueta || `encargo-${item.id || inicio}`,
     fuente: 'encargo',
     de,
@@ -187,7 +236,7 @@ export function fromInboxItem(item, ahora = Date.now()) {
     duracion: formatearDuracion(duracionMs(inicio, fin), { enCurso }),
     en_curso: enCurso,
     url: null,
-  };
+  }, item, true, ahora);
 }
 
 export function fromSesion(sesion, ahora = Date.now()) {
@@ -215,7 +264,7 @@ export function fromSesion(sesion, ahora = Date.now()) {
   const de = hablantes[0];
   const para = generacionDe(de) === 'leyendas' ? coe[0] : ley[0];
   const id = String(sesion.id || '').trim();
-  return {
+  return anotarMision({
     id: id ? `sesion-${id}` : `sesion-${inicio}`,
     fuente: 'sesion',
     de,
@@ -233,7 +282,7 @@ export function fromSesion(sesion, ahora = Date.now()) {
     duracion: formatearDuracion(duracionMs(inicio, fin), { enCurso }),
     en_curso: enCurso,
     url: id ? `https://www.admira.live/conversacion#sesion-${id}` : 'https://www.admira.live/conversacion',
-  };
+  }, sesion, ligadaAMision(sesion), ahora);
 }
 
 function urlChat(persona) {
@@ -260,7 +309,7 @@ export function fromMensaje(m, ahora = Date.now()) {
   const enCurso = !m.leido;
   const fin = leido || (enCurso ? asMs(ahora) : inicio);
   const id = String(m.id);
-  return {
+  return anotarMision({
     id: `mensaje-${id}`,
     fuente: 'mensaje',
     de,
@@ -277,7 +326,7 @@ export function fromMensaje(m, ahora = Date.now()) {
     duracion: formatearDuracion(duracionMs(inicio, fin), { enCurso }),
     en_curso: enCurso,
     url: urlChat(para) || urlChat(de),
-  };
+  }, m, ligadaAMision(m), ahora);
 }
 
 function recortar(texto, max) {

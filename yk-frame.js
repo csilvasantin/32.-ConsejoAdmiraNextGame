@@ -241,7 +241,8 @@
     // Carlos, 21-11-2026: Consumo y DeepAgents son secciones de admira.live y perdían el menú
     // (caían al de la home pública). Van en el menú único, como las demás.
     ["CONSUMO",     "/consumos"],
-    ["DEEPAGENTS",  "/deepagents"]
+    ["DEEPAGENTS",  "/deepagents"],
+    ["COMUNICACIONES", "/comunicaciones"]
   ];
 
   // Secciones con CONTADOR real «curso/pend» en la barra (Carlos, 2026-07-23):
@@ -1931,7 +1932,8 @@
 
     // [icono AVANZADO] [icono EXPERTO] al extremo derecho
     var icoR = icon("yk-ico yk-ico-adv", "right", "◨", "Avanzado");
-    var icoB = icon("yk-ico yk-ico-exp", "bottom", "▦", "Experto");
+    var langBtn = buildLangButton();
+    var icoB = icon("yk-ico yk-ico-exp", "bottom", "&gt;_", "Experto");
 
     bar.appendChild(icoL);
     bar.appendChild(logo);
@@ -1939,6 +1941,7 @@
     bar.appendChild(nav);
     bar.appendChild(proj);
     bar.appendChild(icoR);
+    bar.appendChild(langBtn);
     bar.appendChild(icoB);
 
     // ------------------------- PANELES (raíles) ----------------------------
@@ -1987,6 +1990,12 @@
     var expert = el("div", "yk-expert");
     var expertHead = el("div", "yk-hd yk-expert-hd");
     expertHead.appendChild(el("span", "yk-expert-title", "EXPERTO"));
+    var expertMax = el("button", "yk-expert-max", "MAX");
+    expertMax.type = "button";
+    expertMax.title = "Maximizar";
+    expertMax.setAttribute("aria-label", "Maximizar modo experto");
+    expertMax.setAttribute("aria-pressed", "false");
+    expertHead.appendChild(expertMax);
     var expertVer = el("span", "yk-ver yk-expert-ver",
       'yokup · perímetro de seguridad · <b>' + VERSION + '</b>');
     expertVer.setAttribute("data-yk-version", "1");
@@ -1997,10 +2006,22 @@
     slotB.appendChild(buildCliConsole());
     railB.appendChild(expertResize);
     railB.appendChild(expert);
-    wireExpertResize(railB, expertResize);
+    var expertoTam = wireExpertResize(railB, expertResize);
+    expertMax.addEventListener("click", function () {
+      var tope = expertoTam.maxHeight();
+      var alto = railB.getBoundingClientRect().height;
+      if (alto >= tope - 8) expertoTam.reset();
+      else expertoTam.apply(tope);
+    });
 
     root.appendChild(bar);
     root.appendChild(railL); root.appendChild(railR); root.appendChild(railB);
+    var seccionActiva = nav.querySelector("a[aria-current='page']");
+    if (seccionActiva) {
+      requestAnimationFrame(function () {
+        try { seccionActiva.scrollIntoView({ inline: "center", block: "nearest" }); } catch (e) {}
+      });
+    }
     // Experto MINIMIZADO (opt-in por página: <html data-yk-expert-min>). Compactado, el
     // panel deja una sola línea «› /help» con su asa, como la consola de la suite en la
     // home; un clic (o Enter) lo abre y pone el foco en la orden. Sin el atributo, nada cambia.
@@ -2033,6 +2054,14 @@
 
     // --- cerrar cualquier panel abierto con Escape ---
     document.addEventListener("keydown", function (e) {
+      var escribe = e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+      if (!escribe && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === "`" || e.code === "Backquote")) {
+        if (!window.matchMedia("(max-width:520px)").matches) {
+          e.preventDefault();
+          setOpen("bottom", !isOpen("bottom"));
+        }
+        return;
+      }
       if (e.key === "Escape") {
         ["left", "right", "bottom"].forEach(function (p) { if (isOpen(p)) setOpen(p, false); });
       }
@@ -2806,17 +2835,69 @@
   }
 
   function wireExpertResize(rail, handle) {
-    var MIN=190, STEP=32, dragging=false;
+    var LS="yk_expert_alto", MIN=190, STEP=32, dragging=false;
     function maxHeight(){return Math.max(MIN,window.innerHeight-Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--yk-bar-h")||46)-8);}
-    function apply(height){var value=Math.max(MIN,Math.min(maxHeight(),Math.round(height)));rail.style.height=value+"px";handle.setAttribute("aria-valuemin",String(MIN));handle.setAttribute("aria-valuemax",String(Math.round(maxHeight())));handle.setAttribute("aria-valuenow",String(value));}
+    function remember(value){try{if(value==null)localStorage.removeItem(LS);else localStorage.setItem(LS,String(value));}catch(_){}}
+    function apply(height, persist){
+      var value=Math.max(MIN,Math.min(maxHeight(),Math.round(height)));
+      rail.style.height=value+"px";
+      document.documentElement.style.setProperty("--yk-expert-h", value+"px");
+      handle.setAttribute("aria-valuemin",String(MIN));
+      handle.setAttribute("aria-valuemax",String(Math.round(maxHeight())));
+      handle.setAttribute("aria-valuenow",String(value));
+      if(persist!==false)remember(value);
+      var btn=rail.querySelector(".yk-expert-max");
+      if(btn)btn.setAttribute("aria-pressed", value>=maxHeight()-4?"true":"false");
+      return value;
+    }
+    function reset(){
+      rail.style.height="";
+      document.documentElement.style.removeProperty("--yk-expert-h");
+      handle.removeAttribute("aria-valuenow");
+      remember(null);
+      var btn=rail.querySelector(".yk-expert-max");
+      if(btn)btn.setAttribute("aria-pressed","false");
+    }
     function current(){return rail.getBoundingClientRect().height||240;}
+    try{var saved=parseInt(localStorage.getItem(LS),10);if(saved)apply(saved,false);}catch(_){}
     handle.addEventListener("pointerdown",function(event){dragging=true;handle.setPointerCapture(event.pointerId);document.documentElement.classList.add("yk-resizing-expert");event.preventDefault();});
     handle.addEventListener("pointermove",function(event){if(dragging)apply(window.innerHeight-event.clientY);});
     function stop(event){if(!dragging)return;dragging=false;try{handle.releasePointerCapture(event.pointerId);}catch(_){}document.documentElement.classList.remove("yk-resizing-expert");}
     handle.addEventListener("pointerup",stop);handle.addEventListener("pointercancel",stop);
-    handle.addEventListener("dblclick",function(){rail.style.height="";handle.removeAttribute("aria-valuenow");});
+    handle.addEventListener("dblclick",function(){reset();});
     handle.addEventListener("keydown",function(event){var value=current();if(event.key==="ArrowUp")value+=STEP;else if(event.key==="ArrowDown")value-=STEP;else if(event.key==="Home")value=MIN;else if(event.key==="End")value=maxHeight();else return;event.preventDefault();apply(value);});
-    window.addEventListener("resize",function(){if(rail.style.height)apply(current());});
+    window.addEventListener("resize",function(){if(rail.style.height)apply(current(),false);});
+    return {apply:apply, reset:reset, maxHeight:maxHeight};
+  }
+
+  /* Un solo botón: muestra el idioma contrario y alterna con /idioma. */
+  function buildLangButton() {
+    var b = el("button", "yk-ico yk-ico-lang");
+    b.type = "button";
+    b.id = "yk-lang";
+    function otro() {
+      var lang = "es";
+      try { lang = (window.AdmiraIdioma && AdmiraIdioma.lang && AdmiraIdioma.lang()) || document.documentElement.lang || "es"; } catch (e) {}
+      return String(lang).slice(0, 2) === "en" ? "ESP" : "ENG";
+    }
+    function paint() {
+      var o = otro();
+      b.innerHTML = '<span class="yk-ico-gl">' + o + "</span>";
+      var title = o === "ENG" ? "Pasar la interfaz a inglés" : "Pasar la interfaz a castellano";
+      b.title = title;
+      b.setAttribute("aria-label", title);
+    }
+    paint();
+    b.addEventListener("click", function () {
+      var go = function () {
+        if (window.AdmiraIdioma && AdmiraIdioma.run) AdmiraIdioma.run("/idioma");
+        paint();
+      };
+      if (window.AdmiraIdioma && AdmiraIdioma.run) go();
+      else expertScript("/admira-idioma.js?v=" + EXPERT_CMD_V, "AdmiraIdioma").then(go);
+    });
+    window.addEventListener("admira:languagechange", paint);
+    return b;
   }
 
   function closeRailOnNavigation(rail, panel) {

@@ -145,6 +145,7 @@
   function pintar() {
     var d = estado.datos;
     if (!d) return;
+    pintarAhora();
     pintarCifras();
     pintarParejas();
     var ags = {}, cons = {};
@@ -160,6 +161,118 @@
     nota.hidden = !avisos.length; nota.textContent = avisos.join(" ");
     $("pie").textContent = "Fuente: bandeja del MCP (consejero_mensaje · consejero_bandeja · consejero_responder) · archivo por mes en admira.live"
       + (d.archivo.meses.length ? " (" + d.archivo.meses.join(", ") + ")" : "") + " · se actualiza cada minuto.";
+  }
+
+  /* ── AHORA: qué hace cada deepagent principal (GET /api/flota/trabajando, la misma fuente que la barra de agentes) ── */
+  var FLOTA = "/api/flota/trabajando";
+  var FLOTA_MS = 20000;
+  var GRUPOS = [{ motor: "Claude", agentes: ["Neo", "Morfeo"] }, { motor: "Codex", agentes: ["Trinity", "Oraculo"] }];
+  var NOMBRE = { Oraculo: "Oráculo" };
+  var flota = { tarjetas: null, error: "", generado: "", presencia: "" };
+
+  function hace(seg) {
+    var s = Number(seg);
+    if (!isFinite(s) || s < 0) return "—";
+    if (s < 90) return "ahora mismo";
+    if (s < 3600) return "hace " + Math.round(s / 60) + " min";
+    if (s < 172800) return "hace " + Math.round(s / 3600) + " h";
+    return "hace " + Math.round(s / 86400) + " días";
+  }
+  function miles(n) {
+    var v = Number(n) || 0;
+    if (v >= 1e6) return (v / 1e6).toFixed(1).replace(".", ",") + " M";
+    if (v >= 1000) return Math.round(v / 1000) + " k";
+    return String(v);
+  }
+  function mayus(t) { t = String(t || ""); return t ? t.charAt(0).toUpperCase() + t.slice(1) : ""; }
+  function tarjetaDe(nombre) {
+    var k = norm(nombre), ts = flota.tarjetas || [];
+    for (var i = 0; i < ts.length; i++) if (norm(ts[i].agente) === k) return ts[i];
+    return null;
+  }
+  function ultimoMensaje(nombre) {
+    var ms = estado.datos ? estado.datos.mensajes : [];
+    for (var i = 0; i < ms.length; i++) { var p = parejaDe(ms[i]); if (p && p.agente === nombre) return ms[i]; }
+    return null;
+  }
+  function dato(dl, k, v) { dl.appendChild(el("dt", "", k)); dl.appendChild(el("dd", "", v)); }
+
+  function fichaAgente(nombre) {
+    var t = tarjetaDe(nombre), visible = NOMBRE[nombre] || nombre;
+    var art = el("article", "ag " + (t && /^(verde|amarillo|rojo)$/.test(t.estado) ? t.estado : "gris"));
+    var cab = el("div", "ag-cab");
+    var img = el("img");
+    img.alt = ""; img.loading = "lazy";
+    img.src = (t && t.retrato && t.retrato.img) || "/avatars/" + norm(nombre) + ".jpg";
+    cab.appendChild(img);
+    var quien = el("div");
+    quien.appendChild(el("div", "ag-nom", visible));
+    quien.appendChild(el("div", "ag-sub", t ? [t.modelo || t.motor, t.maquina].filter(Boolean).join(" · ") : "sin datos de la flota"));
+    cab.appendChild(quien);
+    var led = el("span", "ag-led");
+    led.title = t ? (t.porqueColor || t.motivo || "") : "";
+    cab.appendChild(led);
+    art.appendChild(cab);
+    if (!t) { art.appendChild(el("p", "ag-tarea nada", "La flota no informa de este agente ahora.")); return art; }
+
+    var tarea = String(t.tarea || "").trim();
+    art.appendChild(el("p", "ag-tarea" + (tarea ? "" : " nada"), tarea || "Sin tarea declarada"));
+    var proy = (t.foco && t.foco.proyecto) || (t.proyecto && t.proyecto !== "otros" ? t.proyecto : "");
+    if (proy) art.appendChild(el("span", "ag-proy", proy));
+    art.appendChild(el("p", "ag-motivo", mayus(t.motivo)));
+
+    var dl = el("dl", "ag-datos");
+    dato(dl, "encargos", (t.enCurso || 0) + " en curso · " + (t.abiertos || 0) + " abiertos" + (t.bloqueados ? " · " + t.bloqueados + " bloqueados" : ""));
+    dato(dl, "tokens", t.sinMedicion ? "sin medición" : miles(t.tokHoy) + " hoy · " + miles(t.tokHora) + "/h");
+    dato(dl, "latido", hace(t.haceS));
+    if (t.limite && isFinite(t.limite.pct)) dato(dl, "cuota", Math.round(t.limite.pct) + " % usado");
+    art.appendChild(dl);
+
+    var m = ultimoMensaje(nombre), sup = estado.datos && estado.datos.supervisores ? estado.datos.supervisores[nombre] : "";
+    var b = el("button", "ag-msg");
+    b.type = "button";
+    if (m) {
+      b.appendChild(el("b", "", m.de + " → " + m.para));
+      b.appendChild(document.createTextNode(" · " + fecha(CORTA, m.hora) + (m.leido ? "" : " · sin leer") + "\n" + String(m.texto || "").slice(0, 110) + (String(m.texto || "").length > 110 ? "…" : "")));
+      b.style.whiteSpace = "pre-line";
+    } else {
+      b.textContent = sup ? "Sin mensajes con " + sup + " todavía" : "Sin mensajes con consejeros";
+    }
+    b.addEventListener("click", function () {
+      estado.agente = nombre; estado.consejero = "";
+      if (estado.datos) pintar();
+      $("feed").scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    art.appendChild(b);
+    return art;
+  }
+
+  function pintarAhora() {
+    var caja = $("ahora"), nota = $("ahora-nota");
+    if (!flota.tarjetas && !flota.error) return;
+    caja.textContent = "";
+    GRUPOS.forEach(function (g) {
+      var sec = el("div", "grupo");
+      sec.appendChild(el("h3", "", g.motor));
+      g.agentes.forEach(function (a) { sec.appendChild(fichaAgente(a)); });
+      caja.appendChild(sec);
+    });
+    $("ahora-hora").textContent = flota.generado ? "flota leída a las " + fecha(HORA, flota.generado) : "";
+    var avisos = [];
+    if (flota.error) avisos.push(flota.error);
+    else if (flota.presencia && flota.presencia !== "ok") avisos.push(flota.presencia === "cache" ? "Presencia de hace unos segundos (Yokup tarda en contestar)." : "La presencia de la flota no responde: los estados pueden ir atrasados.");
+    nota.hidden = !avisos.length; nota.textContent = avisos.join(" ");
+  }
+
+  function cargarFlota() {
+    return fetch(FLOTA, { cache: "no-store", headers: { accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.tarjetas)) throw new Error("sin tarjetas");
+        flota = { tarjetas: d.tarjetas, error: "", generado: d.generado || "", presencia: d.presencia || "" };
+        pintarAhora();
+      })
+      .catch(function () { flota.error = "No se pudo leer el estado de la flota. Se reintentará."; pintarAhora(); });
   }
 
   function marcar(ok, texto) {
@@ -188,8 +301,10 @@
   $("f-q").addEventListener("input", function (e) { estado.q = e.target.value; if (estado.datos) pintarFeed(); });
   $("f-pend").addEventListener("change", function (e) { estado.pend = e.target.checked; if (estado.datos) pintarFeed(); });
   window.addEventListener("hashchange", resaltar);
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) cargar(); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { cargarFlota(); cargar(); } });
 
+  cargarFlota();
+  setInterval(function () { if (!document.hidden) cargarFlota(); }, FLOTA_MS);
   cargar();
   setInterval(function () { if (!document.hidden) cargar(); }, CADA_MS);
 })();

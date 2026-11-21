@@ -130,3 +130,13 @@ test("página: va tras la verja, llama al API y no pinta HTML de los mensajes", 
   assert.ok(js.includes("/api/deepagents/registro"));
   assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(js));
 });
+
+test("página: lo primero es AHORA, con los cuatro deepagents principales por motor", () => {
+  const html = readFileSync(new URL("./deepagents/index.html", import.meta.url), "utf8");
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  assert.ok(html.indexOf('id="ahora"') > 0 && html.indexOf('id="ahora"') < html.indexOf('id="cifras"'));
+  assert.ok(js.includes("/api/flota/trabajando"));
+  assert.ok(js.includes('{ motor: "Claude", agentes: ["Neo", "Morfeo"] }'));
+  assert.ok(js.includes('{ motor: "Codex", agentes: ["Trinity", "Oraculo"] }'));
+  assert.ok(js.includes("Sin tarea declarada"));
+});

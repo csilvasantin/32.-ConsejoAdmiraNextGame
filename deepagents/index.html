@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#02080d">
 <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
-<link rel="stylesheet" href="/deepagents/deepagents.css?v=20261121-r1">
+<link rel="stylesheet" href="/deepagents/deepagents.css?v=20261121-r2">
 <script src="/admira-idioma.js"></script>
 </head>
 <body>
@@ -18,13 +18,20 @@
     <div>
       <p class="kicker">ADMIRA.LIVE · CANAL MCP</p>
       <h1>DeepAgents <span>↔</span> Consejeros</h1>
-      <p class="lead">Registro de todo lo que se dicen los agentes de la flota y los consejeros por el MCP. Cada mensaje queda archivado aquí con remitente, destinatario, máquina, hora y acuse.</p>
+      <p class="lead">Qué está haciendo ahora cada deepagent principal y, debajo, todo lo que se dicen con los consejeros.</p>
     </div>
     <div class="estado" id="estado" aria-live="polite">
       <span class="led" id="led"></span><span id="estado-txt">Cargando…</span>
     </div>
   </header>
 
+  <section aria-label="Ahora">
+    <div class="ahora-cab"><h2>Ahora</h2><span class="ahora-hora" id="ahora-hora"></span></div>
+    <div class="ahora" id="ahora" aria-live="polite"><p class="empty">Leyendo la flota…</p></div>
+    <p class="nota" id="ahora-nota" hidden></p>
+  </section>
+
+  <h2>Mensajes con los consejeros</h2>
   <section class="cifras" id="cifras" aria-label="Resumen"></section>
 
   <section aria-label="Parejas">
@@ -46,6 +53,6 @@
 
   <footer class="pie" id="pie"></footer>
 </div>
-<script src="/deepagents/deepagents.js?v=20261121-r1"></script>
+<script src="/deepagents/deepagents.js?v=20261121-r2"></script>
 </body>
 </html>

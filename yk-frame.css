@@ -353,6 +353,10 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
   box-shadow: 0 0 14px rgba(120,243,255,.25);
 }
 .yk-ico-gl{ font-size: 15px; line-height: 1 }
+.yk-ico-lang .yk-ico-gl{ font-size: 10px; letter-spacing: .08em; font-weight: 700 }
+.yk-ico-exp .yk-ico-gl{ font-size: 13px; letter-spacing: 0 }
+.yk-expert-max{appearance:none;border:1px solid var(--yk-line2);background:transparent;color:var(--yk-brand);font:700 9px/1 var(--yk-mono);letter-spacing:.08em;padding:4px 8px;cursor:pointer;border-radius:6px}
+.yk-expert-max:hover,.yk-expert-max[aria-pressed="true"]{border-color:var(--yk-brand);background:rgba(120,243,255,.12)}
 /* estado ABIERTO: icono «encendido» (relleno) — NO se mueve */
 .yk-ico[aria-pressed="true"]{
   color: var(--yk-bg2);
@@ -421,6 +425,8 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
   display:flex;flex-direction:column;overflow:hidden;
 }
 .yk-open-bottom .yk-rail-bottom{ transform: translateY(0) }
+/* Abierto, el panel empuja el contenido: no lo tapa. */
+html.yk-open-bottom body{ padding-bottom: var(--yk-expert-h, var(--yk-rail-h)); }
 /* Experto minimizado (solo páginas con <html data-yk-expert-min>): una línea «› /help» con asa */
 .yk-expert-min{position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--yk-z) + 2);height:30px;display:flex;align-items:center;gap:12px;padding:0 16px;
   background:rgba(2,8,13,.94);border:0;border-top:1px solid var(--yk-line2,rgba(120,243,255,.25));color:var(--yk-dim,#8aa3b0);
@@ -588,6 +594,7 @@ html[data-yk-expert-min] body{padding-bottom:34px}
      teléfono, y compactado con translateY(103%) asomaba en iOS al rebotar el
      scroll o al plegarse la barra de Safari. Sin panel, tampoco su icono. */
   .yk-rail-bottom, .yk-ico-exp{ display:none !important }
+  html.yk-open-bottom body{ padding-bottom: 0; }
   .yk-expert-hd{align-items:flex-start;flex-wrap:wrap}
   .yk-expert-ver{width:100%;margin-left:15px;text-align:left;white-space:normal;line-height:1.35}
   .yk-cli-console{grid-template-columns:1fr;grid-template-rows:minmax(160px,42%) minmax(0,1fr)}

@@ -125,8 +125,9 @@ test('formatea duraciones y trata segundos y milisegundos', () => {
 
 test('la home y Conversación enlazan la sección visible', () => {
   const home = fs.readFileSync('index.html', 'utf8');
-  assert.match(home, /href="\/comunicaciones"/);
-  assert.match(home, /id="badge-comunicaciones"/);
+  // Carlos, 21-11-2026: la sección se llama DeepAgents; Comunicaciones se abre desde dentro.
+  assert.match(home, /id="badge-comunicaciones" href="\/deepagents"/);
+  assert.match(fs.readFileSync('deepagents/index.html', 'utf8'), /href="\/comunicaciones"/);
   assert.match(home, /comunicaciones-widget\.js/);
   const conv = fs.readFileSync('conversacion.html', 'utf8');
   assert.match(conv, /href="\/comunicaciones"/);

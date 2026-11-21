@@ -86,3 +86,5 @@ h2{font-size:14px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .ag-msg b{color:var(--brand);font-weight:700}
 @media (max-width:900px){.ahora{grid-template-columns:1fr}.grupo{grid-column:auto}}
 @media (max-width:480px){.grupo{grid-template-columns:1fr}}
+.enl{color:var(--brand);font:700 12px/1 var(--mono);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.enl:hover{text-decoration:underline}

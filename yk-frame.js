@@ -237,7 +237,11 @@
     // FLT-1321 (Carlos, 2026-08-08): el Highscore es la foto de cómo va la flota y
     // sólo se alcanzaba desde el raíl AVANZADO, que hay que abrir para verlo. A la
     // derecha de NOTIFICACIONES y en todas las páginas de la plataforma.
-    ["HIGHSCORE",   "/highscore"]
+    ["HIGHSCORE",   "/highscore"],
+    // Carlos, 21-11-2026: Consumo y DeepAgents son secciones de admira.live y perdían el menú
+    // (caían al de la home pública). Van en el menú único, como las demás.
+    ["CONSUMO",     "/consumos"],
+    ["DEEPAGENTS",  "/deepagents"]
   ];
 
   // Secciones con CONTADOR real «curso/pend» en la barra (Carlos, 2026-07-23):

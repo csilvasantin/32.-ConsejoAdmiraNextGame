@@ -51,7 +51,8 @@
     { t: "Flota ▾", en: "Fleet ▾", items: [
       { t: "🏆 Highscore",   en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
       { t: "🧩 Asignaciones", en: "🧩 Assignments", h: "https://www.admira.live/asignaciones/" },
-      { t: "💸 Consumo",     en: "💸 Usage",       h: "https://www.admira.live/consumos" }
+      { t: "💸 Consumo",     en: "💸 Usage",       h: "https://www.admira.live/consumos" },
+      { t: "🤖 DeepAgents",  en: "🤖 DeepAgents",  h: "https://www.admira.live/deepagents" }
     ]}
   ];
   // AVANZADO (Carlos, 18-09-2026): Control, Players y Diario son gestión/infra, no el

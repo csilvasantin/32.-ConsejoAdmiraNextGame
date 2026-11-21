@@ -8,9 +8,10 @@
   function actualizar(el, data) {
     var total = data && Number.isFinite(data.total) ? data.total : 0;
     var label = etiqueta(total);
-    el.textContent = "💬 " + label;
-    el.setAttribute("data-en", total === 1 ? "1 communication" : total + " communications");
-    el.title = "Comunicaciones Leyendas ↔ Coetáneos · " + label + " · se actualiza sola";
+    // Carlos, 21-11-2026: la sección se llama DeepAgents; el contador se queda al lado del nombre.
+    el.textContent = "🤖 DeepAgents · " + total;
+    el.setAttribute("data-en", "🤖 DeepAgents · " + total);
+    el.title = "DeepAgents · " + label + " entre consejeros · se actualiza sola";
   }
   function cargar(el) {
     fetch(API, { cache: "no-store", credentials: "same-origin" })

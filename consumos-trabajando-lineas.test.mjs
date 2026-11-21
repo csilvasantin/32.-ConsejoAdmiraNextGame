@@ -38,7 +38,7 @@ test("Trabajando ahora: cabeceras «Agentes (x/y)» y «Consejeros (x/y)»: x = 
   const src = fs.readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
   assert.match(src, /<li class="tr-grupo"[^\n]*esc\(rotGrupo\(g\)\)/);
   assert.match(src, /<b class="tr-chiptit">' \+ esc\(rotGrupo\(g\)\)/);
-  assert.match(html, /consumos-trabajando\.js\?v=20261022-nombre-maquina/);
+  assert.match(html, /consumos-trabajando\.js\?v=20261121-r227-apps/);
 });
 test("Rótulos de reloj «(x/y)» enteros en móvil: sin partir el contador y desplegable a otra línea", () => {
   assert.match(html, /#vel-ag-titulo,#vel-proy-titulo\{white-space:nowrap\}/);

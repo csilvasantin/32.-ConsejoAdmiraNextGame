@@ -131,7 +131,48 @@
     if (s in orden && c in orden && orden[s] > orden[c]) return { semaforo: o.semaforo, texto: 'el orquestador la marca en ' + (s === 'rojo' ? 'rojo' : 'ámbar') };
     return null;
   }
+  /** r227 (Carlos, 21-11: «minimo 100k por cada aplicación abierta de agentes y de consejeros y siempre va a haber minimo
+   *  6 … los consejeros actuales y los leyendas en MacStudio y MacMini y los 2 DeepAgents en el MacStudio y los 2
+   *  DeepAgents en MacMini»). Regla del dueño: ritmo mínimo = 100.000 tokens/hora × apps abiertas de agentes y consejeros.
+   *  Apps abiertas = señal REAL de /api/flota/trabajando: superficies frescas de cada ficha (app de escritorio o sesión
+   *  CLI por pulso < 3 min o latido < 15 min; la sesión «siempre viva» de Merovingio sin latido propio no cuenta) + la app
+   *  GrokBot detectada en cada Mac (appsGrokBot, fuente «app»). Una por Mac y app (o sesión CLI).
+   *  Pilares MacStudio y MacMini: si el pilar está en línea (alguna señal fresca), cuentan al menos sus 4 apps de base
+   *  (consejeros actuales + leyendas + 2 DeepAgents); si no hay ninguna señal, el pilar está apagado y no cuenta.
+   *  → { n, suelo, porMaquina: {MacStudio: 4, …}, detectadas, base: {MacStudio: true|false, …} } */
+  var SUELO_POR_APP = 100000, PILARES = { macstudio: 'MacStudio', macmini: 'MacMini' }, BASE_PILAR = 4;
+  function claveMaq(m) { var k = String(m || '').toLowerCase().replace(/[^a-z0-9]/g, ''); return k === 'mini' ? 'macmini' : k === 'studio' ? 'macstudio' : k === 'mbp16' ? 'macbookpro16' : k; }
+  function nombreMaq(k, m) { return PILARES[k] || (k === 'macbookpro16' ? 'MacBookPro16' : k === 'grokbotbox' || k === 'box' ? 'GrokBotBox' : m || k); }
+  function superficieViva(x) {
+    if (!x || !x.maquina || (x.fuente !== 'pulso' && x.fuente !== 'latido')) return false;
+    if (x.tipo === 'app') return true;
+    return x.tipo === 'cli' && Object.prototype.hasOwnProperty.call(x, 'sesion');
+  }
+  function appsAbiertas(trab) {
+    var vistas = {}, porMaq = {}, nombres = {};
+    var apunta = function (maq, clave) {
+      var k = claveMaq(maq); if (!k) return;
+      nombres[k] = nombreMaq(k, maq);
+      var id = k + '|' + clave;
+      if (vistas[id]) return; vistas[id] = 1; porMaq[k] = (porMaq[k] || 0) + 1;
+    };
+    ((trab && trab.tarjetas) || []).forEach(function (t) {
+      (t.superficies || []).forEach(function (x) {
+        if (!superficieViva(x)) return;
+        apunta(x.maquina, x.tipo === 'app' ? 'app:' + String(x.app || '').toLowerCase() : 'cli:' + String(x.sesion || t.agente || '').toLowerCase());
+      });
+    });
+    ((trab && trab.appsGrokBot) || []).forEach(function (a) { if (a && a.maquina && a.fuente === 'app') apunta(a.maquina, 'app:grokbot'); });
+    var detectadas = 0, n = 0, out = {}, base = {};
+    Object.keys(porMaq).forEach(function (k) { detectadas += porMaq[k]; });
+    Object.keys(PILARES).forEach(function (k) { if (!porMaq[k]) return; base[PILARES[k]] = porMaq[k] < BASE_PILAR; out[PILARES[k]] = Math.max(BASE_PILAR, porMaq[k]); });
+    Object.keys(porMaq).forEach(function (k) { if (!PILARES[k]) out[nombres[k]] = (out[nombres[k]] || 0) + porMaq[k]; });
+    Object.keys(out).forEach(function (m) { n += out[m]; });
+    return { n: n, suelo: n * SUELO_POR_APP, porMaquina: out, detectadas: detectadas, base: base };
+  }
+  /** r227: ¿la ficha tiene una app o sesión abierta (señal fresca) aunque esté parada? (para «abierta», distinto de parado) */
+  function conAppAbierta(t) { return ((t && t.superficies) || []).some(superficieViva); }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos, filaDe: filaDe, actividad: actividad, respaldo: respaldo, lineasRespaldo: lineasRespaldo };
+  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos, filaDe: filaDe, actividad: actividad, respaldo: respaldo, lineasRespaldo: lineasRespaldo, appsAbiertas: appsAbiertas, conAppAbierta: conAppAbierta, SUELO_POR_APP: SUELO_POR_APP };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

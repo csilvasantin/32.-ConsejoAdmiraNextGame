@@ -80,6 +80,7 @@ h2{font-size:14px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .ag-cab{display:flex;gap:10px;align-items:center;min-width:0}
 .ag-cab img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex:none;background:var(--card2)}
 .ag-nom{font-weight:700;font-size:18px;line-height:1.1}
+.ag-nhoy{color:#3ddc84;cursor:help}
 .ag-sub{font:11px/1.3 var(--mono);color:var(--mut);overflow-wrap:anywhere}
 .ag-led{margin-left:auto;width:12px;height:12px;border-radius:50%;background:var(--dim);flex:none}
 .act-verde .ag-led{background:var(--good);box-shadow:0 0 10px var(--good)}

@@ -89,7 +89,18 @@
   /** r28-sup: resumen corto para la fila plegada: «CLI», «asistente», «+ App · Carlos». */
   function supCorta(t) {
     var l = t.superficies || [], p = [];
-    if (l.some(function (x) { return x.tipo === 'cli'; })) p.push('CLI');
+    // r232 (Carlos, 21-11 21:37: «no está en el cli del MacStudio sino en la desktop app»): la superficie es la del Mac que
+    // se enseña junto al nombre (// MacStudio). Antes salía «CLI» si había un CLI en CUALQUIER Mac (el de Trinity está en
+    // el MBP16). Si en ese Mac no hay ninguna superficie, se dice en qué Mac está cada una.
+    var m = maqActual(t), aqui = m ? l.filter(function (x) { return x.maquina && maqCanon(x.maquina) === m; }) : [];
+    if (aqui.length) {
+      if (aqui.some(function (x) { return x.tipo === 'cli'; })) p.push('CLI');
+      if (aqui.some(function (x) { return x.tipo === 'app' && x.enUso; })) p.push('App · Carlos');
+      else if (aqui.some(function (x) { return x.tipo === 'app'; })) p.push(T('App', 'App'));
+      return p.join(' + ');
+    }
+    var cli = l.filter(function (x) { return x.tipo === 'cli'; })[0];
+    if (cli) p.push('CLI' + (cli.maquina && maqCanon(cli.maquina) && maqCanon(cli.maquina) !== m ? ' (' + maqCanon(cli.maquina) + ')' : ''));
     // r24: el asistente ya va en el runtime («GrokBot (asistente)»): no se repite.
     if (l.some(function (x) { return x.tipo === 'app' && x.enUso; })) p.push('App · Carlos');
     return p.join(' + ');
@@ -122,13 +133,14 @@
     var motor = rt([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
     var que = t.tarea || t.foco || '';
     var linea;
-    if (t.estado === 'rojo') linea = '<span class="tr-est">' + T('sin actividad', 'inactive') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
+    if (t.ciego && (t.estado === 'rojo' || t.estado === 'gris')) linea = '<span class="tr-est">' + T('actividad no medible', 'activity not measurable') + '</span> · ' + esc(T('app ', 'app ') + t.ciego.app + T(' abierta en ', ' open on ') + maqNombre(t.ciego.maquina) + T(': el pulso de ese Mac no ve sus sesiones', ': that Mac\'s pulse cannot see its sessions'));
+    else if (t.estado === 'rojo') linea = '<span class="tr-est">' + T('sin actividad', 'inactive') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
     else if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
     else if (t.sinActividad) linea = sinAct(t) + via(t) + (que ? ' · ' + esc(que) : '');
     else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : T('trabajando', 'working')) + '</span>' + via(t) + (t.enCurso > 0 ? ' · ' + t.enCurso + ' ' + T('en curso', 'in progress') : '') + tokens(t) + (que ? ' · ' + esc(que) : '');
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
-    return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
+    return '<li class="tr-card tr-' + esc(t.estado) + (t.ciego && (t.estado === 'rojo' || t.estado === 'gris') ? ' tr-ciego' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(vis(t.agente)) + '</b>' +
       '<small class="tr-maq tr-rot"><span class="tr-a">' + esc([maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span><span class="tr-c" title="' + esc(focoTitulo(t)) + '">' + esc(focoTxt(t) || [maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span></small>' +
       '<small class="tr-que">' + linea + '</small>' + superficies(t) + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
@@ -159,7 +171,10 @@
   function nAbiertas(ts) { return (ts || []).filter(function (t) { return t.estado !== 'verde' && t.estado !== 'amarillo' && conAppAbierta(t); }).length; }
   function cifras(n, ts) {
     var ab = ts ? nAbiertas(ts) : 0;
-    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle') +
+    // r232: los de «actividad no medible» no son parados: se cuentan aparte.
+    var nc = (ts || []).filter(function (t) { return t.ciego && (t.estado === 'rojo' || t.estado === 'gris'); }).length;
+    ab = Math.max(0, ab - nc); // los «sin medir» siempre tienen la app abierta: no se cuentan dos veces
+    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + (nc ? ' · <b class="tr-abiertas">' + nc + '</b> ' + T('sin medir', 'not measurable') : '') + ' · <b>' + Math.max(0, n.parados - nc) + '</b> ' + T('parados', 'idle') +
       (ab ? ' (<b class="tr-abiertas">' + ab + '</b> ' + T('con app abierta', 'with app open') + ')' : '');
   }
   /** r11: «MBA16 · +C» ↔ «Claude» (o «OpenCode · Nemotron 3 Ultra»); si falta un lado, se repite el otro. */
@@ -227,8 +242,10 @@
   /** r24 (Carlos, 18:00 — «Trinity ni siquiera sale»): todos con nombre. Primero los que trabajan / con Carlos; después
    *  los parados como chips atenuados «Trinity · Codex · CLI · en espera» (antes, caras anónimas en un montón). */
   function chipsDe(l) {
-    var vivos = l.filter(function (t) { return t.estado !== 'gris' && t.estado !== 'rojo'; }), rojos = l.filter(function (t) { return t.estado === 'rojo'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
+    var vivos = l.filter(function (t) { return t.estado !== 'gris' && t.estado !== 'rojo'; }), ciegos = l.filter(function (t) { return t.ciego && (t.estado === 'rojo' || t.estado === 'gris'); }),
+      rojos = l.filter(function (t) { return t.estado === 'rojo' && !t.ciego; }), grises = l.filter(function (t) { return t.estado === 'gris' && !t.ciego; });
     function chip(t) {
+      if (t.ciego && (t.estado === 'rojo' || t.estado === 'gris')) return chipCiego(t);
       var gris = t.estado === 'gris', rojo = t.estado === 'rojo';
       var est = gris ? T('en espera', 'idle') : rojo ? T('sin actividad > 1 h (activo hoy)', 'inactive > 1 h (active today)') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
       var abierta = (gris || rojo) && conAppAbierta(t);
@@ -237,7 +254,12 @@
       var txtAb = cuenta250 ? T('app abierta · 250k/h', 'app open · 250k/h') : T('app abierta', 'app open');
       return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + (gris ? ' <small class="tr-espera">' + esc(abierta ? txtAb + T(' · en espera', ' · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? txtAb + ' · ' : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
     }
-    return vivos.map(chip).join('') + rojos.map(chip).join('') + grises.map(chip).join('');
+    /* r232: app de escritorio abierta que el pulso no puede medir → ni rojo ni «hace 3 h»: «actividad no medible» (azul, «?»). */
+    function chipCiego(t) {
+      var txt = T('app abierta · 250k/h · sin medir', 'app open · 250k/h · not measured');
+      return '<span class="tr-chipa tr-ciego tr-abierta" title="' + esc(t.porqueColor || t.ciego.motivo) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + ' <small class="tr-espera">' + esc(txt) + '</small></span>';
+    }
+    return vivos.map(chip).join('') + ciegos.map(chip).join('') + rojos.map(chip).join('') + grises.map(chip).join('');
   }
   function pinta(d) {
     var ul = document.getElementById('trabajando-lista'), pie = document.getElementById('trabajando-pie'), res = document.getElementById('trabajando-resumen');
@@ -255,8 +277,8 @@
     ponFase(ch); ponFase(ul); if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(rotGrupo(g)) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
     if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n, g.tarjetas) + '</span>'; }).join(' — ') + aviso(d);
     if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
-      T('verde = en un agente, SOLO si gasta tokens de verdad (tokens en los últimos 15 min o en la última hora) o su app de escritorio está en uso (proceso vivo o encargos abiertos no bastan); en un consejero, tokens, latido «trabajando», CPU del proceso, latido con encargo en curso o su consejero_latido «trabajando» vigente · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · rojo = sin actividad desde hace más de 1 h, pero activo hoy (Madrid) · gris = sin actividad hoy · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
-        'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · red = no activity for over 1 h, but active today (Madrid) · grey = no activity today · councillors = the 16 of the Council (legends and contemporaries) · Terminal (CLI) = the agent\'s working channel; only Carlos uses the desktop app («Desktop app · Carlos» when he is using it; «App open, not in use», dimmed, never counts as work) · sources: ') +
+      T('verde = en un agente, SOLO si gasta tokens de verdad (tokens en los últimos 15 min o en la última hora) o su app de escritorio está en uso (proceso vivo o encargos abiertos no bastan); en un consejero, tokens, latido «trabajando», CPU del proceso, latido con encargo en curso o su consejero_latido «trabajando» vigente · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · rojo = sin actividad desde hace más de 1 h, pero activo hoy (Madrid) · gris = sin actividad hoy · azul «actividad no medible» = su app de escritorio está abierta pero el pulso de ese Mac no ve sus sesiones (ni se da por trabajando ni por parado) · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
+        'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · red = no activity for over 1 h, but active today (Madrid) · grey = no activity today · blue «activity not measurable» = its desktop app is open but that Mac\'s pulse cannot see its sessions (neither working nor idle) · councillors = the 16 of the Council (legends and contemporaries) · Terminal (CLI) = the agent\'s working channel; only Carlos uses the desktop app («Desktop app · Carlos» when he is using it; «App open, not in use», dimmed, never counts as work) · sources: ') +
       '<a href="https://bot.yokup.com/api/presence">' + T('presencia de Yokup', 'Yokup presence') + '</a> + <a href="/api/consumos/velocidad">' + T('pulso de tokens', 'token pulse') + '</a>' +
       (d.presencia === 'cache' ? ' · ⚠ ' + T('presencia de caché (hace ', 'cached presence (') + esc(String(d.presenciaEdadS)) + T(' s)', ' s ago)') : d.presencia !== 'ok' ? ' · ⚠ ' + T('presencia sin respuesta', 'no presence answer') : '') + ' · ' + T('cada 10 s', 'every 10 s');
   }

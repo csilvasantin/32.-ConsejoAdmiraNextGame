@@ -764,6 +764,27 @@ export function aplicarAutoreportes(ts, m, ahoraS) {
   return ts;
 }
 
+/**
+ * r232 (Carlos, 21-11 21:37: «esta Trinity a tope y aparece en rojo y además no está en el cli del MacStudio sino en la
+ * desktop app»). Un agente cuya app de escritorio (Claude/Codex) está ABIERTA en su Mac según el pulso, pero cuyo pulso
+ * de tokens de ESE Mac nunca ha visto actividad suya (ultimaActividad null, 0 tokens) no está «parado»: es que el
+ * reportero no ve las sesiones de esa app. Sin señal real no se pinta verde (sería inventar), pero tampoco rojo/gris con
+ * un «hace 3 h» que es el último encargo: se marca t.ciego = { maquina, app, motivo } y la página lo enseña como
+ * «actividad no medible». No cambia t.estado (otras páginas lo leen). Pura.
+ */
+export function aplicarMedicionCiega(ts) {
+  if (!Array.isArray(ts)) return ts;
+  for (const t of ts) {
+    if (!t || t.consejero || (t.estado !== "rojo" && t.estado !== "gris")) continue;
+    if (!t.sinMedicion || t.ultimaActividad || t.ultimoToken || !t.maquina) continue;
+    const k = claveMaquina(t.maquina);
+    const app = (t.superficies || []).find((x) => x && x.tipo === "app" && x.fuente === "pulso" && /^(claude|codex)$/i.test(String(x.app || "")) && claveMaquina(x.maquina || "") === k);
+    if (!app) continue;
+    t.ciego = { maquina: t.maquina, app: app.app, motivo: "app " + app.app + " abierta en " + t.maquina + "; el pulso de ese Mac no ve sus sesiones (0 tokens, ninguna actividad registrada): actividad no medible" };
+  }
+  return ts;
+}
+
 /** r55: actividad de los consejeros (consejero_latido: mensaje, encargo ack/done, handON…) → t.actividad. */
 export function aplicarActividadConsejero(ts, consejeros) {
   if (!Array.isArray(ts) || !consejeros || typeof consejeros !== "object") return ts;
@@ -784,6 +805,7 @@ const haceTxt = (s) => (s < 90 ? Math.round(s) + " s" : s < 5400 ? Math.round(s 
 export function porqueColor(t, ahoraS) {
   if (!t) return "";
   const p = [];
+  if (t.ciego) p.push(t.ciego.motivo); // r232
   const tok = t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : null;
   const app = (t.superficies || []).some((s) => s && s.tipo === "app" && s.enUso);
   if (t.estado === "verde") {

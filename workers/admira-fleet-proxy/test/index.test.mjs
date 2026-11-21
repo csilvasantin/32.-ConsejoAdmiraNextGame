@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import worker, { createFleetProxy, headersToHub } from '../src/index.js';
+import worker, { createFleetProxy, headersToHub, isCloudflareErrorPage, isRetryableRelayResponse, orderRelays, RETRYABLE_RELAY_STATUSES } from '../src/index.js';
 
 const relay = { id: 'test-relay', base: 'https://relay.invalid/fleet' };
 
@@ -392,7 +392,7 @@ test('handoff retries TLS/pre-origin failures and preserves final 303 with every
 });
 
 test('safe reads fail over for every relay connectivity status', async () => {
-  for (const status of [502, 504, 521, 522, 523, 525, 526]) {
+  for (const status of [502, 504, 521, 522, 523, 525, 526, 530]) {
     let calls = 0;
     const proxy = createFleetProxy({
       relays:[
@@ -471,4 +471,170 @@ test('a census 400 is the hub answer and does not fail over', async () => {
   assert.equal(calls[0], 'https://first.invalid/fleet/api/live/frame?machine=admira-macbookairplata');
   assert.equal(response.headers.get('X-Fleet-Relay'), 'first');
   assert.deepEqual(await response.json(), { error: 'máquina desconocida', retry: false, relay: false });
+});
+
+test('isCloudflareErrorPage detects 1016 and 1033, not other text', () => {
+  assert.equal(isCloudflareErrorPage('error code: 1016'), true);
+  assert.equal(isCloudflareErrorPage('<html><body>Error 1033</body></html>'), true);
+  assert.equal(isCloudflareErrorPage('error code: 1033'), true);
+  assert.equal(isCloudflareErrorPage('error code: 1023'), false);
+  assert.equal(isCloudflareErrorPage('gateway timeout'), false);
+});
+
+test('isRetryableRelayResponse treats 530 and 1016/1033 pages as connectivity failures', async () => {
+  assert.equal(await isRetryableRelayResponse(new Response('error code: 1016', {
+    status: 530,
+    headers: {'Content-Type': 'text/plain; charset=UTF-8'},
+  })), true);
+  assert.equal(await isRetryableRelayResponse(new Response('<html>error code: 1033</html>', {
+    status: 503,
+    headers: {'Content-Type': 'text/html; charset=UTF-8'},
+  })), true);
+  assert.equal(await isRetryableRelayResponse(new Response('<html>temporary overload</html>', {
+    status: 503,
+    headers: {'Content-Type': 'text/html'},
+  })), false);
+  assert.equal(await isRetryableRelayResponse(Response.json({error: 'busy'}, {status: 503})), false);
+  assert.equal([...RETRYABLE_RELAY_STATUSES].sort((a, b) => a - b).join(','), '502,504,521,522,523,525,526,530');
+});
+
+test('GET handoff fails over a 530/1016 page and keeps the healthy 303', async () => {
+  const calls = [];
+  const code = 't'.repeat(43);
+  const proxy = createFleetProxy({
+    relays: [
+      {id: 'first', base: 'https://first.invalid/fleet'},
+      {id: 'second', base: 'https://second.invalid/fleet'},
+    ],
+    fetchImpl: async (url, init) => {
+      calls.push({url, method: init.method});
+      if (calls.length === 1) {
+        return new Response('error code: 1016', {
+          status: 530,
+          headers: {'Content-Type': 'text/plain; charset=UTF-8'},
+        });
+      }
+      const headers = new Headers({Location: 'https://www.admira.live/control/'});
+      headers.append('Set-Cookie', '__Host-fleet_session=shared; Path=/; HttpOnly; Secure; SameSite=Lax');
+      return new Response(null, {status: 303, headers});
+    },
+  });
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff?code=' + code));
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get('Location'), 'https://www.admira.live/control/');
+  assert.equal(response.headers.get('X-Fleet-Relay'), 'second');
+  assert.deepEqual(calls, [
+    {url: 'https://first.invalid/fleet/api/auth/handoff', method: 'POST'},
+    {url: 'https://second.invalid/fleet/api/auth/handoff', method: 'POST'},
+  ]);
+});
+
+test('503 Cloudflare 1033 HTML fails over; a 503 app page does not', async () => {
+  let calls = 0;
+  const cf = createFleetProxy({
+    relays: [
+      {id: 'first', base: 'https://first.invalid/fleet'},
+      {id: 'second', base: 'https://second.invalid/fleet'},
+    ],
+    fetchImpl: async () => (++calls === 1
+      ? new Response('<!doctype html><title>Error 1033</title><p>error code: 1033</p>', {
+        status: 503,
+        headers: {'Content-Type': 'text/html; charset=UTF-8'},
+      })
+      : Response.json({ok: true})),
+  });
+  const ok = await cf.fetch(new Request('https://fleet.admira.live/api/status', {
+    headers: {Origin: 'https://www.admira.live'},
+  }));
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('X-Fleet-Relay'), 'second');
+  assert.equal(calls, 2);
+
+  calls = 0;
+  const app = createFleetProxy({
+    relays: [
+      {id: 'first', base: 'https://first.invalid/fleet'},
+      {id: 'second', base: 'https://second.invalid/fleet'},
+    ],
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('<html>maintenance</html>', {
+        status: 503,
+        headers: {'Content-Type': 'text/html'},
+      });
+    },
+  });
+  const held = await app.fetch(new Request('https://fleet.admira.live/api/status', {
+    headers: {Origin: 'https://www.admira.live'},
+  }));
+  assert.equal(held.status, 503);
+  assert.equal(held.headers.get('X-Fleet-Relay'), 'first');
+  assert.equal(calls, 1);
+  assert.equal(await held.text(), '<html>maintenance</html>');
+});
+
+test('ambiguous mutation on 530 is not retried on another relay', async () => {
+  let calls = 0;
+  const proxy = createFleetProxy({
+    relays: [
+      {id: 'first', base: 'https://first.invalid/fleet'},
+      {id: 'second', base: 'https://second.invalid/fleet'},
+    ],
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response('error code: 1016', {status: 530, headers: {'Content-Type': 'text/plain'}});
+    },
+  });
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/term/input', {
+    method: 'POST',
+    headers: {Origin: 'https://www.admira.live', Cookie: '__Host-fleet_session=value', 'X-Fleet-CSRF': 'csrf-value-1234567890'},
+    body: '{"input":"ls\\n"}',
+  }));
+  assert.equal(calls, 1);
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), {ok: false, error: 'relay no disponible; operación no reintentada'});
+});
+
+test('a relay that returned 530 is cooled so the next request tries a healthy one first', async () => {
+  const calls = [];
+  const proxy = createFleetProxy({
+    relays: [
+      {id: 'first', base: 'https://first.invalid/fleet'},
+      {id: 'second', base: 'https://second.invalid/fleet'},
+    ],
+    fetchImpl: async (url) => {
+      calls.push(url);
+      if (url.includes('first.invalid')) {
+        return new Response('error code: 1016', {status: 530, headers: {'Content-Type': 'text/plain'}});
+      }
+      return Response.json({ok: true});
+    },
+  });
+  const first = await proxy.fetch(new Request('https://fleet.admira.live/api/status', {
+    headers: {Origin: 'https://www.admira.live'},
+  }));
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('X-Fleet-Relay'), 'second');
+  assert.deepEqual(calls, [
+    'https://first.invalid/fleet/api/status',
+    'https://second.invalid/fleet/api/status',
+  ]);
+
+  calls.length = 0;
+  const second = await proxy.fetch(new Request('https://fleet.admira.live/api/status', {
+    headers: {Origin: 'https://www.admira.live'},
+  }));
+  assert.equal(second.status, 200);
+  assert.equal(second.headers.get('X-Fleet-Relay'), 'second');
+  assert.deepEqual(calls, ['https://second.invalid/fleet/api/status']);
+});
+
+test('orderRelays puts cooled relays last but still keeps them as fallback', () => {
+  const cooldownUntil = new Map([['macmini', 1_000]]);
+  const ordered = orderRelays([
+    {id: 'macmini'},
+    {id: 'macstudio'},
+    {id: 'macbookpro16'},
+  ], cooldownUntil, 500);
+  assert.deepEqual(ordered.map((relay) => relay.id), ['macstudio', 'macbookpro16', 'macmini']);
 });

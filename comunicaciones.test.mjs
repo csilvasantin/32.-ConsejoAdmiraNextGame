@@ -61,11 +61,11 @@ test('#7637 Musk → Jobs entra con hora Madrid y duración real', () => {
   assert.match(row.inicio_madrid, /21\/11\/2026/);
   assert.match(row.inicio_madrid, /10:21:36/);
   assert.equal(row.en_curso, false);
-  assert.equal(row.mision_inicio_madrid, 'sin hora');
-  assert.equal(row.mision_inicio, 0);
+  assert.equal(row.mision_inicio_madrid, '10:21');
+  assert.equal(row.mision_inicio, row.inicio);
 });
 
-test('la hora de la misión es un dato propio: hoy sin fecha, otro día con fecha, y created_at no cuenta', () => {
+test('la hora de la misión: started_at manda, si no created_at o ts, y sin marcas queda sin hora', () => {
   const conInicio = fromInboxItem({
     id: 7700,
     ts: 1795252896,
@@ -77,7 +77,7 @@ test('la hora de la misión es un dato propio: hoy sin fecha, otro día con fech
     created_at: '2026-11-01T00:00:00Z',
     text: 'encabezados',
   }, AHORA);
-  assert.equal(conInicio.mision_inicio_madrid, '09:15:00');
+  assert.equal(conInicio.mision_inicio_madrid, '09:15');
   assert.notEqual(conInicio.mision_inicio, conInicio.inicio);
   const otroDia = fromInboxItem({
     id: 7701,
@@ -89,7 +89,7 @@ test('la hora de la misión es un dato propio: hoy sin fecha, otro día con fech
     text: 'otro día',
   }, AHORA);
   assert.match(otroDia.mision_inicio_madrid, /20\/11\/2026/);
-  assert.match(otroDia.mision_inicio_madrid, /10:00:00/);
+  assert.match(otroDia.mision_inicio_madrid, /10:00/);
   const soloAlta = fromInboxItem({
     id: 7702,
     ts: 1795252896,
@@ -100,7 +100,12 @@ test('la hora de la misión es un dato propio: hoy sin fecha, otro día con fech
     ack_at: Date.parse('2026-11-21T08:05:00Z'),
     text: 'sin inicio de misión',
   }, AHORA);
-  assert.equal(soloAlta.mision_inicio_madrid, 'sin hora');
+  assert.equal(soloAlta.mision_inicio_madrid, '09:00');
+  const sinMarca = fromMensaje({
+    id: 'cm-7637', de: 'Musk', para: 'Jobs', texto: 'Sobre #7637, sin reloj de misión',
+    hora: '2026-11-21T11:07:00.000Z', leido: true, leido_en: '2026-11-21T11:09:00.000Z',
+  }, AHORA);
+  assert.equal(sinMarca.mision_inicio_madrid, 'sin hora');
   assert.equal(textoInicioMision(0, AHORA), 'sin hora');
   const suelta = fromMensaje({
     id: 'cm-suelto', de: 'Musk', para: 'Jobs', texto: 'sin número de encargo',
@@ -139,6 +144,33 @@ test('una sesión autónoma cuenta como comunicación Leyendas ↔ Coetáneos', 
   assert.equal(row.estado, 'cerrado');
   assert.equal(row.duracion, '12 min');
   assert.equal(row.url, 'https://www.admira.live/conversacion#sesion-sdemo1');
+});
+
+test('el contador y la lista son la misma colección, sesiones incluidas', () => {
+  const encargo = {
+    id: 7637, ts: 1795252896, from_name: 'status-web · Elon Musk (por encargo de Carlos)',
+    target_persona: 'Jobs', status: 'done', done_at: 1795252985, etiqueta: '#7637.11.21', text: 'encabezados',
+  };
+  const sesion = (id, creado) => ({
+    id, tema: 'cruce', estado: 'parada', creado, actualizado: creado + 60000,
+    turnos: [
+      { persona: 'Steve Jobs', texto: 'Empezamos.' },
+      { persona: 'Elon Musk', texto: 'De acuerdo.' },
+    ],
+  });
+  const out = buildComunicaciones({
+    inbox: [encargo],
+    sesiones: [sesion('s-a', AHORA - 120000), sesion('s-b', AHORA - 60000)],
+    mensajes: [{
+      id: 'cm1', de: 'Musk', para: 'Jobs', texto: 'nota privada',
+      hora: new Date(AHORA - 30000).toISOString(), leido: true, leido_en: new Date(AHORA).toISOString(),
+    }],
+  }, AHORA);
+  assert.equal(out.total, out.comunicaciones.length);
+  assert.equal(out.fuentes.encargos, 1);
+  assert.equal(out.fuentes.sesiones, 2);
+  assert.equal(out.fuentes.mensajes, 1);
+  assert.equal(out.total, 4);
 });
 
 test('el recuento junta inbox y sesiones, sin inventar filas', () => {
@@ -196,7 +228,8 @@ test('la home y Conversación enlazan la sección visible', () => {
   }
   assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /participantes/);
   assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /mision_inicio_madrid/);
-  assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /sin hora/);
+  assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /misión iniciada/);
+  assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /rows\.length/);
 });
 
 test('una sesión de la misma generación, o sin hablantes, no se inventa', () => {

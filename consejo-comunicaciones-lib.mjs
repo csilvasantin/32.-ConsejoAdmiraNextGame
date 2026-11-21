@@ -18,33 +18,43 @@ export function diaMadrid(ts) {
   }).format(new Date(ts));
 }
 
-function horaSoloMadrid(ts) {
+function horaMinutoMadrid(ts) {
   return new Intl.DateTimeFormat('es-ES', {
-    timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).format(new Date(ts));
 }
 
-/** Campos que son el inicio real de una misión. created_at, ts y ack_at no lo son. */
+/** Inicio de trabajo si existe. Si no, la hora en que se encargó (created_at o ts). */
 const CAMPOS_INICIO_MISION = ['mission_started', 'started_at', 'active_since'];
 
-export function msInicioMision(registro) {
+export function msInicioMision(registro, { encargo = false } = {}) {
   if (!registro || typeof registro !== 'object') return 0;
   for (const campo of CAMPOS_INICIO_MISION) {
     const ms = asMs(registro[campo]);
     if (ms) return ms;
   }
+  const alta = asMs(registro.created_at);
+  if (alta) return alta;
+  if (encargo) {
+    const ts = asMs(registro.ts);
+    if (ts) return ts;
+  }
   return 0;
 }
 
-/** Hoy: solo la hora. Otro día: fecha y hora. Sin dato real: «sin hora». */
+/** Hoy: HH:MM. Otro día: fecha y HH:MM. Sin ninguna marca: «sin hora». */
 export function textoInicioMision(ms, ahora = Date.now()) {
   if (!ms) return 'sin hora';
-  if (diaMadrid(ms) === diaMadrid(ahora)) return horaSoloMadrid(ms);
-  return horaMadrid(ms);
+  const hm = horaMinutoMadrid(ms);
+  if (diaMadrid(ms) === diaMadrid(ahora)) return hm;
+  const fecha = new Intl.DateTimeFormat('es-ES', {
+    timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric',
+  }).format(new Date(ms));
+  return `${fecha} ${hm}`;
 }
 
-function anotarMision(row, registro, ligada, ahora) {
-  const ms = msInicioMision(registro);
+function anotarMision(row, registro, ligada, ahora, encargo = false) {
+  const ms = msInicioMision(registro, { encargo });
   if (!ligada && !ms) {
     row.mision_inicio = 0;
     row.mision_inicio_madrid = null;
@@ -236,7 +246,7 @@ export function fromInboxItem(item, ahora = Date.now()) {
     duracion: formatearDuracion(duracionMs(inicio, fin), { enCurso }),
     en_curso: enCurso,
     url: null,
-  }, item, true, ahora);
+  }, item, true, ahora, true);
 }
 
 export function fromSesion(sesion, ahora = Date.now()) {

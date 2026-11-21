@@ -123,8 +123,6 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const origin = request.headers.get('Origin') || '';
   const auth = await autorizado(request, env);
   if (!auth.ok) return json({ ok: false, error: 'privado: entra en admira.live o usa el token de máquina' }, 401, origin, 'GET, OPTIONS');
-  const url = new URL(request.url);
-  const limite = Math.min(40, Math.max(1, Number(url.searchParams.get('limite')) || 20));
   const privados = sesionParaMensajes(auth);
   const [inbox, sesiones, mensajes] = await Promise.all([
     leerInbox(f),
@@ -134,6 +132,5 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const out = buildComunicaciones({ inbox: inbox.items, sesiones, mensajes: mensajes.items });
   const aviso = avisoDe(inbox, mensajes);
   if (aviso) out.aviso = aviso;
-  if (out.comunicaciones.length > limite) out.comunicaciones = out.comunicaciones.slice(0, limite);
   return json(out, 200, origin, 'GET, OPTIONS');
 }

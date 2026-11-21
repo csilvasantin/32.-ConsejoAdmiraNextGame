@@ -236,20 +236,32 @@
   }
   // Fecha ABSOLUTA de la misión (dd/mm hh:mm) — el «hace X» relativo se queda,
   // pero la tarjeta pinta también la fecha real (pedido Carlos, 2026-07-15).
-  function fechaCorta(ms) {
-    if (!ms) return "";
-    var d = new Date(ms > 4102444800 ? ms : ms * 1000);
-    if (isNaN(d)) return "";
-    var p = function (n) { return (n < 10 ? "0" : "") + n; };
-    return p(d.getDate()) + "/" + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  function partesMadrid(ms) {
+    var n = _ms(ms);
+    if (!n) return null;
+    var parts = {};
+    try {
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+      }).formatToParts(new Date(n)).forEach(function (x) {
+        if (x.type !== "literal") parts[x.type] = x.value;
+      });
+    } catch (e) { return null; }
+    return parts.hour ? parts : null;
   }
-  // Sólo la hora (HH:MM) — primera columna del tablero: hora + Nº de misión.
+  function fechaCorta(ms) {
+    var p = partesMadrid(ms);
+    return p ? p.day + "/" + p.month + " " + p.hour + ":" + p.minute : "";
+  }
+  // Sólo la hora (HH:MM, Europe/Madrid) — primera columna del tablero.
   function horaCorta(ms) {
-    if (!ms) return "";
-    var d = new Date(ms > 4102444800 ? ms : ms * 1000);
-    if (isNaN(d)) return "";
-    var p = function (n) { return (n < 10 ? "0" : "") + n; };
-    return p(d.getHours()) + ":" + p(d.getMinutes());
+    var p = partesMadrid(ms);
+    return p ? p.hour + ":" + p.minute : "";
+  }
+  function inicioMisionMs(t) {
+    if (!t) return 0;
+    return _ms(t.mission_started) || _ms(t.started_at) || _ms(t.active_since) || _ms(t.created_at) || 0;
   }
 
   function init(opts) {
@@ -763,10 +775,12 @@
     // #4587: con encargo, el «#» es el del encargo (#n.MM.DD); el contador del día va sin «#».
     var conEncargo = !!(window.YkDisplayRef && window.YkDisplayRef.encargo && window.YkDisplayRef.encargo(t));
     var numMis = (t.display_n != null && t.display_n !== "") ? (conEncargo ? t.display_n + "º" : "#" + t.display_n) : "";
-    var horaMis = horaCorta(t.created_at);
+    var iniMs = inicioMisionMs(t);
+    var horaMis = horaCorta(iniMs);
+    var horaTitulo = horaMis ? ("misión iniciada " + (fechaCorta(iniMs) || horaMis) + " Europe/Madrid") : "sin hora";
     var horaMisHtml =
-      '<div class="cel hora-col" title="' + esc("creada " + fechaCorta(t.created_at)) + '">' +
-        '<span class="hm-hora">' + esc(horaMis || "—") + "</span></div>" +
+      '<div class="cel hora-col" title="' + esc(horaTitulo) + '">' +
+        '<span class="hm-hora">' + esc(horaMis || "sin hora") + "</span></div>" +
       '<div class="cel num-col" title="' + esc(numMis ? "Misión " + numMis + " del día" : "sin número de misión del día") + '">' +
         '<span class="hm-num' + (numMis ? "" : " sin") + '">' + esc(numMis || "—") + "</span></div>";
     var idHtml = '<div class="tkid" title="ID técnico: ' + esc(t.id) + '">' +
@@ -799,7 +813,7 @@
     var subjectHtml = '<div class="subj">' + proyectoLinea + '<div class="t"' + titleAttrs + '>' + esc(displayTitle) + '</div>' +
       (metaHtml ? '<div class="m">' + metaHtml + "</div>" : "") + "</div>";
     var createdHtml =
-      '<span class="fch2" title="creada: ' + esc(fechaCorta(t.created_at)) + '">📅 ' + fechaCorta(t.created_at) + "</span>";
+      '<span class="fch2" title="' + esc(horaTitulo) + '">📅 ' + esc(fechaCorta(iniMs) || "sin hora") + "</span>";
     var progressTimingHtml =
       (dv && dv.end ? '<span class="fch2 fin" title="finalizada: ' + esc(fechaCorta(dv.end)) + '">🏁 ' + fechaCorta(dv.end) + "</span>"
         : (dv && dv.run ? '<span class="fch2 run' + (stt === "No concluida" ? " overdue" : "") + '" title="' + esc(dv.tip) + '">⏳ ' + (stt === "No concluida" ? "no concluida" : "en curso") + "</span>" : "")) +

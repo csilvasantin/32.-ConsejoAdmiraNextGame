@@ -21,7 +21,8 @@
   }
   var ultimo = null;
   function pintar(data) {
-    var total = data && Number.isFinite(data.total) ? data.total : 0;
+    var rows = (data && data.comunicaciones) || [];
+    var total = rows.length;
     countEl.textContent = String(total);
     labelEl.textContent = etiqueta(total).replace(/^\d+\s+/, "");
     updEl.textContent = data && data.actualizado_madrid
@@ -34,7 +35,6 @@
       noteEl.hidden = true;
       noteEl.textContent = "";
     }
-    var rows = (data && data.comunicaciones) || [];
     if (!rows.length) {
       feedEl.innerHTML = '<p class="empty">' + esc(t(
         "Ahora mismo no hay comunicaciones cruzadas entre coetáneos y leyendas en encargos, sesiones autónomas ni mensajes privados.",
@@ -49,9 +49,9 @@
       var misionTxt = "";
       if (row.mision_inicio_madrid) {
         var mh = row.mision_inicio_madrid === "sin hora"
-          ? t("sin hora", "no time")
-          : row.mision_inicio_madrid + " Europe/Madrid";
-        misionTxt = '<br><span class="mision-hora">' + esc(t("misión", "mission")) + " " + esc(mh) + "</span>";
+          ? t("misión sin hora", "mission: no time")
+          : t("misión iniciada", "mission started") + " " + row.mision_inicio_madrid;
+        misionTxt = '<br><span class="mision-hora">' + esc(mh) + "</span>";
       }
       var when = '<span class="when">' + esc(t("empezó", "started")) + " " + esc(row.inicio_madrid) + " Europe/Madrid<br>" + esc(whenDur) + misionTxt + "</span>";
       var src = row.fuente === "sesion" ? t("sesión", "session") : (row.fuente === "mensaje" ? t("mensaje", "message") : t("encargo", "assignment"));

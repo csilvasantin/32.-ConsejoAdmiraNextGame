@@ -6,7 +6,7 @@
     return n === 1 ? "1 comunicación" : n + " comunicaciones";
   }
   function actualizar(el, data) {
-    var total = data && isFinite(data.total) ? data.total : 0;
+    var total = data && Number.isFinite(data.total) ? data.total : 0;
     var label = etiqueta(total);
     el.textContent = "💬 " + label;
     el.setAttribute("data-en", total === 1 ? "1 communication" : total + " communications");

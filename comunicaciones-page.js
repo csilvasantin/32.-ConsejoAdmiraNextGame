@@ -17,7 +17,7 @@
     return n === 1 ? "1 comunicación" : n + " comunicaciones";
   }
   function pintar(data) {
-    var total = data && isFinite(data.total) ? data.total : 0;
+    var total = data && Number.isFinite(data.total) ? data.total : 0;
     countEl.textContent = String(total);
     labelEl.textContent = etiqueta(total).replace(/^\d+\s+/, "");
     updEl.textContent = data && data.actualizado_madrid
@@ -32,22 +32,28 @@
     }
     var rows = (data && data.comunicaciones) || [];
     if (!rows.length) {
-      feedEl.innerHTML = '<p class="empty">Ahora mismo no hay comunicaciones cruzadas entre coetáneos y leyendas en el inbox público ni en las sesiones autónomas.</p>';
+      feedEl.innerHTML = '<p class="empty">Ahora mismo no hay comunicaciones cruzadas entre coetáneos y leyendas en encargos, sesiones autónomas ni mensajes privados.</p>';
       return;
     }
     feedEl.innerHTML = rows.map(function (row) {
       var who = esc(row.de) + ' <span class="to">→ ' + esc(row.para) + "</span>";
-      var when = '<span class="when">empezó ' + esc(row.inicio_madrid) + " Europe/Madrid<br>duró " + esc(row.duracion) + "</span>";
-      var src = row.fuente === "sesion" ? "sesión" : "encargo";
-      var href = row.url
-        ? '<a href="' + esc(row.url) + '">' + esc(row.tema || row.etiqueta || row.id) + "</a>"
-        : esc(row.tema || "");
+      var dur = String(row.duracion || "");
+      var whenDur = dur.indexOf("en curso") === 0 ? dur : "duró " + dur;
+      var when = '<span class="when">empezó ' + esc(row.inicio_madrid) + " Europe/Madrid<br>" + esc(whenDur) + "</span>";
+      var src = row.fuente === "sesion" ? "sesión" : (row.fuente === "mensaje" ? "mensaje" : "encargo");
+      var texto = row.tema || row.etiqueta || row.id || "";
+      var destino = String(row.url || "");
+      var href = /^https:\/\/www\.admira\.live\//.test(destino)
+        ? '<a href="' + esc(destino) + '">' + esc(texto) + "</a>"
+        : esc(texto);
+      var otros = (row.participantes || []).filter(function (p) { return p && p !== row.de && p !== row.para; });
+      var mas = otros.length ? '<p class="text">Con ' + otros.map(esc).join(", ") + ".</p>" : "";
       var estClass = row.en_curso ? "tag curso" : "tag est";
       var tags = [
         row.etiqueta ? '<span class="tag">' + esc(row.etiqueta) + "</span>" : "",
         row.estado ? '<span class="' + estClass + '">' + esc(row.estado) + "</span>" : ""
       ].filter(Boolean).join("");
-      return '<article class="msg"><header><span class="who">' + who + '</span><span class="src">' + src + "</span>" + when + "</header><p class=\"text\">" + href + "</p>" + (tags ? '<div class="tags">' + tags + "</div>" : "") + "</article>";
+      return '<article class="msg"><header><span class="who">' + who + '</span><span class="src">' + src + "</span>" + when + "</header><p class=\"text\">" + href + "</p>" + mas + (tags ? '<div class="tags">' + tags + "</div>" : "") + "</article>";
     }).join("");
   }
   function cargar() {

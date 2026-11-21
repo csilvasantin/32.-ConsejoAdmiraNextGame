@@ -1,33 +1,84 @@
 /**
  * GET /api/consejo/comunicaciones
- * Recuento vivo de hilos Leyendas ↔ Coetáneos: encargos públicos + sesiones autónomas.
- * Misma auth que /api/consejo/sesion. Sin secretos en la respuesta.
+ * Recuento vivo de hilos Leyendas ↔ Coetáneos: encargos públicos, sesiones autónomas
+ * y, con la sesión de admira.live, mensajes privados consejero_mensaje.
+ * El token de la bandeja solo viaja de este servidor al Worker. Nunca sale en el JSON.
  */
-import { buildComunicaciones, INBOX_PUBLICO } from '../../../consejo-comunicaciones-lib.mjs';
+import {
+  buildComunicaciones, juntarInbox, urlMensajes, urlsInboxPublico,
+} from '../../../consejo-comunicaciones-lib.mjs';
 import { SESION_KEY_PREF, SESION_INDICE } from '../../../consejo-sesion-lib.mjs';
 import { autorizado, json, options } from '../council/_auth.mjs';
 
 function kv(env) { return (env && (env.CONSUMOS_KV || env.RECORTE_KV)) || null; }
 
-async function leerInbox() {
+const SESION_PRIVADA = new Set(['maquina', 'persona', 'agente', 'kiosco']);
+
+/** La cookie de la puerta o el token de máquina. El atajo por Origin no abre los mensajes privados. */
+export function sesionParaMensajes(auth) {
+  return !!(auth && SESION_PRIVADA.has(auth.via));
+}
+
+async function leerLista(fetchImpl, url) {
   try {
-    const r = await fetch(INBOX_PUBLICO, { headers: { accept: 'application/json' } });
-    if (!r.ok) return { items: [], error: `inbox ${r.status}` };
+    const r = await fetchImpl(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return { items: [], fallo: true };
     const d = await r.json();
-    return { items: Array.isArray(d && d.items) ? d.items : [], error: null };
-  } catch (e) {
-    return { items: [], error: e && e.message ? e.message : 'inbox inaccesible' };
+    return { items: Array.isArray(d && d.items) ? d.items : [], fallo: false };
+  } catch {
+    return { items: [], fallo: true };
   }
 }
 
-async function leerSesiones(store, limite) {
+export async function leerInbox(fetchImpl = fetch) {
+  const resultados = await Promise.all(urlsInboxPublico().map((u) => leerLista(fetchImpl, u)));
+  const fallos = resultados.filter((r) => r.fallo).length;
+  return {
+    items: juntarInbox(resultados.map((r) => r.items)),
+    error: fallos === resultados.length ? 'inbox' : (fallos ? 'parcial' : null),
+  };
+}
+
+function mensajeSano(m) {
+  if (!m || typeof m !== 'object') return null;
+  return {
+    id: m.id ?? null,
+    de: m.de ?? null,
+    para: m.para ?? null,
+    texto: m.texto ?? '',
+    hora: m.hora ?? null,
+    leido: !!m.leido,
+    leido_en: m.leido_en || null,
+    responde_a: m.responde_a || null,
+    de_tipo: m.de_tipo || 'consejero',
+    para_tipo: m.para_tipo || 'consejero',
+  };
+}
+
+export async function leerMensajes(env, fetchImpl = fetch) {
+  const url = urlMensajes(env && env.MCP_BASE);
+  if (!url) return { items: [], error: 'mensajes' };
+  const headers = { accept: 'application/json' };
+  const tok = String((env && env.CONSEJERO_MENSAJES_TOKEN) || '').trim();
+  if (tok) headers['x-mensajes-token'] = tok;
+  try {
+    const r = await fetchImpl(url, { headers, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return { items: [], error: 'mensajes' };
+    const d = await r.json();
+    const items = (Array.isArray(d && d.mensajes) ? d.mensajes : []).map(mensajeSano).filter(Boolean);
+    return { items, error: null };
+  } catch {
+    return { items: [], error: 'mensajes' };
+  }
+}
+
+async function leerSesiones(store) {
   if (!store) return [];
   let indice = [];
   try { indice = JSON.parse((await store.get(SESION_INDICE)) || '[]'); } catch { indice = []; }
   if (!Array.isArray(indice)) indice = [];
-  const metas = indice.slice(0, limite);
   const out = [];
-  for (const meta of metas) {
+  for (const meta of indice.slice(0, 40)) {
     if (!meta || !meta.id) continue;
     try {
       const raw = await store.get(SESION_KEY_PREF + meta.id);
@@ -40,17 +91,32 @@ async function leerSesiones(store, limite) {
   return out;
 }
 
+function avisoDe(inbox, mensajes) {
+  const partes = [];
+  if (inbox && inbox.error === 'inbox') partes.push('La bandeja pública de encargos no ha respondido.');
+  else if (inbox && inbox.error === 'parcial') partes.push('Alguna bandeja pública de encargos no ha respondido; el contador usa las que sí.');
+  if (mensajes && mensajes.error) partes.push('Los mensajes privados entre consejeros no se han podido leer en este momento.');
+  return partes.join(' ');
+}
+
 export const onRequestOptions = ({ request }) => options(request, 'GET, OPTIONS');
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, fetchImpl }) {
+  const f = fetchImpl || fetch;
   const origin = request.headers.get('Origin') || '';
   const auth = await autorizado(request, env);
   if (!auth.ok) return json({ ok: false, error: 'privado: entra en admira.live o usa el token de máquina' }, 401, origin, 'GET, OPTIONS');
   const url = new URL(request.url);
   const limite = Math.min(40, Math.max(1, Number(url.searchParams.get('limite')) || 20));
-  const inbox = await leerInbox();
-  const sesiones = await leerSesiones(kv(env), limite);
-  const out = buildComunicaciones({ inbox: inbox.items, sesiones });
-  if (inbox.error) out.aviso = 'La bandeja pública de encargos no ha respondido; las sesiones sí se listan si hay almacén.';
+  const privados = sesionParaMensajes(auth);
+  const [inbox, sesiones, mensajes] = await Promise.all([
+    leerInbox(f),
+    leerSesiones(kv(env)),
+    privados ? leerMensajes(env, f) : Promise.resolve({ items: [], error: null }),
+  ]);
+  const out = buildComunicaciones({ inbox: inbox.items, sesiones, mensajes: mensajes.items });
+  const aviso = avisoDe(inbox, mensajes);
+  if (aviso) out.aviso = aviso;
+  if (out.comunicaciones.length > limite) out.comunicaciones = out.comunicaciones.slice(0, limite);
   return json(out, 200, origin, 'GET, OPTIONS');
 }

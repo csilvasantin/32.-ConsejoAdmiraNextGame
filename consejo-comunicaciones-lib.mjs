@@ -1,7 +1,7 @@
 /**
  * Comunicaciones Leyendas ↔ Coetáneos.
- * Agrupa solo hilos reales (encargos del inbox público y sesiones autónomas).
- * No inventa mensajes ni incluye claves.
+ * Solo hilos reales: inbox público de encargos, sesiones autónomas y mensajes
+ * privados consejero_mensaje (si el backend los trae). No inventa filas ni claves.
  */
 import { generacionDe, personaCanonica, SILLA_CLAVE } from './consejo-sillas-lib.mjs';
 
@@ -13,6 +13,10 @@ export function horaMadrid(ts) {
 }
 
 export const INBOX_PUBLICO = 'https://bot.yokup.com/api/public/inbox';
+export const MENSAJES_BASE = 'https://mcp.admira.live';
+/** Sillas cuya bandeja pública se lee (cada una trae sus 80 encargos más recientes). */
+export const SILLAS_INBOX = Object.freeze([...new Set(Object.values(SILLA_CLAVE))]);
+const CHAT_CON_PAGINA = new Set(['jobs', 'wozniak', 'lucas', 'disney', 'musk', 'huang']);
 
 const ESTADO = {
   pending: 'pendiente',
@@ -80,6 +84,41 @@ export function esCruce(a, b) {
   return !!(ga && gb && ga !== gb);
 }
 
+/** Bandeja global + una por silla. URLs públicas, sin credenciales. */
+export function urlsInboxPublico() {
+  return [
+    INBOX_PUBLICO,
+    ...SILLAS_INBOX.map((p) => `${INBOX_PUBLICO}?${new URLSearchParams({ persona: p })}`),
+  ];
+}
+
+export function juntarInbox(listas) {
+  const visto = new Set();
+  const out = [];
+  for (const lista of listas || []) {
+    for (const item of lista || []) {
+      if (!item || typeof item !== 'object') continue;
+      const id = item.id == null ? '' : String(item.id);
+      if (id) {
+        if (visto.has(id)) continue;
+        visto.add(id);
+      }
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+/** Solo https, sin usuario ni query: el token de mensajes no sale en la URL. */
+export function urlMensajes(base = MENSAJES_BASE) {
+  let u;
+  try { u = new URL(String(base || MENSAJES_BASE)); } catch { return null; }
+  if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash) return null;
+  const destino = new URL('/consejero/mensajes', u.origin);
+  destino.searchParams.set('max', '500');
+  return destino.toString();
+}
+
 export function duracionMs(inicio, fin) {
   const a = asMs(inicio);
   const b = asMs(fin);
@@ -141,7 +180,7 @@ export function fromInboxItem(item, ahora = Date.now()) {
     duracion_ms: duracionMs(inicio, fin),
     duracion: formatearDuracion(duracionMs(inicio, fin), { enCurso }),
     en_curso: enCurso,
-    url: etiqueta ? `https://www.admira.live/conversacion` : null,
+    url: null,
   };
 }
 
@@ -161,21 +200,22 @@ export function fromSesion(sesion, ahora = Date.now()) {
   }
   const ley = hablantes.filter((p) => generacionDe(p) === 'leyendas');
   const coe = hablantes.filter((p) => generacionDe(p) === 'coetaneos');
-  // Una sesión autónoma es, por definición, el canal Leyendas ↔ Coetáneos.
+  // Sin un consejero de cada generación no hay cruce: no se rellena con «Leyendas» / «Coetáneos».
+  if (!ley.length || !coe.length) return null;
   const inicio = asMs(sesion.creado);
   if (!inicio) return null;
   const enCurso = String(sesion.estado || '') === 'en_curso';
   const fin = enCurso ? asMs(ahora) : (asMs(sesion.actualizado) || inicio);
-  const de = ley[0] || 'Leyendas';
-  const para = coe[0] || 'Coetáneos';
+  const de = hablantes[0];
+  const para = generacionDe(de) === 'leyendas' ? coe[0] : ley[0];
   const id = String(sesion.id || '').trim();
   return {
     id: id ? `sesion-${id}` : `sesion-${inicio}`,
     fuente: 'sesion',
     de,
     para,
-    de_generacion: ley[0] ? 'leyendas' : 'leyendas',
-    para_generacion: 'coetaneos',
+    de_generacion: generacionDe(de),
+    para_generacion: generacionDe(para),
     participantes: hablantes,
     tema: recortar(sesion.tema, 180),
     etiqueta: id ? `#sesion-${id}` : '',
@@ -190,28 +230,80 @@ export function fromSesion(sesion, ahora = Date.now()) {
   };
 }
 
+function urlChat(persona) {
+  const clave = String(SILLA_CLAVE[persona] || '').toLowerCase();
+  if (!CHAT_CON_PAGINA.has(clave)) return null;
+  return `https://www.admira.live/chat/${clave}/#entre-consejeros`;
+}
+
+function esMensajeConsejero(m) {
+  if (!m || typeof m !== 'object' || m.id == null || m.id === '') return false;
+  if (m.de_tipo === 'agente' || m.para_tipo === 'agente') return false;
+  return true;
+}
+
+/** Un mensaje privado consejero→consejero. La duración es hasta que se leyó; si sigue pendiente, en curso. */
+export function fromMensaje(m, ahora = Date.now()) {
+  if (!esMensajeConsejero(m)) return null;
+  const de = personaEnRemitente(m.de);
+  const para = personaEnRemitente(m.para);
+  if (!esCruce(de, para)) return null;
+  const inicio = asMs(m.hora);
+  if (!inicio) return null;
+  const leido = m.leido ? asMs(m.leido_en) : 0;
+  const enCurso = !m.leido;
+  const fin = leido || (enCurso ? asMs(ahora) : inicio);
+  const id = String(m.id);
+  return {
+    id: `mensaje-${id}`,
+    fuente: 'mensaje',
+    de,
+    para,
+    de_generacion: generacionDe(de),
+    para_generacion: generacionDe(para),
+    tema: recortar(m.texto, 180),
+    etiqueta: id,
+    estado: enCurso ? 'en curso' : 'leído',
+    inicio,
+    fin,
+    inicio_madrid: horaMadrid(inicio),
+    duracion_ms: duracionMs(inicio, fin),
+    duracion: formatearDuracion(duracionMs(inicio, fin), { enCurso }),
+    en_curso: enCurso,
+    url: urlChat(para) || urlChat(de),
+  };
+}
+
 function recortar(texto, max) {
   const t = String(texto || '').replace(/\s+/g, ' ').trim();
   if (t.length <= max) return t;
   return t.slice(0, max - 1).trimEnd() + '…';
 }
 
-export function buildComunicaciones({ inbox = [], sesiones = [] } = {}, ahora = Date.now()) {
+export function buildComunicaciones({ inbox = [], sesiones = [], mensajes = [] } = {}, ahora = Date.now()) {
   const rows = [];
-  for (const item of inbox || []) {
-    const row = fromInboxItem(item, ahora);
-    if (row) rows.push(row);
-  }
-  for (const sesion of sesiones || []) {
-    const row = fromSesion(sesion, ahora);
-    if (row) rows.push(row);
-  }
+  const vistos = new Set();
+  const meter = (row) => {
+    if (!row || vistos.has(row.id)) return;
+    vistos.add(row.id);
+    rows.push(row);
+  };
+  for (const item of juntarInbox([inbox])) meter(fromInboxItem(item, ahora));
+  for (const sesion of sesiones || []) meter(fromSesion(sesion, ahora));
+  for (const mensaje of mensajes || []) meter(fromMensaje(mensaje, ahora));
   rows.sort((a, b) => (b.inicio || 0) - (a.inicio || 0));
+  const fuentes = { encargos: 0, sesiones: 0, mensajes: 0 };
+  for (const row of rows) {
+    if (row.fuente === 'sesion') fuentes.sesiones += 1;
+    else if (row.fuente === 'mensaje') fuentes.mensajes += 1;
+    else fuentes.encargos += 1;
+  }
   return {
     ok: true,
     total: rows.length,
     actualizado: ahora,
     actualizado_madrid: horaMadrid(ahora),
+    fuentes,
     comunicaciones: rows,
   };
 }

@@ -81,4 +81,5 @@
 
 /api/consejo/comunicaciones
   Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
 

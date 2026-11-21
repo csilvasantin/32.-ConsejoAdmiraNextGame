@@ -8,9 +8,15 @@ import {
   formatearDuracion,
   fromInboxItem,
   fromSesion,
+  fromMensaje,
   buildComunicaciones,
   etiquetaContador,
+  urlsInboxPublico,
+  urlMensajes,
+  juntarInbox,
 } from './consejo-comunicaciones-lib.mjs';
+import * as api from './functions/api/consejo/comunicaciones.js';
+import { COOKIE, emitir } from './functions/_puerta.js';
 
 const AHORA = Date.parse('2026-11-21T11:00:00Z');
 
@@ -125,4 +131,167 @@ test('la home y Conversación enlazan la sección visible', () => {
   const conv = fs.readFileSync('conversacion.html', 'utf8');
   assert.match(conv, /href="\/comunicaciones"/);
   assert.match(fs.readFileSync('comunicaciones.html', 'utf8'), /id="contador"/);
+  for (const file of ['comunicaciones-page.js', 'comunicaciones-widget.js', 'comunicaciones.html']) {
+    const src = fs.readFileSync(file, 'utf8');
+    assert.doesNotMatch(src, /CONSEJERO_MENSAJES_TOKEN|x-mensajes-token|Bearer |api[_-]?key/i);
+  }
+  assert.match(fs.readFileSync('comunicaciones-page.js', 'utf8'), /participantes/);
+});
+
+test('una sesión de la misma generación, o sin hablantes, no se inventa', () => {
+  assert.equal(fromSesion({
+    id: 's1', creado: AHORA - 60000, actualizado: AHORA, estado: 'parada',
+    roster: ['Steve Jobs', 'Steve Wozniak'],
+    turnos: [{ persona: 'Steve Jobs', texto: 'hola' }],
+  }, AHORA), null);
+  assert.equal(fromSesion({
+    id: 's2', creado: AHORA - 60000, estado: 'en_curso', tema: 'plenario vacío', turnos: 3,
+  }, AHORA), null);
+});
+
+test('el mensaje privado Musk → Jobs del 21-nov 12:07 Madrid entra; agente o misma generación no', () => {
+  const row = fromMensaje({
+    id: 'cm7637',
+    de: 'Musk',
+    para: 'Jobs',
+    texto: 'Sobre #7637: los encabezados.',
+    hora: '2026-11-21T11:07:00.000Z',
+    leido: true,
+    leido_en: '2026-11-21T11:09:00.000Z',
+    de_tipo: 'consejero',
+    para_tipo: 'consejero',
+    maquina: 'GrokBot',
+    aviso: { token: 'no-sale' },
+  }, AHORA);
+  assert.ok(row);
+  assert.equal(row.de, 'Elon Musk');
+  assert.equal(row.para, 'Steve Jobs');
+  assert.equal(row.fuente, 'mensaje');
+  assert.match(row.inicio_madrid, /21\/11\/2026/);
+  assert.match(row.inicio_madrid, /12:07:00/);
+  assert.equal(row.duracion_ms, 120000);
+  assert.equal(row.duracion, '2 min');
+  assert.equal(row.url, 'https://www.admira.live/chat/jobs/#entre-consejeros');
+  assert.equal(row.maquina, undefined);
+  assert.equal(fromMensaje({
+    id: 'a', de: 'Musk', para: 'Huang', hora: '2026-11-21T11:07:00Z',
+    de_tipo: 'consejero', para_tipo: 'consejero',
+  }, AHORA), null);
+  assert.equal(fromMensaje({
+    id: 'b', de: 'Neo', para: 'Jobs', hora: '2026-11-21T11:07:00Z',
+    de_tipo: 'agente', para_tipo: 'consejero',
+  }, AHORA), null);
+});
+
+test('el recuento suma el mensaje privado sin duplicar el encargo', () => {
+  const encargo = {
+    id: 7637, ts: 1795252896, from_name: 'status-web · Elon Musk (por encargo de Carlos)',
+    target_persona: 'Jobs', status: 'done', done_at: 1795252985, etiqueta: '#7637.11.21', text: 'encabezados',
+  };
+  const out = buildComunicaciones({
+    inbox: juntarInbox([[encargo], [encargo]]),
+    sesiones: [],
+    mensajes: [{
+      id: 'cm7637', de: 'Musk', para: 'Jobs', texto: 'Sobre #7637',
+      hora: '2026-11-21T11:07:00.000Z', leido: true, leido_en: '2026-11-21T11:09:00.000Z',
+    }],
+  }, AHORA);
+  assert.equal(out.total, 2);
+  assert.equal(out.fuentes.encargos, 1);
+  assert.equal(out.fuentes.mensajes, 1);
+  assert.equal(out.comunicaciones[0].fuente, 'mensaje');
+});
+
+test('las URLs de bandeja y de mensajes no llevan secreto', () => {
+  const urls = urlsInboxPublico();
+  assert.ok(urls.some((u) => u.includes('persona=Jobs')));
+  for (const u of urls) {
+    assert.ok(u.startsWith('https://bot.yokup.com/api/public/inbox'));
+    assert.doesNotMatch(u, /token|key|secret|Bearer/i);
+  }
+  assert.equal(urlMensajes('https://mcp.admira.live'), 'https://mcp.admira.live/consejero/mensajes?max=500');
+  assert.equal(urlMensajes('http://mcp.admira.live'), null);
+  assert.equal(urlMensajes('https://user:tok@mcp.admira.live'), null);
+});
+
+const TOKEN = 'sekreto-de-prueba-no-imprimir-32';
+const MENSAJE = {
+  id: 'cm7637', de: 'Musk', para: 'Jobs', texto: 'Sobre #7637: los encabezados.',
+  hora: '2026-11-21T11:07:00.000Z', leido: true, leido_en: '2026-11-21T11:09:00.000Z',
+  maquina: 'GrokBot', aviso: { token: TOKEN },
+};
+
+function fetchFalso(vistos, { mensajes = [], estadoMensajes = 200 } = {}) {
+  return async (u, init) => {
+    vistos.push({ u: String(u), h: (init && init.headers) || {} });
+    if (String(u).includes('/consejero/mensajes')) {
+      return new Response(JSON.stringify({ ok: true, mensajes }), { status: estadoMensajes });
+    }
+    if (String(u).includes('persona=Jobs')) {
+      return new Response(JSON.stringify({ items: [{
+        id: 7637, ts: 1795252896, from_name: 'status-web · Elon Musk (por encargo de Carlos)',
+        target_persona: 'Jobs', status: 'done', done_at: 1795252985, etiqueta: '#7637.11.21', text: 'encabezados',
+      }] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ items: [] }), { status: 200 });
+  };
+}
+
+test('sin sesión no se lee nada', async () => {
+  const vistos = [];
+  const r = await api.onRequestGet({
+    request: new Request('https://evil.example/api/consejo/comunicaciones'),
+    env: { CONSEJERO_MENSAJES_TOKEN: TOKEN },
+    fetchImpl: fetchFalso(vistos),
+  });
+  assert.equal(r.status, 401);
+  assert.equal(vistos.length, 0);
+});
+
+test('el atajo por Origin no abre los mensajes privados ni devuelve el token', async () => {
+  const vistos = [];
+  const r = await api.onRequestGet({
+    request: new Request('https://www.admira.live/api/consejo/comunicaciones?limite=40', {
+      headers: { origin: 'https://www.admira.live' },
+    }),
+    env: { CONSEJERO_MENSAJES_TOKEN: TOKEN },
+    fetchImpl: fetchFalso(vistos, { mensajes: [MENSAJE] }),
+  });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.ok(!vistos.some((v) => v.u.includes('/consejero/mensajes')));
+  assert.equal(d.fuentes.mensajes, 0);
+  assert.equal(d.fuentes.encargos, 1);
+  assert.equal(JSON.stringify(d).includes(TOKEN), false);
+  assert.equal(JSON.stringify(d).includes('GrokBot'), false);
+});
+
+test('con la sesión de admira.live el mensaje Musk → Jobs entra y el token no sale', async () => {
+  const secreto = 'prueba-puerta-comunicaciones-32b';
+  const ahora = Math.floor(Date.now() / 1000);
+  const { valor } = await emitir(secreto, 'persona', 'csilvasantin@gmail.com', ahora);
+  const vistos = [];
+  const r = await api.onRequestGet({
+    request: new Request('https://www.admira.live/api/consejo/comunicaciones?limite=40', {
+      headers: { origin: 'https://www.admira.live', cookie: `${COOKIE}=${valor}` },
+    }),
+    env: { PUERTA_FIRMA: secreto, CONSEJERO_MENSAJES_TOKEN: TOKEN },
+    fetchImpl: fetchFalso(vistos, { mensajes: [MENSAJE] }),
+  });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.fuentes.mensajes, 1);
+  assert.equal(d.fuentes.encargos, 1);
+  assert.equal(d.total, 2);
+  const msg = d.comunicaciones.find((c) => c.fuente === 'mensaje');
+  assert.equal(msg.de, 'Elon Musk');
+  assert.equal(msg.para, 'Steve Jobs');
+  assert.match(msg.inicio_madrid, /12:07:00/);
+  const llamada = vistos.find((v) => v.u.includes('/consejero/mensajes'));
+  assert.equal(llamada.u, 'https://mcp.admira.live/consejero/mensajes?max=500');
+  assert.equal(llamada.h['x-mensajes-token'], TOKEN);
+  const cuerpo = JSON.stringify(d);
+  assert.equal(cuerpo.includes(TOKEN), false);
+  assert.equal(cuerpo.includes('GrokBot'), false);
+  assert.equal(cuerpo.includes('aviso'), false);
 });

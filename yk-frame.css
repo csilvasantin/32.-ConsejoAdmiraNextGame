@@ -353,7 +353,6 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
   box-shadow: 0 0 14px rgba(120,243,255,.25);
 }
 .yk-ico-gl{ font-size: 15px; line-height: 1 }
-.yk-ico-lang .yk-ico-gl{ font-size: 10px; letter-spacing: .08em; font-weight: 700 }
 .yk-ico-exp .yk-ico-gl{ font-size: 13px; letter-spacing: 0 }
 .yk-expert-max{appearance:none;border:1px solid var(--yk-line2);background:transparent;color:var(--yk-brand);font:700 9px/1 var(--yk-mono);letter-spacing:.08em;padding:4px 8px;cursor:pointer;border-radius:6px}
 .yk-expert-max:hover,.yk-expert-max[aria-pressed="true"]{border-color:var(--yk-brand);background:rgba(120,243,255,.12)}
@@ -754,10 +753,6 @@ html[data-yk-expert-min] body{padding-bottom:34px}
 }
 .yk-bar .yk-nav a.yk-nuevo{ border-color: #f0c040 }
 .yk-bar .yk-nav a .yk-nav-c{ line-height: 1; font-size: 7px; color: #ffb454 }
-#badge-comunicaciones .admira-da-n{
-  display:inline-block; padding:2px 4px; font-size:7px; line-height:1;
-  color:#1b130a; background:#ffb454; border:1px solid #000;
-}
 .yk-bar .yk-ico, .yk-bar .yk-proj-btn{
   height: 29px; min-width: 30px; padding: 0 6px; border-radius: 0;
   border: 2px solid #8b5a14; background: #2a1a08; box-shadow: 2px 2px 0 #000; color: #ffdd66;
@@ -772,7 +767,6 @@ html[data-yk-expert-min] body{padding-bottom:34px}
 .yk-bar .yk-pf-svg .panel{ fill: #5a4020 }
 .yk-bar .yk-ico[aria-pressed="true"] .yk-pf-svg .frame{ stroke: #ffdd66 }
 .yk-bar .yk-ico[aria-pressed="true"] .yk-pf-svg .panel{ fill: #ffdd66 }
-.yk-bar .yk-ico-lang .yk-ico-gl{ font-size: 7px; letter-spacing: .5px }
 .yk-bar .yk-proj-btn b{ color: #fff }
 .yk-bar .yk-proj-cx{ color: #c9a86a }
 /* Hasta 1440px el selector de proyecto se queda en punto + cifra + ▾ (el nombre, en su menú). */
@@ -786,7 +780,6 @@ html[data-yk-expert-min] body{padding-bottom:34px}
 @media (max-width: 820px){
   .yk-bar .yk-logo{ padding: 0 5px }
   .yk-bar .yk-logo-img{ height: 16px }
-  .yk-bar .yk-ico-lang{ display: none }
 }
 @media (max-width: 520px){
   .yk-bar{ gap: 5px }

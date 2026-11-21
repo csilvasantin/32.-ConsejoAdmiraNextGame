@@ -38,7 +38,7 @@
   // Asignaciones · DeepAgents · Consumo … [avanzado] [experto]. Mismo orden y mismos rótulos
   // que la home (index.html .top-bar) y que el marco de plataforma (yk-frame.js APP_NAV);
   // barra-unica.test.mjs vigila que las tres sigan iguales. DeepAgents (antes la pastilla
-  // «N comunicaciones») va justo ANTES de Consumo y lleva el contador como insignia.
+  // «N comunicaciones») va justo ANTES de Consumo, sin número (Carlos, 21-11-2026).
   var TOP = [
     { t: "📊 Dashboard",    en: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
     { t: "🎯 Objetivos",    en: "🎯 Goals",       h: "https://www.admira.live/objetivos" },
@@ -47,7 +47,7 @@
     { t: "✅ Tareas",       en: "✅ Tasks",       h: "https://www.admira.live/tareas" },
     { t: "🏆 Highscore",    en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
     { t: "🧩 Asignaciones", en: "🧩 Assignments", h: "https://www.admira.live/asignaciones/" },
-    { t: "🤖 DeepAgents",   en: "🤖 DeepAgents",  h: "https://www.admira.live/deepagents", id: "badge-comunicaciones" },
+    { t: "🤖 DeepAgents",   en: "🤖 DeepAgents",  h: "https://www.admira.live/deepagents" },
     { t: "💸 Consumo",      en: "💸 Usage",       h: "https://www.admira.live/consumos" }
   ];
   // OPCIONES (icono a la izquierda del todo): lo que no cabe en la fila — mismas secciones
@@ -123,7 +123,6 @@
     "border:2px solid #a07828;background:#3a2410;padding:6px 9px}" +
     ".pf-opciones-menu .pf-op-panel:hover{background:#8b5a14;color:#fff}" +
     ".pf-op-sep{height:2px;background:#8b5a14;margin:2px 0}" +
-    "#badge-comunicaciones .admira-da-n{display:inline-block;margin-left:5px;padding:2px 4px;font-size:7px;line-height:1;color:#1b130a;background:#ffb454;border:1px solid #000}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
     "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;flex:0 0 auto}" +
     "#admira-ro{order:90;display:flex;align-items:center;align-self:center;flex:0 0 auto;max-width:42vw;overflow:hidden;text-overflow:ellipsis;" +
@@ -218,7 +217,6 @@
     top.appendChild(nav);
     ensureBottomMenu(linkHTML);
     buildOpciones(top, linkHTML, isHere);
-    cargaContador();
 
     // Botón hamburguesa (☰): oculto en desktop vía CSS; en móvil abre/cierra el nav.
     // Empieza cerrado (hidden) para que en móvil el panel no tape el contenido.
@@ -403,20 +401,6 @@
     wrap.appendChild(btn);
     wrap.appendChild(menu);
     top.insertBefore(wrap, top.firstChild);
-  }
-
-  // Contador de DeepAgents (antes «N comunicaciones»): lo pinta /comunicaciones-widget.js
-  // sobre #badge-comunicaciones. Se carga una vez, con el mismo ?v= de la barra.
-  function cargaContador() {
-    if (document.querySelector('script[src*="comunicaciones-widget.js"]')) {
-      if (window.AdmiraDeepAgentsContador) window.AdmiraDeepAgentsContador();
-      return;
-    }
-    var v = ""; try { v = new URL(BAR_SRC, location.href).searchParams.get("v") || ""; } catch (e) {}
-    var s = document.createElement("script");
-    s.src = "/comunicaciones-widget.js" + (v ? "?v=" + encodeURIComponent(v) : "");
-    s.defer = true;
-    (document.head || document.documentElement).appendChild(s);
   }
 
   // Inserta el enlace "👥 Usuarios" en la barra superior si el usuario logueado

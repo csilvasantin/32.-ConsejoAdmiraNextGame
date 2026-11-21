@@ -1930,7 +1930,6 @@
       var a = el("a", it.active ? "on" : null, it.text || it.label);
       a.href = it.href || "#";
       if (it.en) a.setAttribute("data-en", it.en);
-      if (it.label === "DEEPAGENTS") a.id = "badge-comunicaciones";
       if (it.active) a.setAttribute("aria-current", "page");
       if (it.panel) {
         // MISIONES/TAREAS: abre/enfoca el raíl izquierdo/derecho en vez de navegar
@@ -1954,7 +1953,8 @@
 
     // [icono AVANZADO] [icono EXPERTO] al extremo derecho
     var icoR = icon("yk-ico yk-ico-adv", "right", '<svg class="yk-pf-svg" viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>', "Avanzado");
-    var langBtn = buildLangButton();
+    // Sin botón de idioma en la barra (Carlos, 21-11-2026): el idioma se elige al entrar
+    // (admira-idioma.js, que el marco sigue cargando arriba) y /idioma sigue en el modo Experto.
     var icoB = icon("yk-ico yk-ico-exp", "bottom", '<svg class="yk-pf-svg" viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/></svg>', "Experto");
 
     bar.appendChild(icoL);
@@ -1963,9 +1963,7 @@
     bar.appendChild(nav);
     bar.appendChild(proj);
     bar.appendChild(icoR);
-    bar.appendChild(langBtn);
     bar.appendChild(icoB);
-    setTimeout(loadDeepAgentsCounter, 0);
 
     // ------------------------- PANELES (raíles) ----------------------------
     // Rótulos por página: <body data-yk-rail-left="…" data-yk-rail-right="…">.
@@ -2803,19 +2801,6 @@
     return nav;
   }
 
-  // Contador de DeepAgents: /comunicaciones-widget.js pinta la insignia en #badge-comunicaciones.
-  function loadDeepAgentsCounter() {
-    if (!document.getElementById("badge-comunicaciones")) return;
-    if (document.querySelector('script[src*="comunicaciones-widget.js"]')) {
-      if (window.AdmiraDeepAgentsContador) window.AdmiraDeepAgentsContador();
-      return;
-    }
-    var s = document.createElement("script");
-    s.src = "/comunicaciones-widget.js?v=" + encodeURIComponent(VERSION);
-    s.defer = true;
-    document.head.appendChild(s);
-  }
-
   function buildRailNav(items) {
     var nav = el("nav", "yk-rail-nav");
     nav.setAttribute("aria-label", "Secciones de Yokup");
@@ -2923,36 +2908,6 @@
     handle.addEventListener("keydown",function(event){var value=current();if(event.key==="ArrowUp")value+=STEP;else if(event.key==="ArrowDown")value-=STEP;else if(event.key==="Home")value=MIN;else if(event.key==="End")value=maxHeight();else return;event.preventDefault();apply(value);});
     window.addEventListener("resize",function(){if(rail.style.height)apply(current(),false);});
     return {apply:apply, reset:reset, maxHeight:maxHeight};
-  }
-
-  /* Un solo botón: muestra el idioma contrario y alterna con /idioma. */
-  function buildLangButton() {
-    var b = el("button", "yk-ico yk-ico-lang");
-    b.type = "button";
-    b.id = "yk-lang";
-    function otro() {
-      var lang = "es";
-      try { lang = (window.AdmiraIdioma && AdmiraIdioma.lang && AdmiraIdioma.lang()) || document.documentElement.lang || "es"; } catch (e) {}
-      return String(lang).slice(0, 2) === "en" ? "ESP" : "ENG";
-    }
-    function paint() {
-      var o = otro();
-      b.innerHTML = '<span class="yk-ico-gl">' + o + "</span>";
-      var title = o === "ENG" ? "Pasar la interfaz a inglés" : "Pasar la interfaz a castellano";
-      b.title = title;
-      b.setAttribute("aria-label", title);
-    }
-    paint();
-    b.addEventListener("click", function () {
-      var go = function () {
-        if (window.AdmiraIdioma && AdmiraIdioma.run) AdmiraIdioma.run("/idioma");
-        paint();
-      };
-      if (window.AdmiraIdioma && AdmiraIdioma.run) go();
-      else expertScript("/admira-idioma.js?v=" + EXPERT_CMD_V, "AdmiraIdioma").then(go);
-    });
-    window.addEventListener("admira:languagechange", paint);
-    return b;
   }
 
   function closeRailOnNavigation(rail, panel) {

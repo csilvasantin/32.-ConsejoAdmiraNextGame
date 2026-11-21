@@ -205,9 +205,10 @@ test('formatea duraciones y trata segundos y milisegundos', () => {
 test('la home y Conversación enlazan la sección visible', () => {
   const home = fs.readFileSync('index.html', 'utf8');
   // Carlos, 21-11-2026: la sección se llama DeepAgents; Comunicaciones se abre desde dentro.
-  assert.match(home, /id="badge-comunicaciones" href="\/deepagents"/);
+  assert.match(home, /<a href="\/deepagents" class="version-badge"/);
   assert.match(fs.readFileSync('deepagents/index.html', 'utf8'), /href="\/comunicaciones"/);
-  assert.match(home, /comunicaciones-widget\.js/);
+  // r224: la barra ya no pinta el número de comunicaciones.
+  assert.doesNotMatch(home, /comunicaciones-widget\.js/);
   const conv = fs.readFileSync('conversacion.html', 'utf8');
   assert.match(conv, /href="\/comunicaciones"/);
   const pagina = fs.readFileSync('comunicaciones.html', 'utf8');
@@ -220,7 +221,8 @@ test('la home y Conversación enlazan la sección visible', () => {
   const marco = fs.readFileSync('yk-frame.js', 'utf8');
   // Barra única (21-11-2026): Comunicaciones sale de la fila y vive en el raíl Opciones.
   assert.match(marco, /var APP_NAV_OPCIONES = \[[\s\S]*\["COMUNICACIONES",\s+"\/comunicaciones"/);
-  assert.match(marco, /b\.id = "yk-lang"/);
+  // r224: el idioma se elige al entrar; no hay botón de idioma en la barra.
+  assert.doesNotMatch(marco, /b\.id = "yk-lang"/);
   // Barra única (21-11-2026): el modo experto usa el mismo icono de panel inferior que la home.
   assert.match(marco, /icon\("yk-ico yk-ico-exp", "bottom", [\s\S]{0,200}"Experto"\)/);
   assert.match(fs.readFileSync('admira-bar.js', 'utf8'), /www\.admira\.live\/comunicaciones/);

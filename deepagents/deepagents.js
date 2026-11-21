@@ -166,20 +166,15 @@
   /* ── AHORA: qué hace cada deepagent principal (GET /api/flota/trabajando, la misma fuente que la barra de agentes) ── */
   var FLOTA = "/api/flota/trabajando";
   var FLOTA_MS = 20000;
-  /* Carlos, 21-11-2026 (r229): los cuatro deepagents fijos van primero y sin rótulos de motor (Claude/Codex ya va
-   * dentro de cada ficha). Leyendas → MacStudio (Trinity, Neo) · Coetáneos → MacMini (Oráculo, Morfeo).
-   * La máquina principal sale SIEMPRE por defecto; solo si el agente vive además en otro equipo de AdmiraNeXT aparece,
-   * en el mismo sitio, un desplegable con las otras (nunca elegidas por defecto). */
-  var FIJOS = [
-    // proyecto = SOLO el de por defecto (respaldo marcado «por defecto»); manda el que el agente trabaja de verdad.
-    // lado = monitor físico del agente en su equipo principal (r230: por posición, no por índice).
-    { agente: "Trinity", maquina: "MacStudio", proyecto: "admira.studio", lado: "izquierda" },
-    { agente: "Neo", maquina: "MacStudio", proyecto: "admira.live", lado: "derecha" },
-    { agente: "Oraculo", maquina: "MacMini", proyecto: "", lado: "" },
-    { agente: "Morfeo", maquina: "MacMini", proyecto: "", lado: "" }
-  ];
+  /* r234: el estado de los cuatro deepagents (abierto · actividad · proyecto) sale de /assets/deepagents-estado.js,
+   * el MISMO módulo que usa Consumo para «Agentes (trabajando/abiertos)» y «Proyectos». */
+  var DA = window.DeepAgentsEstado;
+  var FIJOS = DA.FIJOS, NOMBRE = DA.NOMBRE, claveMaq = DA.claveMaq, fijoDe = DA.fijoDe, maquinasDe = DA.maquinasDe;
+  var nombreProy = DA.nombreProy, proyectoActual = DA.proyectoActual;
+  var actividadGit = {}; // agente → { ts, accion, repo, rama, pr } (GET /api/deepagents/actividad o GitHub directo)
+  function abiertoEn(t, maq) { return DA.abiertoEn(t, maq, flota.tarjetas); }
+  function actividadEn(t, maq, principal, abierto, nombre) { return DA.actividadEn(t, maq, principal, abierto, nombre, actividadGit); }
   var maqElegida = {}; // agente → máquina elegida en el desplegable (por defecto, la principal)
-  var NOMBRE = { Oraculo: "Oráculo" };
   var flota = { tarjetas: null, error: "", generado: "", presencia: "" };
 
   function hace(seg) {
@@ -197,11 +192,7 @@
     return String(v);
   }
   function mayus(t) { t = String(t || ""); return t ? t.charAt(0).toUpperCase() + t.slice(1) : ""; }
-  function tarjetaDe(nombre) {
-    var k = norm(nombre), ts = flota.tarjetas || [];
-    for (var i = 0; i < ts.length; i++) if (norm(ts[i].agente) === k) return ts[i];
-    return null;
-  }
+  function tarjetaDe(nombre) { return DA.tarjetaDe(flota.tarjetas, nombre); }
   function ultimoMensaje(nombre) {
     var ms = estado.datos ? estado.datos.mensajes : [];
     for (var i = 0; i < ms.length; i++) { var p = parejaDe(ms[i]); if (p && p.agente === nombre) return ms[i]; }
@@ -209,96 +200,12 @@
   }
   function dato(dl, k, v) { dl.appendChild(el("dt", "", k)); dl.appendChild(el("dd", "", v)); }
 
-  function claveMaq(m) { return norm(m).replace(/[^a-z0-9]/g, ""); }
-  function fijoDe(nombre) { for (var i = 0; i < FIJOS.length; i++) if (FIJOS[i].agente === nombre) return FIJOS[i]; return null; }
-  // Equipos donde el agente está desplegado o tiene latido: el principal primero, luego el resto (sin repetir).
-  function maquinasDe(t, principal) {
-    var vistas = {}, lista = [];
-    function poner(m) { var k = claveMaq(m); if (!k || vistas[k]) return; vistas[k] = 1; lista.push(String(m)); }
-    poner(principal);
-    if (t) {
-      (t.maquinas || []).forEach(poner);
-      (t.superficies || []).forEach(function (s) { if (s && s.maquina) poner(s.maquina); });
-    }
-    return lista;
-  }
-  /* r231 (Carlos, 21-11-2026 20:23) — DOS señales separadas, por máquina elegida:
-   * BORDE/ETIQUETA = ¿está ABIERTO en esa máquina?  verde abierto · rojo cerrado · amarillo no se sabe.
-   *   Abierto: la app o la sesión aparece en el pulso fresco de ESE Mac (< 3 min, lista de procesos/ventanas que manda
-   *   el propio Mac), o un latido vivo de su app de escritorio, o «con Carlos» en él. Cerrado: el pulso de ese Mac está
-   *   vivo (otro agente sale en él) y este agente no aparece. Sin pulso de ese Mac → amarillo: un latido viejo NO es «cerrado».
-   * PUNTO = actividad.  verde trabajando · rojo abierto sin hacer nada · amarillo no se sabe.
-   *   Trabajando: app en uso/al frente en ese Mac, con Carlos, o en la principal encargo en curso, tokens reales,
-   *   encargo cerrado hace < 20 min o trabajo firmado en GitHub (rama «trinity/…», «neo/…») hace < 20 min. */
-  var RECIENTE_S = 20 * 60;
-  var actividadGit = {}; // agente → { ts, accion, repo, rama, pr } (GET /api/deepagents/actividad)
-  function pulsoVivoEn(k) {
-    var ts = flota.tarjetas || [];
-    for (var i = 0; i < ts.length; i++) {
-      var ss = ts[i].superficies || [];
-      for (var j = 0; j < ss.length; j++) if (ss[j] && ss[j].fuente === "pulso" && claveMaq(ss[j].maquina) === k) return true;
-    }
-    return false;
-  }
-  function nombreSup(s) { return s.app || s.runtime || "sesión"; }
-  function abiertoEn(t, maq) {
-    if (!t) return { estado: "amarillo", porque: "la flota no informa de este agente" };
-    var k = claveMaq(maq);
-    var sup = (t.superficies || []).filter(function (s) { return s && claveMaq(s.maquina) === k; });
-    var pul = sup.filter(function (s) { return s.fuente === "pulso"; });
-    if (pul.length) return { estado: "verde", porque: pul.map(nombreSup).join(" + ") + " abierto en " + maq + " (pulso del Mac)" };
-    if (sup.length) return { estado: "verde", porque: sup.map(nombreSup).join(" + ") + " abierto en " + maq + " (latido de la app)" };
-    if (t.conCarlosEn && claveMaq(t.conCarlosEn) === k) return { estado: "verde", porque: "con Carlos en " + maq };
-    if (pulsoVivoEn(k)) return { estado: "rojo", porque: "el pulso de " + maq + " no lo ve abierto" };
-    return { estado: "amarillo", porque: "sin pulso de " + maq + ": no se sabe si está abierto" };
-  }
-  function haceTexto(seg) { return seg < 90 ? "hace " + Math.max(0, Math.round(seg)) + " s" : "hace " + Math.round(seg / 60) + " min"; }
-  function actividadEn(t, maq, principal, abierto, nombre) {
-    if (!t) return { luz: "amarillo", porque: "sin datos de actividad" };
-    var k = claveMaq(maq), esPrincipal = k === claveMaq(principal), ahora = Date.now() / 1000;
-    var sup = (t.superficies || []).filter(function (s) { return s && claveMaq(s.maquina) === k; });
-    for (var i = 0; i < sup.length; i++) if (sup[i].enUso || sup[i].alFrente) return { luz: "verde", porque: nombreSup(sup[i]) + " en uso en " + maq };
-    if (t.conCarlosEn && claveMaq(t.conCarlosEn) === k) return { luz: "verde", porque: "con Carlos en " + maq };
-    if (esPrincipal) {
-      if (t.enCurso > 0) return { luz: "verde", porque: t.enCurso + " encargo en curso" };
-      if (t.estado === "verde") return { luz: "verde", porque: t.porqueColor || t.motivo || "trabajando" };
-      var g = actividadGit[nombre] || actividadGit[NOMBRE[nombre] || nombre];
-      if (g && isFinite(g.ts) && ahora - g.ts / 1000 < RECIENTE_S) return { luz: "verde", porque: "GitHub: " + (g.accion === "merged" ? "PR fusionado" : g.accion === "opened" ? "PR abierto" : g.accion) + " en " + g.repo + " " + haceTexto(ahora - g.ts / 1000) + " (" + g.rama + ")" };
-      if (t.actividad && isFinite(t.actividad.ts) && ahora - t.actividad.ts < RECIENTE_S) return { luz: "verde", porque: (t.actividad.fuente || "actividad") + " " + haceTexto(ahora - t.actividad.ts) };
-    }
-    if (abierto.estado === "verde") return { luz: "rojo", porque: "abierto en " + maq + " sin actividad ahora" };
-    if (abierto.estado === "rojo") return { luz: "rojo", porque: "cerrado en " + maq };
-    return { luz: "amarillo", porque: "no se sabe qué hace en " + maq };
-  }
   // Pastilla del proyecto → captura en tiempo real de ese agente en su equipo (control remoto de admira.live en «solo ver»).
   function enlaceCaptura(maq, fijo, principal) {
     var u = "/control/?rc=" + encodeURIComponent(claveMaq(maq)) + "&name=" + encodeURIComponent(maq) + "&ver=1";
     if (fijo && fijo.lado && claveMaq(maq) === claveMaq(principal)) u += "&lado=" + fijo.lado;
     return u;
   }
-  /* r230 (Carlos, 21-11-2026 20:02: «Neo está con admira.store, no con admira.live»). La pastilla enseña el proyecto en
-   * el que el agente trabaja AHORA, con evidencia de /api/flota/trabajando: foco declarado por el agente
-   * (POST /api/consejo/foco → fuente «agente»), proyecto de su latido/pulso (fuente «ahora»/«latido»: campo project del
-   * latido en bot.yokup.com o proyecto medido en el pulso). Sin dato real → el de por defecto, marcado «por defecto». */
-  var FUENTE_REAL = { agente: "declarado por el agente", ahora: "latido / pulso de ahora", latido: "latido", consejero: "declarado" };
-  function limpioProy(p) {
-    var k = String(p || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
-    return k && k !== "otros" && k !== "training" ? k : "";
-  }
-  function nombreProy(k) {
-    var partes = k.split(".");
-    if (partes.length < 2) return k.charAt(0).toUpperCase() + k.slice(1);
-    var ext = partes.slice(1).join(".");
-    return partes[0].charAt(0).toUpperCase() + partes[0].slice(1) + "." + (ext === "live" ? ext : ext.charAt(0).toUpperCase() + ext.slice(1));
-  }
-  function proyectoActual(t, fijo) {
-    var f = t && t.foco;
-    if (f && !f.defecto && FUENTE_REAL[f.fuente] && limpioProy(f.proyecto)) return { k: limpioProy(f.proyecto), defecto: false, fuente: FUENTE_REAL[f.fuente] };
-    if (t && limpioProy(t.proyecto)) return { k: limpioProy(t.proyecto), defecto: false, fuente: "latido" };
-    if (fijo && fijo.proyecto) return { k: fijo.proyecto, defecto: true, fuente: "por defecto" };
-    return null;
-  }
-
   function fichaAgente(nombre) {
     var t = tarjetaDe(nombre), visible = NOMBRE[nombre] || nombre, fijo = fijoDe(nombre);
     var principal = (fijo && fijo.maquina) || (t && t.maquina) || "";
@@ -310,7 +217,14 @@
     var img = el("img");
     img.alt = ""; img.loading = "lazy";
     img.src = (t && t.retrato && t.retrato.img) || "/avatars/" + norm(nombre) + ".jpg";
-    cab.appendChild(img);
+    // r233: la foto abre las acciones sobre la app de escritorio del agente en la máquina elegida.
+    var bFoto = el("button", "ag-foto");
+    bFoto.type = "button";
+    bFoto.title = "Acciones sobre la app de " + visible + " en " + sel;
+    bFoto.setAttribute("aria-label", bFoto.title);
+    bFoto.appendChild(img);
+    bFoto.addEventListener("click", function () { abrirAcciones(nombre, visible, sel, ab); });
+    cab.appendChild(bFoto);
     var quien = el("div");
     quien.appendChild(el("div", "ag-nom", visible));
     // Bajo el nombre, solo el equipo: texto si vive en uno; desplegable si está en más de uno (principal elegido).
@@ -373,6 +287,99 @@
     return art;
   }
 
+  /* ── r233 · Cerrar / Arrancar desktop app (Carlos, 21-11-2026 20:34) ──
+   * Libera un Mac de la app de escritorio para que el agente trabaje por CLI. 1) se REGISTRA la petición en
+   * /api/deepagents/app (solo persona con sesión; lista cerrada), 2) la ejecuta el relay de la flota con la acción
+   * «deepagentapp» (open -a / quit app de Claude o ChatGPT/Codex, nada más) y la sesión Google del navegador,
+   * 3) se registra el resultado. Cerrar pide confirmación. */
+  var APP_DE = { Neo: "claude", Morfeo: "claude", Trinity: "codex", Oraculo: "codex" };
+  var NOMBRE_APP = { claude: "Claude", codex: "ChatGPT/Codex" };
+  var mesh = null;
+  function cargarMesh() {
+    if (mesh) return Promise.resolve(mesh);
+    return new Promise(function (ok, mal) {
+      function crear() { try { mesh = window.AdmiraFleetMesh.create({ timeoutMs: 20000, cooldownMs: 15000 }); ok(mesh); } catch (e) { mal(e); } }
+      if (window.AdmiraFleetMesh) return crear();
+      var sc = document.createElement("script");
+      sc.src = "/control/fleet-mesh.js?v=20261110-control-lan-55a36066f39c";
+      sc.onload = crear; sc.onerror = function () { mal(new Error("no carga el cliente de la flota")); };
+      document.head.appendChild(sc);
+    });
+  }
+  function registrarAccion(datos) {
+    return fetch("/api/deepagents/app", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(datos) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: "HTTP " + r.status }; }).then(function (d) { d.status = r.status; return d; }); });
+  }
+  function ejecutar(nombre, maq, accion, salida) {
+    var app = APP_DE[nombre], base = { agente: nombre, maquina: maq, accion: accion };
+    salida.textContent = "Registrando la orden…";
+    return registrarAccion(Object.assign({ fase: "pedida" }, base)).then(function (d) {
+      if (!d.ok) { salida.textContent = "No se ejecuta: " + (d.error || "sin permiso"); return; }
+      salida.textContent = "Enviando al relay de " + maq + "…";
+      return cargarMesh().then(function (m) {
+        return m.json("/action", { method: "POST", headers: { "Content-Type": "application/json" }, commandId: window.AdmiraFleetMesh.commandId(),
+          body: JSON.stringify({ machine: claveMaq(maq), action: "deepagentapp", arg: accion + ":" + app }) });
+      }).then(function (out) {
+        var r = out.response, x = out.data || {};
+        var desconocida = r.status === 400 && /acci[oó]n desconocida/i.test(String(x.error || ""));
+        var ok = r.ok && (x.rc === 0 || x.rc == null) && !x.error;
+        var texto = desconocida ? "El relay de " + maq + " todavía no tiene la acción «deepagentapp»: hay que actualizar su FleetControl."
+          : r.status === 401 ? "Sin sesión en la flota: entra una vez en admira.live/control y repite."
+          : ok ? (String(x.stdout || x.out || "").trim() || "Hecho.") : "Falló: " + (x.error || x.stderr || ("HTTP " + r.status));
+        salida.textContent = texto;
+        registrarAccion(Object.assign({ fase: "resultado", ok: ok, salida: texto }, base)).then(cargarAcciones);
+        setTimeout(cargarFlota, 6000);
+      }).catch(function (e) {
+        var texto = "No se pudo hablar con la flota: " + ((e && e.message) || e);
+        salida.textContent = texto;
+        registrarAccion(Object.assign({ fase: "resultado", ok: false, salida: texto }, base)).then(cargarAcciones);
+      });
+    });
+  }
+  function abrirAcciones(nombre, visible, maq, ab) {
+    var app = APP_DE[nombre]; if (!app) return;
+    var viejo = document.getElementById("da-acciones"); if (viejo) viejo.remove();
+    var dlg = el("dialog", "da-dlg"); dlg.id = "da-acciones";
+    dlg.appendChild(el("h3", "", visible + " · " + maq));
+    dlg.appendChild(el("p", "", "App de escritorio: " + NOMBRE_APP[app] + " — " + ({ verde: "abierta", rojo: "cerrada", amarillo: "no se sabe si está abierta" }[ab.estado]) + "."));
+    dlg.appendChild(el("p", "nota-dlg", "Cerrarla libera la máquina para que " + visible + " trabaje por CLI. Queda registrado en DeepAgents."));
+    var fila = el("div", "dlg-botones"), salida = el("p", "dlg-salida");
+    salida.setAttribute("aria-live", "polite");
+    function boton(accion, texto) {
+      var b = el("button", "dlg-b " + accion, texto); b.type = "button";
+      b.addEventListener("click", function () {
+        if (accion === "cerrar" && !window.confirm("¿Cerrar " + NOMBRE_APP[app] + " de " + visible + " en " + maq + "? Se perderá lo que no esté guardado en esa app.")) return;
+        Array.prototype.forEach.call(fila.querySelectorAll("button.dlg-b"), function (x) { x.disabled = true; });
+        ejecutar(nombre, maq, accion, salida);
+      });
+      fila.appendChild(b);
+    }
+    if (ab.estado !== "rojo") boton("cerrar", "Cerrar desktop app");
+    if (ab.estado !== "verde") boton("abrir", "Arrancar desktop app");
+    var cerrar = el("button", "dlg-x", "Cerrar ventana"); cerrar.type = "button";
+    cerrar.addEventListener("click", function () { dlg.close(); dlg.remove(); });
+    fila.appendChild(cerrar);
+    dlg.appendChild(fila); dlg.appendChild(salida);
+    document.body.appendChild(dlg);
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  }
+  function cargarAcciones() {
+    return fetch("/api/deepagents/app", { cache: "no-store", credentials: "same-origin", headers: { accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var caja = $("acciones"), sec = $("sec-acciones");
+        if (!caja || !sec) return;
+        if (!d || !d.ok) { sec.hidden = true; return; }
+        sec.hidden = false; caja.textContent = "";
+        if (!d.acciones.length) { caja.appendChild(el("p", "empty", "Ninguna app abierta o cerrada desde aquí todavía.")); return; }
+        d.acciones.slice(0, 20).forEach(function (a) {
+          var txt = fecha(CORTA, a.hora) + " · " + a.por + " · " + (a.accion === "cerrar" ? "cerrar" : "arrancar") + " " + (NOMBRE_APP[a.app] || a.app) + " de " + a.agente + " en " + a.maquina
+            + (a.fase === "resultado" ? " → " + (a.ok ? "OK" : "fallo") + (a.salida ? " (" + a.salida + ")" : "") : " · pedida");
+          caja.appendChild(el("p", "accion" + (a.fase === "resultado" && !a.ok ? " mal" : ""), txt));
+        });
+      }).catch(function () {});
+  }
+
   function pintarAhora() {
     var caja = $("ahora"), nota = $("ahora-nota");
     if (!flota.tarjetas && !flota.error) return;
@@ -388,46 +395,9 @@
     nota.hidden = !avisos.length; nota.textContent = avisos.join(" ");
   }
 
-  /* Actividad firmada en GitHub. Primero el servidor (/api/deepagents/actividad, caché de borde); si GitHub le niega la
-   * consulta (sin token, 403 por IP compartida de Cloudflare), el navegador la pide él mismo a la API pública de GitHub
-   * (CORS abierto, 60/h por IP: aquí como mucho 20/h) y la interpreta igual que deepagents-actividad-lib.mjs. */
-  var GH_EVENTOS = "https://api.github.com/users/csilvasantin/events/public?per_page=100";
-  var AGENTES_RAMA = { trinity: "Trinity", neo: "Neo", oraculo: "Oráculo", "oráculo": "Oráculo", morfeo: "Morfeo" };
-  var ghUltima = 0;
-  function actividadDeEventos(eventos) {
-    var out = {};
-    (Array.isArray(eventos) ? eventos : []).forEach(function (e) {
-      if (!e || !e.created_at || !e.repo) return;
-      var p = e.payload || {}, rama = null, accion = null, pr = null;
-      if (e.type === "PullRequestEvent" && p.pull_request) {
-        rama = p.pull_request.head && p.pull_request.head.ref;
-        accion = p.action === "closed" && p.pull_request.merged ? "merged" : p.action;
-        pr = p.pull_request.number || p.number || null;
-      } else if (e.type === "PushEvent" || e.type === "CreateEvent") {
-        rama = e.type === "CreateEvent" ? (p.ref_type === "branch" ? p.ref : null) : p.ref;
-        accion = e.type === "PushEvent" ? "push" : "rama creada";
-      }
-      var r = String(rama || "").replace(/^refs\/heads\//, "").toLowerCase(), pre = r.split("/")[0];
-      var agente = r.indexOf("/") > 0 && AGENTES_RAMA[pre] ? AGENTES_RAMA[pre] : null;
-      var ts = Date.parse(e.created_at);
-      if (!agente || !isFinite(ts)) return;
-      if (!out[agente] || out[agente].ts < ts) out[agente] = { ts: ts, hora: new Date(ts).toISOString(), accion: accion, repo: String(e.repo.name || "").split("/").pop(), rama: String(rama).replace(/^refs\/heads\//, ""), pr: pr };
-    });
-    return out;
-  }
-  function actividadDesdeNavegador() {
-    if (Date.now() - ghUltima < 180000) return Promise.resolve();
-    ghUltima = Date.now();
-    return fetch(GH_EVENTOS, { headers: { accept: "application/vnd.github+json" } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (ev) { if (ev) { actividadGit = actividadDeEventos(ev); pintarAhora(); } })
-      .catch(function () {});
-  }
+  // Actividad firmada en GitHub (servidor y, si GitHub le niega la consulta, el navegador): DA.leerActividad.
   function cargarActividad() {
-    return fetch("/api/deepagents/actividad", { cache: "no-store", headers: { accept: "application/json" } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { if (d && d.ok && d.agentes) { actividadGit = d.agentes; pintarAhora(); } else return actividadDesdeNavegador(); })
-      .catch(function () { return actividadDesdeNavegador(); });
+    return DA.leerActividad().then(function (a) { if (a) { actividadGit = a; pintarAhora(); } });
   }
   function cargarFlota() {
     return fetch(FLOTA, { cache: "no-store", headers: { accept: "application/json" } })
@@ -480,6 +450,7 @@
   cargarFlota();
   setInterval(function () { if (!document.hidden) cargarFlota(); }, FLOTA_MS);
   cargarActividad();
+  cargarAcciones();
   setInterval(function () { if (!document.hidden) cargarActividad(); }, 60000);
   cargar();
   setInterval(function () { if (!document.hidden) cargar(); }, CADA_MS);

@@ -23,7 +23,7 @@ test("#7056: «Agentes (x/y)»: x = tokens en los últimos 15 min, y = conectado
 
 test("#7056: el rótulo es Agentes (x/y) y el desplegable dice «trabajando · conectados de»", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
-  assert.match(js, /T\('Agentes', 'Agents'\) \+ ' \(' \+ xy\(nAgTrab\(\), nAgCon\(\)\) \+ '\)'/);
+  assert.match(js, /T\('Agentes', 'Agents'\) \+ ' \(' \+ \(c \? c\.agentesTrabajando \+ '\/' \+ c\.agentesAbiertos : xy\(nAgTrab\(\), nAgCon\(\)\)\) \+ '\)'/);
   assert.match(js, /T\('trabajando', 'working'\)/);
   assert.match(js, /T\('conectados', 'connected'\)/);
   assert.match(js, /T\('de ', 'of '\)/);

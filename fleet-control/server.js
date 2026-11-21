@@ -25,6 +25,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
+const { deepagentAppCommand } = require('./deepagent-app');
 const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
 const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, handoffOriginAllowed, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
 const { sessionMutationError } = require('./session-csrf');
@@ -458,6 +459,10 @@ const ACTIONS = {
     macos: (arg) => macOpenCommand(arg),
     linux: (arg) => linuxOpenCommand(arg, LGUI),
     windows: (arg) => windowsOpenCommand(arg)
+  },
+  // r233: app de escritorio de un deepagent (lista cerrada en deepagent-app.js; solo macOS).
+  deepagentapp: {
+    macos: (arg) => deepagentAppCommand(arg)
   },
   closeapp: {
     macos: (arg) => 'osascript -e ' + sh('quit app "' + String(arg).replace(/"/g, '') + '"') + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '"',

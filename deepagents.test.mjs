@@ -33,6 +33,13 @@ async function conPuerta(tipo, q = "") {
   return new Request("https://www.admira.live/api/deepagents/registro" + q, { headers: { cookie: cookieDe(c.valor, c.maxAge).split(";")[0] } });
 }
 
+
+function cargaDA() {
+  const ctx = {};
+  new Function("globalThis", "module", readFileSync(new URL("./assets/deepagents-estado.js", import.meta.url), "utf8"))(ctx, undefined);
+  return ctx.DeepAgentsEstado;
+}
+
 test("lib: agente canónico, pareja y supervisor", () => {
   assert.equal(lib.agente("oráculo"), "Oraculo");
   assert.equal(lib.agente("Jobs"), null);
@@ -137,12 +144,13 @@ test("página: lo primero son los cuatro deepagents fijos, sin rótulos de motor
   assert.ok(html.indexOf('id="ahora"') > 0 && html.indexOf('id="ahora"') < html.indexOf('id="cifras"'));
   assert.ok(!html.includes("<h2>Ahora</h2>") && !html.includes('id="ahora-hora"'));
   assert.ok(!js.includes("flota leída") && !js.includes('motor: "Claude"'));
-  assert.ok(js.includes("/api/flota/trabajando"));
+  assert.ok(js.includes("/api/flota/trabajando") && js.includes("window.DeepAgentsEstado"));
+  const mod = readFileSync(new URL("./assets/deepagents-estado.js", import.meta.url), "utf8");
   // Leyendas → MacStudio, Coetáneos → MacMini; la máquina principal va por defecto.
-  assert.ok(js.includes('{ agente: "Trinity", maquina: "MacStudio", proyecto: "admira.studio", lado: "izquierda" }'));
-  assert.ok(js.includes('{ agente: "Neo", maquina: "MacStudio", proyecto: "admira.live", lado: "derecha" }'));
-  assert.ok(/agente: "Oraculo", maquina: "MacMini"/.test(js) && /agente: "Morfeo", maquina: "MacMini"/.test(js));
-  assert.ok(js.indexOf('agente: "Trinity"') < js.indexOf('agente: "Neo"') && js.indexOf('agente: "Neo"') < js.indexOf('agente: "Oraculo"'));
+  assert.ok(mod.includes('{ agente: "Trinity", maquina: "MacStudio", proyecto: "admira.studio", lado: "izquierda" }'));
+  assert.ok(mod.includes('{ agente: "Neo", maquina: "MacStudio", proyecto: "admira.live", lado: "derecha" }'));
+  assert.ok(/agente: "Oraculo", maquina: "MacMini", proyecto: "admira.tv"/.test(mod) && /agente: "Morfeo", maquina: "MacMini"/.test(mod));
+  assert.ok(mod.indexOf('agente: "Trinity"') < mod.indexOf('agente: "Neo"') && mod.indexOf('agente: "Neo"') < mod.indexOf('agente: "Oraculo"'));
   // Desplegable solo con más de un equipo; luz verde/rojo/amarillo; la pastilla abre la captura en vivo.
   assert.ok(js.includes("maqs.length > 1") && js.includes('el("select", "ag-maq")'));
   assert.ok(js.includes('verde: "trabajando", rojo: "sin hacer nada", amarillo: "no se sabe"'));
@@ -169,9 +177,7 @@ test("menú: DeepAgents y Consumo llevan el menú de la plataforma, y la secció
 });
 
 test("r230: la pastilla enseña el proyecto real (foco/latido) y el de por defecto solo como respaldo marcado", () => {
-  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
-  const ini = js.indexOf("  var FUENTE_REAL"), fin = js.indexOf("  function fichaAgente(");
-  const { proyectoActual, nombreProy } = new Function(js.slice(ini, fin) + "return { proyectoActual, nombreProy };")();
+  const { proyectoActual, nombreProy } = cargaDA();
   const neo = { proyecto: "admira.live" };
   assert.deepEqual(proyectoActual({ foco: { proyecto: "admira.store", fuente: "ahora", defecto: false }, proyecto: "admira.store" }, neo), { k: "admira.store", defecto: false, fuente: "latido / pulso de ahora" });
   assert.equal(proyectoActual({ foco: { proyecto: "https://www.admira.store/admira-xp", fuente: "agente", defecto: false } }, neo).k, "admira.store");
@@ -181,6 +187,7 @@ test("r230: la pastilla enseña el proyecto real (foco/latido) y el de por defec
   assert.equal(nombreProy("admira.store"), "Admira.Store");
   assert.equal(nombreProy("admira.live"), "Admira.live");
   assert.equal(nombreProy("admira.studio"), "Admira.Studio");
+  assert.equal(nombreProy("admira.tv"), "Admira.tv");
 });
 
 test("r230: /control elige el monitor por posición (etiqueta del equipo o geometría), nunca adivina", () => {
@@ -225,10 +232,9 @@ test("r231: borde = abierto en la máquina, punto = actividad; GitHub firma la a
 });
 
 test("r232: si el servidor no llega a GitHub, el navegador lee los eventos públicos y los interpreta igual que la lib", async () => {
-  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
-  assert.ok(js.includes("https://api.github.com/users/csilvasantin/events/public") && js.includes("actividadDesdeNavegador()"));
-  const ini = js.indexOf("  var AGENTES_RAMA"), fin = js.indexOf("  function actividadDesdeNavegador(");
-  const nav = new Function(js.slice(ini, fin) + "return actividadDeEventos;")();
+  const mod = readFileSync(new URL("./assets/deepagents-estado.js", import.meta.url), "utf8");
+  assert.ok(mod.includes("https://api.github.com/users/csilvasantin/events/public") && mod.includes("function leerActividad("));
+  const nav = cargaDA().actividadDeEventos;
   const { actividadDeEventos } = await import("./deepagents-actividad-lib.mjs");
   const ev = [
     { type: "PullRequestEvent", created_at: "2026-11-21T19:19:55Z", repo: { name: "csilvasantin/admira-studio" }, payload: { action: "merged", pull_request: { number: 168, head: { ref: "trinity/x" } } } },
@@ -237,4 +243,43 @@ test("r232: si el servidor no llega a GitHub, el navegador lee los eventos públ
     { type: "PushEvent", created_at: "2026-11-21T19:33:00Z", repo: { name: "csilvasantin/z" }, payload: { ref: "refs/heads/main" } },
   ];
   assert.deepEqual(nav(ev), actividadDeEventos(ev));
+});
+
+test("r234: Consumo y DeepAgents cuentan con el mismo módulo; Oráculo admira.tv por defecto", () => {
+  const D = cargaDA();
+  const ts = [
+    { agente: "Neo", estado: "verde", maquina: "MacStudio", foco: { proyecto: "admira.store", fuente: "ahora", defecto: false }, superficies: [{ tipo: "app", maquina: "MacStudio", app: "Claude", enUso: true, fuente: "pulso" }] },
+    { agente: "Trinity", estado: "rojo", maquina: "MacStudio", superficies: [{ tipo: "app", maquina: "MacStudio", app: "Codex", enUso: false, fuente: "pulso" }] },
+    { agente: "Oráculo", estado: "rojo", maquina: "MacMini", superficies: [{ tipo: "app", maquina: "MacMini", app: "Codex", enUso: false, fuente: "pulso" }] },
+    { agente: "Morfeo", estado: "rojo", maquina: "MacMini", haceS: 30000, superficies: [] },
+  ];
+  const r = D.resumen(ts, { Trinity: { ts: Date.now() - 5 * 60000, accion: "merged", repo: "admira-studio", rama: "trinity/x" } });
+  assert.deepEqual(r.map((a) => [a.visible, a.abierto.estado, a.actividad.luz]), [["Trinity", "verde", "verde"], ["Neo", "verde", "verde"], ["Oráculo", "verde", "rojo"], ["Morfeo", "rojo", "rojo"]]);
+  const c = D.contadores(r);
+  assert.equal(c.agentesTrabajando + "/" + c.agentesAbiertos, "2/3");
+  assert.deepEqual(c.proyectos.map((p) => p.nombre), ["Admira.Studio", "Admira.Store", "Admira.tv"]);
+  assert.equal(c.proyectosActivos + "/" + c.proyectosTotal, "2/3");
+  const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
+  assert.ok(html.indexOf("/assets/deepagents-estado.js") > 0 && html.indexOf("/assets/deepagents-estado.js") < html.indexOf("/assets/consumos-velocimetro.js"));
+});
+
+test("r233: cerrar/arrancar app: lista cerrada en el relay y en admira.live, foto = botón, cerrar pide confirmación", async () => {
+  const { createRequire } = await import("node:module");
+  const require = createRequire(import.meta.url);
+  const { deepagentAppCommand, COMANDOS } = require("./fleet-control/deepagent-app.js");
+  assert.deepEqual(Object.keys(COMANDOS).sort(), ["abrir:claude", "abrir:codex", "cerrar:claude", "cerrar:codex"]);
+  for (const mal of ["cerrar:Safari", "abrir:claude; rm -rf ~", "", null, "quit:codex"]) assert.throws(() => deepagentAppCommand(mal));
+  assert.match(deepagentAppCommand("cerrar:claude"), /quit app "Claude"/);
+  assert.match(deepagentAppCommand("abrir:codex"), /open -a Codex/);
+  const srv = readFileSync(new URL("./fleet-control/server.js", import.meta.url), "utf8");
+  assert.ok(srv.includes("deepagentapp: {\n    macos: (arg) => deepagentAppCommand(arg)\n  }"));
+  const { validarAccion } = await import("./deepagents-app-lib.mjs");
+  assert.equal(validarAccion({ agente: "Trinity", maquina: "MacStudio", accion: "cerrar" }).accion.arg, "cerrar:codex");
+  assert.equal(validarAccion({ agente: "Neo", maquina: "MacStudio", accion: "abrir" }).accion.arg, "abrir:claude");
+  assert.equal(validarAccion({ agente: "Smith", maquina: "MacMini", accion: "abrir" }).ok, false);
+  assert.equal(validarAccion({ agente: "Neo", maquina: "MacStudio", accion: "borrar" }).ok, false);
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  assert.ok(js.includes('action: "deepagentapp"') && js.includes("window.confirm(") && js.includes('el("button", "ag-foto")'));
+  const fn = readFileSync(new URL("./functions/api/deepagents/app.js", import.meta.url), "utf8");
+  assert.ok(fn.includes('q.tipo !== "persona"'));
 });

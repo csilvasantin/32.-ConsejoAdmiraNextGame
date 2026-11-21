@@ -12,8 +12,9 @@
   var NOMBRE = { Oraculo: "Oráculo" };
   /* Carlos, 21-11-2026 (r229): los cuatro deepagents fijos van primero y sin rótulos de motor (Claude/Codex ya va
    * dentro de cada ficha). Leyendas → MacStudio (Trinity, Neo) · Coetáneos → MacMini (Oráculo, Morfeo).
-   * La máquina principal sale SIEMPRE por defecto; solo si el agente vive además en otro equipo de AdmiraNeXT aparece,
-   * en el mismo sitio, un desplegable con las otras (nunca elegidas por defecto). */
+   * La máquina principal sale SIEMPRE por defecto. El desplegable ofrece siempre los 4 pilares (MacStudio, MacMini,
+   * MacBookPro16, MacBookProNegro14) más las que salgan por datos reales; las que no tienen latido de ese agente
+   * se marcan «sin latido» (Carlos, 21-11-2026 22:31). */
   var FIJOS = [
     // proyecto = SOLO el de por defecto (respaldo marcado «por defecto»); manda el que el agente trabaja de verdad.
     // lado = monitor físico del agente en su equipo principal (r230: por posición, no por índice).
@@ -30,16 +31,43 @@
   }
   function claveMaq(m) { return norm(m).replace(/[^a-z0-9]/g, ""); }
   function fijoDe(nombre) { for (var i = 0; i < FIJOS.length; i++) if (FIJOS[i].agente === nombre) return FIJOS[i]; return null; }
-  // Equipos donde el agente está desplegado o tiene latido: el principal primero, luego el resto (sin repetir).
+  /* Los 4 pilares de Carlos (21-11-2026 20:59 / 22:31). Alias para no duplicar «MacBook Pro 16» y «MBP16». */
+  var PILARES = ["MacStudio", "MacMini", "MacBookPro16", "MacBookProNegro14"];
+  var ALIAS_PILAR = {
+    macstudio: "MacStudio", studio: "MacStudio",
+    macmini: "MacMini", mini: "MacMini",
+    macbookpro16: "MacBookPro16", mbp16: "MacBookPro16", pro16: "MacBookPro16",
+    macbookpronegro14: "MacBookProNegro14", macbookpro14: "MacBookProNegro14",
+    mbp14: "MacBookProNegro14", negro14: "MacBookProNegro14", pro14: "MacBookProNegro14"
+  };
+  function nombrePilar(m) { return ALIAS_PILAR[claveMaq(m)] || null; }
+  function claveLista(m) { return nombrePilar(m) || claveMaq(m); }
+  // Principal primero, luego el resto de pilares, luego máquinas reales de más (sin repetir).
   function maquinasDe(t, principal) {
     var vistas = {}, lista = [];
-    function poner(m) { var k = claveMaq(m); if (!k || vistas[k]) return; vistas[k] = 1; lista.push(String(m)); }
+    function poner(m) {
+      if (!m) return;
+      var k = claveLista(m); if (!k || vistas[k]) return;
+      vistas[k] = 1; lista.push(nombrePilar(m) || String(m));
+    }
     poner(principal);
+    PILARES.forEach(poner);
     if (t) {
       (t.maquinas || []).forEach(poner);
       (t.superficies || []).forEach(function (s) { if (s && s.maquina) poner(s.maquina); });
     }
     return lista;
+  }
+  function conLatidoEn(t, maq) {
+    if (!t || !maq) return false;
+    var k = claveLista(maq);
+    if (t.maquina && claveLista(t.maquina) === k) return true;
+    if (t.conCarlosEn && claveLista(t.conCarlosEn) === k) return true;
+    var ms = t.maquinas || [];
+    for (var i = 0; i < ms.length; i++) if (claveLista(ms[i]) === k) return true;
+    var ss = t.superficies || [];
+    for (var j = 0; j < ss.length; j++) if (ss[j] && ss[j].maquina && claveLista(ss[j].maquina) === k) return true;
+    return false;
   }
   /* r231 (Carlos, 21-11-2026 20:23) — DOS señales separadas, por máquina elegida:
    * BORDE/ETIQUETA = ¿está ABIERTO en esa máquina?  verde abierto · rojo cerrado · amarillo no se sabe.
@@ -54,30 +82,63 @@
     var ts = tarjetas || [];
     for (var i = 0; i < ts.length; i++) {
       var ss = ts[i].superficies || [];
-      for (var j = 0; j < ss.length; j++) if (ss[j] && ss[j].fuente === "pulso" && claveMaq(ss[j].maquina) === k) return true;
+      for (var j = 0; j < ss.length; j++) if (ss[j] && ss[j].fuente === "pulso" && claveLista(ss[j].maquina) === k) return true;
     }
     return false;
   }
   function nombreSup(s) { return s.app || s.runtime || "sesión"; }
+  /* Neo y Morfeo comparten Claude; Trinity y Oráculo, Codex. El pulso a menudo firma la app con el nombre de la sesión
+   * (p. ej. «NeoMBP16»), no con quién está realmente detrás. Si la app está abierta y no podemos atribuirla a este
+   * agente con fiabilidad, no se inventa ni «abierto» ni «cerrado»: amarillo. */
+  var APP_DE = { neo: "claude", morfeo: "claude", trinity: "codex", oraculo: "codex" };
+  var APP_NOMBRE = { claude: "Claude", codex: "Codex" };
+  function appDeAgente(nombre) { return APP_DE[norm(nombre)] || ""; }
+  function appDeSup(s) {
+    var a = norm((s && s.app) || "");
+    if (a.indexOf("claude") >= 0) return "claude";
+    if (a.indexOf("codex") >= 0 || a.indexOf("chatgpt") >= 0) return "codex";
+    return "";
+  }
+  function pulsosAppEn(k, app, tarjetas) {
+    var quien = [], ts = tarjetas || [];
+    if (!app) return quien;
+    for (var i = 0; i < ts.length; i++) {
+      var ss = (ts[i] && ts[i].superficies) || [];
+      for (var j = 0; j < ss.length; j++) {
+        var s = ss[j];
+        if (!s || s.fuente !== "pulso" || s.tipo === "cli" || claveLista(s.maquina) !== k || appDeSup(s) !== app) continue;
+        quien.push(s.agente || ts[i].agente || "sin firmar");
+      }
+    }
+    return quien;
+  }
+  function visibleDe(n) { return NOMBRE[n] || n; }
   function abiertoEn(t, maq, tarjetas) {
     if (!t) return { estado: "amarillo", porque: "la flota no informa de este agente" };
-    var k = claveMaq(maq);
-    var sup = (t.superficies || []).filter(function (s) { return s && claveMaq(s.maquina) === k; });
+    var k = claveLista(maq);
+    var sup = (t.superficies || []).filter(function (s) { return s && claveLista(s.maquina) === k; });
     var pul = sup.filter(function (s) { return s.fuente === "pulso"; });
     if (pul.length) return { estado: "verde", porque: pul.map(nombreSup).join(" + ") + " abierto en " + maq + " (pulso del Mac)" };
     if (sup.length) return { estado: "verde", porque: sup.map(nombreSup).join(" + ") + " abierto en " + maq + " (latido de la app)" };
-    if (t.conCarlosEn && claveMaq(t.conCarlosEn) === k) return { estado: "verde", porque: "con Carlos en " + maq };
-    if (pulsoVivoEn(k, tarjetas)) return { estado: "rojo", porque: "el pulso de " + maq + " no lo ve abierto" };
+    if (t.conCarlosEn && claveLista(t.conCarlosEn) === k) return { estado: "verde", porque: "con Carlos en " + maq };
+    if (pulsoVivoEn(k, tarjetas)) {
+      var app = appDeAgente(t.agente), firmas = pulsosAppEn(k, app, tarjetas).filter(function (n) { return norm(n) !== norm(t.agente); });
+      if (app && firmas.length) {
+        var appN = APP_NOMBRE[app] || app, otros = firmas.map(visibleDe).join(", ");
+        return { estado: "amarillo", porque: appN + " está abierto en " + maq + " (pulso del Mac), firmado como " + otros + ": no se distingue si es " + visibleDe(t.agente) };
+      }
+      return { estado: "rojo", porque: "el pulso de " + maq + " no lo ve abierto" };
+    }
     return { estado: "amarillo", porque: "sin pulso de " + maq + ": no se sabe si está abierto" };
   }
   function haceTexto(seg) { return seg < 90 ? "hace " + Math.max(0, Math.round(seg)) + " s" : "hace " + Math.round(seg / 60) + " min"; }
   function actividadEn(t, maq, principal, abierto, nombre, actividadGit) {
     actividadGit = actividadGit || {};
     if (!t) return { luz: "amarillo", porque: "sin datos de actividad" };
-    var k = claveMaq(maq), esPrincipal = k === claveMaq(principal), ahora = Date.now() / 1000;
-    var sup = (t.superficies || []).filter(function (s) { return s && claveMaq(s.maquina) === k; });
+    var k = claveLista(maq), esPrincipal = k === claveLista(principal), ahora = Date.now() / 1000;
+    var sup = (t.superficies || []).filter(function (s) { return s && claveLista(s.maquina) === k; });
     for (var i = 0; i < sup.length; i++) if (sup[i].enUso || sup[i].alFrente) return { luz: "verde", porque: nombreSup(sup[i]) + " en uso en " + maq };
-    if (t.conCarlosEn && claveMaq(t.conCarlosEn) === k) return { luz: "verde", porque: "con Carlos en " + maq };
+    if (t.conCarlosEn && claveLista(t.conCarlosEn) === k) return { luz: "verde", porque: "con Carlos en " + maq };
     if (esPrincipal) {
       if (t.enCurso > 0) return { luz: "verde", porque: t.enCurso + " encargo en curso" };
       if (t.estado === "verde") return { luz: "verde", porque: t.porqueColor || t.motivo || "trabajando" };
@@ -176,7 +237,7 @@
     return { agentesTrabajando: trabajando.length, agentesAbiertos: abiertos.length, total: lista.length,
       proyectos: lp, proyectosActivos: lp.filter(function (p) { return p.activo; }).length, proyectosTotal: lp.length };
   }
-  return { FIJOS: FIJOS, NOMBRE: NOMBRE, RECIENTE_S: RECIENTE_S, norm: norm, claveMaq: claveMaq, fijoDe: fijoDe, tarjetaDe: tarjetaDe,
-    maquinasDe: maquinasDe, abiertoEn: abiertoEn, actividadEn: actividadEn, limpioProy: limpioProy, nombreProy: nombreProy,
+  return { FIJOS: FIJOS, NOMBRE: NOMBRE, PILARES: PILARES, RECIENTE_S: RECIENTE_S, norm: norm, claveMaq: claveMaq, claveLista: claveLista, nombrePilar: nombrePilar, fijoDe: fijoDe, tarjetaDe: tarjetaDe,
+    maquinasDe: maquinasDe, conLatidoEn: conLatidoEn, abiertoEn: abiertoEn, actividadEn: actividadEn, limpioProy: limpioProy, nombreProy: nombreProy,
     proyectoActual: proyectoActual, actividadDeEventos: actividadDeEventos, leerActividad: leerActividad, resumen: resumen, contadores: contadores };
 });

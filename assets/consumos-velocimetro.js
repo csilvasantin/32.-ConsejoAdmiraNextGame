@@ -72,7 +72,7 @@
       ticks +
       '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">TOKENS/HORA</text>' +
       '<circle cx="' + (CX - 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-vivo"><title>' + esc(T('en vivo', 'live')) + '</title></circle>' +
-      '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin datos', 'no data')) + '</title></circle>' +
+      '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin dato en vivo', 'no live data')) + '</title></circle>' +
       '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>' +
       /* r112 (Carlos): escudo Ducati simplificado, dibujado a mano en SVG (no es el fichero de marca), en el eje. */
       '<g class="vel-escudo" transform="translate(' + CX + ' ' + CY + ')" aria-hidden="true">' +
@@ -233,8 +233,31 @@
   /** 19-11: horas desde la medianoche de Madrid (mínimo 15 min) para la media del día del respaldo. */
   function horasDia() { return Math.max(0.25, relojMadrid(Date.now()).s / 3600); }
   function txtFuente(f) {
-    return f === 'cursor' ? T('Cursor con retraso', 'delayed Cursor data') : f === 'media' ? T('media del día', 'day average') :
-      f === 'ultimo' ? T('último valor conocido', 'last known value') : T('cifra aproximada', 'approximate figure');
+    return f === 'cursor' ? T('Cursor con retraso', 'delayed Cursor data') : f === 'hora' ? T('ritmo de la última hora con datos', 'rate of the last hour with data') :
+      f === 'sinvivo' ? T('sin dato en vivo', 'no live data') : '';
+  }
+  /** 21-11: ISO del último uso con tokens (máximo de una lista de filas de agente). */
+  function ultimoUso(filas) {
+    var m = 0;
+    (filas || []).forEach(function (a) { var t = Date.parse(a && (a.ultimoEvento || a.ultimaActividad) || ''); if (isFinite(t) && t > m) m = t; });
+    return m ? new Date(m).toISOString() : null;
+  }
+  function horaMadrid(iso) {
+    var t = Date.parse(iso || ''); if (!isFinite(t)) return '';
+    return new Date(t).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
+  }
+  /** 21-11 (Carlos): qué es la cifra grande, según de dónde sale. Nunca «0» si no se ha medido. */
+  function txtRitmo(fuente, iso) {
+    var h = horaMadrid(iso);
+    if (fuente === 'hora') return T('ritmo de la última hora con datos', 'rate of the last hour with data') + (h ? ' · ' + T('último uso ', 'last use ') + h : '');
+    if (fuente === 'cursor') return T('ritmo de la última ventana publicada (Cursor, con retraso)', 'rate of the last published window (Cursor, delayed)');
+    if (fuente === 'sinvivo') return T('sin dato en vivo: hay trabajo pero ningún token medido en la última hora', 'no live data: there is work but no tokens measured in the last hour') + (h ? ' · ' + T('último uso ', 'last use ') + h : '');
+    return T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)');
+  }
+  /** Ritmo honesto de una fila (agente o proyecto) para listas y desplegables: el mismo criterio que los diales. */
+  function ritmoFila(o) {
+    if (!o) return null;
+    return E.respaldo({ tokHora: o.tokHora, ultimaHora: o.tokUltimaHora, cursor: tasaVista(o), tokHoy: o.tokHoy, trabajando: hayVerdes() }).tokHora;
   }
   /** Último valor REAL de cada velocímetro (flota, agente, proyecto), para el respaldo cuando falta el pulso. */
   var LS_ULT = 'consumos.vel.ultimo';
@@ -307,12 +330,11 @@
     clearTimeout(tMarcha);
     tMarcha = setTimeout(function () { cambiaMarcha(); programaMarcha(); }, 12000 + Math.random() * 16000);
   }
-  if (typeof document !== 'undefined' && document.addEventListener) {
-    programaMarcha();
-    document.addEventListener('visibilitychange', function () { if (document.hidden) clearTimeout(tMarcha); else programaMarcha(); });
-  }
+  // 21-11: los cambios de marcha (caída visual del 10–25 % sin datos que la respalden) quedan desactivados.
   /** Amplitud de la vibración (grados) para una fracción de escala: 0 si parada; 0,5° → 1,5° a fondo. */
-  function amplitud(frac, sin) { return sin || !(frac > 0.002) ? 0 : 0.5 + Math.min(1, frac * 1.6); }
+  // 21-11 (Carlos: «estan las agujas moviendose» con 0 tokens/hora): la aguja marca EXACTAMENTE la cifra. Sin
+  // vibración de carretera, sin ralentí (r114) y sin cambios de marcha (r113): solo el muelle al cambiar de valor.
+  function amplitud() { return 0; }
   Dial.prototype.cuadro = function (t) {
     var self = this, dt = Math.min(0.05, Math.max(0.001, ((t - (this.tPrev || t)) / 1000) || 0.016));
     this.tPrev = t;
@@ -336,16 +358,15 @@
     f *= fm;
     // r114 (Carlos): RALENTÍ visual — una moto en marcha nunca marca 0: la aguja no baja de ~9 % del recorrido (temblor
     // ±1 %), tampoco con dato 0 ni durante el cambio de marcha. Solo la aguja/arco: cifra, odómetro y datos son reales.
-    if (quieto) this.ralenti = RALENTI;
-    else { if (t - (this.tRal || 0) > 90) { this.tRal = t; this.ralObj = RALENTI + (Math.random() * 2 - 1) * 0.01; } this.ralenti = (this.ralenti || RALENTI) + ((this.ralObj || RALENTI) - (this.ralenti || RALENTI)) * Math.min(1, dt * 10); }
-    if (f < this.ralenti) f = this.ralenti;
+    // 21-11: sin ralentí visual — con 0 medido la aguja está en 0.
+    if (f < 0) f = 0;
     this.fVisual = f;
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
     b.classList.toggle('en-roja', !this.sin && f >= 0.8);
     if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
-    var vibra = !quieto; // r114: siempre al ralentí → siempre tiembla un poco
+    var vibra = false; // 21-11: la aguja se asienta en la cifra y se queda quieta
     if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };
@@ -357,12 +378,9 @@
   };
   Dial.prototype.pinta = function (tokHora, max, tokHoy, sin, tokHoyVivo, est) {
     var b = this.box;
-    // 19-11 (Carlos: «nunca sin datos»): si aún llega sin cifra, se rellena con el último valor del dial, etiquetado.
-    if (sin || tokHora == null || !isFinite(Number(tokHora))) {
-      var rr = E.respaldo({ tokHora: null, tokHoy: tokHoy, horasDia: horasDia(), ultimo: { tokHora: this.v, tokHoy: tokHoy }, plausible: 0 });
-      tokHora = rr.tokHora; if (tokHoy == null) tokHoy = rr.tokHoy; est = est || rr.fuente || 'plausible'; sin = false;
-    }
-    b.classList.toggle('estimado', !!est);
+    // 21-11 (Carlos): sin cifra medida no se inventa nada: «sin dato en vivo» y la aguja en reposo en 0.
+    if (sin || tokHora == null || !isFinite(Number(tokHora))) { sin = true; est = est || 'sinvivo'; }
+    b.classList.toggle('estimado', est === 'cursor');
     b.classList.toggle('sin-datos', !!sin);
     if (max !== this.max || !b.querySelector('.vel-svg')) {
       var fracVieja = this.max ? (this.frac * this.max) / max : 0;
@@ -372,16 +390,16 @@
     this.sin = !!sin; this.v = v;
     this.destino = Math.max(0, Math.min(1, v / max));
     var cifra = b.querySelector('.vel-cifra');
-    if (sin) cifra.textContent = T('sin datos', 'no data');
+    if (sin) cifra.textContent = T('sin dato en vivo', 'no live data');
     b.querySelector('.vel-unidad').textContent = sin ? '' : T('tokens/hora', 'tokens/hour');
     this.arranca();
-    var rm = ritmoMedio(sin ? null : tokHoy);
+    var rm = ritmoMedio(tokHoy); // 21-11: la media del día es medida aunque no haya ritmo en vivo
     // r57 (Carlos): sin uso real reciente (último evento > 3 min) no hay pronóstico: el cuentakilómetros se queda en tokHoy.
     var fresco = this.fresco !== false;
     odometro(b.querySelector('.odo'), tokHoy, fresco ? v : 0, fresco && (v > 0 || hayVerdes()), tokHoyVivo, this.periodo, !fresco);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
-    if (que) que.innerHTML = (est ? '<small class="vel-est">' + T('estimado', 'estimated') + ' · ' + esc(txtFuente(est)) + '</small> · ' : '') + (sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour'));
+    if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '');
   };
   root.ConsumosVelocimetroAguja = { amplitud: amplitud };
 
@@ -559,10 +577,11 @@
         (el.auto && el.proyecto ? '<small>' + T('ahora sigue a ', 'now following ') + '<b>' + esc(nomP(el.proyecto)) + '</b></small>' : '') + '</span>' }];
     opts.forEach(function (o) {
       var est = o.tokHoy == null ? 'rojo' : E.estadoFila(o.tokHora, o.tokHoy);
-      var cifras = o.tokHoy == null ? T('sin datos hoy', 'no data today') : '<b>' + (o.tokHora != null ? fmt(o.tokHora) : '—') + ' ' + T('tokens/hora', 'tokens/hour') + '</b> · ' + fmt(o.tokHoy) + T(' hoy', ' today') + (o.maquinas && o.maquinas.length ? ' · ' + esc(o.maquinas.join(', ')) : '');
+      var rf = ritmoFila(o);
+      var cifras = o.tokHoy == null ? T('sin datos hoy', 'no data today') : '<b>' + (rf != null ? fmt(rf) : '—') + ' ' + T('tokens/hora', 'tokens/hour') + '</b> · ' + fmt(o.tokHoy) + T(' hoy', ' today') + (o.maquinas && o.maquinas.length ? ' · ' + esc(o.maquinas.join(', ')) : '');
       items.push({ valor: o.proyecto, estado: est, titulo: esc(txtEstado(est)),
         html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(nomP(o.proyecto)) + '</span><small>' + cifras + '</small></span>',
-        boton: punto(est) + '<span class="dd-bt">' + esc(nomP(o.proyecto)) + (el.auto ? ' <em class="dd-autotag">auto</em>' : '') + (o.tokHora != null ? ' · ' + fmt(o.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : '') + '</span>' });
+        boton: punto(est) + '<span class="dd-bt">' + esc(nomP(o.proyecto)) + (el.auto ? ' <em class="dd-autotag">auto</em>' : '') + (rf != null ? ' · ' + fmt(rf) + ' ' + T('tokens/hora', 'tokens/hour') : '') + '</span>' });
     });
     DD.proy.pon(items, el.auto ? (elegido ? elegido.proyecto : AUTO) : el.proyecto);
     if (el.auto) DD.proy.valor = AUTO; // el botón enseña el proyecto seguido; la opción marcada es «Automático»
@@ -652,8 +671,10 @@
     estado.d1.periodo = per;
     if (!r.agente) {
       max = sin ? (estado.d1.max || 2e6) : (d.escalaMax || 2e6);
-      var rF = resp('flota', { tokHora: sin ? null : d.tokHora, tokHoy: sin ? null : d.tokHoy, plausible: 0 });
+      var rF = resp('flota', { tokHora: sin ? null : d.tokHora, ultimaHora: sin ? null : d.tokUltimaHora, tokHoy: sin ? null : d.tokHoy,
+        trabajando: hayVerdes(), ultimoEvento: sin ? null : ultimoUso(d.porAgente) });
       var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
+      estado.d1.ultimoEvento = rF.ultimoEvento;
       estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
       if (tit) tit.textContent = rotAg(); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       if (rot) rot.textContent = rotuloPeriodo(per) + (per !== 'hoy' && nOdo == null ? ' · —' : '');
@@ -663,7 +684,8 @@
     if (per !== 'hoy') {
       // Histórico solo de la flota: con un agente elegido, fuera de HOY no hay cifra honesta → «—».
       var maxA = escala(((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0), 5e6);
-      var rP = resp('ag:' + r.agente, { tokHora: r.fila && r.fila.tokHora != null ? r.fila.tokHora : null, cursor: r.fila ? (tasaVista(r.fila) != null ? tasaVista(r.fila) : r.fila.tokHoraRetraso) : null, tokHoy: r.fila ? r.fila.tokHoy : null, plausible: plausibleDe(d, ((d && d.porAgente) || []).length) });
+      var rP = resp('ag:' + r.agente, { tokHora: r.fila && r.fila.tokHora != null ? r.fila.tokHora : null, ultimaHora: r.fila ? r.fila.tokUltimaHora : null, cursor: r.fila ? (tasaVista(r.fila) != null ? tasaVista(r.fila) : r.fila.tokHoraRetraso) : null, tokHoy: r.fila ? r.fila.tokHoy : null, trabajando: hayVerdes(), ultimoEvento: r.fila ? ultimoUso([r.fila]) : null });
+      estado.d1.ultimoEvento = rP.ultimoEvento;
       estado.d1.pinta(rP.tokHora, maxA, null, false, null, rP.fuente);
       if (tit) tit.textContent = rotAg();
       if (rot) rot.textContent = vis(r.agente) + ' · ' + rotuloPeriodo(per) + ' · —';
@@ -671,15 +693,18 @@
       return d && d.escalaMax || maxA;
     }
     var f = r.fila;
-    var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0);
+    var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0, a.tokUltimaHora || 0); }, 0);
     max = escala(maxAg, 5e6);
     // 19-11 (Carlos: «nunca sin datos»): pulso en vivo → Cursor con retraso → media del día → último → aproximado.
+    // 21-11 (Carlos): ritmo REAL — 15 min → última hora con datos → ventana publicada de Cursor → «sin dato en vivo».
     var rA = resp('ag:' + r.agente, {
       tokHora: f && !f.conRetraso ? (f.stale ? 0 : f.tokHora) : null,
+      ultimaHora: f && !f.conRetraso && !f.stale ? f.tokUltimaHora : null,
       cursor: f && f.conRetraso ? (tasaVista(f) != null ? tasaVista(f) : f.tokHoraRetraso) : null,
-      tokHoy: f ? f.tokHoy : null, plausible: plausibleDe(d, ((d && d.porAgente) || []).length) });
+      tokHoy: f ? f.tokHoy : null, trabajando: hayVerdes(), ultimoEvento: f ? ultimoUso([f]) : null });
     estado.estAg = { agente: r.agente, tokHoy: rA.tokHoy, estimado: rA.estimado };
-    estado.d1.pinta(rA.tokHora, max, rA.tokHoy, false, f && !f.conRetraso && !rA.estimado ? f.tokHoy : 0, rA.fuente);
+    estado.d1.ultimoEvento = rA.ultimoEvento;
+    estado.d1.pinta(rA.tokHora, max, rA.tokHoy, false, f && !f.conRetraso ? f.tokHoy : 0, rA.fuente);
     if (tit) tit.textContent = rotAg();
     if (rot) rot.textContent = vis(r.agente) + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('No aparece ahora en el pulso ni en Yokup: cifra estimada.', 'Not in the pulse or Yokup right now: estimated figure.') :
@@ -697,21 +722,26 @@
     var lista = (d && d.porProyecto) || [];
     var p = null;
     for (var i = 0; i < lista.length; i++) if (lista[i].proyecto === nombre) p = lista[i];
-    var maxRate = lista.reduce(function (m, x) { return Math.max(m, x.tokHora || 0); }, 0);
+    var maxRate = lista.reduce(function (m, x) { return Math.max(m, x.tokHora || 0, x.tokUltimaHora || 0); }, 0);
     var hayPulso = d && d.agentesTiempoReal > 0;
     // tok/h del proyecto: medido (p.tokHora), 0 si hay pulso fresco y el proyecto no aparece (medido: nadie trabaja en él), si no «sin datos».
     var rate = p ? p.tokHora : (hayPulso ? 0 : null);
     var hoy = p ? p.tokHoy : (lista.length ? 0 : null);
     // 19-11 (Carlos: «nunca sin datos»): sin pulso fresco, media del día → último → su parte de la flota, etiquetado.
-    var rPr = resp('p:' + (nombre || ''), { tokHora: sin ? null : rate, tokHoy: sin ? null : hoy, plausible: plausibleDe(d, Math.max(1, lista.length)) });
-    var estP = rPr.fuente || (p && p.estimado ? 'cursor' : null);
+    var agsP = ((d && d.porAgente) || []).filter(function (a) { return a && a.porProyecto && Number(a.porProyecto[nombre]) > 0; });
+    var rPr = resp('p:' + (nombre || ''), { tokHora: sin ? null : rate, ultimaHora: sin || !p ? null : p.tokUltimaHora, tokHoy: sin ? null : hoy,
+      trabajando: hayVerdes(), ultimoEvento: ultimoUso(agsP) });
+    var estP = rPr.fuente || (p && p.estimado && !(rate > 0) ? 'cursor' : null);
     var sinP = false;
-    estado.d2.pinta(rPr.tokHora, escala(maxRate, 5e6), rPr.tokHoy, false, rPr.estimado ? 0 : Math.max(0, (hoy || 0) - retrasoEnProyecto(d, nombre)), estP);
+    estado.d2.ultimoEvento = rPr.ultimoEvento;
+    // 21-11: el cuentakilómetros del proyecto solo adelanta (pronóstico) con uso real de hace ≤ 3 min, como el de la flota.
+    estado.d2.fresco = usoFresco(sin ? [] : agsP, Date.now());
+    estado.d2.pinta(rPr.tokHora, escala(maxRate, 5e6), rPr.tokHoy, false, Math.max(0, (hoy || 0) - retrasoEnProyecto(d, nombre)), estP);
     var nom = document.getElementById('vel-proy-nombre');
     if (nom) nom.textContent = (nombre && nomP(nombre)) || T('ningún proyecto con datos', 'no project with data');
     var met = document.getElementById('vel-proy-metodo');
     if (met) met.innerHTML = !nombre ? T('Aún no llega el desglose por proyecto de ningún Mac.', 'No per-project breakdown from any Mac yet.') :
-      rPr.estimado ? T('Sin pulso fresco: cifra estimada', 'No fresh pulse: estimated figure') + ' (' + esc(txtFuente(rPr.fuente)) + ')' + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
+      rPr.fuente === 'sinvivo' ? T('Sin dato en vivo para este proyecto', 'No live data for this project') + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
       (p && p.estimado && !(p.tokUltimos15min > 0) ? T('estimado', 'estimated') + ' · ' + T('Cursor con retraso', 'delayed Cursor data') + (p.retrasoS ? ' (~' + Math.max(1, Math.round(p.retrasoS / 60)) + ' min)' : '') +
         (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
        p ? T('15 min', '15 min') + ': <b>' + fmt(p.tokUltimos15min) + '</b> tok' + (p.maquinas && p.maquinas.length ? ' · ' + esc(p.maquinas.join(', ')) : '') +

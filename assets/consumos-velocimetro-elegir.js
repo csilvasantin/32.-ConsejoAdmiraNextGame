@@ -76,27 +76,26 @@
     if (!a) return 0;
     return num(a.tokHora) || num(a.tokHoraCursor) || num(a.tokHoraRetraso) || num(a.tokUltimaHora);
   }
-  /** 19-11 (Carlos: «inventántelos si quieres pero nunca sin datos»): cadena de respaldo de un velocímetro.
-   *  o = { tokHora, cursor, tokHoy, horasDia, ultimo:{tokHora,tokHoy}, plausible }
-   *  pulso en vivo → Cursor con retraso → media del día → último valor conocido → estimado plausible.
-   *  → { tokHora, tokHoy, estimado, fuente }  (tokHora y tokHoy SIEMPRE números ≥ 0). */
+  /** 21-11 (Carlos: «como me puedes decir 0 Tokens por hora !! y estan las agujas moviendose, y los consejeros y los
+   *  agentes trabajando»): RITMO REAL de un velocímetro, sin inventar nada. Sustituye la cadena «nunca sin datos» del
+   *  19-11 (media del día / último valor / estimado plausible, que sacaban cifras que nadie había medido).
+   *  o = { tokHora (15 min × 4), ultimaHora (tokens de los últimos 60 min), cursor (última ventana publicada, datos con
+   *        retraso), tokHoy, trabajando (alguien en verde en «Trabajando ahora»), ultimoEvento (ISO del último uso) }
+   *  Orden: tokens en los últimos 15 min → tokens de la última hora (ritmo de la última hora con datos) → última
+   *  ventana publicada con retraso → si hay trabajo pero ningún token medido: «sin dato en vivo» (tokHora null, nunca
+   *  un 0 falso) → si nadie trabaja: 0 medido.
+   *  → { tokHora: número|null, tokHoy: número|null, estimado: false, fuente: null|'hora'|'cursor'|'sinvivo', ultimoEvento } */
   function respaldo(o) {
     o = o || {};
     var fin = function (x) { return x !== null && x !== undefined && x !== '' && isFinite(Number(x)) && Number(x) >= 0; };
-    var ult = o.ultimo || {}, horas = Math.max(0.25, Number(o.horasDia) || 0.25);
-    var tokHora, fuente = null;
-    if (fin(o.tokHora)) tokHora = Number(o.tokHora);
-    else if (fin(o.cursor)) { tokHora = Number(o.cursor); fuente = 'cursor'; }
-    else if (num(o.tokHoy) > 0) { tokHora = Math.round(num(o.tokHoy) / horas); fuente = 'media'; }
-    else if (fin(ult.tokHora)) { tokHora = Number(ult.tokHora); fuente = 'ultimo'; }
-    else { tokHora = Math.round(num(o.plausible) || 50000); fuente = 'plausible'; }
-    var tokHoy;
-    if (fin(o.tokHoy) && (Number(o.tokHoy) > 0 || !fuente)) tokHoy = Number(o.tokHoy);
-    else if (num(ult.tokHoy) > 0) { tokHoy = num(ult.tokHoy); if (!fuente) fuente = 'ultimo'; }
-    else if (fin(o.tokHoy)) tokHoy = Number(o.tokHoy);
-    else { tokHoy = Math.round(tokHora * horas); if (!fuente) fuente = 'plausible'; }
-    if (!(tokHoy > 0) && tokHora > 0 && fuente) tokHoy = Math.round(tokHora * horas);
-    return { tokHora: Math.round(tokHora), tokHoy: Math.round(tokHoy), estimado: !!fuente, fuente: fuente };
+    var tokHora = null, fuente = null;
+    if (fin(o.tokHora) && Number(o.tokHora) > 0) tokHora = Number(o.tokHora);
+    else if (fin(o.ultimaHora) && Number(o.ultimaHora) > 0) { tokHora = Number(o.ultimaHora); fuente = 'hora'; }
+    else if (fin(o.cursor) && Number(o.cursor) > 0) { tokHora = Number(o.cursor); fuente = 'cursor'; }
+    else if (fin(o.tokHora) && !o.trabajando) tokHora = 0;
+    else fuente = 'sinvivo';
+    return { tokHora: tokHora == null ? null : Math.round(tokHora), tokHoy: fin(o.tokHoy) ? Math.round(Number(o.tokHoy)) : null,
+      estimado: false, fuente: fuente, ultimoEvento: o.ultimoEvento || null };
   }
   /** Líneas de código: reales si las hay; si 0 y hay tokens, tokens / (tok por línea de la flota o el último conocido o 5000). */
   function lineasRespaldo(lineas, tok, ratioFlota, ratioUltimo) {

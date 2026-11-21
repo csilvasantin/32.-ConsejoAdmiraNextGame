@@ -71,15 +71,16 @@ test("/api/consumos/velocidad expone proyectoAhora", async () => {
   assert.ok("proyectoAhora" in r || r.sinDatos === true);
 });
 
-test("aguja analógica: vibración 0 a 0 tok/h o sin datos; 0,5° → 1,5° según la escala", () => {
+// r225 (21-11, Carlos: «estan las agujas moviendose» con 0 tok/h): la aguja ya no vibra nunca; marca la cifra exacta.
+test("aguja analógica: sin vibración a ningún ritmo (aguja = cifra)", () => {
   const w = { document: { readyState: "complete", getElementById: () => null, documentElement: { lang: "es" } } };
   w.window = w;
   vm.runInNewContext(readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8"), w);
   const amp = w.ConsumosVelocimetroAguja.amplitud;
   assert.equal(amp(0, false), 0);
   assert.equal(amp(0.5, true), 0);
-  assert.ok(amp(0.01, false) >= 0.5 && amp(0.01, false) < 0.6);
-  assert.equal(amp(1, false), 1.5);
+  assert.equal(amp(0.01, false), 0);
+  assert.equal(amp(1, false), 0);
 });
 
 // r23: desplegables con estado (verde / amarillo / rojo) y agentes conocidos sin datos.

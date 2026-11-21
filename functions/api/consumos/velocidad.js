@@ -19,6 +19,7 @@
 import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora, madrid, KEY_DIAS, anotarDia, yokupPorDia, periodosTokens, diasPeriodo } from "../../../consumos-velocidad-lib.mjs";
 import { mezclar, appsGrokBot, superficiesDePulso, limitesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
+import { volcarSiPendiente } from "../../../consejo-consumo-lib.mjs";
 import { KEY_HIST, anotarHistorico } from "../../../historico-lib.mjs";
 import { perfilesFlota } from "../../../consumos-perfiles.mjs";
 
@@ -69,6 +70,8 @@ export async function onRequestGet(ctx) {
 export async function calcular({ env, fetchImpl }) {
   const ahora = Date.now();
   const store = kv(env);
+  // r225: consumo de los consejeros del motor Cloudflare que quedó sin volcar al pulso (regla de 50 s) → se vuelca ya.
+  await volcarSiPendiente(env, ahora);
   const [d, docs, dMes, libroRaw, histRaw] = await Promise.all([leerYokup(fetchImpl || fetch), leerPulsos(store).catch(() => []), leerYokup(fetchImpl || fetch, FUENTE_MES, 600),
     store ? store.get(KEY_DIAS).catch(() => null) : null, store ? store.get(KEY_HIST).catch(() => null) : null]);
   let yk = null, propias = [], deYokup = [];

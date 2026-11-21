@@ -17,7 +17,7 @@ Una ruta inaccesible nunca se presenta como «equipo caído».
 
 | # | Nivel | URL base | Sirve |
 |---|---|---|---|
-| 1 | **Mac Mini** (preferido) | `https://macmini.tail48b61c.ts.net/fleet/api` | lectura + comandos |
+| 1 | **Mac Mini** (preferido) | `https://macmini.tail48b61c.ts.net/fleet/api` (tailnet) · público por el borde: `https://macmini.tail48b61c.ts.net:10000/fleet/api` (Funnel solo `/fleet`, 9-nov-2026) | lectura + comandos |
 | 2 | **MacBook Pro 16** | `https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api` | lectura + comandos |
 | 3 | **Cloudflare degradado** | `https://fallback.admira.store` | solo-lectura (roster + último estado conocido) |
 
@@ -150,7 +150,8 @@ Funnel de este Mac: `tailscale funnel --bg --https=10000 http://127.0.0.1:8088` 
 for L in backup-node backup-fleet backup-gateway mini-monitor snap-push mini-recover; do \
   echo -n "$L: "; launchctl print gui/$(id -u)/com.admiranext.$L | grep -m1 'state ='; done
 # salud por nivel
-curl -s https://macmini.tail48b61c.ts.net/fleet/api/health           # nivel 1 (Mini)
+curl -s https://macmini.tail48b61c.ts.net:10000/fleet/api/health     # nivel 1 (Mini, Funnel público solo /fleet)
+curl -s https://macstudio.tail48b61c.ts.net/fleet/api/health         # pilar Mac Studio (Funnel)
 curl -s https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api/health # nivel 2
 curl -s https://fallback.admira.store/__fallback/health              # nivel 3 (Cloudflare)
 # estado remoto del monitor

@@ -6,7 +6,7 @@
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, soloVerdeReal, autoreportesDeHoy, aplicarAutoreportes } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, soloVerdeReal, autoreportesDeHoy, aplicarAutoreportes, aplicarMedicionCiega } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { KEY_ENCARGOS, anotarEncargos } from "../../../historico-lib.mjs";
@@ -153,6 +153,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   soloVerdeReal(ts, ahoraS); // r56: verde solo con tokens reales o app atribuible; latidos → solo rojo
   aplicarAutoreportes(ts, autoreportesDeHoy(partes, ahoraS), ahoraS); // r57: tokens propios autodeclarados
   aplicarRojo(ts, ahoraS); // rojo = parado > 1 h pero activo hoy (Madrid); gris = nada hoy
+  aplicarMedicionCiega(ts); // r232: app de escritorio abierta que el pulso no puede medir → «actividad no medible»
   // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
   const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));
   for (const t of ts) t.foco = focoDe(t, focos, ahoraMs);

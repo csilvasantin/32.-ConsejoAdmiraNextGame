@@ -160,7 +160,7 @@ test('spontaneous native bot responses omit Tú and legacy rows are separate, ne
     message({id:'gb_native',prompt:'',text:'Aviso espontáneo',status:'done'})
   ]);
   await h.clock.advance(3000);
-  assert.match(h.log.textContent,/Encargos anteriores/);
+  assert.match(h.log.textContent,/Misiones anteriores/);
   assert.deepEqual(h.answers.map(x=>x.text),['Aviso espontáneo']);
   const nativeItem=h.log.children.find(x=>x.className==='council-chat__turn');
   assert.doesNotMatch(nativeItem.textContent,/Tú/);
@@ -459,7 +459,7 @@ test('Elon va por encargo MCP: capacidades por persona, respuesta del Merovingio
   await h.clock.advance(3000);
   assert.deepEqual(h.answers.map(a=>[a.persona,a.text]),[['Elon Musk','Soy Elon: primeros principios.']]);
   assert.match(h.log.textContent,/Hola Elon/);assert.match(h.log.textContent,/Soy Elon/);
-  assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  assert.doesNotMatch(h.log.textContent,/Misiones anteriores/);
   h.api.destroy();
 });
 
@@ -506,7 +506,7 @@ test('sin señal y notas internas: se anuncia el plan B y no se anima la nota',a
  assert.doesNotMatch(h.log.textContent,/sin ESTADO/);assert.match(h.log.textContent,/Responder con Grok 4.6/);assert.equal(h.restores.length,0);h.api.destroy();
 });
 
-test('Jobs (leyenda) va por bot-inbox: Enviado nativo, sin «Encargos anteriores», y la respuesta se anuncia', async()=>{
+test('Jobs (leyenda) va por bot-inbox: Enviado nativo, sin «Misiones anteriores», y la respuesta se anuncia', async()=>{
   const h=harness();
   h.capabilitiesHandler=call=>call.query.get('persona')==='Jobs'
     ? response({ok:true,mode:'inbox',provider:'webhook',bidirectional:true,available:true,selectedPersona:'Jobs',status:'idle',lastObservedAt:'2026-09-18T08:00:00.000Z'})
@@ -521,12 +521,12 @@ test('Jobs (leyenda) va por bot-inbox: Enviado nativo, sin «Encargos anteriores
   h.histories.set('Steve Jobs',[row({status:'pending'})]);
   await h.clock.advance(3000);
   assert.match(h.log.textContent,/Enviado|pensando/);
-  assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  assert.doesNotMatch(h.log.textContent,/Misiones anteriores/);
   assert.doesNotMatch(h.statuses.at(-1)||'/',/esperando mensajes visibles/);
   h.histories.set('Steve Jobs',[row({status:'done',text:'Diseñando el próximo producto.',updatedAt:'2026-09-18T08:02:00.000Z'})]);
   await h.clock.advance(3000);
   assert.deepEqual(h.answers.map(a=>[a.persona,a.text,a.source]),[['Steve Jobs','Diseñando el próximo producto.','inbox']]);
   assert.match(h.log.textContent,/Diseñando el próximo producto/);
-  assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  assert.doesNotMatch(h.log.textContent,/Misiones anteriores/);
   h.api.destroy();
 });

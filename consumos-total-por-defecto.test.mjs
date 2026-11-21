@@ -28,7 +28,7 @@ test("el total usa la cadena honesta de r225 (15 min → última hora → Cursor
   assert.match(js, /function ritmoTotal\(d, sin, conConsejeros\)/);
   assert.match(js, /var vivo = v15 > 0 \? v15 : vH, total = vivo \+ cur;/, "en vivo (15 min → última hora) + ventana de Cursor");
   assert.match(js, /total = hayVerdes\(\) \? null : 0; fuente = total == null \? 'sinvivo' : null;/, "sin nada medido: «sin dato en vivo» o 0");
-  assert.match(js, /if \(nombre === TODOS\) return pintaTodos\(d, sin, lista\);/);
+  assert.match(js, /if \(nombre === TODOS \|\| !nombre\) \{/);
   assert.match(js, /function escalaTotal\(d, v\)/);
   // escala: 1,25 × max(pico 24 h, cifra), mínimo 2 M
   const ctx = {};

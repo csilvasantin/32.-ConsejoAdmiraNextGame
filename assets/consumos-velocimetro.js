@@ -21,6 +21,12 @@
   function en() { return (document.documentElement.lang || 'es').slice(0, 2) === 'en'; }
   function T(es, ing) { return en() ? ing : es; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  /** r230: tokens de hoy en millones con 2 decimales («3,94 M»), para que la cifra se vea crecer. */
+  function fmtM(n) {
+    if (n == null || !isFinite(n)) return '—';
+    if (n < 1e6) return fmt(n);
+    return (n / 1e6).toLocaleString(en() ? 'en-US' : 'es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' M';
+  }
   function fmt(n) {
     if (n == null || !isFinite(n)) return '—';
     var loc = en() ? 'en-US' : 'es-ES';
@@ -46,7 +52,7 @@
   /* Cuadro de mandos de superdeportiva (Carlos, 02-11-2026): tacómetro con marco de aluminio y fondo de carbono,
    * zona roja del 80 % al 100 %, aguja fina con contrapeso y testigos LED (verde = en vivo, ámbar = sin datos,
    * rojo = en zona roja). Misma geometría (centro 150,150 · R 120 · aguja −90°…+90°): la lógica no cambia. */
-  function svg(max, pfx, etiqueta) {
+  function svg(max, pfx, etiqueta, rotulo) {
     var ticks = '', i, RO = R + 30, RI = R + 23;
     for (i = 0; i <= 40; i++) {
       var f = i / 40, may = i % 10 === 0, med = i % 5 === 0, a = pt(f, R + 12), b2 = pt(f, R + (may ? -4 : med ? 2 : 6));
@@ -70,7 +76,7 @@
       '<path d="' + arco(0, 1, R + 1) + '" class="vel-pista"/>' +
       '<path d="' + arco(0, 1, R + 1) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
       ticks +
-      '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">TOKENS/HORA</text>' +
+      '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">' + (rotulo || 'TOKENS/HORA') + '</text>' +
       '<circle cx="' + (CX - 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-vivo"><title>' + esc(T('en vivo', 'live')) + '</title></circle>' +
       '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin dato en vivo', 'no live data')) + '</title></circle>' +
       '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>' +
@@ -433,6 +439,8 @@
     var self = this, dt = Math.min(0.05, Math.max(0.001, ((t - (this.tPrev || t)) / 1000) || 0.016));
     this.tPrev = t;
     var quieto = menosMovimiento();
+    // r230: reloj de TOKENS HOY: el valor crece en vivo (mismo acumulado que el odómetro); aguja = cifra en cada cuadro.
+    if (this.vivoFn) { var vv = this.vivoFn(); if (vv != null && isFinite(vv)) { this.v = vv; this.valor = vv; this.destino = Math.max(0, Math.min(1, vv / (this.max || 1))); } }
     if (quieto) { this.frac = this.destino; this.vel = 0; this.valor = this.v; this.ruido = 0; }
     else {
       // Muelle subamortiguado (ζ≈0,55): llega con un pequeño sobreimpulso y se asienta en ~1 s.
@@ -440,7 +448,7 @@
       this.vel += (k * (this.destino - this.frac) - c * this.vel) * dt;
       this.frac += this.vel * dt;
       this.valor += (this.v - this.valor) * Math.min(1, dt * 6);
-      var amp = amplitud(this.destino, this.sin);
+      var amp = this.vivoFn ? (this.ritmoVivo > 0 && !this.sin ? 0.9 + 0.9 * Math.min(1, this.ritmoVivo / 3e6) : 0) : amplitud(this.destino, this.sin);
       if (this.fase == null) this.fase = Math.random() * 6.28;
       this.ruido = temblor(t, amp, this.tPulso || 0, this.fase);
     }
@@ -457,9 +465,9 @@
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
     b.classList.toggle('en-roja', !this.sin && f >= 0.8);
-    if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
+    if (cifra && !this.sin) cifra.textContent = this.vivoFn ? fmtM(this.v) : fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
-    var vibra = !quieto && amplitud(this.destino, this.sin) > 0; // r228: temblor mientras el ritmo > 0
+    var vibra = !quieto && (this.vivoFn ? this.ritmoVivo > 0 && !this.sin : amplitud(this.destino, this.sin) > 0); // r228: temblor mientras el ritmo > 0
     if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };
@@ -477,7 +485,7 @@
     b.classList.toggle('sin-datos', !!sin);
     if (max !== this.max || !b.querySelector('.vel-svg')) {
       var fracVieja = this.max ? (this.frac * this.max) / max : 0;
-      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja));
+      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta, this.rotuloEscala); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja));
     }
     var v = sin ? 0 : (Number(tokHora) || 0);
     this.sin = !!sin; this.v = v;
@@ -498,6 +506,53 @@
     var que = b.querySelector('.vel-que');
     if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento, this.suelo)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '') +
       ' · ' + T('refresco cada ', 'refresh every ') + Math.round(POLL / 1000) + ' s';
+  };
+  /* r230 (Carlos, 21-11 21:07: «cambiar el segundo reloj para que ponga los tokens consumidos por un proyecto en concreto
+   * o por todos por defecto … en el reloj digital siempre estaran lo de todos los proyectos»). Reloj 2 = TOKENS HOY:
+   * aguja y cifra = acumulado del día (con «Todos», el MISMO acumulado que el odómetro: base real de la API + estimado en
+   * curso, monótono, reinicio a medianoche). Con un proyecto: su acumulado (base real del proyecto + su ritmo medido).
+   * El odómetro del reloj 2 enseña SIEMPRE el total de todos los proyectos. */
+  function Acumulado() { this.mostrado = null; this.real = null; this.ritmo = 0; this.dia = ''; this.clave = ''; this.tPrev = 0; this.tGuarda = 0; }
+  Acumulado.prototype.pon = function (n, ritmoTokH, clave) {
+    var ahora = Date.now(), dia = relojMadrid(ahora).dia;
+    if (n == null || !isFinite(n)) { this.real = null; return; }
+    if (dia !== this.dia || clave !== this.clave || this.mostrado == null) { this.dia = dia; this.clave = clave; this.mostrado = Math.max(n, Number(odoGuardados(dia)[clave]) || 0); this.tPrev = ahora; }
+    else this.mostrado = Math.max(this.mostrado, n);
+    this.real = n; this.ritmo = Math.max(0, Number(ritmoTokH) || 0);
+  };
+  Acumulado.prototype.valor = function () {
+    if (this.real == null) return null;
+    var ahora = Date.now(), dia = relojMadrid(ahora).dia, dt = this.tPrev ? Math.max(0, (ahora - this.tPrev) / 1000) : 0;
+    this.tPrev = ahora;
+    if (dia !== this.dia) { this.dia = dia; this.mostrado = 0; this.real = 0; dt = relojMadrid(ahora).s; }
+    this.mostrado = odoSiguiente(this.mostrado, this.real, this.ritmo, dt);
+    if (ahora - this.tGuarda > 2000) { this.tGuarda = ahora; odoGuarda(this.dia, this.clave, this.mostrado); }
+    return this.mostrado;
+  };
+  /** Escala del reloj de tokens hoy: 1,25 × el acumulado, mínimo 1 M (millones). */
+  function escalaHoy(v) { return escala((Number(v) || 0) * 1.25 / 1.5, 1e6); }
+  /** o = { valor: fn, ritmo, sin, odoN, odoRitmo, odoClave, texto } */
+  Dial.prototype.pintaHoy = function (o) {
+    var b = this.box, sin = !!o.sin;
+    this.rotuloEscala = 'TOKENS HOY';
+    b.classList.toggle('estimado', false);
+    b.classList.toggle('sin-datos', sin);
+    odometro(b.querySelector('.odo'), o.odoN, o.odoRitmo, this.pfx + ':' + o.odoClave, 'hoy');
+    var v0 = sin ? 0 : (o.valor() || 0);
+    var max = escalaHoy(Math.max(v0, Number(o.odoN) || 0));
+    if (max !== this.max || !b.querySelector('.vel-svg') || this.rotuloPintado !== this.rotuloEscala) {
+      var fracVieja = this.max ? (this.frac * this.max) / max : 0;
+      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta, this.rotuloEscala); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja)); this.rotuloPintado = this.rotuloEscala;
+    }
+    this.sin = sin; this.vivoFn = sin ? null : o.valor; this.ritmoVivo = sin ? 0 : (Number(o.ritmo) || 0);
+    this.v = v0; this.valor = v0; this.destino = Math.max(0, Math.min(1, v0 / max));
+    if (this.ritmoVivo > 0 && !menosMovimiento()) this.tPulso = (root.performance && performance.now) ? performance.now() : Date.now();
+    var cifra = b.querySelector('.vel-cifra');
+    if (sin) cifra.textContent = T('sin dato', 'no data');
+    b.querySelector('.vel-unidad').textContent = sin ? '' : T('tokens hoy', 'tokens today');
+    var que = b.querySelector('.vel-que');
+    if (que) que.innerHTML = o.texto || '';
+    this.arranca();
   };
   root.ConsumosVelocimetroAguja = { amplitud: amplitud, temblor: temblor, odoSiguiente: odoSiguiente, POLL_MS: POLL };
 
@@ -686,7 +741,7 @@
     // r226: «Todos los proyectos» (la suma) es la 1.ª opción y la de partida; «Automático» queda 2.ª.
     var items = [{ valor: TODOS, estado: estT,
       html: '<span class="dd-fila"><span class="dd-tit">' + punto(estT) + T('Todos los proyectos', 'All projects') + '</span><small><b>' + cifT + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + nConHoy + T(' proyectos con tokens hoy', ' projects with tokens today') + '</small></span>',
-      boton: punto(estT) + '<span class="dd-bt">' + T('Todos los proyectos', 'All projects') + (rT.tokHora != null ? ' · ' + fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : '') + '</span>' },
+      boton: punto(estT) + '<span class="dd-bt">' + T('Todos los proyectos', 'All projects') + '</span>' }, // r230: sin cifra en el botón → mismo alto de cabecera que «Agentes»
       { valor: AUTO, estado: elegido ? E.estadoFila(elegido.tokHora, elegido.tokHoy) : '',
       html: '<span class="dd-fila"><span class="dd-tit"><i class="dd-punto dd-auto" aria-hidden="true"></i>' + T('Automático: el que más gasta ahora', 'Automatic: top spender right now') + '</span>' +
         (el.auto && el.proyecto ? '<small>' + T('ahora sigue a ', 'now following ') + '<b>' + esc(nomP(el.proyecto)) + '</b></small>' : '') + '</span>' }];
@@ -699,7 +754,7 @@
       var linDP = dp ? '<small class="dd-sub dd-da">DeepAgents: ' + esc(dp.agentes.join(', ')) + ' · ' + (dp.activo ? T('activo', 'active') : T('abierto sin actividad', 'open, idle')) + '</small>' : '';
       items.push({ valor: o.proyecto, estado: est, titulo: esc(txtEstado(est)),
         html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(nom) + '</span><small>' + cifras + '</small>' + linDP + '</span>',
-        boton: punto(est) + '<span class="dd-bt">' + esc(nomP(o.proyecto)) + (el.auto ? ' <em class="dd-autotag">auto</em>' : '') + (rf != null ? ' · ' + fmt(rf) + ' ' + T('tokens/hora', 'tokens/hour') : '') + '</span>' });
+        boton: punto(est) + '<span class="dd-bt">' + esc(nomP(o.proyecto)) + (el.auto ? ' <em class="dd-autotag">auto</em>' : '') + '</span>' });
     });
     DD.proy.pon(items, el.auto ? (elegido ? elegido.proyecto : AUTO) : el.proyecto);
     if (el.auto) DD.proy.valor = AUTO; // el botón enseña el proyecto seguido; la opción marcada es «Automático»
@@ -809,7 +864,7 @@
       estado.d1.suelo = rF.suelo;
       estado.d1.clave = 'flota';
       // r229: la misma escala en los dos relojes del total (la del mayor, el de proyectos) para que se vea la diferencia.
-      max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, Math.max(rF.tokHora || 0, ritmoTotal(d, false, true).tokHora || 0));
+      max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, rF.tokHora); // r230: el reloj 2 ya es de tokens hoy: escala propia de nuevo
       var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
       estado.d1.ultimoEvento = rF.ultimoEvento;
       estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
@@ -854,56 +909,53 @@
   function pintaProyecto(d, sin) {
     var box = document.getElementById('vel-g-proy');
     if (!box) return;
-    if (!estado.d2) estado.d2 = new Dial(box, 'vg2', T('Velocímetro de tokens por hora del proyecto', 'Project tokens per hour speedometer'));
+    if (!estado.d2) estado.d2 = new Dial(box, 'vg2', T('Reloj de tokens consumidos hoy', 'Tokens used today gauge'));
     var nombre = proyectoActual(d);
     var lista = (d && d.porProyecto) || [];
-    if (nombre === TODOS) return pintaTodos(d, sin, lista);
+    // Odómetro del reloj 2 = SIEMPRE todos los proyectos (total de hoy + estimado en curso al ritmo del total).
+    var rT = ritmoTotal(d || {}, sin, true);
+    estado.d2.suelo = rT.suelo; estado.d2.ultimoEvento = rT.ultimoEvento;
+    var odoN = sin ? null : rT.tokHoy, odoRitmo = rT.tokHora || 0;
+    var nom = document.getElementById('vel-proy-nombre');
+    if (nom) nom.textContent = T('Todos los proyectos', 'All projects');
+    var met = document.getElementById('vel-proy-metodo');
+    var nHoy = lista.filter(function (x) { return x.tokHoy > 0; }).length;
+    var refresco = ' · ' + T('refresco cada ', 'refresh every ') + Math.round(POLL / 1000) + ' s';
+    if (nombre === TODOS || !nombre) {
+      estado.d2.clave = 'todos';
+      var dial = estado.d2;
+      dial.pintaHoy({
+        sin: sin || odoN == null, odoN: odoN, odoRitmo: odoRitmo, odoClave: 'todos', ritmo: odoRitmo,
+        // la aguja lee el MISMO acumulado que el odómetro (se crea en la llamada anterior a odometro)
+        valor: function () { var o = dial.box.querySelector('.odo')._odo; return o && o.mostrado != null ? o.mostrado : odoN; },
+        texto: esc(T('tokens consumidos hoy por todos los proyectos (Madrid)', 'tokens used today by all projects (Madrid)')) + ' · ' + T('medido ', 'measured ') + '<b>' + fmtM(odoN) + '</b>' +
+          (odoRitmo > 0 ? ' · ' + T('sube en vivo a ~', 'rising live at ~') + fmt(odoRitmo) + ' ' + T('tokens/hora (estimado en curso)', 'tokens/hour (running estimate)') : '') + refresco
+      });
+      if (met) met.innerHTML = sin ? T('Sin dato en vivo', 'No live data') : nHoy + T(' proyectos con tokens hoy', ' projects with tokens today');
+      return;
+    }
     var p = null;
     for (var i = 0; i < lista.length; i++) if (lista[i].proyecto === nombre) p = lista[i];
-    var maxRate = lista.reduce(function (m, x) { return Math.max(m, x.tokHora || 0, x.tokUltimaHora || 0); }, 0);
-    var hayPulso = d && d.agentesTiempoReal > 0;
-    // tok/h del proyecto: medido (p.tokHora), 0 si hay pulso fresco y el proyecto no aparece (medido: nadie trabaja en él), si no «sin datos».
-    var rate = p ? p.tokHora : (hayPulso ? 0 : null);
-    var hoy = p ? p.tokHoy : (lista.length ? 0 : null);
-    // 19-11 (Carlos: «nunca sin datos»): sin pulso fresco, media del día → último → su parte de la flota, etiquetado.
     var agsP = ((d && d.porAgente) || []).filter(function (a) { return a && a.porProyecto && Number(a.porProyecto[nombre]) > 0; });
-    var rPr = resp('p:' + (nombre || ''), { tokHora: sin ? null : rate, ultimaHora: sin || !p ? null : p.tokUltimaHora, tokHoy: sin ? null : hoy,
-      trabajando: hayVerdes(), ultimoEvento: ultimoUso(agsP) });
-    var estP = rPr.fuente || (p && p.estimado && !(rate > 0) ? 'cursor' : null);
-    var sinP = false;
-    estado.d2.ultimoEvento = rPr.ultimoEvento; estado.d2.clave = 'p:' + (nombre || '');
-    // 21-11: el cuentakilómetros del proyecto solo adelanta (pronóstico) con uso real de hace ≤ 3 min, como el de la flota.
-    estado.d2.fresco = usoFresco(sin ? [] : agsP, Date.now());
-    estado.d2.pinta(rPr.tokHora, escala(maxRate, 5e6), rPr.tokHoy, false, Math.max(0, (hoy || 0) - retrasoEnProyecto(d, nombre)), estP);
-    var nom = document.getElementById('vel-proy-nombre');
-    if (nom) nom.textContent = (nombre && nomP(nombre)) || T('ningún proyecto con datos', 'no project with data');
-    var met = document.getElementById('vel-proy-metodo');
-    if (met) met.innerHTML = !nombre ? T('Aún no llega el desglose por proyecto de ningún Mac.', 'No per-project breakdown from any Mac yet.') :
-      rPr.fuente === 'sinvivo' ? T('Sin dato en vivo para este proyecto', 'No live data for this project') + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
-      (p && p.estimado && !(p.tokUltimos15min > 0) ? T('estimado', 'estimated') + ' · ' + T('Cursor con retraso', 'delayed Cursor data') + (p.retrasoS ? ' (~' + Math.max(1, Math.round(p.retrasoS / 60)) + ' min)' : '') +
-        (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') :
-       p ? T('15 min', '15 min') + ': <b>' + fmt(p.tokUltimos15min) + '</b> tok' + (p.maquinas && p.maquinas.length ? ' · ' + esc(p.maquinas.join(', ')) : '') +
-        (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
+    var rPr = resp('p:' + nombre, { tokHora: sin || !p ? null : p.tokHora, ultimaHora: sin || !p ? null : p.tokUltimaHora, tokHoy: sin || !p ? null : p.tokHoy, trabajando: false, ultimoEvento: ultimoUso(agsP) });
+    var ritmoP = rPr.tokHora || 0, hoyP = sin ? null : (p ? p.tokHoy : (lista.length ? 0 : null));
+    if (!estado.acP) estado.acP = new Acumulado();
+    estado.acP.pon(hoyP, ritmoP, 'vg2v:p:' + nombre);
+    estado.d2.clave = 'p:' + nombre;
+    estado.d2.pintaHoy({
+      sin: sin || hoyP == null, odoN: odoN, odoRitmo: odoRitmo, odoClave: 'todos', ritmo: ritmoP,
+      valor: function () { return estado.acP.valor(); },
+      texto: esc(T('tokens consumidos hoy por ', 'tokens used today by ') + nomP(nombre) + T(' (Madrid)', ' (Madrid)')) + ' · ' +
+        (ritmoP > 0 ? T('ritmo medido ', 'measured rate ') + fmt(ritmoP) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin consumo en la última hora', 'no usage in the last hour')) +
+        ' · ' + T('el contador digital es el de todos los proyectos', 'the digital counter is all projects') + refresco
+    });
+    if (met) met.innerHTML = p && p.maquinas && p.maquinas.length ? esc(p.maquinas.join(', ')) + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : (eleccion(d).auto ? T('auto: el que más gasta ahora', 'auto: top spender right now') : '');
   }
-
   /** r227: desglose medido del total para los desplegables: « (mínimo 12 apps × 100 k · medido 0)». */
   function desglose(rT) {
     var su = rT && rT.suelo;
     if (!su || rT.fuente !== 'suelo') return '';
     return ' (' + su.nAgentes + ' ' + T('agentes', 'agents') + ' × 250 k' + (su.conConsejeros ? ' + ' + su.nGrokBot + ' GrokBot × 250 k' : '') + ' + ' + T('medido ', 'measured ') + fmt(su.medidoAgentes + su.medidoConsejeros) + ')';
-  }
-  /** r226: dial de PROYECTOS en «Todos los proyectos» = suma de todos (mismo total y mismas reglas que «Toda la flota»). */
-  function pintaTodos(d, sin, lista) {
-    var rT = ritmoTotal(d || {}, sin, true);
-    estado.d2.suelo = rT.suelo;
-    estado.d2.ultimoEvento = rT.ultimoEvento; estado.d2.clave = 'todos';
-    estado.d2.fresco = usoFresco(sin ? [] : (d && d.porAgente) || [], Date.now());
-    estado.d2.pinta(rT.tokHora, sin ? 2e6 : escalaTotal(d, rT.tokHora), rT.tokHoy, false, sin ? rT.tokHoy : tokHoyVivo(d), rT.fuente);
-    var nom = document.getElementById('vel-proy-nombre');
-    if (nom) nom.textContent = T('Todos los proyectos', 'All projects');
-    var met = document.getElementById('vel-proy-metodo');
-    var nHoy = lista.filter(function (p) { return p.tokHoy > 0; }).length;
-    if (met) met.innerHTML = sin ? T('Sin dato en vivo', 'No live data') : nHoy + T(' proyectos con tokens hoy', ' projects with tokens today') + ' · 15 min: <b>' + fmt(Number(d.tokUltimos15min) || 0) + '</b> tok · ' + T('última hora', 'last hour') + ': <b>' + fmt(Number(d.tokUltimaHora) || 0) + '</b> tok';
   }
   /* r22 (Carlos: «falta la velocidad por hora por agente para ver qué agente trabaja más»): ranking en vivo por tok/h,
    * barra relativa al líder, tokens de hoy, máquina, proyecto actual y «con Carlos»; clic = elegir el agente en el dial. */
@@ -952,7 +1004,7 @@
     box.classList.toggle('rt', !sin && d.metodo === 'tiempo real');
     pintaSelectorAgente(d);
     pintaIzquierdo(d, sin);
-    var max = sin ? 2e6 : escalaTotal(d, ritmoTotal(d, false, true).tokHora); // r226: la escala que se dice = la del dial del total
+    var max = sin ? 2e6 : escalaTotal(d, ritmoTotal(d, false, false).tokHora); // r226: la escala que se dice = la del dial del total
     pintaSelector(d);
     pintaProyecto(d, sin);
     var tpr = document.getElementById('vel-proy-titulo'); if (tpr) tpr.textContent = rotProy();

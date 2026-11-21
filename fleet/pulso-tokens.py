@@ -338,8 +338,12 @@ def guardar_cache(c):
     os.replace(tmp, CACHE)
 
 
-def lineas_nuevas(path, offset):
-    """Devuelve (lineas completas desde offset, nuevo offset). Si el fichero encogió, empieza de cero."""
+TROZO = 48 * 1024 * 1024  # r233: como mucho 48 MB por lectura (las sesiones de la app Codex pasan de 2 GB)
+
+
+def lineas_nuevas(path, offset, maximo=None):
+    """Devuelve (lineas completas desde offset, nuevo offset). Si el fichero encogió, empieza de cero.
+    r233: con `maximo` lee como mucho esos bytes (el llamador repite hasta ponerse al día)."""
     size = os.path.getsize(path)
     if size < offset:
         offset = 0
@@ -347,11 +351,83 @@ def lineas_nuevas(path, offset):
         return [], offset
     with open(path, "rb") as f:
         f.seek(offset)
-        data = f.read()
+        data = f.read(maximo) if maximo else f.read()
     corte = data.rfind(b"\n")
     if corte < 0:
+        if maximo and len(data) >= maximo:  # una sola línea más larga que el trozo: se salta (no trae token_count útil)
+            return [], offset + len(data)
         return [], offset
     return data[: corte + 1].splitlines(), offset + corte + 1
+
+
+RX_TS = re.compile(rb'"timestamp":\s*"([0-9T:.+\-]+Z?)"')
+
+
+def _ts_linea(f, pos):
+    """Primer timestamp (s UTC) de la primera línea COMPLETA tras `pos`, o None."""
+    f.seek(pos)
+    if pos:
+        f.readline()
+    for _ in range(64):
+        l = f.readline(2 * 1024 * 1024)
+        if not l:
+            return None
+        m = RX_TS.search(l[:200])
+        if m:
+            dt = ts_de(m.group(1).decode())
+            return dt.timestamp() if dt else None
+    return None
+
+
+def offset_desde(path, inicio_s):
+    """r233: offset (inicio de línea) de la primera línea con timestamp ≥ inicio_s, por búsqueda binaria (las líneas de
+    un rollout de Codex van en orden). Evita leer GB de días anteriores en una sesión larga de la app."""
+    size = os.path.getsize(path)
+    lo, hi = 0, size
+    with open(path, "rb") as f:
+        while hi - lo > 1024 * 1024:
+            mid = (lo + hi) // 2
+            t = _ts_linea(f, mid)
+            if t is None or t >= inicio_s:
+                hi = mid
+            else:
+                lo = mid
+        f.seek(lo)
+        if lo:
+            f.readline()
+        return f.tell()
+
+
+def ultimo_token_count(path, hasta, ventana=256 * 1024 * 1024):
+    """r233: total_token_usage [in, cached, out] del último token_count ANTES de `hasta` (mirando hacia atrás ≤ 256 MB),
+    para que el primer token_count de hoy de una sesión vieja cuente solo su delta. None si no hay."""
+    paso = 8 * 1024 * 1024
+    fin = hasta
+    with open(path, "rb") as f:
+        while fin > 0 and hasta - fin < ventana:
+            ini = max(0, fin - paso)
+            f.seek(ini)
+            data = f.read(fin - ini)
+            for raw in reversed(data.split(b"\n")):
+                if b'"token_count"' not in raw:
+                    continue
+                try:
+                    tu = ((json.loads(raw).get("payload") or {}).get("info") or {}).get("total_token_usage")
+                except Exception:
+                    continue
+                if tu:
+                    return [int(tu.get("input_tokens") or 0), int(tu.get("cached_input_tokens") or 0), int(tu.get("output_tokens") or 0)]
+            fin = ini + max(0, data.find(b"\n")) if ini else 0
+    return None
+
+
+def meta_codex(path):
+    """payload de la línea session_meta (la primera) de un rollout de Codex; {} si no se puede leer."""
+    try:
+        with open(path, "rb") as h:
+            return (json.loads(h.readline(16 * 1024 * 1024) or b"{}").get("payload") or {})
+    except Exception:
+        return {}
 
 
 def es_hoy(dt, dia):
@@ -396,15 +472,18 @@ def id_sesion_codex(path):
     return m.group(1) if m else os.path.realpath(path)
 
 
-def rutas_codex(hoy, dias=15):
+def rutas_codex(hoy=None, dias=None):
+    """r233 (Carlos, 21-11 21:37: «esta Trinity a tope y aparece en rojo»): TODAS las sesiones de Codex, sin ventana de
+    días. La app de escritorio mantiene vivos hilos que empezaron hace semanas (en el MacStudio, rollouts del 17, 21 y
+    29-10 que siguen escribiendo hoy); con la ventana de 15 días de r20 quedaban fuera y Trinity salía con 0 tokens.
+    El llamador filtra por mtime. `hoy`/`dias` se mantienen por compatibilidad y no se usan."""
     homes = [os.path.join(HOME, ".codex")]
     if os.environ.get("CODEX_HOME"):
         homes.append(os.environ["CODEX_HOME"])
+    homes += glob.glob(os.path.join(HOME, ".codex-*"))  # carpetas por agente (~/.codex-<agente>)
     rutas = []
     for h in _unicos([h for h in homes if os.path.isdir(h)]):
-        for delta in range(0, dias):
-            d = hoy - timedelta(days=delta)
-            rutas += glob.glob(os.path.join(h, "sessions", d.strftime("%Y/%m/%d"), "*.jsonl"))
+        rutas += glob.glob(os.path.join(h, "sessions", "*", "*", "*", "*.jsonl"))
         rutas += glob.glob(os.path.join(h, "archived_sessions", "*.jsonl"))
     # Una sesión = un id: si está en sessions y archived_sessions se queda la copia más reciente.
     por_id = {}
@@ -477,11 +556,67 @@ def claude(cache, dia, inicio_dia):
     return tok, cache_r, (datetime.fromtimestamp(ult, timezone.utc).isoformat().replace("+00:00", "Z") if ult else None), pp
 
 
+def procesa_linea_codex(f, raw, dia):
+    """Una línea de un rollout de Codex → actualiza el estado `f` de la sesión (cwd, tokens de hoy). r233: extraída de
+    codex() para leer por trozos."""
+    es_ctx = b'"session_meta"' in raw or b'"turn_context"' in raw
+    es_exec = b'"CommandExecution"' in raw and b'"cwd"' in raw
+    if b'"token_count"' not in raw and not es_ctx and not es_exec:
+        return
+    try:
+        d = json.loads(raw)
+    except Exception:
+        return
+    p = d.get("payload") or {}
+    if d.get("type") in ("session_meta", "turn_context") and p.get("cwd"):
+        if not f.get("cwd_exec"):
+            f["cwd"] = p.get("cwd")
+        f["cwd_sesion"] = p.get("cwd")
+        return
+    it = p.get("item") or {}
+    if p.get("type") == "item_completed" and it.get("type") == "CommandExecution" and it.get("cwd"):
+        # r20: el cwd del comando es donde trabaja de verdad (worktrees /tmp/trinity-*, ~/Projects/*).
+        c = str(it.get("cwd"))
+        c = c[7:] if c.startswith("file://") else c
+        if not RUTA_NEUTRA.search(c.lower()):
+            if c != f.get("cwd_sesion") or not f.get("cwd_exec"):
+                f["cwd"] = c
+                f["cwd_exec"] = True
+        return
+    if p.get("type") != "token_count":
+        return
+    tu = ((p.get("info") or {}).get("total_token_usage")) or None
+    if not tu:
+        return
+    cur = [int(tu.get("input_tokens") or 0), int(tu.get("cached_input_tokens") or 0), int(tu.get("output_tokens") or 0)]
+    if f.get("base_pend"):  # r233: sesión vieja sin token_count previo legible: este solo fija la base
+        f["prev"], f["base_pend"] = cur, False
+        return
+    prev = f["prev"] or [0, 0, 0]
+    dt = ts_de(d.get("timestamp"))
+    if es_hoy(dt, dia):
+        if cur[0] < prev[0] or cur[2] < prev[2]:
+            prev = [0, 0, 0]  # contador reiniciado
+        d_in, d_cache, d_out = cur[0] - prev[0], max(0, cur[1] - prev[1]), cur[2] - prev[2]
+        if d_in or d_out:
+            pr = proyecto_de(f.get("cwd"))
+            f.setdefault("pp", {})[pr] = f["pp"].get(pr, 0) + max(0, d_in - d_cache) + d_out
+            if pr == OTROS:
+                po = f.setdefault("otros", {})
+                po[f.get("cwd") or ""] = po.get(f.get("cwd") or "", 0) + max(0, d_in - d_cache) + d_out
+            f["tok"] += max(0, d_in - d_cache) + d_out
+            f["cache"] += d_cache
+            f["ult"] = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    f["prev"] = cur
+
+
 def codex(cache, dia, inicio_dia):
     st = cache["codex"]
     hoy = datetime.now(MADRID)
-    # r20: una sesión de Codex vive en la carpeta del día en que EMPEZÓ (Trinity lleva desde el 07-10): se miran
-    # las de los últimos 14 días y se filtran por mtime de hoy. r49: + CODEX_HOME y archived_sessions, una vez por sesión.
+    # r20: una sesión de Codex vive en la carpeta del día en que EMPEZÓ (Trinity lleva desde el 07-10).
+    # r49: + CODEX_HOME y archived_sessions, una vez por sesión. r233: todas las sesiones (sin ventana de días),
+    # filtradas por mtime de hoy; las sesiones largas se leen desde la primera línea de hoy y por trozos.
+    carpeta_hoy = "/" + hoy.strftime("%Y/%m/%d") + "/"
     for path in rutas_codex(hoy):
         try:
             if os.path.getmtime(path) < inicio_dia:
@@ -491,59 +626,31 @@ def codex(cache, dia, inicio_dia):
             if f.get("path") not in (None, path):  # misma sesión en otra ruta: se relee entera desde cero
                 f.update({"off": 0, "prev": None, "tok": 0, "cache": 0, "pp": {}, "otros": {}})
             f["path"] = path
-            lineas, nuevo = lineas_nuevas(path, f["off"])
+            # r233: sesión que empezó otro día vista por primera vez hoy: se salta a la primera línea de hoy y la base es
+            # el último token_count anterior; si no se encuentra, el primer token_count de hoy solo fija la base.
+            if not f["off"] and carpeta_hoy not in path and os.path.getsize(path) > TROZO // 4:
+                off0 = offset_desde(path, inicio_dia)
+                if off0 > 0:
+                    m = meta_codex(path)
+                    if m.get("cwd") and not f.get("cwd"):
+                        f["cwd"] = f["cwd_sesion"] = m.get("cwd")
+                    f["prev"] = ultimo_token_count(path, off0)
+                    f["base_pend"] = f["prev"] is None
+                    f["off"] = off0
         except OSError:
             continue
-        if nuevo < f["off"]:  # fichero reescrito: empezar de cero
-            f.update({"prev": None, "tok": 0, "cache": 0})
-        for raw in lineas:
-            es_ctx = b'"session_meta"' in raw or b'"turn_context"' in raw
-            es_exec = b'"CommandExecution"' in raw and b'"cwd"' in raw
-            if b'"token_count"' not in raw and not es_ctx and not es_exec:
-                continue
+        while True:
             try:
-                d = json.loads(raw)
-            except Exception:
-                continue
-            p = d.get("payload") or {}
-            if d.get("type") in ("session_meta", "turn_context") and p.get("cwd"):
-                if not f.get("cwd_exec"):
-                    f["cwd"] = p.get("cwd")
-                f["cwd_sesion"] = p.get("cwd")
-                continue
-            it = p.get("item") or {}
-            if p.get("type") == "item_completed" and it.get("type") == "CommandExecution" and it.get("cwd"):
-                # r20: el cwd del comando es donde trabaja de verdad (worktrees /tmp/trinity-*, ~/Projects/*).
-                c = str(it.get("cwd"))
-                c = c[7:] if c.startswith("file://") else c
-                if not RUTA_NEUTRA.search(c.lower()):
-                    if c != f.get("cwd_sesion") or not f.get("cwd_exec"):
-                        f["cwd"] = c
-                        f["cwd_exec"] = True
-                continue
-            if p.get("type") != "token_count":
-                continue
-            tu = ((p.get("info") or {}).get("total_token_usage")) or None
-            if not tu:
-                continue
-            cur = [int(tu.get("input_tokens") or 0), int(tu.get("cached_input_tokens") or 0), int(tu.get("output_tokens") or 0)]
-            prev = f["prev"] or [0, 0, 0]
-            dt = ts_de(d.get("timestamp"))
-            if es_hoy(dt, dia):
-                if cur[0] < prev[0] or cur[2] < prev[2]:
-                    prev = [0, 0, 0]  # contador reiniciado
-                d_in, d_cache, d_out = cur[0] - prev[0], max(0, cur[1] - prev[1]), cur[2] - prev[2]
-                if d_in or d_out:
-                    pr = proyecto_de(f.get("cwd"))
-                    f.setdefault("pp", {})[pr] = f["pp"].get(pr, 0) + max(0, d_in - d_cache) + d_out
-                    if pr == OTROS:
-                        po = f.setdefault("otros", {})
-                        po[f.get("cwd") or ""] = po.get(f.get("cwd") or "", 0) + max(0, d_in - d_cache) + d_out
-                    f["tok"] += max(0, d_in - d_cache) + d_out
-                    f["cache"] += d_cache
-                    f["ult"] = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-            f["prev"] = cur
-        f["off"] = nuevo
+                lineas, nuevo = lineas_nuevas(path, f["off"], TROZO)
+            except OSError:
+                break
+            if nuevo == f["off"]:
+                break
+            if nuevo < f["off"]:  # fichero reescrito: empezar de cero
+                f.update({"prev": None, "tok": 0, "cache": 0})
+            for raw in lineas:
+                procesa_linea_codex(f, raw, dia)
+            f["off"] = nuevo
     files = st["files"].values()
     ult = max((f["ult"] for f in files if f.get("ult")), default=None)
     pp = {}
@@ -825,15 +932,12 @@ def actividad_claude(ahora, ventana=VENTANA_CC_S):
 def actividad_codex(ahora, ventana=VENTANA_CC_S):
     res = {"desktop": None, "humano": None}
     hoy = datetime.now(MADRID)
-    rutas = set()
-    for delta in (0, 1, 2, 3):  # el escritorio de Codex reabre sesiones de días anteriores
-        rutas.update(glob.glob(os.path.join(HOME, ".codex", "sessions", (hoy - timedelta(days=delta)).strftime("%Y/%m/%d"), "*.jsonl")))
-    for path in rutas:
+    # r233: el escritorio de Codex reabre sesiones de hace semanas: todas las sesiones, filtradas por mtime.
+    for path in rutas_codex():
         try:
             if ahora - os.path.getmtime(path) > ventana:
                 continue
-            with open(path) as h:
-                meta = (json.loads(h.readline() or "{}").get("payload") or {})
+            meta = meta_codex(path)
             lineas = _cola(path)
         except Exception:
             continue
@@ -982,10 +1086,40 @@ def en_uso_app(idle, frente, nombres_frente, humano_app_ts, ahora, ventana=VENTA
     return bool(humano_app_ts and ahora - humano_app_ts < ventana)
 
 
+def cpu_procesos():
+    """r233: {pid: %cpu} de ps (sin TCC: solo pid y %cpu)."""
+    out = {}
+    for l in _cmd(["ps", "-axo", "pid=,%cpu="]).splitlines():
+        p = l.split()
+        if len(p) == 2 and p[0].isdigit():
+            try:
+                out[int(p[0])] = float(p[1].replace(",", "."))
+            except ValueError:
+                pass
+    return out
+
+
+def cpu_arbol(pid_raiz, procs, cpus):
+    """Puro: %cpu del proceso y todos sus descendientes (helpers, renderer, codex app-server…)."""
+    hijos = {}
+    for p, pp, _c in procs:
+        hijos.setdefault(pp, []).append(p)
+    tot, cola, vistos = 0.0, [pid_raiz], set()
+    while cola:
+        x = cola.pop()
+        if x in vistos or len(vistos) > 400:
+            continue
+        vistos.add(x)
+        tot += cpus.get(x, 0.0)
+        cola.extend(hijos.get(x, []))
+    return round(tot, 1)
+
+
 def superficies_app(maq, procs, idle, frente, act, grokbot):
-    """[{agente|None, tipo:'app', app, alFrente, enUso, cuenta?}] de las apps de escritorio abiertas."""
+    """[{agente|None, tipo:'app', app, alFrente, enUso, cuenta?, cpu}] de las apps de escritorio abiertas."""
     out, ahora = [], time.time()
     comandos = [c.split(" --")[0] for _p, _pp, c in procs]
+    cpus = cpu_procesos()
     for sufijo, app, nombres, motor in APPS_ESCRITORIO:
         if not any(c.endswith(sufijo) for c in comandos) or any(x["app"] == app for x in out):
             continue
@@ -994,6 +1128,9 @@ def superficies_app(maq, procs, idle, frente, act, grokbot):
         al = (frente or "").strip().lower() in nombres
         x = {"agente": (MAPA[maq].get(motor) or (None,))[0] if motor else None, "tipo": "app", "app": app,
              "alFrente": al, "enUso": en_uso_app(idle, frente, nombres, hu_ts, ahora)}
+        raiz = next((p for p, _pp, c in procs if c.split(" --")[0].endswith(sufijo)), None)
+        if raiz is not None:
+            x["cpu"] = cpu_arbol(raiz, procs, cpus)  # r233: actividad de la app aunque no deje ficheros legibles
         if app == "GrokBot" and grokbot:
             x["cuenta"] = grokbot.get("cuenta")
         out.append(x)

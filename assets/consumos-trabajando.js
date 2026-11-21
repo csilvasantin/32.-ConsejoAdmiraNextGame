@@ -144,7 +144,7 @@
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + (t.ciego && (t.estado === 'rojo' || t.estado === 'gris') ? ' tr-ciego' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
-      '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(vis(t.agente)) + '</b>' +
+      '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(vis(t.agente)) + nHoy(t) + '</b>' +
       '<small class="tr-maq tr-rot"><span class="tr-a">' + esc([maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span><span class="tr-c" title="' + esc(focoTitulo(t)) + '">' + esc(focoTxt(t) || [maqNombre(t.maquina), motor].filter(Boolean).join(' · ') || '—') + '</span></small>' +
       '<small class="tr-que">' + linea + '</small>' + superficies(t) + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
   }
@@ -257,6 +257,15 @@
     var hm = horaMision(q.ts);
     return (q.tipo === 'ultima' ? T('última: ', 'last: ') : T('último: ', 'latest: ')) + cab + (hm ? ' · ' + hm : '') + otra;
   }
+  /** r244 (Carlos, 23:31): «(N)» junto al nombre = misiones HECHAS hoy (Madrid) según la bandeja de Yokup de ese agente,
+   *  en todas sus máquinas; tooltip con número, título y hora. Sin dato de la bandeja (null) no se pinta nada. */
+  function nHoy(t) {
+    var l = t && t.hechasHoy;
+    if (!Array.isArray(l)) return '';
+    var tip = l.length ? T('Misiones cumplidas hoy', 'Missions completed today') + ' (' + l.length + '):\n' + l.map(function (m) { var a = madrid(m.ts); return m.id + (a ? ' · ' + a.hour + ':' + a.minute : '') + (m.maquina ? ' · ' + (maqCanon(m.maquina) || m.maquina) : '') + (m.titulo ? ' · ' + m.titulo : ''); }).join('\n')
+      : T('Ninguna misión cumplida hoy (bandeja de Yokup)', 'No missions completed today (Yokup inbox)');
+    return ' <span class="tr-nhoy' + (l.length ? '' : ' tr-nhoy0') + '" title="' + esc(tip) + '">(' + l.length + ')</span>';
+  }
   function fijaChip(t) {
     var a = queHaceTxt(t);
     var c = llmTxt(t), sc = supCorta(t);
@@ -298,20 +307,20 @@
       // r229: un agente con su app Claude/Codex abierta vale 250 k/h en el reloj de agentes (y en el de proyectos).
       var cuenta250 = abierta && t.grupo !== 'consejeros' && !t.consejero && (t.superficies || []).some(function (x) { return x && x.tipo === 'app' && /^(claude|codex)$/i.test(String(x.app || '')) && (x.fuente === 'pulso' || x.fuente === 'latido'); });
       var txtAb = cuenta250 ? T('app abierta · 250k/h', 'app open · 250k/h') : T('app abierta', 'app open');
-      return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + (gris ? ' <small class="tr-espera">' + esc(abierta ? txtAb + T(' · en espera', ' · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? txtAb + ' · ' : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + nHoy(t) + sufMaq(t) + fijaChip(t) + (gris ? ' <small class="tr-espera">' + esc(abierta ? txtAb + T(' · en espera', ' · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? txtAb + ' · ' : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
     }
     /* r235: deepagent abierto (verde) sin tokens recientes: «abierto · 250k/h», sin «hace 12 h» ni «en espera». */
     /* r243: consejero con el Grok Bot de su cuenta abierto en algún Mac (bot en la nube, accesible): verde «Grok Bot abierto». */
     function chipAbiertoApp(t) {
-      return '<span class="tr-chipa tr-verde tr-abiertoda tr-abiertoapp" title="' + esc(t.porqueColor || t.abiertoApp) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(T('Grok Bot abierto', 'Grok Bot open')) + '</small></span>';
+      return '<span class="tr-chipa tr-verde tr-abiertoda tr-abiertoapp" title="' + esc(t.porqueColor || t.abiertoApp) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + nHoy(t) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(T('Grok Bot abierto', 'Grok Bot open')) + '</small></span>';
     }
     function chipAbiertoDA(t) {
-      return '<span class="tr-chipa tr-verde tr-abiertoda" title="' + esc(t.porqueColor || t.abiertoDA) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(T('abierto · 250k/h', 'open · 250k/h')) + '</small></span>';
+      return '<span class="tr-chipa tr-verde tr-abiertoda" title="' + esc(t.porqueColor || t.abiertoDA) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + nHoy(t) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(T('abierto · 250k/h', 'open · 250k/h')) + '</small></span>';
     }
     /* r232: app de escritorio abierta que el pulso no puede medir → ni rojo ni «hace 3 h»: «actividad no medible» (azul, «?»). */
     function chipCiego(t) {
       var txt = T('app abierta · 250k/h · sin medir', 'app open · 250k/h · not measured');
-      return '<span class="tr-chipa tr-ciego tr-abierta" title="' + esc(t.porqueColor || t.ciego.motivo) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(txt) + '</small></span>';
+      return '<span class="tr-chipa tr-ciego tr-abierta" title="' + esc(t.porqueColor || t.ciego.motivo) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + nHoy(t) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(txt) + '</small></span>';
     }
     // r235: los deepagents (t._da ≥ 0, de conDeepAgents) van SIEMPRE primero, en el orden de /deepagents, sea cual sea su color.
     var esDA = function (t) { return t._da >= 0; }, noDA = function (t) { return !esDA(t); };
@@ -370,7 +379,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { conDeepAgents: conDeepAgents, grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, queHaceTxt: queHaceTxt, fijaChip: fijaChip, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { conDeepAgents: conDeepAgents, grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, queHaceTxt: queHaceTxt, fijaChip: fijaChip, nHoy: nHoy, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

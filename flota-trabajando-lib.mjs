@@ -222,7 +222,18 @@ export function misionesDe(items, p, norm = (x) => String(x || "").toLowerCase()
   const hechas = mias.filter((x) => /^(done|completed|hecho)$/.test(String(x.status || "")) && Number(x.done_at));
   const ult = hechas.filter((x) => !esChat(x)).sort((a, b) => b.done_at - a.done_at)[0] || null;
   const chat = hechas.filter(esChat).sort((a, b) => b.done_at - a.done_at)[0] || null;
-  return { enCurso: cur ? fic(cur, ts(cur)) : null, ultima: ult ? fic(ult, Number(ult.done_at)) : null, ultimoChat: chat ? fic(chat, Number(chat.done_at)) : null };
+  return { enCurso: cur ? fic(cur, ts(cur)) : null, ultima: ult ? fic(ult, Number(ult.done_at)) : null, ultimoChat: chat ? fic(chat, Number(chat.done_at)) : null,
+    hechas: hechas.filter((x) => !esChat(x)).map((x) => ({ id: "#" + x.id, titulo: tituloEncargo(x.text), ts: Number(x.done_at), maquina: x.target_machine || null })) };
+}
+/** r244 (Carlos, 21-11-2026 23:31: «al lado del nombre del consejero entre parentesis (x) ponga las misiones que ha
+ *  cumplido hoy» · «y los agentes igual»). Misiones HECHAS (done) cerradas HOY (día natural de Madrid), de la bandeja de
+ *  Yokup de esa persona (todas sus máquinas: el nombre es del agente). Fuera: cancelled, chats contestados y duplicados
+ *  (mismo id). → [{ id, titulo, ts, maquina }] por hora. Pura. */
+export function hechasHoyDe(misiones, ahoraS) {
+  const hoy = diaMadrid(ahoraS * 1000), vistos = new Set();
+  return ((misiones && misiones.hechas) || [])
+    .filter((m) => m && m.ts && diaMadrid(m.ts * 1000) === hoy && !vistos.has(m.id) && vistos.add(m.id))
+    .sort((a, b) => a.ts - b.ts);
 }
 /** r242: EN QUÉ ESTÁ una ficha, por prioridad: (1) misión en curso de Yokup; (1b) tarea declarada en un latido fresco
  *  (< 15 min); (2) última misión hecha; (3) lo último que hizo (último chat contestado o última tarea declarada);
@@ -676,6 +687,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     // r242: en qué está (misión en curso / última hecha / último hecho), con la bandeja de Yokup de ESA persona (los
     // consejeros «vía» un agente usan la suya, no la del agente) y la máquina mostrada.
     const cgT = carga && typeof carga.get === "function" ? carga.get(personaCenso(t.agente)) || null : null;
+    t.hechasHoy = cgT && cgT.misiones ? hechasHoyDe(cgT.misiones, ahoraS).map((m) => ({ id: m.id, titulo: m.titulo, ts: m.ts, maquina: m.maquina ? maquinaCorta(m.maquina) : null })) : null; // r244
     t.queHace = queHaceDe({ misiones: cgT && cgT.misiones, latido: t.via ? null : t._lat, maquina: t.maquina, consejero: !!t.consejero, ahoraS });
     delete t._lat;
     t.superficies = superficiesDe(t, { latidos: (porAg.get(t.agente) || {}).latidos || [], supPulso, apps: (velocidad && velocidad.grokbotApps) || [], ahoraS });

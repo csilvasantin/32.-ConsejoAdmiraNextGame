@@ -226,7 +226,14 @@
     bFoto.addEventListener("click", function () { abrirAcciones(nombre, visible, sel, ab); });
     cab.appendChild(bFoto);
     var quien = el("div");
-    quien.appendChild(el("div", "ag-nom", visible));
+    var nom = el("div", "ag-nom", visible);
+    // r244 (Carlos, 23:31): «(N)» = misiones cumplidas hoy (Madrid), bandeja de Yokup del agente en todas sus máquinas.
+    if (t && Array.isArray(t.hechasHoy)) {
+      var nh = el("span", "ag-nhoy", " (" + t.hechasHoy.length + ")");
+      nh.title = t.hechasHoy.length ? "Misiones cumplidas hoy:\n" + t.hechasHoy.map(function (m) { return m.id + " · " + new Date(m.ts * 1000).toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }) + (m.maquina ? " · " + m.maquina : "") + (m.titulo ? " · " + m.titulo : ""); }).join("\n") : "Ninguna misión cumplida hoy (bandeja de Yokup)";
+      nom.appendChild(nh);
+    }
+    quien.appendChild(nom);
     // Bajo el nombre, desplegable con los 4 pilares (más las reales); principal elegido. Sin latido de este agente → sufijo.
     if (maqs.length > 1) {
       var s = el("select", "ag-maq");

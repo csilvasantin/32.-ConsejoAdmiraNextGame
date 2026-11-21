@@ -54,8 +54,9 @@ test("endpoint: periodos en la respuesta y libro diario en KV", async () => {
   for (const k of ["ayer", "semana", "mes"]) assert.ok(k in d.periodos, k);
 });
 
-test("UI: el cuentakilómetros de la flota es un botón (role, tabindex, Enter/Espacio) y rota HOY→AYER→SEMANA→MES", () => {
+test("UI: rotación HOY→AYER→SEMANA→MES disponible pero r231 la desconecta (odómetro izquierdo = media por hora de ayer)", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
+  assert.doesNotMatch(js, /^    preparaPeriodo\(\);$/m);
   assert.match(js, /PERIODOS = \['hoy', 'ayer', 'semana', 'mes'\]/);
   assert.match(js, /setAttribute\('role', 'button'\)/);
   assert.match(js, /e\.key === 'Enter' \|\| e\.key === ' '/);

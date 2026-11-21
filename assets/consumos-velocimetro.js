@@ -501,7 +501,7 @@
     var fresco = this.fresco !== false;
     // r228: el cuentakilómetros suma al ritmo de la cifra grande (v), monótono; ver Odometro.
     void fresco; void tokHoyVivo;
-    odometro(b.querySelector('.odo'), tokHoy, v, this.pfx + ':' + (this.clave || ''), this.periodo);
+    // r231: el odómetro del reloj 1 ya no es «tokens hoy»: lo pinta pintaOdosAyer (media por hora de ayer, quieto).
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
     if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento, this.suelo)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '') +
@@ -531,15 +531,55 @@
   };
   /** Escala del reloj de tokens hoy: 1,25 × el acumulado, mínimo 1 M (millones). */
   function escalaHoy(v) { return escala((Number(v) || 0) * 1.25 / 1.5, 1e6); }
-  /** o = { valor: fn, ritmo, sin, odoN, odoRitmo, odoClave, texto } */
+  /* r231 (Carlos, 21-11 21:25: «en los relojes digitales pondremos el total de tokens del dia de ayer en el de la
+   * izquierda la media por hora de tokens consumidos y en el de la derecha el total del día»). Los dos odómetros enseñan
+   * el DÍA DE AYER CERRADO (día natural de Madrid) y no suben en vivo: izquierda = total de ayer / horas del día (24; 23 o
+   * 25 en los cambios de hora), derecha = total de ayer. Fuente: /api/consumos/velocidad → periodos.ayer = libro diario KV
+   * consumos:vel:dias:v1 (máximo tokHoy MEDIDO de la flota visto ese día: pulso + Cursor + Yokup, consejeros incluidos) o,
+   * si falta, partes de Yokup sin caché. Los mínimos de 250 k por app abierta son solo de la aguja en el navegador y nunca
+   * se escriben en ese libro: aquí no hay suelos. Sin histórico de ayer: «—» y rótulo honesto, nunca un 0 falso. */
+  function horasDeDia(dia) {
+    // desfase de Madrid sobre UTC (1 o 2 h) a mediodía del día anterior y del propio: el cambio de hora es de madrugada,
+    // así que si difieren ese día tuvo 23 h (marzo) o 25 h (octubre).
+    var off = function (dd) { return Math.round((relojMadrid(Date.parse(dd + 'T12:00:00Z')).s - 43200) / 3600); };
+    var ant = new Date(Date.parse(dia + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+    return 24 + off(ant) - off(dia);
+  }
+  function ayerDe(d, sin) {
+    var a = !sin && d && d.periodos && d.periodos.ayer, x = a && a.dias && a.dias[0];
+    var fuente = x ? x.fuente : '', tok = a && a.tok != null && isFinite(Number(a.tok)) ? Number(a.tok) : null;
+    if (/ninguno/.test(fuente)) tok = null; // «ningún parte ese día» no es un 0 medido
+    var h = a && a.desde ? horasDeDia(a.desde) : 24;
+    return { tok: tok, media: tok == null ? null : tok / h, horas: h, dia: a ? a.desde : null, fuente: fuente };
+  }
+  root.ConsumosAyer = { ayerDe: ayerDe, horasDeDia: horasDeDia };
+  /** Odómetro quieto con una cifra cerrada (sin suma por segundo ni nota de estimado). */
+  function odoAyer(dial, n, rotEl, rotulo, titulo) {
+    var el = dial.box.querySelector('.odo');
+    odometro(el, n, 0, dial.pfx + ':ayer', 'ayer');
+    if (el) { el.title = titulo; el.setAttribute('aria-label', (n == null ? '—' : Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES')) + ' · ' + rotulo); }
+    if (rotEl && rotEl.textContent !== rotulo) rotEl.textContent = rotulo;
+  }
+  function pintaOdosAyer(d, sin) {
+    var A = ayerDe(d, sin), fecha = A.dia ? fechaCorta(A.dia) : '';
+    var fu = A.fuente ? ' · ' + A.fuente : '';
+    var sinH = T(' · sin histórico', ' · no history');
+    if (estado.d1) odoAyer(estado.d1, A.media == null ? null : Math.round(A.media), document.getElementById('vel-ag-rotulo'),
+      T('Ayer · media tokens/hora', 'Yesterday · avg tokens/hour') + (A.media == null ? sinH : ''),
+      A.media == null ? T('Sin histórico de ayer', 'No history for yesterday') : T('Ayer ', 'Yesterday ') + fecha + ' (Madrid): ' + Math.round(A.tok).toLocaleString('es-ES') + ' tokens / ' + A.horas + ' h' + fu + T(' · medido, sin mínimos por app', ' · measured, no per-app minimums'));
+    if (estado.d2) odoAyer(estado.d2, A.tok, document.getElementById('vel-proy-rotulo'),
+      T('Ayer · total tokens', 'Yesterday · total tokens') + (A.tok == null ? sinH : ''),
+      A.tok == null ? T('Sin histórico de ayer', 'No history for yesterday') : T('Ayer ', 'Yesterday ') + fecha + ' (Madrid), ' + T('todos los proyectos', 'all projects') + fu + T(' · medido, sin mínimos por app', ' · measured, no per-app minimums'));
+    return A;
+  }
+  /** o = { valor: fn, ritmo, sin, texto } — r231: el odómetro lo pinta pintaOdosAyer (ayer cerrado). */
   Dial.prototype.pintaHoy = function (o) {
     var b = this.box, sin = !!o.sin;
     this.rotuloEscala = 'TOKENS HOY';
     b.classList.toggle('estimado', false);
     b.classList.toggle('sin-datos', sin);
-    odometro(b.querySelector('.odo'), o.odoN, o.odoRitmo, this.pfx + ':' + o.odoClave, 'hoy');
     var v0 = sin ? 0 : (o.valor() || 0);
-    var max = escalaHoy(Math.max(v0, Number(o.odoN) || 0));
+    var max = escalaHoy(Math.max(v0, Number(o.base) || 0));
     if (max !== this.max || !b.querySelector('.vel-svg') || this.rotuloPintado !== this.rotuloEscala) {
       var fracVieja = this.max ? (this.frac * this.max) / max : 0;
       b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta, this.rotuloEscala); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja)); this.rotuloPintado = this.rotuloEscala;
@@ -849,7 +889,8 @@
     });
   }
   root.ConsumosUsoFresco = usoFresco;
-  function pintaIzquierdo(d, sin) {
+  function pintaIzquierdo(d, sin) { var m = pintaIzquierdo0(d, sin); pintaOdosAyer(d, sin); return m; }
+  function pintaIzquierdo0(d, sin) {
     var g1 = document.getElementById('vel-g-total');
     if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
     var r = E.elegirAgente(sin ? [] : d.porAgente, sin ? (estado.agente === AUTO ? '' : estado.agente) : agenteVer(d));
@@ -869,7 +910,7 @@
       estado.d1.ultimoEvento = rF.ultimoEvento;
       estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
       if (tit) tit.textContent = rotAg(); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
-      if (rot) rot.textContent = rotuloPeriodo(per) + (per !== 'hoy' && nOdo == null ? ' · —' : '');
+      void rot; void nOdo;
       if (met) met.innerHTML = per === 'hoy' ? '' : textoPeriodo(pd);
       return max;
     }
@@ -898,7 +939,6 @@
     estado.d1.ultimoEvento = rA.ultimoEvento; estado.d1.clave = 'ag:' + r.agente;
     estado.d1.pinta(rA.tokHora, max, rA.tokHoy, false, f && !f.conRetraso ? f.tokHoy : 0, rA.fuente);
     if (tit) tit.textContent = rotAg();
-    if (rot) rot.textContent = vis(r.agente) + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('No aparece ahora en el pulso ni en Yokup: cifra estimada.', 'Not in the pulse or Yokup right now: estimated figure.') :
       (f.conRetraso && tasaVista(f) != null ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T(f.tokHoraCursorFuente === 'media_hoy' ? 'media de hoy' : 'última ventana publicada', f.tokHoraCursorFuente === 'media_hoy' ? 'today average' : 'last published window') + ' <b>' + fmt(tasaVista(f)) + '</b> ' + T('tokens/hora', 'tokens/hour') :
        f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: aguja estimada', 'no live figure: estimated needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
@@ -906,28 +946,27 @@
         (f.conRetraso ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('tokens/hora de la última hora con datos', 'tokens/hour of the last hour with data') : f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
     return d && d.escalaMax || max;
   }
-  function pintaProyecto(d, sin) {
+  function pintaProyecto(d, sin) { pintaProyecto0(d, sin); pintaOdosAyer(d, sin); }
+  function pintaProyecto0(d, sin) {
     var box = document.getElementById('vel-g-proy');
     if (!box) return;
     if (!estado.d2) estado.d2 = new Dial(box, 'vg2', T('Reloj de tokens consumidos hoy', 'Tokens used today gauge'));
     var nombre = proyectoActual(d);
     var lista = (d && d.porProyecto) || [];
-    // Odómetro del reloj 2 = SIEMPRE todos los proyectos (total de hoy + estimado en curso al ritmo del total).
+    // Total de hoy de todos los proyectos (+ estimado en curso al ritmo del total): aguja con «Todos».
     var rT = ritmoTotal(d || {}, sin, true);
     estado.d2.suelo = rT.suelo; estado.d2.ultimoEvento = rT.ultimoEvento;
     var odoN = sin ? null : rT.tokHoy, odoRitmo = rT.tokHora || 0;
-    var nom = document.getElementById('vel-proy-nombre');
-    if (nom) nom.textContent = T('Todos los proyectos', 'All projects');
     var met = document.getElementById('vel-proy-metodo');
     var nHoy = lista.filter(function (x) { return x.tokHoy > 0; }).length;
     var refresco = ' · ' + T('refresco cada ', 'refresh every ') + Math.round(POLL / 1000) + ' s';
     if (nombre === TODOS || !nombre) {
       estado.d2.clave = 'todos';
-      var dial = estado.d2;
-      dial.pintaHoy({
-        sin: sin || odoN == null, odoN: odoN, odoRitmo: odoRitmo, odoClave: 'todos', ritmo: odoRitmo,
-        // la aguja lee el MISMO acumulado que el odómetro (se crea en la llamada anterior a odometro)
-        valor: function () { var o = dial.box.querySelector('.odo')._odo; return o && o.mostrado != null ? o.mostrado : odoN; },
+      if (!estado.acT) estado.acT = new Acumulado();
+      estado.acT.pon(odoN, odoRitmo, 'vg2:todos'); // r231: acumulado propio (antes lo llevaba el odómetro, que ahora es de ayer)
+      estado.d2.pintaHoy({
+        sin: sin || odoN == null, base: odoN, ritmo: odoRitmo,
+        valor: function () { return estado.acT.valor(); },
         texto: esc(T('tokens consumidos hoy por todos los proyectos (Madrid)', 'tokens used today by all projects (Madrid)')) + ' · ' + T('medido ', 'measured ') + '<b>' + fmtM(odoN) + '</b>' +
           (odoRitmo > 0 ? ' · ' + T('sube en vivo a ~', 'rising live at ~') + fmt(odoRitmo) + ' ' + T('tokens/hora (estimado en curso)', 'tokens/hour (running estimate)') : '') + refresco
       });
@@ -943,11 +982,11 @@
     estado.acP.pon(hoyP, ritmoP, 'vg2v:p:' + nombre);
     estado.d2.clave = 'p:' + nombre;
     estado.d2.pintaHoy({
-      sin: sin || hoyP == null, odoN: odoN, odoRitmo: odoRitmo, odoClave: 'todos', ritmo: ritmoP,
+      sin: sin || hoyP == null, base: hoyP, ritmo: ritmoP,
       valor: function () { return estado.acP.valor(); },
       texto: esc(T('tokens consumidos hoy por ', 'tokens used today by ') + nomP(nombre) + T(' (Madrid)', ' (Madrid)')) + ' · ' +
         (ritmoP > 0 ? T('ritmo medido ', 'measured rate ') + fmt(ritmoP) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin consumo en la última hora', 'no usage in the last hour')) +
-        ' · ' + T('el contador digital es el de todos los proyectos', 'the digital counter is all projects') + refresco
+        refresco
     });
     if (met) met.innerHTML = p && p.maquinas && p.maquinas.length ? esc(p.maquinas.join(', ')) + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : (eleccion(d).auto ? T('auto: el que más gasta ahora', 'auto: top spender right now') : '');
   }
@@ -1103,7 +1142,7 @@
   root.ConsumosPeriodo = { PERIODOS: PERIODOS, rotulo: function (p) { return rotuloPeriodo(p); }, actual: function () { return estado.periodo; } };
   function arranca() {
     if (!document.getElementById('velocimetro')) return;
-    preparaPeriodo();
+    // r231: el odómetro izquierdo es fijo (media por hora de ayer): sin rotación hoy→ayer→semana→mes al pulsar.
     // r26 (Carlos): rótulos «Tokens por hora» · «Agente ·» · «Proyecto ·» (en inglés: Tokens per hour · Agent · Project).
     rotulos();
     // r11: se repintan al cambiar de idioma (antes solo al arrancar: «AGENTE» seguía en castellano con ?lang=en si el

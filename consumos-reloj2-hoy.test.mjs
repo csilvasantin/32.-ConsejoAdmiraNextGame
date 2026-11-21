@@ -8,18 +8,19 @@ import vm from "node:vm";
 const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
 
-test("reloj 2 = tokens hoy: aguja y cifra leen el acumulado en vivo; con «Todos» el mismo que el odómetro", () => {
+test("reloj 2 = tokens hoy: aguja y cifra leen el acumulado en vivo (r231: acumulado propio, el odómetro es de ayer)", () => {
   assert.match(js, /Dial\.prototype\.pintaHoy = function \(o\)/);
-  assert.match(js, /valor: function \(\) \{ var o = dial\.box\.querySelector\('\.odo'\)\._odo; return o && o\.mostrado != null \? o\.mostrado : odoN; \}/);
+  assert.match(js, /estado\.acT\.pon\(odoN, odoRitmo, 'vg2:todos'\);/);
+  assert.match(js, /valor: function \(\) \{ return estado\.acT\.valor\(\); \}/);
   assert.match(js, /if \(this\.vivoFn\) \{ var vv = this\.vivoFn\(\);/);
   assert.match(js, /T\('tokens hoy', 'tokens today'\)/);
   assert.match(js, /this\.rotuloEscala = 'TOKENS HOY';/);
 });
 
-test("el odómetro del reloj 2 es SIEMPRE el de todos los proyectos (clave todos), también con un proyecto elegido", () => {
-  const i = js.indexOf("  function pintaProyecto(d, sin) {"), seg = js.slice(i, i + 6000);
-  assert.equal((seg.match(/odoN: odoN, odoRitmo: odoRitmo, odoClave: 'todos'/g) || []).length, 2);
-  assert.match(seg, /estado\.acP\.pon\(hoyP, ritmoP, 'vg2v:p:' \+ nombre\);/);
+test("con un proyecto elegido la aguja lleva su propio acumulado; los odómetros los pinta pintaOdosAyer tras cada repintado", () => {
+  assert.match(js, /estado\.acP\.pon\(hoyP, ritmoP, 'vg2v:p:' \+ nombre\);/);
+  assert.match(js, /function pintaProyecto\(d, sin\) \{ pintaProyecto0\(d, sin\); pintaOdosAyer\(d, sin\); \}/);
+  assert.match(js, /function pintaIzquierdo\(d, sin\) \{ var m = pintaIzquierdo0\(d, sin\); pintaOdosAyer\(d, sin\); return m; \}/);
 });
 
 test("acumulado del proyecto: monótono y escala de millones", () => {

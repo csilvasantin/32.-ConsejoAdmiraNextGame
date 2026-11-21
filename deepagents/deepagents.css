@@ -95,6 +95,7 @@ h2{font-size:14px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .ag-maq:focus-visible{outline:2px solid var(--brand)}
 a.ag-proy{text-decoration:none;cursor:pointer}a.ag-proy:hover,a.ag-proy:focus-visible{box-shadow:0 0 0 2px var(--ink);outline:none}
 a.ag-proy::after{content:" ↗"}
+.ag-proy.defecto{background:transparent;color:var(--brand);border:1px dashed var(--brand)}
 @media (max-width:900px){.ahora{grid-template-columns:repeat(2,minmax(0,1fr))}.grupo{grid-column:auto}}
 @media (max-width:480px){.ahora{grid-template-columns:1fr}}
 .enl{color:var(--brand);font:700 12px/1 var(--mono);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}

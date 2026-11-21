@@ -6,7 +6,7 @@
  *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, soloVerdeReal, autoreportesDeHoy, aplicarAutoreportes, aplicarMedicionCiega } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe, activosDeFlota, aplicarLatidosConsejero, aplicarRojo, aplicarActividadConsejero, porqueColor, ultimaAccionEncargos, misionesDe, soloVerdeReal, autoreportesDeHoy, aplicarAutoreportes, aplicarMedicionCiega } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { KEY_ENCARGOS, anotarEncargos } from "../../../historico-lib.mjs";
@@ -35,7 +35,7 @@ export async function leerCarga(fetchImpl, personas) {
       if (!r.ok) return [p, null];
       const d = await r.json();
       if (Array.isArray(d && d.items)) itemsVistos.push(...d.items);
-      return [p, { ...cargaDe((d && d.items) || [], p), ultAccion: ultimaAccionEncargos((d && d.items) || [], p, personaCenso) }];
+      return [p, { ...cargaDe((d && d.items) || [], p), ultAccion: ultimaAccionEncargos((d && d.items) || [], p, personaCenso), misiones: misionesDe((d && d.items) || [], p, personaCenso) }];
     } catch (e) { return [p, null]; }
   }));
   return new Map(filas.filter(([, c]) => c));

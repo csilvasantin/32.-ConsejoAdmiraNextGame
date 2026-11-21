@@ -186,6 +186,59 @@ export function ultimaAccionEncargos(items, p, norm = (x) => String(x || "").toL
   }
   return r;
 }
+/** r242 (Carlos, 21-11-2026 22:50: «que ponga en que esta el Agente o el DeepAgent … la misión actual o la ultima que
+ *  ha hecho»). Título legible de un encargo de la bandeja de Yokup: primera frase del texto real, sin las coletillas de
+ *  quién lo pide («Carlos (via Jensen):», «URGENTE, Carlos por voz (…).», «Encargo de Jobs (…) para Trinity en el
+ *  MacStudio,»…). Los avisos de chat («[chat-coetaneos] Steve Jobs → Neo») → «chat con Steve Jobs». Nunca inventa: es un
+ *  recorte del texto, o null. Pura. */
+export function tituloEncargo(texto) {
+  let t = String(texto || "").replace(/\r/g, "").trim();
+  const chat = t.match(/^\[chat-[a-z]+\]\s*([^\n→]+?)\s*→/i);
+  if (chat) return "chat con " + chat[1].trim();
+  t = t.split("\n")[0].trim();
+  const pre = [/^\[[^\]]{1,40}\]\s*/, /^URGENTE[,:.]?\s*/i, /^(?:encargo|petici[oó]n|orden|superproyecto)(?: de [^.:,(]+)?(?:\([^)]*\))?[^.:,]{0,60}[.:,]\s*/i,
+    /^Carlos\s*\((?:v[ií]a|por)[^)]*\)\s*[:.,]\s*/i, /^Carlos por voz\s*\([^)]*\)\s*[.:,]\s*/i, /^Inicio de la misi[oó]n:[^.]*\.\s*/i,
+    /^De [^,.]{1,40}, con el OK de Carlos\.\s*/i, /^REENCARGO de #\d+\s*(?:\([^)]*\))?[:.]?\s*/i, /^Esto sustituye a #\d+\s*[:.]\s*/i];
+  for (let k = 0; k < 3; k++) for (const r of pre) t = t.replace(r, "");
+  const m = t.match(/^(.{12,}?[^.\s]{2})\.(?:\s|$)/);
+  if (m) t = m[1];
+  t = t.replace(/\s+/g, " ").trim();
+  if (t.length > 80) t = t.slice(0, 79).replace(/\s+\S*$/, "") + "…";
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : null;
+}
+const esChat = (x) => /^\s*\[chat-/i.test(String((x && x.text) || ""));
+/** r242: misiones de una persona en su bandeja de Yokup → { enCurso, ultima, ultimoChat } (cada una { id:"#7643",
+ *  titulo, maquina (target_machine), ts, estado } o null). enCurso = in_progress (si no, aceptado «ack»), primero las que
+ *  no son chat; ultima = la última HECHA (done) que no es chat; ultimoChat = el último chat contestado. Pura. */
+export function misionesDe(items, p, norm = (x) => String(x || "").toLowerCase()) {
+  const mias = (items || []).filter((x) => x && x.id != null && (!p || norm(x.target_persona) === norm(p)));
+  const fic = (x, ts) => ({ id: "#" + x.id, titulo: tituloEncargo(x.text), maquina: x.target_machine || null, ts: ts || null, estado: String(x.status || "") });
+  const ts = (x) => Number(x.ack_at) || Number(x.ts) || 0;
+  const elegir = (l, f) => l.sort((a, b) => (esChat(a) - esChat(b)) || f(b) - f(a))[0] || null;
+  const cur = elegir(mias.filter((x) => x.status === "in_progress"), ts) || elegir(mias.filter((x) => x.status === "ack"), ts);
+  const hechas = mias.filter((x) => /^(done|completed|hecho)$/.test(String(x.status || "")) && Number(x.done_at));
+  const ult = hechas.filter((x) => !esChat(x)).sort((a, b) => b.done_at - a.done_at)[0] || null;
+  const chat = hechas.filter(esChat).sort((a, b) => b.done_at - a.done_at)[0] || null;
+  return { enCurso: cur ? fic(cur, ts(cur)) : null, ultima: ult ? fic(ult, Number(ult.done_at)) : null, ultimoChat: chat ? fic(chat, Number(chat.done_at)) : null };
+}
+/** r242: EN QUÉ ESTÁ una ficha, por prioridad: (1) misión en curso de Yokup; (1b) tarea declarada en un latido fresco
+ *  (< 15 min); (2) última misión hecha; (3) lo último que hizo (último chat contestado o última tarea declarada);
+ *  si no, null («sin misión registrada»). otraMaquina: la misión es de otro Mac que el mostrado (no se le atribuye al
+ *  mostrado: el cliente lo indica). Pura. */
+export function queHaceDe({ misiones = null, latido = null, maquina = null, consejero = false, ahoraS }) {
+  const otra = (m) => !consejero && !!(m && maquina && claveMaquina(m) !== claveMaquina(maquina));
+  const de = (tipo, m) => ({ tipo, id: m.id || null, titulo: m.titulo || null, ts: m.ts || null, maquina: m.maquina ? maquinaCorta(m.maquina) : null, otraMaquina: otra(m.maquina) });
+  const M = misiones || {};
+  if (M.enCurso && M.enCurso.titulo) return de("en_curso", M.enCurso);
+  // Los process_snapshot repostean la última tarea declarada cada minuto (r55): su hora no dice nada → nunca «en curso»
+  // y sin hora. Solo un latido propio fresco (< 15 min) de la MISMA máquina mostrada cuenta como tarea en curso.
+  const snap = latido && latido.fuente === "process_snapshot";
+  const lat = latido && latido.tarea ? { id: latido.encargo || null, titulo: String(latido.tarea).replace(/(?:encargo\s*)?#\d{3,6}\b|\bFLT-\d{3,6}\b/gi, "").replace(/\s*\/\s*#?\s*(?=[·:])/g, " ").replace(/^[\s·:\/—-]+|[\s·:\/—-]+$/g, "").replace(/\s{2,}/g, " ").trim() || null, ts: snap ? null : latido.ts || null, maquina: latido.maquina || null } : null;
+  if (lat && lat.titulo && lat.ts && ahoraS - lat.ts < VENTANA_VIVO_S && !otra(lat.maquina)) return de("declarado", lat);
+  if (M.ultima && M.ultima.titulo) return de("ultima", M.ultima);
+  const otros = [M.ultimoChat && M.ultimoChat.titulo ? de("ultimo", M.ultimoChat) : null, lat && lat.titulo ? de("ultimo", lat) : null].filter(Boolean);
+  return otros.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
+}
 const masNueva = (a, b) => (!a ? b : !b ? a : b.ts > a.ts ? b : a);
 const masReciente = (iso, s) => { const t = iso ? Date.parse(iso) : NaN; return s != null && !(t >= s * 1000) ? new Date(s * 1000).toISOString() : iso; };
 
@@ -572,6 +625,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       motor, modelo: modeloCard,
       enCurso, abiertos: cg ? Number(cg.abiertos) || 0 : null, bloqueados: cg ? Number(cg.blocked) || 0 : null, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
+      _lat: (() => { const e = x.latidos.find((y) => y && String(y.task || "").trim()); return e ? { tarea: limpio(e.task, 120), encargo: encargoDe(e.task, e.focus), ts: Number(e.declared_updated || e.updated) || null, maquina: e.machine || null, fuente: e.source || null } : null; })(),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
       encargo: encargoDe(l && l.task, l && l.focus),
       tokHora: p && p.tokHora != null ? p.tokHora : null, tokHoy: p ? p.tokHoy || 0 : null,
@@ -616,6 +670,11 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   // asistente de GrokBot en la nube (rutinas / webhooks), no en una CLI: «GrokBot (asistente)», nunca «GrokBot CLI».
   for (const t of out) {
     if (CONSEJEROS_ASISTENTE.includes(t.agente)) { t.motor = RUNTIME_ASISTENTE; t.modelo = null; t.runtime = RUNTIME_ASISTENTE; }
+    // r242: en qué está (misión en curso / última hecha / último hecho), con la bandeja de Yokup de ESA persona (los
+    // consejeros «vía» un agente usan la suya, no la del agente) y la máquina mostrada.
+    const cgT = carga && typeof carga.get === "function" ? carga.get(personaCenso(t.agente)) || null : null;
+    t.queHace = queHaceDe({ misiones: cgT && cgT.misiones, latido: t.via ? null : t._lat, maquina: t.maquina, consejero: !!t.consejero, ahoraS });
+    delete t._lat;
     t.superficies = superficiesDe(t, { latidos: (porAg.get(t.agente) || {}).latidos || [], supPulso, apps: (velocidad && velocidad.grokbotApps) || [], ahoraS });
   }
   const ord = ORDEN_ESTADO;

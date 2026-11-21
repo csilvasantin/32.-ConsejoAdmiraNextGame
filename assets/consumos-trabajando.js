@@ -131,12 +131,13 @@
   }
   function tarjeta(t) {
     var motor = rt([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
-    var que = t.tarea || t.foco || '';
+    var que = t.queHace !== undefined ? queHaceTxt(t) : (t.tarea || t.foco || ''); // r242
+    var ult = t.queHace !== undefined ? '' : T('último', 'last') + ': ';
     var linea;
     if (t.abiertoDA && t.estado === 'verde') linea = '<span class="tr-est">' + T('abierto · 250k/h', 'open · 250k/h') + '</span> · ' + esc(t.abiertoDA) + (que ? ' · ' + esc(que) : '');
     else if (t.ciego && (t.estado === 'rojo' || t.estado === 'gris')) linea = '<span class="tr-est">' + T('actividad no medible', 'activity not measurable') + '</span> · ' + esc(T('app ', 'app ') + t.ciego.app + T(' abierta en ', ' open on ') + maqNombre(t.ciego.maquina) + T(': el pulso de ese Mac no ve sus sesiones', ': that Mac\'s pulse cannot see its sessions'));
-    else if (t.estado === 'rojo') linea = '<span class="tr-est">' + T('sin actividad', 'inactive') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
-    else if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
+    else if (t.estado === 'rojo') linea = '<span class="tr-est">' + T('sin actividad', 'inactive') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + ult + esc(que) : '');
+    else if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + ult + esc(que) : '');
     else if (t.sinActividad) linea = sinAct(t) + via(t) + (que ? ' · ' + esc(que) : '');
     else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : T('trabajando', 'working') + (t.conCarlosTrabajando ? ' · ' + esc(cc(t)) : '')) + '</span>' + via(t) + (t.enCurso > 0 ? ' · ' + t.enCurso + ' ' + T('en curso', 'in progress') : '') + tokens(t) + (que ? ' · ' + esc(que) : '');
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
@@ -226,6 +227,44 @@
     if (!tit && !t.encargo) return '';
     return (t.encargo || 'FLT') + (tit ? ' · ' + tit : '');
   }
+  /** r242 (Carlos, 21-11-2026 22:50: «que ponga en que esta el Agente o el DeepAgent … la misión actual o la ultima que
+   *  ha hecho»). Texto FIJO de la fila (ya no rota cada 15 s): t.queHace de la API → «#7621 · título» (en curso),
+   *  «última: #7643 · título · 18:33», «último: chat con Steve Jobs · 22:32» o «sin misión registrada». Si la misión es
+   *  de otro Mac que el mostrado, lo dice («· en MBP16»): no se atribuye a la app de este. */
+  var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  function madrid(ts) {
+    try {
+      var f = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(ts * 1000));
+      var o = {}; f.forEach(function (x) { o[x.type] = x.value; }); return o;
+    } catch (e) { return null; }
+  }
+  function horaMision(ts, desde) {
+    if (!ts) return '';
+    var a = madrid(ts), h = madrid(Date.now() / 1000);
+    if (!a) return '';
+    var hm = a.hour + ':' + a.minute, mismoDia = h && a.day === h.day && a.month === h.month && a.year === h.year;
+    if (desde) return mismoDia ? '' : T('desde ', 'since ') + Number(a.day) + '-' + MESES[Number(a.month) - 1];
+    return mismoDia ? hm : Number(a.day) + '-' + MESES[Number(a.month) - 1] + ' ' + hm;
+  }
+  function queHaceTxt(t) {
+    var q = t && t.queHace;
+    if (!q || !q.titulo) return T('sin misión registrada', 'no mission on record');
+    var cab = (q.id ? q.id + ' · ' : '') + q.titulo;
+    var otra = q.otraMaquina && q.maquina ? ' · ' + T('en ', 'on ') + (maqCanon(q.maquina) || q.maquina) : '';
+    if (q.tipo === 'en_curso') { var d = horaMision(q.ts, true); return cab + (d ? ' · ' + d : '') + otra; }
+    if (q.tipo === 'declarado') return cab + otra;
+    var hm = horaMision(q.ts);
+    return (q.tipo === 'ultima' ? T('última: ', 'last: ') : T('último: ', 'latest: ')) + cab + (hm ? ' · ' + hm : '') + otra;
+  }
+  function fijaChip(t) {
+    var a = queHaceTxt(t);
+    var c = llmTxt(t), sc = supCorta(t);
+    if (/\bCLI\b/.test(c)) sc = sc.replace(/^CLI( \+ )?/, '');
+    var proy = t.proyecto && t.proyecto !== 'otros' && a.toLowerCase().indexOf(String(t.proyecto).toLowerCase()) < 0 ? t.proyecto : '';
+    var peq = [proy, c, sc, t.gratis && !/gratis|free/i.test(c) ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
+    var tit = { en_curso: T('Misión en curso', 'Mission in progress'), declarado: T('Tarea declarada en su latido', 'Task declared in its heartbeat'), ultima: T('Última misión hecha', 'Last mission done'), ultimo: T('Lo último que hizo', 'Latest activity') }[(t.queHace || {}).tipo] || '';
+    return ' <small class="tr-alt tr-fija' + (t.queHace && t.queHace.titulo ? '' : ' tr-sinmision') + '" title="' + esc((tit ? tit + ': ' : '') + a + (peq ? ' · ' + peq : '')) + '"><span class="tr-qh">' + esc(a) + '</span>' + (peq ? '<span class="tr-peq">' + esc(peq) + '</span>' : '') + '</small>';
+  }
   /** r45: LLM / modelo del chip («Claude · claude-opus-5», «GrokBot CLI»…). */
   function llmTxt(t) { return rt([t.motor || t.runtime, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ')); }
   function altChip(t, sinMaq) {
@@ -257,16 +296,16 @@
       // r229: un agente con su app Claude/Codex abierta vale 250 k/h en el reloj de agentes (y en el de proyectos).
       var cuenta250 = abierta && t.grupo !== 'consejeros' && !t.consejero && (t.superficies || []).some(function (x) { return x && x.tipo === 'app' && /^(claude|codex)$/i.test(String(x.app || '')) && (x.fuente === 'pulso' || x.fuente === 'latido'); });
       var txtAb = cuenta250 ? T('app abierta · 250k/h', 'app open · 250k/h') : T('app abierta', 'app open');
-      return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + (gris ? ' <small class="tr-espera">' + esc(abierta ? txtAb + T(' · en espera', ' · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? txtAb + ' · ' : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + (gris ? ' <small class="tr-espera">' + esc(abierta ? txtAb + T(' · en espera', ' · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? txtAb + ' · ' : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
     }
     /* r235: deepagent abierto (verde) sin tokens recientes: «abierto · 250k/h», sin «hace 12 h» ni «en espera». */
     function chipAbiertoDA(t) {
-      return '<span class="tr-chipa tr-verde tr-abiertoda" title="' + esc(t.porqueColor || t.abiertoDA) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + ' <small class="tr-espera">' + esc(T('abierto · 250k/h', 'open · 250k/h')) + '</small></span>';
+      return '<span class="tr-chipa tr-verde tr-abiertoda" title="' + esc(t.porqueColor || t.abiertoDA) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(T('abierto · 250k/h', 'open · 250k/h')) + '</small></span>';
     }
     /* r232: app de escritorio abierta que el pulso no puede medir → ni rojo ni «hace 3 h»: «actividad no medible» (azul, «?»). */
     function chipCiego(t) {
       var txt = T('app abierta · 250k/h · sin medir', 'app open · 250k/h · not measured');
-      return '<span class="tr-chipa tr-ciego tr-abierta" title="' + esc(t.porqueColor || t.ciego.motivo) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + ' <small class="tr-espera">' + esc(txt) + '</small></span>';
+      return '<span class="tr-chipa tr-ciego tr-abierta" title="' + esc(t.porqueColor || t.ciego.motivo) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + fijaChip(t) + ' <small class="tr-espera">' + esc(txt) + '</small></span>';
     }
     // r235: los deepagents (t._da ≥ 0, de conDeepAgents) van SIEMPRE primero, en el orden de /deepagents, sea cual sea su color.
     var esDA = function (t) { return t._da >= 0; }, noDA = function (t) { return !esDA(t); };
@@ -325,7 +364,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { conDeepAgents: conDeepAgents, grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { conDeepAgents: conDeepAgents, grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, queHaceTxt: queHaceTxt, fijaChip: fijaChip, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

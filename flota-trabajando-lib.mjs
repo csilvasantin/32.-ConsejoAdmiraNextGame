@@ -385,6 +385,21 @@ export function conCarlosPorPresencia(latidos, activas, ahoraS, enUso = new Set(
   return null;
 }
 
+/** r241: ventana de «actividad propia reciente» de un agente (último token) y CPU mínima de su app de escritorio
+ *  (árbol de procesos, medida por el pulso) para darlo por trabajando aunque Carlos le haya escrito. Una app de
+ *  escritorio abierta sin hacer nada ronda 0–35 %; trabajando (Codex/Claude con herramientas) supera el 40 %. */
+export const ACTIVIDAD_PROPIA_S = 300;
+export const CPU_APP_TRABAJANDO = 40;
+/** r241: ¿el agente trabaja por su cuenta AHORA? → motivo | null. Señales: último token real < 5 min (o, sin hora del
+ *  último token, tok/h vivo > 0) o su app de escritorio con CPU > CPU_APP_TRABAJANDO. Pura. */
+export function actividadPropia({ agente, ultTok = null, tokVivo = null, superficies = [], ahoraS }) {
+  if (ultTok != null && ahoraS - ultTok <= ACTIVIDAD_PROPIA_S) return "tokens hace " + Math.max(0, ahoraS - ultTok) + " s";
+  if (ultTok == null && Number(tokVivo) > 0) return "tokens en los últimos 15 min";
+  const a = (superficies || []).find((s) => s && s.tipo === "app" && s.agente && canonico(s.agente) === agente && Number(s.cpu) > CPU_APP_TRABAJANDO);
+  if (a) return "app " + (a.app || "de escritorio") + " al " + Math.round(Number(a.cpu)) + " % de CPU en " + maquinaCorta(a.maquina);
+  return null;
+}
+
 /** Estado de una tarjeta: { estado:'amarillo'|'verde'|'gris', motivo }. */
 // r52 (Carlos, 22-10-2026 22:10): si un CONSEJERO está trabajando de verdad (cualquier señal verde), VERDE gana a
 // «con Carlos». verdeGana=true lo activa (consejeros); los agentes siguen con amarillo por delante.
@@ -503,11 +518,18 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const pPropio = unirPulsos(x.pulsos.filter((a) => a && !a.conRetraso));
     const ultTok = ultimoTokenS(x.agente, pPropio, velocidad && velocidad.grokbotApps, ahoraS);
     const tokReciente = ultTok != null && ahoraS - ultTok <= UMBRAL_ROJO_S;
+    // r241 (Carlos, 21-11-2026 22:39: «porque Trinity aparece en amarillo si esta trabajando a tope?»): en un AGENTE, la
+    // actividad propia reciente gana a «con Carlos» (como ya pasaba con los consejeros, r52). Amarillo solo si está
+    // parado esperando a Carlos. Se guarda conCarlos (motivo) para saber dónde está Carlos.
+    if (!esConsejero(x.agente) && st.estado === "amarillo") {
+      const act = actividadPropia({ agente: x.agente, ultTok, tokVivo, superficies: supPulso, ahoraS });
+      if (act) { st.conCarlos = (p && p.conCarlos && p.conCarlosMotivo) || st.motivo; st.motivo = st.conCarlos; st.estado = "verde"; st.motivo = act + " · con Carlos (" + st.motivo + ")"; }
+    }
     if (!esConsejero(x.agente) && tokReciente && st.estado === "gris") { st.estado = "verde"; st.motivo = "tokens hace " + Math.max(0, ahoraS - ultTok) + " s"; }
     if (st.estado === "verde" && !esConsejero(x.agente)) {
       const gasta = Number(tokVivo) > 0 || !!(pPropio && Number(pPropio.tokUltimaHora) > 0) || tokReciente;
       const appUso = (supPulso || []).some((s) => s && s.tipo === "app" && s.enUso && s.agente && canonico(s.agente) === x.agente);
-      if (!gasta && !appUso) { st.estado = "gris"; st.motivo = "sin tokens en la última hora (" + st.motivo + ")"; }
+      if (!gasta && !appUso && !st.conCarlos) { st.estado = "gris"; st.motivo = "sin tokens en la última hora (" + st.motivo + ")"; }
     }
     // r4: instancias vivas (< 15 min) por máquina+runtime; las de OpenCode/DeepAgents/Nemotron son el plan C gratis.
     const inst = new Map();
@@ -545,7 +567,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
-      conCarlosEn,
+      conCarlosEn, conCarlosTrabajando: st.estado === "verde" && st.conCarlos ? st.conCarlos : null,
       maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && cuentaLatido(l) && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: modeloCard,
       enCurso, abiertos: cg ? Number(cg.abiertos) || 0 : null, bloqueados: cg ? Number(cg.blocked) || 0 : null, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,

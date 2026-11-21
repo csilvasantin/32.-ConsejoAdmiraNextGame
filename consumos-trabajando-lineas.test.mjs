@@ -47,8 +47,8 @@ test("Rótulos de reloj «(x/y)» enteros en móvil: sin partir el contador y de
   assert.doesNotMatch(html, /#vel-ag-titulo[^{]*\{[^}]*text-overflow:ellipsis/);
 });
 
-test("ventana 21:20 · el «·» del rótulo se oculta en móvil y «Agentes (x/y)» lleva su nota corta", () => {
+test("ventana 21:20 · el «·» del rótulo se oculta en móvil; r230: sin la nota bajo «Agentes» (relojes de igual altura)", () => {
   assert.match(html, /@media \(max-width:560px\)\{\.vel-g h3 \.vel-sep\{display:none\}\}/);
   assert.doesNotMatch(html, /<\/span> · <span class="vel-sel"/);
-  assert.match(html, /id="vel-ag-nota"[^>]*>DeepAgents trabajando \/ abiertos \(pulso de cada Mac\)<\/p>/);
+  assert.doesNotMatch(html, /id="vel-ag-nota"|DeepAgents trabajando \/ abiertos/);
 });

@@ -12,7 +12,7 @@ import {
   buildComunicaciones,
   etiquetaContador,
   urlsInboxPublico,
-  urlMensajes,
+  urlsMensajes,
   juntarInbox,
 } from './consejo-comunicaciones-lib.mjs';
 import * as api from './functions/api/consejo/comunicaciones.js';
@@ -209,9 +209,11 @@ test('las URLs de bandeja y de mensajes no llevan secreto', () => {
     assert.ok(u.startsWith('https://bot.yokup.com/api/public/inbox'));
     assert.doesNotMatch(u, /token|key|secret|Bearer/i);
   }
-  assert.equal(urlMensajes('https://mcp.admira.live'), 'https://mcp.admira.live/consejero/mensajes?max=500');
-  assert.equal(urlMensajes('http://mcp.admira.live'), null);
-  assert.equal(urlMensajes('https://user:tok@mcp.admira.live'), null);
+  const msgs = urlsMensajes('https://mcp.admira.live');
+  assert.ok(msgs.some((u) => u === 'https://mcp.admira.live/consejero/mensajes?con=Jobs&max=500'));
+  assert.ok(msgs.some((u) => u.includes('con=Musk')));
+  assert.equal(urlsMensajes('http://mcp.admira.live').length, 0);
+  assert.equal(urlsMensajes('https://user:tok@mcp.admira.live').length, 0);
 });
 
 const TOKEN = 'sekreto-de-prueba-no-imprimir-32';
@@ -287,9 +289,10 @@ test('con la sesión de admira.live el mensaje Musk → Jobs entra y el token no
   assert.equal(msg.de, 'Elon Musk');
   assert.equal(msg.para, 'Steve Jobs');
   assert.match(msg.inicio_madrid, /12:07:00/);
-  const llamada = vistos.find((v) => v.u.includes('/consejero/mensajes'));
-  assert.equal(llamada.u, 'https://mcp.admira.live/consejero/mensajes?max=500');
-  assert.equal(llamada.h['x-mensajes-token'], TOKEN);
+  const llamadas = vistos.filter((v) => v.u.includes('/consejero/mensajes'));
+  assert.ok(llamadas.some((v) => v.u === 'https://mcp.admira.live/consejero/mensajes?con=Jobs&max=500'));
+  assert.ok(llamadas.every((v) => v.h['x-mensajes-token'] === TOKEN));
+  assert.equal(new Set(llamadas.map((v) => v.u)).size, llamadas.length);
   const cuerpo = JSON.stringify(d);
   assert.equal(cuerpo.includes(TOKEN), false);
   assert.equal(cuerpo.includes('GrokBot'), false);

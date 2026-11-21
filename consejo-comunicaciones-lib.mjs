@@ -109,14 +109,20 @@ export function juntarInbox(listas) {
   return out;
 }
 
-/** Solo https, sin usuario ni query: el token de mensajes no sale en la URL. */
-export function urlMensajes(base = MENSAJES_BASE) {
+/**
+ * Una URL por silla. `con` es el contrato que ya usa el Worker: así un Musk→Jobs
+ * no se pierde entre los mensajes de los agentes. Solo https, sin usuario ni secreto.
+ */
+export function urlsMensajes(base = MENSAJES_BASE) {
   let u;
-  try { u = new URL(String(base || MENSAJES_BASE)); } catch { return null; }
-  if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash) return null;
-  const destino = new URL('/consejero/mensajes', u.origin);
-  destino.searchParams.set('max', '500');
-  return destino.toString();
+  try { u = new URL(String(base || MENSAJES_BASE)); } catch { return []; }
+  if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash) return [];
+  return SILLAS_INBOX.map((silla) => {
+    const destino = new URL('/consejero/mensajes', u.origin);
+    destino.searchParams.set('con', silla);
+    destino.searchParams.set('max', '500');
+    return destino.toString();
+  });
 }
 
 export function duracionMs(inicio, fin) {

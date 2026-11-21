@@ -5,7 +5,7 @@
  * El token de la bandeja solo viaja de este servidor al Worker. Nunca sale en el JSON.
  */
 import {
-  buildComunicaciones, juntarInbox, urlMensajes, urlsInboxPublico,
+  buildComunicaciones, juntarInbox, urlsMensajes, urlsInboxPublico,
 } from '../../../consejo-comunicaciones-lib.mjs';
 import { SESION_KEY_PREF, SESION_INDICE } from '../../../consejo-sesion-lib.mjs';
 import { autorizado, json, options } from '../council/_auth.mjs';
@@ -56,20 +56,36 @@ function mensajeSano(m) {
 }
 
 export async function leerMensajes(env, fetchImpl = fetch) {
-  const url = urlMensajes(env && env.MCP_BASE);
-  if (!url) return { items: [], error: 'mensajes' };
+  const urls = urlsMensajes(env && env.MCP_BASE);
+  if (!urls.length) return { items: [], error: 'mensajes' };
   const headers = { accept: 'application/json' };
   const tok = String((env && env.CONSEJERO_MENSAJES_TOKEN) || '').trim();
   if (tok) headers['x-mensajes-token'] = tok;
-  try {
-    const r = await fetchImpl(url, { headers, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return { items: [], error: 'mensajes' };
-    const d = await r.json();
-    const items = (Array.isArray(d && d.mensajes) ? d.mensajes : []).map(mensajeSano).filter(Boolean);
-    return { items, error: null };
-  } catch {
-    return { items: [], error: 'mensajes' };
+  const tandas = await Promise.all(urls.map(async (url) => {
+    try {
+      const r = await fetchImpl(url, { headers, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return { items: [], fallo: true };
+      const d = await r.json();
+      return {
+        items: (Array.isArray(d && d.mensajes) ? d.mensajes : []).map(mensajeSano).filter(Boolean),
+        fallo: false,
+      };
+    } catch {
+      return { items: [], fallo: true };
+    }
+  }));
+  const vistos = new Set();
+  const items = [];
+  for (const tanda of tandas) {
+    for (const m of tanda.items) {
+      const id = String(m.id);
+      if (vistos.has(id)) continue;
+      vistos.add(id);
+      items.push(m);
+    }
   }
+  const fallos = tandas.filter((t) => t.fallo).length;
+  return { items, error: fallos === tandas.length ? 'mensajes' : (fallos ? 'parcial' : null) };
 }
 
 async function leerSesiones(store) {
@@ -95,7 +111,8 @@ function avisoDe(inbox, mensajes) {
   const partes = [];
   if (inbox && inbox.error === 'inbox') partes.push('La bandeja pública de encargos no ha respondido.');
   else if (inbox && inbox.error === 'parcial') partes.push('Alguna bandeja pública de encargos no ha respondido; el contador usa las que sí.');
-  if (mensajes && mensajes.error) partes.push('Los mensajes privados entre consejeros no se han podido leer en este momento.');
+  if (mensajes && mensajes.error === 'mensajes') partes.push('Los mensajes privados entre consejeros no se han podido leer en este momento.');
+  else if (mensajes && mensajes.error === 'parcial') partes.push('Alguna bandeja privada de consejeros no ha respondido; el contador usa las que sí.');
   return partes.join(' ');
 }
 

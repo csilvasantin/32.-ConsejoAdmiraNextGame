@@ -45,7 +45,6 @@
     { t: "⚖️ Decisiones",   en: "⚖️ Decisions",   h: "https://www.admira.live/decisiones" },
     { t: "🚀 Misiones",     en: "🚀 Missions",    h: "https://www.admira.live/misiones" },
     { t: "✅ Tareas",       en: "✅ Tasks",       h: "https://www.admira.live/tareas" },
-    { t: "🏆 Highscore",    en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
     { t: "🧩 Asignaciones", en: "🧩 Assignments", h: "https://www.admira.live/asignaciones/" },
     { t: "🤖 DeepAgents",   en: "🤖 DeepAgents",  h: "https://www.admira.live/deepagents" },
     { t: "💸 Consumo",      en: "💸 Usage",       h: "https://www.admira.live/consumos" }
@@ -63,7 +62,9 @@
   // AVANZADO (Carlos, 18-09-2026): Control, Players y Diario son gestión/infra, no el
   // flujo de trabajo → se recogen tras el botón «Avanzado» para no saturar la barra.
   // Siguen a un clic desde cualquier página; sus páginas no se tocan.
+  // r245 (Carlos, 21-11-2026 23:37): Highscore sale de la barra superior y queda en AVANZADO.
   var ADV = [
+    { t: "🏆 Highscore", en: "🏆 Highscore", h: "https://www.admira.live/highscore" },
     { t: "🖥️ Control",  en: "🖥️ Control", h: "https://www.admira.live/control/" },
     { t: "🕶️ Hackeo",   en: "🕶️ Hack",    h: "https://www.admira.live/hackeo" },
     { t: "📺 Players",  en: "📺 Players", h: "https://www.admira.live/players/" },

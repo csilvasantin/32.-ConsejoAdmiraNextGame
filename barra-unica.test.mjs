@@ -7,7 +7,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const ORDEN = ["/dashboard", "/objetivos", "/decisiones", "/misiones", "/tareas", "/highscore",
+// r245 (Carlos, 21-11-2026 23:37): «sacar Highscore del menu superior que ya lo tenemos en el menu de opciones del
+// modo avanzado» → fuera de la fila en las tres superficies; sigue en AVANZADO.
+const ORDEN = ["/dashboard", "/objetivos", "/decisiones", "/misiones", "/tareas",
   "/asignaciones", "/deepagents", "/consumos"];
 const norm = (h) => h.replace(/^https:\/\/www\.admira\.live/, "").replace(/\/$/, "");
 
@@ -73,4 +75,31 @@ test("DeepAgents: sin CANAL MCP, texto plegado tras la flecha y hora de lectura 
   assert.match(h, /<p class="lead" id="da-lead" hidden>/);
   assert.match(js, /\$\("lectura-hora"\)\.textContent = flota\.generado \?/);
   assert.match(js, /\$\("da-lead"\)\.hidden = !abrir/);
+});
+
+// r245 (Carlos, 21-11-2026 23:37): «vamos a meter en avanzado las opciones que aparecen arriba y ganamos ese espacio
+// para la interface y subirlo todo, relojes y agentes y sacar Highscore del menu superior».
+test("r245: Highscore sigue en AVANZADO en las tres superficies, fuera de la fila", () => {
+  const marco = readFileSync("yk-frame.js", "utf8");
+  const adv = marco.slice(marco.indexOf("function buildAdvancedNav()"), marco.indexOf("function projectField("));
+  assert.match(adv, /highscore\.href = "\/highscore"/);
+  const bar = readFileSync("admira-bar.js", "utf8");
+  const ADV = bar.slice(bar.indexOf("var ADV = ["), bar.indexOf("];", bar.indexOf("var ADV = [")));
+  assert.match(ADV, /h: "https:\/\/www\.admira\.live\/highscore"/);
+  const home = readFileSync("index.html", "utf8");
+  const tabs = home.slice(home.indexOf('<nav class="top-tabs"'), home.indexOf("</nav>", home.indexOf('<nav class="top-tabs"')));
+  assert.doesNotMatch(tabs, /class="version-badge"[^>]*>🏆 Highscore/);
+  assert.match(home, /class="rail-btn" href="\/highscore"/, "la home lo conserva en su raíl");
+});
+
+test("r245: la subnavegación de Consumo vive en AVANZADO del marco; /consumos ya no la pinta arriba", () => {
+  const marco = readFileSync("yk-frame.js", "utf8");
+  const sub = marco.slice(marco.indexOf("var ADV_SUBNAV = ["), marco.indexOf("];", marco.indexOf("var ADV_SUBNAV = [")));
+  assert.deepEqual([...sub.matchAll(/\["([^"]+)",/g)].map((m) => m[1]), ["/", "/consumo", "/pendiente", "/consumos-proyectos", "/orquestar/"]);
+  assert.match(marco.slice(marco.indexOf("function buildAdvancedNav()")), /ADV_SUBNAV\.forEach/);
+  const html = readFileSync("consumos.html", "utf8");
+  const wrap = html.slice(html.indexOf('<div class="wrap">'), html.indexOf("<h1>Consumo Agentes"));
+  assert.doesNotMatch(wrap, /<nav>/);
+  assert.doesNotMatch(wrap, /href="\/pendiente"/);
+  assert.match(html, /yk-frame\.js\?v=20261121-r245-avanzado/);
 });

@@ -27,5 +27,5 @@ test("página: la superficie corta es la del Mac mostrado (Trinity // MacStudio 
   assert.match(js, /actividad no medible/);
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.match(html, /\.tr-chipa\.tr-ciego i\{background:#5fd3ff/);
-  assert.match(html, /consumos-trabajando\.js\?v=20261121-r241-verde-gana/);
+  assert.match(html, /consumos-trabajando\.js\?v=20261121-r242-en-que-esta/);
 });

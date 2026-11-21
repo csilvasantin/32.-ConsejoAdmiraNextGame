@@ -85,7 +85,9 @@
       if (g && isFinite(g.ts) && ahora - g.ts / 1000 < RECIENTE_S) return { luz: "verde", porque: "GitHub: " + (g.accion === "merged" ? "PR fusionado" : g.accion === "opened" ? "PR abierto" : g.accion) + " en " + g.repo + " " + haceTexto(ahora - g.ts / 1000) + " (" + g.rama + ")" };
       if (t.actividad && isFinite(t.actividad.ts) && ahora - t.actividad.ts < RECIENTE_S) return { luz: "verde", porque: (t.actividad.fuente || "actividad") + " " + haceTexto(ahora - t.actividad.ts) };
     }
-    if (abierto.estado === "verde") return { luz: "rojo", porque: "abierto en " + maq + " sin actividad ahora" };
+    // r235 (Carlos, 21-11 22:15: «si estan abiertos como en deepagents que aparezcan en verde»): abierto = verde también
+    // en el punto; rojo solo si está cerrado. El porqué dice que es por estar abierto (sin tokens recientes).
+    if (abierto.estado === "verde") return { luz: "verde", porque: "abierto en " + maq + " (" + abierto.porque.replace(/^.* abierto en [^(]*\(|\)$/g, "") + ") · sin tokens recientes", porAbierto: true };
     if (abierto.estado === "rojo") return { luz: "rojo", porque: "cerrado en " + maq };
     return { luz: "amarillo", porque: "no se sabe qué hace en " + maq };
   }

@@ -279,8 +279,8 @@ test("r43 · front: grupos() separa Agentes y Consejeros con cuentas propias (tr
   ];
   const g = JSON.parse(JSON.stringify(ct.grupos(ts)));
   assert.deepEqual(g.map((x) => x.id), ["agentes", "consejeros"]);
-  assert.deepEqual({ ...g[0].n }, { trabajando: 1, conCarlos: 2, parados: 1, total: 4 });
-  assert.deepEqual({ ...g[1].n }, { trabajando: 1, conCarlos: 0, parados: 2, total: 3 });
+  assert.deepEqual({ ...g[0].n }, { trabajando: 1, abiertos: 0, conCarlos: 2, parados: 1, total: 4 });
+  assert.deepEqual({ ...g[1].n }, { trabajando: 1, abiertos: 0, conCarlos: 0, parados: 2, total: 3 });
   assert.deepEqual(Array.from(g[1].tarjetas, (t) => t.agente), ["Jobs", "Disney", "Musk"]);
 });
 

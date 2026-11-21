@@ -153,7 +153,7 @@ test("página: lo primero son los cuatro deepagents fijos, sin rótulos de motor
   assert.ok(mod.indexOf('agente: "Trinity"') < mod.indexOf('agente: "Neo"') && mod.indexOf('agente: "Neo"') < mod.indexOf('agente: "Oraculo"'));
   // Desplegable solo con más de un equipo; luz verde/rojo/amarillo; la pastilla abre la captura en vivo.
   assert.ok(js.includes("maqs.length > 1") && js.includes('el("select", "ag-maq")'));
-  assert.ok(js.includes('verde: "trabajando", rojo: "sin hacer nada", amarillo: "no se sabe"'));
+  assert.ok(js.includes('verde: "trabajando", rojo: "cerrado", amarillo: "no se sabe"')) // r235: abierto = verde;
   assert.ok(js.includes('"/control/?rc="') && js.includes('"&ver=1"') && js.includes('"&lado="') && !js.includes('"&pantalla="'));
   assert.ok(js.includes("Sin tarea declarada"));
 });
@@ -254,11 +254,11 @@ test("r234: Consumo y DeepAgents cuentan con el mismo módulo; Oráculo admira.t
     { agente: "Morfeo", estado: "rojo", maquina: "MacMini", haceS: 30000, superficies: [] },
   ];
   const r = D.resumen(ts, { Trinity: { ts: Date.now() - 5 * 60000, accion: "merged", repo: "admira-studio", rama: "trinity/x" } });
-  assert.deepEqual(r.map((a) => [a.visible, a.abierto.estado, a.actividad.luz]), [["Trinity", "verde", "verde"], ["Neo", "verde", "verde"], ["Oráculo", "verde", "rojo"], ["Morfeo", "rojo", "rojo"]]);
+  assert.deepEqual(r.map((a) => [a.visible, a.abierto.estado, a.actividad.luz]), [["Trinity", "verde", "verde"], ["Neo", "verde", "verde"], ["Oráculo", "verde", "verde"], ["Morfeo", "rojo", "rojo"]]); // r235: abierto = punto verde
   const c = D.contadores(r);
-  assert.equal(c.agentesTrabajando + "/" + c.agentesAbiertos, "2/3");
+  assert.equal(c.agentesTrabajando + "/" + c.agentesAbiertos, "3/3");
   assert.deepEqual(c.proyectos.map((p) => p.nombre), ["Admira.Studio", "Admira.Store", "Admira.tv"]);
-  assert.equal(c.proyectosActivos + "/" + c.proyectosTotal, "2/3");
+  assert.equal(c.proyectosActivos + "/" + c.proyectosTotal, "3/3");
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.ok(html.indexOf("/assets/deepagents-estado.js") > 0 && html.indexOf("/assets/deepagents-estado.js") < html.indexOf("/assets/consumos-velocimetro.js"));
 });

@@ -1929,6 +1929,8 @@ function deepLinkRc(){
   if(_rcDeepDone) return;
   const q=new URLSearchParams(location.search);
   const raw=(q.get('rc')||'').trim(); if(!raw) return;
+  // DeepAgents (r229): ?ver=1 abre en «solo ver» (sin mandar ratón/teclado) y ?pantalla=N (1 = principal) elige el monitor del agente.
+  { const pn=parseInt(q.get('pantalla')||'',10); window.__rcDeep={ver:q.get('ver')==='1', pantalla:(Number.isInteger(pn)&&pn>0)?pn-1:null}; }
   if(typeof window.openRemoteControl!=='function') return;
   if(!MACHINES.length){
     if(!SESSION || !/^[a-z0-9-]{3,80}$/i.test(raw)) return;
@@ -4203,6 +4205,7 @@ function collapseAllToggle(){
         const sel=ov.querySelector('#rc-disp'); if(!sel||!cur||cur.closed||!ds.length) return;
         // SIEMPRE visible (mejora 3): con una pantalla enseña su nombre; con varias, elige.
         sel.innerHTML=ds.map(p=>'<option value="'+p.indice+'">🖵 '+dsEsc(p.nombre)+'</option>').join('');
+        { const w=window.__rcDeep&&window.__rcDeep.pantalla; if(Number.isInteger(w)&&ds.some(p=>p.indice===w)){ sel.value=String(w); cur.display=w; cur.fpsArr=[]; cur.lastFrameAt=0; } window.__rcDeep=null; }
         sel.addEventListener('change',()=>{ if(!cur)return; const n=parseInt(sel.value,10); if(!Number.isInteger(n)||n<0)return; cur.display=n; cur.fpsArr=[]; cur.lastFrameAt=0; });
       }catch(e){/* sin selector: se sigue viendo la pantalla 0, como siempre */}
     })();
@@ -4227,7 +4230,7 @@ function collapseAllToggle(){
     ov.querySelector('#rc-rapido').addEventListener('click',()=>rcPreset(0.3,0.3,30,1280));
     ov.querySelector('#rc-nitido').addEventListener('click',()=>rcPreset(1.0,0.8,8,2560));
     ov.querySelector('#rc-q').addEventListener('input',e=>{cur.q=(+e.target.value)/10;window.AdmiraRcStream.reset(cur);});
-    const ctlBtn=ov.querySelector('#rc-ctl');ctlBtn.addEventListener('click',()=>{cur.control=!cur.control;ctlBtn.classList.toggle('on',cur.control);ctlBtn.textContent=cur.control?'🎮 control: ON':'👁️ solo ver';img.style.cursor=cur.control?'crosshair':'default';});
+    const ctlBtn=ov.querySelector('#rc-ctl');ctlBtn.addEventListener('click',()=>{cur.control=!cur.control;ctlBtn.classList.toggle('on',cur.control);ctlBtn.textContent=cur.control?'🎮 control: ON':'👁️ solo ver';img.style.cursor=cur.control?'crosshair':'default';});if(window.__rcDeep&&window.__rcDeep.ver&&cur.control){ctlBtn.click();}
     /* DESBLOQUEO ASISTIDO y PORTAPAPELES REMOTO (mejora 3): van por el mismo inyector que el
        teclado (texto Unicode + Intro). La contraseña no se guarda en ningún sitio: se pide en
        un campo de contraseña, se manda y se olvida. */

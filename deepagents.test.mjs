@@ -131,13 +131,22 @@ test("página: va tras la verja, llama al API y no pinta HTML de los mensajes", 
   assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(js));
 });
 
-test("página: lo primero es AHORA, con los cuatro deepagents principales por motor", () => {
+test("página: lo primero son los cuatro deepagents fijos, sin rótulos de motor ni «flota leída»", () => {
   const html = readFileSync(new URL("./deepagents/index.html", import.meta.url), "utf8");
   const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
   assert.ok(html.indexOf('id="ahora"') > 0 && html.indexOf('id="ahora"') < html.indexOf('id="cifras"'));
+  assert.ok(!html.includes("<h2>Ahora</h2>") && !html.includes('id="ahora-hora"'));
+  assert.ok(!js.includes("flota leída") && !js.includes('motor: "Claude"'));
   assert.ok(js.includes("/api/flota/trabajando"));
-  assert.ok(js.includes('{ motor: "Claude", agentes: ["Neo", "Morfeo"] }'));
-  assert.ok(js.includes('{ motor: "Codex", agentes: ["Trinity", "Oraculo"] }'));
+  // Leyendas → MacStudio, Coetáneos → MacMini; la máquina principal va por defecto.
+  assert.ok(/agente: "Trinity", maquina: "MacStudio", proyecto: "Admira.Studio", url: "https:\/\/admira.studio"/.test(js));
+  assert.ok(/agente: "Neo", maquina: "MacStudio", proyecto: "Admira.live", url: "https:\/\/admira.live"/.test(js));
+  assert.ok(/agente: "Oraculo", maquina: "MacMini"/.test(js) && /agente: "Morfeo", maquina: "MacMini"/.test(js));
+  assert.ok(js.indexOf('agente: "Trinity"') < js.indexOf('agente: "Neo"') && js.indexOf('agente: "Neo"') < js.indexOf('agente: "Oraculo"'));
+  // Desplegable solo con más de un equipo; luz verde/rojo/amarillo; la pastilla abre la captura en vivo.
+  assert.ok(js.includes("maqs.length > 1") && js.includes('el("select", "ag-maq")'));
+  assert.ok(js.includes('verde: "Trabajando", rojo: "Sin hacer nada", amarillo: "No se sabe"'));
+  assert.ok(js.includes('"/control/?rc="') && js.includes('"&ver=1"'));
   assert.ok(js.includes("Sin tarea declarada"));
 });
 

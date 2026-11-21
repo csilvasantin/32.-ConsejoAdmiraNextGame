@@ -166,7 +166,17 @@
   /* ── AHORA: qué hace cada deepagent principal (GET /api/flota/trabajando, la misma fuente que la barra de agentes) ── */
   var FLOTA = "/api/flota/trabajando";
   var FLOTA_MS = 20000;
-  var GRUPOS = [{ motor: "Claude", agentes: ["Neo", "Morfeo"] }, { motor: "Codex", agentes: ["Trinity", "Oraculo"] }];
+  /* Carlos, 21-11-2026 (r229): los cuatro deepagents fijos van primero y sin rótulos de motor (Claude/Codex ya va
+   * dentro de cada ficha). Leyendas → MacStudio (Trinity, Neo) · Coetáneos → MacMini (Oráculo, Morfeo).
+   * La máquina principal sale SIEMPRE por defecto; solo si el agente vive además en otro equipo de AdmiraNeXT aparece,
+   * en el mismo sitio, un desplegable con las otras (nunca elegidas por defecto). */
+  var FIJOS = [
+    { agente: "Trinity", maquina: "MacStudio", proyecto: "Admira.Studio", url: "https://admira.studio", pantalla: 1 },
+    { agente: "Neo", maquina: "MacStudio", proyecto: "Admira.live", url: "https://admira.live", pantalla: 3 },
+    { agente: "Oraculo", maquina: "MacMini", proyecto: "", url: "", pantalla: 0 },
+    { agente: "Morfeo", maquina: "MacMini", proyecto: "", url: "", pantalla: 0 }
+  ];
+  var maqElegida = {}; // agente → máquina elegida en el desplegable (por defecto, la principal)
   var NOMBRE = { Oraculo: "Oráculo" };
   var flota = { tarjetas: null, error: "", generado: "", presencia: "" };
 
@@ -197,9 +207,52 @@
   }
   function dato(dl, k, v) { dl.appendChild(el("dt", "", k)); dl.appendChild(el("dd", "", v)); }
 
+  function claveMaq(m) { return norm(m).replace(/[^a-z0-9]/g, ""); }
+  function fijoDe(nombre) { for (var i = 0; i < FIJOS.length; i++) if (FIJOS[i].agente === nombre) return FIJOS[i]; return null; }
+  // Equipos donde el agente está desplegado o tiene latido: el principal primero, luego el resto (sin repetir).
+  function maquinasDe(t, principal) {
+    var vistas = {}, lista = [];
+    function poner(m) { var k = claveMaq(m); if (!k || vistas[k]) return; vistas[k] = 1; lista.push(String(m)); }
+    poner(principal);
+    if (t) {
+      (t.maquinas || []).forEach(poner);
+      (t.superficies || []).forEach(function (s) { if (s && s.maquina) poner(s.maquina); });
+    }
+    return lista;
+  }
+  /* Luz por máquina con evidencia real (Carlos, 21-11-2026): VERDE trabajando · ROJO sin hacer nada · AMARILLO no se sabe.
+   * Verde: app en uso o al frente en ESA máquina, «con Carlos» en ella, o en la principal un encargo en curso o tokens reales.
+   * Rojo: la app está abierta en esa máquina pero sin uso, o la flota dice que lleva parado (>1 h / nada hoy) en la principal.
+   * Amarillo: sin pulso de esa máquina (solo latido o censo). Un encargo en cola NO cuenta como trabajo. */
+  function luzEn(t, maq, principal) {
+    if (!t) return { luz: "amarillo", porque: "la flota no informa de este agente" };
+    var k = claveMaq(maq), esPrincipal = k === claveMaq(principal);
+    var sup = (t.superficies || []).filter(function (s) { return s && claveMaq(s.maquina) === k; });
+    for (var i = 0; i < sup.length; i++) if (sup[i].enUso || sup[i].alFrente) return { luz: "verde", porque: (sup[i].app || sup[i].runtime || "sesión") + " en uso en " + maq };
+    if (t.conCarlosEn && claveMaq(t.conCarlosEn) === k) return { luz: "verde", porque: "con Carlos en " + maq };
+    if (esPrincipal && claveMaq(t.maquina) === k) {
+      if (t.enCurso > 0) return { luz: "verde", porque: t.enCurso + " encargo en curso" };
+      if (t.estado === "verde") return { luz: "verde", porque: t.porqueColor || t.motivo || "trabajando" };
+    }
+    var pulso = sup.filter(function (s) { return s.fuente === "pulso"; });
+    if (pulso.length) return { luz: "rojo", porque: (pulso[0].app || pulso[0].runtime || "sesión") + " abierta en " + maq + " sin uso" };
+    if (esPrincipal && claveMaq(t.maquina) === k && (t.estado === "rojo" || t.estado === "gris")) return { luz: "rojo", porque: t.porqueColor || t.motivo || "sin actividad" };
+    return { luz: "amarillo", porque: "sin pulso de " + maq + ": no se sabe" };
+  }
+  // Pastilla del proyecto → captura en tiempo real de ese agente en su equipo (control remoto de admira.live en «solo ver»).
+  function enlaceCaptura(maq, fijo, principal) {
+    var u = "/control/?rc=" + encodeURIComponent(claveMaq(maq)) + "&name=" + encodeURIComponent(maq) + "&ver=1";
+    if (fijo && fijo.pantalla && claveMaq(maq) === claveMaq(principal)) u += "&pantalla=" + fijo.pantalla;
+    return u;
+  }
+
   function fichaAgente(nombre) {
-    var t = tarjetaDe(nombre), visible = NOMBRE[nombre] || nombre;
-    var art = el("article", "ag " + (t && /^(verde|amarillo|rojo)$/.test(t.estado) ? t.estado : "gris"));
+    var t = tarjetaDe(nombre), visible = NOMBRE[nombre] || nombre, fijo = fijoDe(nombre);
+    var principal = (fijo && fijo.maquina) || (t && t.maquina) || "";
+    var maqs = maquinasDe(t, principal);
+    var sel = maqElegida[nombre] && maqs.some(function (m) { return claveMaq(m) === claveMaq(maqElegida[nombre]); }) ? maqElegida[nombre] : principal;
+    var l = luzEn(t, sel, principal);
+    var art = el("article", "ag " + l.luz);
     var cab = el("div", "ag-cab");
     var img = el("img");
     img.alt = ""; img.loading = "lazy";
@@ -207,21 +260,39 @@
     cab.appendChild(img);
     var quien = el("div");
     quien.appendChild(el("div", "ag-nom", visible));
-    quien.appendChild(el("div", "ag-sub", t ? [t.modelo || t.motor, t.maquina].filter(Boolean).join(" · ") : "sin datos de la flota"));
+    // Bajo el nombre, solo el equipo: texto si vive en uno; desplegable si está en más de uno (principal elegido).
+    if (maqs.length > 1) {
+      var s = el("select", "ag-maq");
+      s.setAttribute("aria-label", "Equipo de " + visible);
+      maqs.forEach(function (m) { var o = el("option", "", m); o.value = m; if (claveMaq(m) === claveMaq(sel)) o.selected = true; s.appendChild(o); });
+      s.addEventListener("change", function (e) { maqElegida[nombre] = e.target.value; pintarAhora(); });
+      quien.appendChild(s);
+    } else if (principal) {
+      quien.appendChild(el("div", "ag-sub", principal));
+    }
     cab.appendChild(quien);
     var led = el("span", "ag-led");
-    led.title = t ? (t.porqueColor || t.motivo || "") : "";
+    led.title = { verde: "Trabajando", rojo: "Sin hacer nada", amarillo: "No se sabe" }[l.luz] + " · " + l.porque;
+    led.setAttribute("aria-label", led.title);
     cab.appendChild(led);
     art.appendChild(cab);
+
+    // Proyecto por defecto del deepagent; la pastilla abre su captura en tiempo real en el equipo elegido.
+    if (fijo && fijo.proyecto) {
+      var pr = el("a", "ag-proy", fijo.proyecto);
+      pr.href = enlaceCaptura(sel, fijo, principal);
+      pr.target = "_blank"; pr.rel = "noopener";
+      pr.title = "Ver en tiempo real la pantalla de " + visible + " en " + sel + " · proyecto " + fijo.url;
+      art.appendChild(pr);
+    }
     if (!t) { art.appendChild(el("p", "ag-tarea nada", "La flota no informa de este agente ahora.")); return art; }
 
     var tarea = String(t.tarea || "").trim();
     art.appendChild(el("p", "ag-tarea" + (tarea ? "" : " nada"), tarea || "Sin tarea declarada"));
-    var proy = (t.foco && t.foco.proyecto) || (t.proyecto && t.proyecto !== "otros" ? t.proyecto : "");
-    if (proy) art.appendChild(el("span", "ag-proy", proy));
-    art.appendChild(el("p", "ag-motivo", mayus(t.motivo)));
+    art.appendChild(el("p", "ag-motivo", mayus(l.porque)));
 
     var dl = el("dl", "ag-datos");
+    dato(dl, "motor", t.modelo || t.motor || "—");
     dato(dl, "encargos", (t.enCurso || 0) + " en curso · " + (t.abiertos || 0) + " abiertos" + (t.bloqueados ? " · " + t.bloqueados + " bloqueados" : ""));
     dato(dl, "tokens", t.sinMedicion ? "sin medición" : miles(t.tokHoy) + " hoy · " + miles(t.tokHora) + "/h");
     dato(dl, "latido", hace(t.haceS));
@@ -251,13 +322,7 @@
     var caja = $("ahora"), nota = $("ahora-nota");
     if (!flota.tarjetas && !flota.error) return;
     caja.textContent = "";
-    GRUPOS.forEach(function (g) {
-      var sec = el("div", "grupo");
-      sec.appendChild(el("h3", "", g.motor));
-      g.agentes.forEach(function (a) { sec.appendChild(fichaAgente(a)); });
-      caja.appendChild(sec);
-    });
-    $("ahora-hora").textContent = flota.generado ? "flota leída a las " + fecha(HORA, flota.generado) : "";
+    FIJOS.forEach(function (f) { caja.appendChild(fichaAgente(f.agente)); });
     // Cabecera (Carlos, 21-11-2026): la hora de lectura de los agentes, a la altura del título.
     // Es el «generado» real de la lectura de la flota; sin dato no se inventa ninguna hora.
     $("lectura-hora").textContent = flota.generado ? "agentes leídos a las " + fecha(HORA, flota.generado)

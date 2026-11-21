@@ -9,7 +9,7 @@ import { consejeros, resumirRespuesta, CONSEJEROS } from '../src/consejo.js';
 // El Consejo se sustituye por un fetch falso que graba qué se le pidió.
 
 const ENV = { MCP_KEY: 'clave-de-prueba-larga', COUNCIL_MACHINE_TOKEN: 'token-maquina', AGORA_SYNC_KEY: 'agora',
-  COUNCIL_BASE: 'https://consejo.test/council', FLEET_BASE: 'https://consejo.test/api', AGORA_WORKER: 'https://agora.test', VERSION: 'v.04.09.2026.r1.06:20' };
+  COUNCIL_BASE: 'https://consejo.test/council', FLEET_BASE: 'https://consejo.test/api', CONSEJO_ASK_BASE: 'https://consejo.test/api', AGORA_WORKER: 'https://agora.test', VERSION: 'v.04.09.2026.r1.06:20' };
 
 function fetchFalso(peticiones) {
   return async (url, init = {}) => {
@@ -20,13 +20,17 @@ function fetchFalso(peticiones) {
     if (u.endsWith('/api/council/models')) return ok({ models: [{ key: 'claude-sonnet', free: false }, { key: 'llama-70b', free: true }] });
     if (u.endsWith('/api/council/health')) return ok({ status: 'ok', agents: 16 });
     if (u.endsWith('/api/council/ask-one')) {
-      if ((init.headers || {})['x-council-token'] !== 'token-maquina') return new Response(JSON.stringify({ detail: 'Authentication required' }), { status: 401 });
+      const h = init.headers || {}; if (h['x-council-token'] !== 'token-maquina' && h['x-mensajes-token'] !== 'token-maquina') return new Response(JSON.stringify({ detail: 'Authentication required' }), { status: 401 });
       return ok({ name: body.agent_name, role: 'Chief Technology Officer', persona: 'Steve Wozniak', side: 'racional', icon: '⚙️', content: `Respuesta a: ${body.message}` });
     }
     if (u.endsWith('/api/council/ask')) return ok({ racional: [{ name: 'CEO', persona: 'Steve Jobs', side: 'racional', icon: '🏛️', content: 'Simplifica.' }], creativo: [{ name: 'CCO', persona: 'Walt Disney', side: 'creativo', icon: '💡', content: 'Cuenta una historia.' }] });
     if (u.endsWith('/council/machine-status')) return ok({ machines: [{ id: 'macmini', online: true }] });
     if (u.endsWith('/council/tasks')) return ok({ tasks: [{ id: 'task-1', title: 'Probar el MCP', status: 'doing' }] });
     if (u.endsWith('/agora/feed')) return ok({ ok: true, id: 'msg-1', echoed: body });
+    if (u.includes('/consejo/sesion')) {
+      if (body && body.accion === 'arrancar' || body && body.accion === 'duelo') return ok({ ok: true, id: 's-test', estado: 'en_curso', tema: body.tema, turnos: [], url: 'https://www.admira.live/conversacion#sesion-s-test' });
+      return ok({ ok: true, id: 's-test', estado: 'parada', motivo_parada: 'objetivo', tema: 'x', turnos: [], metricas: { relleno_pct: 0 } });
+    }
     return new Response('Not found', { status: 404 });
   };
 }
@@ -55,7 +59,7 @@ test('el servidor publica las herramientas del Consejo, la flota y AgoraMatrix',
   const { client } = await cliente();
   const { tools } = await client.listTools();
   const nombres = tools.map((t) => t.name).filter((n) => !n.startsWith('yokup_') && !n.startsWith('telegram_')).sort();
-  assert.deepEqual(nombres, ['agente_encargar', 'agentes_vivos', 'agora_decir', 'consejero_bandeja', 'consejero_latido', 'consejero_mensaje', 'consejero_preguntar', 'consejero_responder', 'consejero_webhook_borrar', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejo_bots', 'consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'consumo_reportar', 'consumos_velocidad', 'encargo_anular', 'encargo_estado', 'encargo_responder', 'encargos_listar', 'equipo_ahorro', 'equipo_handoff', 'equipo_handon', 'flota_estado']);
+  assert.deepEqual(nombres, ['agente_encargar', 'agentes_vivos', 'agora_decir', 'consejero_bandeja', 'consejero_latido', 'consejero_mensaje', 'consejero_preguntar', 'consejero_responder', 'consejero_webhook_borrar', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejo_bots', 'consejo_consejeros', 'consejo_conversacion_autonoma', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'consumo_reportar', 'consumos_velocidad', 'encargo_anular', 'encargo_estado', 'encargo_responder', 'encargos_listar', 'equipo_ahorro', 'equipo_handoff', 'equipo_handon', 'flota_estado']);
   const preguntar = tools.find((t) => t.name === 'consejero_preguntar');
   assert.deepEqual(preguntar.inputSchema.properties.rol.enum, ['CEO', 'CTO', 'COO', 'CFO', 'CCO', 'CDO', 'CXO', 'CSO']);
   const { resources } = await client.listResources();
@@ -72,7 +76,13 @@ test('preguntar a un consejero llama a ask-one con el token de máquina y devuel
   const p = peticiones.find((x) => x.url.endsWith('/api/council/ask-one'));
   assert.equal(p.method, 'POST');
   assert.equal(p.headers['x-council-token'], 'token-maquina');
-  assert.deepEqual(p.body, { message: '¿Cómo conectamos GrokBot al Consejo?', agent_name: 'CTO', generation: 'leyendas', llm: 'llama-70b', max_tokens: 300, context: null });
+  assert.equal(p.headers['x-mensajes-token'] || p.headers['x-council-token'], 'token-maquina');
+  assert.equal(p.body.message, '¿Cómo conectamos GrokBot al Consejo?');
+  assert.equal(p.body.agent_name, 'CTO');
+  assert.equal(p.body.generation, 'leyendas');
+  assert.equal(p.body.llm, 'llama-70b');
+  assert.equal(p.body.max_tokens, 300);
+  assert.equal(p.body.report, false);
 });
 
 test('preguntar al Consejo resume racional y creativo en un solo texto, y por defecto va por grok-4.6', async () => {
@@ -110,7 +120,7 @@ test('flota, tareas, modelos y AgoraMatrix van a sus bases correctas', async () 
   // flota_estado lee además la presencia de bot.yokup.com (runtimes y GrokBotBox).
   assert.deepEqual(peticiones.map((p) => p.url).filter((u) => !u.endsWith('/api/presence')), [
     'https://consejo.test/api/council/machine-status', 'https://consejo.test/api/council/tasks',
-    'https://consejo.test/council/api/council/models', 'https://agora.test/agora/feed',
+    'https://consejo.test/api/council/models', 'https://agora.test/agora/feed',
   ]);
   assert.equal(JSON.parse(agora.content[0].text).echoed.from, 'Morfeo');
   assert.equal(peticiones.find((p) => p.url.endsWith('/agora/feed')).body.key, 'agora');

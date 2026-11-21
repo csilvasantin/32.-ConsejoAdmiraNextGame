@@ -44,7 +44,12 @@ h1{font-size:clamp(26px,6vw,34px);letter-spacing:-.03em;margin:0 0 6px}
 <div class="wrap">
   <p class="back"><a href="/">← Consejo</a></p>
   <h1>Conversación</h1>
-  <p class="lead">Charla de los coetáneos y encargos del equipo. Lo más reciente primero, con el proyecto, la misión o la tarea cuando consta.</p>
+  <p class="lead">Charla de los coetáneos y encargos del equipo. Arriba, las sesiones autónomas Leyendas ↔ Coetáneos (transcript persistente). Lo más reciente primero.</p>
+  <section id="sesiones-autonoma" style="margin:16px 0 22px">
+    <h2 style="font-size:18px;margin:0 0 8px">Sesiones autónomas</h2>
+    <p class="note" id="sesion-note"></p>
+    <div id="sesion-box" class="feed">Cargando sesiones…</div>
+  </section>
   <div id="quien"></div>
   <p class="note" id="note" hidden></p>
   <div class="feed" id="feed" aria-live="polite">Cargando la conversación…</div>
@@ -102,6 +107,38 @@ h1{font-size:clamp(26px,6vw,34px);letter-spacing:-.03em;margin:0 0 6px}
     names.forEach(function (name) { if (name) seen.push(name); });
     QUIEN.setSeen(seen);
   }
+
+  function pintarSesion(d) {
+    if (!d || !d.ok) return '<p class="empty">No hay transcript de esa sesión.</p>';
+    var m = d.metricas || {};
+    var head = '<article class="msg"><header><span class="who">' + esc(d.tema || "Sesión") + '</span><span class="src">' + esc(d.modo || "plenario") + '</span><span class="when">' + esc(d.estado + (d.motivo_parada ? " · " + d.motivo_parada : "")) + "</span></header>";
+    var meta = '<p class="note">Coste ' + esc(String(d.coste_eur || 0)) + ' € · cruce ' + esc(String(m.referencia_cruzada_pct || 0)) + '% · identidad ' + esc(String(m.identidad_pct || 0)) + '% · ES ' + esc(String(m.espanol_pct || 0)) + '% · p95 ' + esc(String(m.latencia_p95_ms || 0)) + " ms · relleno " + esc(String(m.relleno_pct || 0)) + "%</p>";
+    var turns = (d.turnos || []).map(function (x) {
+      return '<article class="msg"><header><span class="who">' + esc(x.persona) + (x.mesa ? ' <span class="to">· ' + esc(x.mesa) + "</span>" : "") + '</span><span class="src">' + esc(x.llm || "") + '</span><span class="when">' + esc(x.ts_madrid || "") + "</span></header><p class=\"text\">" + esc(x.texto || x.error || "") + "</p></article>";
+    }).join("");
+    return head + meta + "</article>" + (turns || "");
+  }
+  function cargarSesiones() {
+    var box = document.getElementById("sesion-box");
+    var note = document.getElementById("sesion-note");
+    var hash = (location.hash || "").replace(/^#/, "");
+    var id = (hash.indexOf("sesion-") === 0 ? hash.slice(7) : new URLSearchParams(location.search).get("sesion")) || "";
+    var url = id ? "/api/consejo/sesion?id=" + encodeURIComponent(id) : "/api/consejo/sesion?limite=5";
+    return fetch(url, { cache: "no-store" }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); }).then(function (pack) {
+      if (pack.r.status === 401) { box.innerHTML = '<p class="empty">Entra con tu sesión de admira.live para ver las sesiones autónomas.</p>'; return; }
+      if (id) { box.innerHTML = pintarSesion(pack.d); return; }
+      var list = (pack.d && pack.d.sesiones) || [];
+      if (!list.length) { box.innerHTML = '<p class="empty">Aún no hay sesiones autónomas.</p>'; return; }
+      box.innerHTML = list.map(function (s) {
+        return '<article class="msg"><header><span class="who"><a href="#sesion-' + esc(s.id) + '">' + esc(s.tema || s.id) + '</a></span><span class="src">' + esc(s.estado || "") + '</span><span class="when">' + esc(String(s.coste_eur || 0)) + " €</span></header></article>";
+      }).join("");
+    }).catch(function () {
+      if (note) note.textContent = "No se han podido leer las sesiones autónomas.";
+      box.innerHTML = '<p class="empty">Sin sesiones por ahora.</p>';
+    });
+  }
+  window.addEventListener("hashchange", cargarSesiones);
+  cargarSesiones();
 
   Promise.all([
     fetch(AGORA, { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("charla"); return r.json(); }).catch(function () { notes.push("La charla de coetáneos no ha respondido."); return { feed: [] }; }),

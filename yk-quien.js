@@ -23,7 +23,7 @@
     { id: "porat", quien: "Porat", label: "Porat", full: "Ruth Porat", grupo: "coetaneos", deepagent: "oraculo" },
     { id: "lasseter", quien: "Lasseter", label: "Lasseter", full: "John Lasseter", grupo: "coetaneos", deepagent: "mouse" },
     { id: "ive", quien: "Ive", label: "Ive", full: "Jony Ive", grupo: "coetaneos", deepagent: "arquitecto" },
-    { id: "ratti", quien: "Ratti", label: "Ratti", full: "Carlos Ratti", grupo: "coetaneos", deepagent: "link" },
+    { id: "ratti", quien: "Ratti", label: "Ratti", full: "Carlo Ratti", grupo: "coetaneos", deepagent: "link" },
     { id: "reynolds", quien: "Reynolds", label: "Reynolds", full: "Ryan Reynolds", grupo: "coetaneos", deepagent: null }
   ];
   var DEEPAGENTS = [

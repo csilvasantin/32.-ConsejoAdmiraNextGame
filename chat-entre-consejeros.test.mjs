@@ -56,3 +56,11 @@ test("la página ya no lee la bandeja en abierto", () => {
   const home = readFileSync(new URL("./council-grokbot.js", import.meta.url), "utf8");
   assert.ok(home.includes("#entre-consejeros"));
 });
+
+test("entre-consejeros incluye Lasseter, Ive, Murati y Reynolds", () => {
+  assert.equal(api.silla("lasseter"), "Lasseter");
+  assert.equal(api.silla("Ive"), "Ive");
+  assert.equal(api.silla("murati"), "Murati");
+  assert.equal(api.silla("Reynolds"), "Reynolds");
+  assert.equal(api.SILLAS.jobs, "Jobs");
+});

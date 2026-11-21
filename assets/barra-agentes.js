@@ -74,7 +74,7 @@
 
   function chip(t) {
     var est = t.estado === "verde" || t.estado === "amarillo" ? t.estado : "gris";
-    var estTxt = est === "verde" ? T("trabajando", "working") : est === "amarillo" ? T("con Carlos", "with Carlos") : T("parado", "idle");
+    var estTxt = est === "verde" ? (t.abiertoApp || t.abiertoDA ? T("abierto", "open") : T("trabajando", "working")) : est === "amarillo" ? T("con Carlos", "with Carlos") : T("parado", "idle");
     var ab = t.abiertos;
     var enc = ab == null ? '<span class="ar-enc cero" title="' + esc(T("Sin datos de la bandeja de encargos", "No task inbox data")) + '">📋–</span>'
       : '<span class="ar-enc' + (ab ? "" : " cero") + '">📋' + ab + "</span>";

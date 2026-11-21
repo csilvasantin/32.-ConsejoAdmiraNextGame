@@ -68,3 +68,17 @@
 /api/chat/turno-voz
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
+
+/consejo-comunicaciones-lib.mjs
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+
+/comunicaciones-page.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/comunicaciones-widget.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/api/consejo/comunicaciones
+  Cache-Control: no-store
+

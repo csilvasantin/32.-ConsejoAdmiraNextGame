@@ -653,7 +653,10 @@
   function pintaSelector(d) {
     if (!DD.proy) return;
     var lista = E.ordenarProyectos((d && d.porProyecto) || []), vistos = {}, opts = [];
-    lista.forEach(function (p) { vistos[p.proyecto] = 1; opts.push(p); });
+    var daC = daCuenta(), daProy = {};
+    // r234: primero los proyectos de los DeepAgents abiertos (los mismos de las pastillas), luego el resto.
+    if (daC) daC.proyectos.forEach(function (p) { daProy[p.k] = p; var f = lista.filter(function (x) { return x.proyecto === p.k; })[0]; vistos[p.k] = 1; opts.push(f || { proyecto: p.k, tokHoy: null, tokHora: null }); });
+    lista.forEach(function (p) { if (vistos[p.proyecto]) return; vistos[p.proyecto] = 1; opts.push(p); });
     GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ proyecto: p, tokHoy: null, tokHora: null }); });
     var el = eleccion(d), elegido = opts.filter(function (o) { return o.proyecto === el.proyecto; })[0];
     var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null, tokHoy: null };
@@ -671,8 +674,11 @@
       var est = o.tokHoy == null ? 'rojo' : E.estadoFila(o.tokHora, o.tokHoy);
       var rf = ritmoFila(o);
       var cifras = o.tokHoy == null ? T('sin datos hoy', 'no data today') : '<b>' + (rf != null ? fmt(rf) : '—') + ' ' + T('tokens/hora', 'tokens/hour') + '</b> · ' + fmt(o.tokHoy) + T(' hoy', ' today') + (o.maquinas && o.maquinas.length ? ' · ' + esc(o.maquinas.join(', ')) : '');
+      var dp = daProy[o.proyecto], nom = dp ? dp.nombre : nomP(o.proyecto);
+      if (dp) est = dp.activo ? 'verde' : 'rojo';
+      var linDP = dp ? '<small class="dd-sub dd-da">DeepAgents: ' + esc(dp.agentes.join(', ')) + ' · ' + (dp.activo ? T('activo', 'active') : T('abierto sin actividad', 'open, idle')) + '</small>' : '';
       items.push({ valor: o.proyecto, estado: est, titulo: esc(txtEstado(est)),
-        html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(nomP(o.proyecto)) + '</span><small>' + cifras + '</small></span>',
+        html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(nom) + '</span><small>' + cifras + '</small>' + linDP + '</span>',
         boton: punto(est) + '<span class="dd-bt">' + esc(nomP(o.proyecto)) + (el.auto ? ' <em class="dd-autotag">auto</em>' : '') + (rf != null ? ' · ' + fmt(rf) + ' ' + T('tokens/hora', 'tokens/hour') : '') + '</span>' });
     });
     DD.proy.pon(items, el.auto ? (elegido ? elegido.proyecto : AUTO) : el.proyecto);
@@ -717,7 +723,7 @@
     var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null };
     var estF = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
-      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + desglose(rT) + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + desglose(rT) + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + (daCuenta() ? (function (c) { return c.agentesTrabajando + ' ' + T('trabajando', 'working') + ' · ' + c.agentesAbiertos + ' ' + T('abiertos de ', 'open of ') + c.total + ' DeepAgents'; })(daCuenta()) : textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length)) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     var unico = agUnico(d);
     // r226: «Automático» (el único activo o el que más gasta) es la 2.ª opción, nunca la de partida.
@@ -725,8 +731,20 @@
       (estado.agente === AUTO && unico ? '<small>' + T('ahora sigue a ', 'now following ') + '<b>' + esc(vis(unico)) + '</b></small>' : '') + '</span>',
       boton: '<i class="dd-punto dd-auto" aria-hidden="true"></i><span class="dd-bt">' + (unico ? esc(vis(unico)) + ' <em class="dd-autotag">auto</em>' : T('Automático', 'Automatic')) + '</span>' });
     if (unico && !ags.some(function (a) { return a.agente === unico; })) ags.push({ agente: unico, tokHora: null, tokHoy: 0, sinDatos: true });
+    var daL = daLista(), daPor = {};
+    if (daL) {
+      daL.forEach(function (x) { daPor[x.visible] = x; if (!ags.some(function (a) { return a.agente === x.visible; })) ags.push({ agente: x.visible, tokHora: null, tokHoy: 0, sinDatos: true }); });
+      ags.sort(function (a, b) { var ia = daL.map(function (x) { return x.visible; }).indexOf(a.agente), ib = daL.map(function (x) { return x.visible; }).indexOf(b.agente); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+    }
     ags.forEach(function (a) {
-      var f = filaAgenteInfo(a, perfilDe(d, a.agente));
+      var f = filaAgenteInfo(a, perfilDe(d, a.agente)), dx = daPor[a.agente];
+      if (dx) { // r234: estado de DeepAgents (punto = actividad) y su línea: abierto/cerrado en su Mac y proyecto.
+        f.est = dx.actividad.luz;
+        var est = { verde: T('abierto', 'open'), rojo: T('cerrado', 'closed'), amarillo: T('¿abierto?', 'open?') }[dx.abierto.estado] + ' ' + T('en ', 'on ') + dx.maquina;
+        var act = { verde: T('trabajando', 'working'), rojo: T('sin hacer nada', 'idle'), amarillo: T('no se sabe', 'unknown') }[dx.actividad.luz];
+        var linDA = '<small class="dd-sub dd-da">DeepAgent · ' + esc(est) + ' · ' + esc(act) + (dx.proyecto ? ' · ' + esc(dx.proyecto.nombre) + (dx.proyecto.defecto ? T(' (por defecto)', ' (default)') : '') : '') + '</small>';
+        f.html = f.html.replace(/^<span class="dd-fila"><span class="dd-tit"><i class="dd-punto dd-[a-z]+"/, '<span class="dd-fila"><span class="dd-tit"><i class="dd-punto dd-' + f.est + '"').replace(/<\/span>$/, linDA + '</span>');
+      }
       // #6991: con un solo agente operativo el botón dice su nombre y máquina («Morfeo · MacMini»), no «Toda la flota».
       var maqU = '';
       items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(vis(a.agente)) + (maqU ? ' · ' + esc(maqU) : '') + '</span>' });
@@ -964,9 +982,21 @@
   function proysPP() { return ((estado.datos && estado.datos.porProyecto) || []).filter(function (p) { return p && p.proyecto && p.proyecto !== 'otros'; }); }
   function nProyTrab() { return proysPP().filter(function (p) { return Number(p.tokHora) > 0; }).length; }
   function nProyHoy() { return proysPP().filter(function (p) { return Number(p.tokHoy) > 0; }).length; }
-  function rotProy() { return T('Proyectos', 'Projects') + ' (' + xy(nProyTrab(), nProyHoy()) + ')'; }
-  function rotAg() { return T('Agentes', 'Agents') + ' (' + xy(nAgTrab(), nAgCon()) + ')'; }
-  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (ev && ev.detail && ev.detail.tarjetas) TRAB = ev.detail; if (!a) return; ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
+  /* r234 (Carlos, 21-11-2026 20:36: «no puede decir 0/1 con Trinity y Neo abiertos»). Los rótulos salen del MISMO
+   * estado que las fichas de /deepagents (/assets/deepagents-estado.js: pulso fresco de cada Mac + actividad):
+   * Agentes (trabajando/abiertos) de los cuatro DeepAgents · Proyectos (activos/total) de los agentes abiertos.
+   * Sin tarjetas de la flota todavía, se queda la cuenta anterior. Los tokens no cambian. */
+  var DAE = root.DeepAgentsEstado || null, DA_ACT = {};
+  function daLista() { return DAE && TRAB && TRAB.tarjetas ? DAE.resumen(TRAB.tarjetas, DA_ACT) : null; }
+  function daCuenta() { var l = daLista(); return l ? DAE.contadores(l) : null; }
+  function rotProy() { var c = daCuenta(); return T('Proyectos', 'Projects') + ' (' + (c ? c.proyectosActivos + '/' + c.proyectosTotal : xy(nProyTrab(), nProyHoy())) + ')'; }
+  function rotAg() { var c = daCuenta(); return T('Agentes', 'Agents') + ' (' + (c ? c.agentesTrabajando + '/' + c.agentesAbiertos : xy(nAgTrab(), nAgCon())) + ')'; }
+  function daRepinta() { rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaSelector(estado.datos); } }
+  if (DAE && DAE.leerActividad) {
+    var daLee = function () { DAE.leerActividad().then(function (a) { if (a) { DA_ACT = a; daRepinta(); } }); };
+    setTimeout(daLee, 500); setInterval(function () { if (!document.hidden) daLee(); }, 60000);
+  }
+  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (ev && ev.detail && ev.detail.tarjetas) TRAB = ev.detail; if (!a) { if (TRAB) daRepinta(); return; } ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
   var H1_ES = null, TIT_ES = null;
   function rotulos() {
     var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');

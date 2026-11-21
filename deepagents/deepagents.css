@@ -103,3 +103,17 @@ a.ag-proy::after{content:" ↗"}
 @media (max-width:480px){.ahora{grid-template-columns:1fr}}
 .enl{color:var(--brand);font:700 12px/1 var(--mono);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
 .enl:hover{text-decoration:underline}
+
+/* r233 · foto = botón de acciones; diálogo cerrar/arrancar app */
+.ag-foto{appearance:none;padding:0;border:0;background:none;border-radius:50%;cursor:pointer;flex:none;min-width:44px;min-height:44px}
+.ag-foto:hover img,.ag-foto:focus-visible img{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand)}
+.ag-foto:focus-visible{outline:none}
+.da-dlg{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-width:420px}
+.da-dlg::backdrop{background:rgba(0,0,0,.6)}
+.da-dlg h3{margin:0 0 8px}.da-dlg p{margin:6px 0}.nota-dlg{color:var(--mut);font-size:13px}
+.dlg-botones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.dlg-b,.dlg-x{min-height:44px;border-radius:10px;padding:8px 12px;font:600 14px var(--sans);cursor:pointer;border:1px solid var(--line);background:var(--card2);color:var(--ink)}
+.dlg-b.cerrar{border-color:var(--bad);color:var(--bad)}.dlg-b.abrir{border-color:var(--good);color:var(--good)}
+.dlg-b:disabled{opacity:.5;cursor:default}
+.dlg-salida{font:12px/1.4 var(--mono);color:var(--mut);white-space:pre-wrap}
+.acciones .accion{margin:0 0 4px;font:12px/1.4 var(--mono);color:var(--mut)}.acciones .accion.mal{color:var(--bad)}

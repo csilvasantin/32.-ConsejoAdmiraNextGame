@@ -357,7 +357,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <div class="vel-par">
       <div class="vel-g" id="vel-g-total">
         <h3><span id="vel-ag-titulo">Agentes (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-ag-dd"></span><span class="vel-sep" aria-hidden="true"> · </span><a class="vel-hist" href="/historico?tipo=agente" title="Qué hizo cada agente: hoy, ayer, semana y mes">Histórico</a></h3>
-        <p class="vel-xy-nota" id="vel-ag-nota" data-en="working in the last 15 min / connected to the fleet">trabajando en los últimos 15 min / conectados a la flota</p>
+        <p class="vel-xy-nota" id="vel-ag-nota" data-en="DeepAgents working / open (each Mac's pulse)">DeepAgents trabajando / abiertos (pulso de cada Mac)</p>
         <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Tokens acumulados hoy (Madrid)"></div><p class="odo-rotulo" id="vel-ag-rotulo">tokens hoy</p></div>
         <div class="vel-lectura"><span class="vel-cifra" id="vel-cifra">…</span><span class="vel-unidad" id="vel-unidad">tokens/hora</span><p class="vel-que"></p><p class="vel-extra" id="vel-ag-metodo"></p><p class="vel-extra vel-ag-lineas" id="vel-ag-lineas"></p></div>
       </div>
@@ -544,7 +544,8 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-matriz.js?v=20261021-r46-jensen"></script>
 <script src="/assets/consumos-trabajando.js?v=20261121-r227-apps"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
-<script src="/assets/consumos-velocimetro.js?v=20261121-r228-odometro-vivo"></script>
+<script src="/assets/deepagents-estado.js?v=20261121-r1"></script>
+<script src="/assets/consumos-velocimetro.js?v=20261121-r234-deepagents"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=20261010-r25"></script>
 <script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>

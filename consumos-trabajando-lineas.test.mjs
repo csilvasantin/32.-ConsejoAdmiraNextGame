@@ -9,7 +9,8 @@ test("Trabajando ahora: cabecera por grupo y una fila por agente/consejero (colu
   assert.match(html, /\.tr-chipgrupo \.tr-chipa\{display:flex;width:100%/);
 });
 test("Proyectos (x/y): x = tokens últimos 15 min, y = con consumo hoy", () => {
-  assert.match(js, /function rotProy\(\) \{ return T\('Proyectos', 'Projects'\) \+ ' \(' \+ xy\(nProyTrab\(\), nProyHoy\(\)\)/);
+  // r234 (Carlos 21-11-2026 20:36): primero el estado de DeepAgents (activos/total); sin flota, la cuenta de tokens de antes.
+  assert.match(js, /function rotProy\(\) \{ var c = daCuenta\(\); return T\('Proyectos', 'Projects'\) \+ ' \(' \+ \(c \? c\.proyectosActivos \+ '\/' \+ c\.proyectosTotal : xy\(nProyTrab\(\), nProyHoy\(\)\)\)/);
   assert.match(html, /Proyectos \(0\/0\)/);
 });
 
@@ -49,5 +50,5 @@ test("Rótulos de reloj «(x/y)» enteros en móvil: sin partir el contador y de
 test("ventana 21:20 · el «·» del rótulo se oculta en móvil y «Agentes (x/y)» lleva su nota corta", () => {
   assert.match(html, /@media \(max-width:560px\)\{\.vel-g h3 \.vel-sep\{display:none\}\}/);
   assert.doesNotMatch(html, /<\/span> · <span class="vel-sel"/);
-  assert.match(html, /id="vel-ag-nota"[^>]*>trabajando en los últimos 15 min \/ conectados a la flota<\/p>/);
+  assert.match(html, /id="vel-ag-nota"[^>]*>DeepAgents trabajando \/ abiertos \(pulso de cada Mac\)<\/p>/);
 });

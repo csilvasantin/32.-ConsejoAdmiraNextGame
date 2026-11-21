@@ -57,6 +57,6 @@ test("el velocímetro ya no escribe «Este agente no aparece…: sin cifra» ni 
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
   assert.ok(!/sin cifra\.'/.test(js));
   assert.ok(!/no se enseña ninguna cifra/i.test(js));
-  assert.ok(/E\.respaldo\(/.test(js) && /resp\('ag:'/.test(js) && /resp\('p:'/.test(js) && /function ritmoTotal\(d, sin\)/.test(js));
+  assert.ok(/E\.respaldo\(/.test(js) && /resp\('ag:'/.test(js) && /resp\('p:'/.test(js) && /function ritmoTotal\(d, sin, conConsejeros\)/.test(js));
   assert.ok(!/plausible: plausibleDe/.test(js), "ningún dial pide ya una cifra plausible");
 });

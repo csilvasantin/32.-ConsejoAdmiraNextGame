@@ -34,7 +34,7 @@
   function escala(pico, minimo) {
     var bruto = Math.max(minimo, 1.5 * (Number(pico) || 0));
     var mag = Math.pow(10, Math.floor(Math.log10(bruto)));
-    var ms = [1, 2, 2.5, 5, 10];
+    var ms = [1, 2, 2.5, 3, 4, 5, 10]; // r229: 3 M y 4 M para que los dos relojes del total quepan sin saltar a 5 M
     for (var i = 0; i < ms.length; i++) if (ms[i] * mag >= bruto) return ms[i] * mag;
     return 10 * mag;
   }
@@ -267,11 +267,18 @@
     return new Date(t).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
   }
   /** 21-11 (Carlos): qué es la cifra grande, según de dónde sale. Nunca «0» si no se ha medido. */
-  function txtRitmo(fuente, iso) {
+  /** r229: «4 agentes abiertos × 250 k + 3 GrokBot abiertos × 250 k + medido 268 k (consejeros 0)». */
+  function txtSuelo(su) {
+    var t = su.nAgentes + ' ' + T(su.nAgentes === 1 ? 'agente abierto' : 'agentes abiertos', su.nAgentes === 1 ? 'open agent' : 'open agents') + ' × 250 k';
+    if (su.conConsejeros) t += ' + ' + su.nGrokBot + ' GrokBot ' + T(su.nGrokBot === 1 ? 'abierto' : 'abiertos', 'open') + ' × 250 k' + (su.grokbots && su.grokbots.length ? ' (' + su.grokbots.map(function (g) { return g.maquina; }).join(', ') + ')' : '');
+    t += ' + ' + T('medido ', 'measured ') + fmt(su.medidoAgentes + su.medidoConsejeros) + ' ' + T('tokens/hora', 'tokens/hour');
+    if (su.conConsejeros) t += ' (' + T('consejeros ', 'councillors ') + fmt(su.medidoConsejeros) + ')';
+    return t;
+  }
+  function txtRitmo(fuente, iso, su) {
     var h = horaMadrid(iso);
     if (fuente === 'hora') return T('ritmo de la última hora con datos', 'rate of the last hour with data') + (h ? ' · ' + T('último uso ', 'last use ') + h : '');
-    if (fuente === 'suelo' && SUELO) return T('incluye mínimo de 100 k/h por app abierta', 'includes a 100 k/h minimum per open app') + ' (' + txtApps(SUELO) + ') · ' + T('medido: ', 'measured: ') +
-      (SUELO.medido == null ? T('sin dato en vivo', 'no live data') : fmt(SUELO.medido) + ' ' + T('tokens/hora', 'tokens/hour'));
+    if (fuente === 'suelo' && su) return txtSuelo(su);
     if (fuente === '15+cursor') return T('suma de la flota: últimos 15 min + última ventana de Cursor (con retraso)', 'fleet sum: last 15 min + last Cursor window (delayed)');
     if (fuente === 'hora+cursor') return T('suma de la flota: última hora con datos', 'fleet sum: last hour with data') + (h ? ' (' + T('último uso ', 'last use ') + h + ')' : '') + T(' + última ventana de Cursor (con retraso)', ' + last Cursor window (delayed)');
     if (fuente === 'cursor') return T('ritmo de la última ventana publicada (Cursor, con retraso)', 'rate of the last published window (Cursor, delayed)');
@@ -289,30 +296,43 @@
    *  (15 min; si es 0, la última hora con datos de los agentes en vivo) + la última ventana publicada de Cursor de los que
    *  llegan con retraso (Grok Bot (Consejo)), que la velocidad en vivo no incluye (r39) → no se cuenta dos veces.
    *  Sin nada medido: «sin dato en vivo» si hay trabajo, 0 si no. */
-  var TRAB = null, SUELO = null;
+  var TRAB = null;
   /** r227: «12 apps: MacStudio 4 · MacMini 5 · MacBookPro16 3». */
   function txtApps(su) {
     if (!su) return '';
     var det = Object.keys(su.porMaquina || {}).map(function (m) { return m + ' ' + su.porMaquina[m]; }).join(' · ');
     return su.n + ' ' + T(su.n === 1 ? 'app' : 'apps', su.n === 1 ? 'app' : 'apps') + (det ? ': ' + det : '');
   }
-  function ritmoTotal(d, sin) {
-    if (sin || !d) return { tokHora: null, tokHoy: null, fuente: 'sinvivo', ultimoEvento: null, estimado: false };
-    var vivos = (d.porAgente || []).filter(function (a) { return a && !a.conRetraso; });
-    var v15 = Number(d.tokHora) > 0 ? Number(d.tokHora) : 0;
+  /** Medido honesto (reglas r226) de un grupo de filas: en vivo (15 min; si 0, última hora con datos) + ventana de Cursor. */
+  function medidoDe(filas) {
+    var vivos = filas.filter(function (a) { return a && !a.conRetraso; });
+    var v15 = vivos.reduce(function (s, a) { return s + (Number(a.tokHora) > 0 && !a.stale ? Number(a.tokHora) : 0); }, 0);
     var vH = vivos.reduce(function (s, a) { return s + (Number(a.tokUltimaHora) > 0 ? Number(a.tokUltimaHora) : 0); }, 0);
-    var cur = cursorFlota(d) || 0;
-    var vivo = v15 > 0 ? v15 : vH, total = vivo + cur, fuente;
-    if (total > 0) fuente = v15 > 0 ? (cur ? '15+cursor' : null) : vH > 0 ? (cur ? 'hora+cursor' : 'hora') : 'cursor';
+    var cur = filas.reduce(function (s, a) { var v = tasaVista(a); return s + (v > 0 ? v : 0); }, 0);
+    var vivo = v15 > 0 ? v15 : vH, total = vivo + cur;
+    var fuente = total > 0 ? (v15 > 0 ? (cur ? '15+cursor' : null) : vH > 0 ? (cur ? 'hora+cursor' : 'hora') : 'cursor') : null;
+    return { total: total, fuente: fuente, vivos: vivos };
+  }
+  /** r229 (Carlos, 21-11 20:50): los dos relojes ya no marcan lo mismo.
+   *  · Reloj 1 «Toda la flota» (agentes): 250 k/h por agente abierto + consumo medido de los agentes.
+   *  · Reloj 2 «Todos los proyectos»: lo del reloj 1 + 250 k/h por GrokBot abierto + consumo medido de los consejeros
+   *    (motor Cloudflare). La diferencia viva entre los dos = consejeros (sus apps GrokBot y si se están ejecutando).
+   *  Suelos con señal real (E.suelos); sin datos de flota aún, solo lo medido. El odómetro de hoy parte del real. */
+  function ritmoTotal(d, sin, conConsejeros) {
+    if (sin || !d) return { tokHora: null, tokHoy: null, fuente: 'sinvivo', ultimoEvento: null, estimado: false };
+    var filas = d.porAgente || [];
+    var mA = medidoDe(filas.filter(function (a) { return !E.esFilaConsejeros(a); }));
+    var mC = conConsejeros ? medidoDe(filas.filter(E.esFilaConsejeros)) : { total: 0, fuente: null, vivos: [] };
+    var su = TRAB ? E.suelos(TRAB, DAE) : null;
+    var sA = su ? su.sueloAgentes : 0, sG = su && conConsejeros ? su.sueloGrokBot : 0;
+    var medido = mA.total + mC.total, total = sA + sG + medido, fuente;
+    if (sA + sG > 0) fuente = 'suelo';
+    else if (medido > 0) fuente = mA.fuente || mC.fuente;
     else { total = hayVerdes() ? null : 0; fuente = total == null ? 'sinvivo' : null; }
-    // r227 (decisión de Carlos): mínimo de 100 k tokens/hora por app abierta de agentes y consejeros (señal real de
-    // /api/flota/trabajando; pilares MacStudio y MacMini con sus 4 apps de base mientras estén en línea).
-    // Cifra = max(medido, mínimo). El odómetro (tokens hoy) sigue siendo el real.
-    var apps = TRAB ? E.appsAbiertas(TRAB) : null, medido = total, fuenteMedida = fuente;
-    if (apps && apps.suelo > 0 && !(total >= apps.suelo)) { total = apps.suelo; fuente = 'suelo'; }
-    SUELO = apps ? { n: apps.n, porMaquina: apps.porMaquina, suelo: apps.suelo, medido: medido, fuenteMedida: fuenteMedida, manda: fuente === 'suelo' } : null;
+    var desg = su ? { conConsejeros: !!conConsejeros, nAgentes: su.nAgentes, agentes: su.agentes, sueloAgentes: sA, nGrokBot: conConsejeros ? su.nGrokBot : 0,
+      grokbots: conConsejeros ? su.grokbots : [], sueloGrokBot: sG, medidoAgentes: mA.total, medidoConsejeros: mC.total } : null;
     return { tokHora: total == null ? null : Math.round(total), tokHoy: d.tokHoy != null ? Math.round(Number(d.tokHoy)) : null, fuente: fuente,
-      ultimoEvento: ultimoUso(vivos), estimado: false, vivo: vivo, cursor: cur, medido: medido, apps: apps };
+      ultimoEvento: ultimoUso(mA.vivos.concat(mC.vivos)), estimado: false, medido: medido, suelo: desg };
   }
   /** Ritmo honesto de una fila (agente o proyecto) para listas y desplegables: el mismo criterio que los diales. */
   function ritmoFila(o) {
@@ -476,7 +496,7 @@
     odometro(b.querySelector('.odo'), tokHoy, v, this.pfx + ':' + (this.clave || ''), this.periodo);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
-    if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '') +
+    if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento, this.suelo)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '') +
       ' · ' + T('refresco cada ', 'refresh every ') + Math.round(POLL / 1000) + ' s';
   };
   root.ConsumosVelocimetroAguja = { amplitud: amplitud, temblor: temblor, odoSiguiente: odoSiguiente, POLL_MS: POLL };
@@ -659,7 +679,7 @@
     lista.forEach(function (p) { if (vistos[p.proyecto]) return; vistos[p.proyecto] = 1; opts.push(p); });
     GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ proyecto: p, tokHoy: null, tokHora: null }); });
     var el = eleccion(d), elegido = opts.filter(function (o) { return o.proyecto === el.proyecto; })[0];
-    var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null, tokHoy: null };
+    var rT = d ? ritmoTotal(d, !!d.sinDatos, true) : { tokHora: null, tokHoy: null };
     var estT = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
     var nConHoy = lista.filter(function (p) { return p.tokHoy > 0; }).length;
     var cifT = (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + desglose(rT) + '<b>';
@@ -720,7 +740,7 @@
     var ags = E.agentesConConocidos((d && d.porAgente) || [], (d && d.conocidos) || []);
     if (estado.agente && estado.agente !== AUTO && !ags.some(function (a) { return a.agente === estado.agente; })) ags.push({ agente: estado.agente, tokHora: null, tokHoy: 0, sinDatos: true });
     var activos = ACT ? ACT.nAgentes : nAgActivos(d), conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
-    var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null };
+    var rT = d ? ritmoTotal(d, !!d.sinDatos, false) : { tokHora: null };
     var estF = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
       html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + desglose(rT) + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + (daCuenta() ? (function (c) { return c.agentesTrabajando + ' ' + T('trabajando', 'working') + ' · ' + c.agentesAbiertos + ' ' + T('abiertos de ', 'open of ') + c.total + ' DeepAgents'; })(daCuenta()) : textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length)) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
@@ -785,9 +805,11 @@
     estado.d1.periodo = per;
     if (!r.agente) {
       // r226: total de toda la flota (agentes + consejeros: Grok Bot (Consejo), Consejeros (Cloudflare)…), escala que lo abarca.
-      var rF = ritmoTotal(d, sin);
+      var rF = ritmoTotal(d, sin, false);
+      estado.d1.suelo = rF.suelo;
       estado.d1.clave = 'flota';
-      max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, rF.tokHora);
+      // r229: la misma escala en los dos relojes del total (la del mayor, el de proyectos) para que se vea la diferencia.
+      max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, Math.max(rF.tokHora || 0, ritmoTotal(d, false, true).tokHora || 0));
       var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
       estado.d1.ultimoEvento = rF.ultimoEvento;
       estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
@@ -866,12 +888,14 @@
 
   /** r227: desglose medido del total para los desplegables: « (mínimo 12 apps × 100 k · medido 0)». */
   function desglose(rT) {
-    if (!rT || rT.fuente !== 'suelo' || !rT.apps) return '';
-    return ' (' + T('mínimo ', 'minimum ') + rT.apps.n + ' apps × 100 k · ' + T('medido ', 'measured ') + (rT.medido == null ? '—' : fmt(rT.medido)) + ')';
+    var su = rT && rT.suelo;
+    if (!su || rT.fuente !== 'suelo') return '';
+    return ' (' + su.nAgentes + ' ' + T('agentes', 'agents') + ' × 250 k' + (su.conConsejeros ? ' + ' + su.nGrokBot + ' GrokBot × 250 k' : '') + ' + ' + T('medido ', 'measured ') + fmt(su.medidoAgentes + su.medidoConsejeros) + ')';
   }
   /** r226: dial de PROYECTOS en «Todos los proyectos» = suma de todos (mismo total y mismas reglas que «Toda la flota»). */
   function pintaTodos(d, sin, lista) {
-    var rT = ritmoTotal(d || {}, sin);
+    var rT = ritmoTotal(d || {}, sin, true);
+    estado.d2.suelo = rT.suelo;
     estado.d2.ultimoEvento = rT.ultimoEvento; estado.d2.clave = 'todos';
     estado.d2.fresco = usoFresco(sin ? [] : (d && d.porAgente) || [], Date.now());
     estado.d2.pinta(rT.tokHora, sin ? 2e6 : escalaTotal(d, rT.tokHora), rT.tokHoy, false, sin ? rT.tokHoy : tokHoyVivo(d), rT.fuente);
@@ -928,7 +952,7 @@
     box.classList.toggle('rt', !sin && d.metodo === 'tiempo real');
     pintaSelectorAgente(d);
     pintaIzquierdo(d, sin);
-    var max = sin ? 2e6 : escalaTotal(d, ritmoTotal(d, false).tokHora); // r226: la escala que se dice = la del dial del total
+    var max = sin ? 2e6 : escalaTotal(d, ritmoTotal(d, false, true).tokHora); // r226: la escala que se dice = la del dial del total
     pintaSelector(d);
     pintaProyecto(d, sin);
     var tpr = document.getElementById('vel-proy-titulo'); if (tpr) tpr.textContent = rotProy();

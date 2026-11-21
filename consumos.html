@@ -20,8 +20,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 .lead,.resumen li,.nombre,.cuenta,.frase,.unidad,.detalle li,.cuando,.pie{overflow-wrap:break-word}
 .top{min-width:0}
 .top > div{min-width:0}
-nav{display:flex;flex-wrap:wrap;gap:14px;padding:4px 0 18px}
-nav a{color:var(--brand);text-decoration:none;font-size:15px}
+/* Solo el índice de la página: sin «.wrap >» esta regla partía en dos líneas el menú del marco (.yk-nav). */
+.wrap > nav{display:flex;flex-wrap:wrap;gap:14px;padding:4px 0 18px}
+.wrap > nav a{color:var(--brand);text-decoration:none;font-size:15px}
 h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0 0 8px}
 .lead{color:var(--mut);font-size:17px;line-height:1.45;margin-bottom:18px}
 .resumen{background:#14080c;border:1px solid rgba(255,90,90,.45);border-radius:16px;padding:16px 16px 8px;margin-bottom:18px}
@@ -340,7 +341,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
   .ducati-ref{margin:-.4em 0 1em;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;opacity:.65}
 </style>
 </head>
-<body>
+<body data-yk-title="CONSUMO" data-yk-zone="app">
 <div class="wrap">
   <nav>
     <a href="/">Inicio</a>

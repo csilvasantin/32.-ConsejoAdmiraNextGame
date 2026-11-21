@@ -140,3 +140,19 @@ test("página: lo primero es AHORA, con los cuatro deepagents principales por mo
   assert.ok(js.includes('{ motor: "Codex", agentes: ["Trinity", "Oraculo"] }'));
   assert.ok(js.includes("Sin tarea declarada"));
 });
+
+test("menú: DeepAgents y Consumo llevan el menú de la plataforma, y la sección se llama DeepAgents", () => {
+  const lee = (f) => readFileSync(new URL(f, import.meta.url), "utf8");
+  for (const f of ["./deepagents/index.html", "./comunicaciones.html", "./consumos.html", "./consumos-proyectos.html"]) {
+    const h = lee(f);
+    assert.ok(/<body[^>]*data-yk-zone="app"/.test(h), f + " sin zona app");
+    assert.ok(h.includes("/yk-frame.js"), f + " sin marco");
+  }
+  const marco = lee("./yk-frame.js");
+  assert.ok(marco.includes('["CONSUMO",     "/consumos"]') && marco.includes('["DEEPAGENTS",  "/deepagents"]'));
+  assert.ok(lee("./admira-bar.js").includes("https://www.admira.live/deepagents"));
+  const home = lee("./index.html");
+  assert.ok(!home.includes("💬 Comunicaciones"));
+  assert.equal((home.match(/🤖 DeepAgents<\/a>/g) || []).length, 2);
+  assert.ok(lee("./deepagents/index.html").includes("<h1>DeepAgents</h1>"));
+});

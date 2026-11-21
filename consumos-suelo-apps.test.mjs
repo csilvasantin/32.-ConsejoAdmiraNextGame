@@ -40,17 +40,47 @@ test("pilares apagados (sin ninguna señal) no cuentan: 0 de verdad", () => {
   assert.equal(E.appsAbiertas(null).n, 0);
 });
 
-test("dial del total: cifra = max(medido, mínimo); el odómetro sigue con tokHoy real; etiqueta honesta", () => {
+// r229 (Carlos, 21-11 20:50): 250 k por agente abierto (reloj 1) y además 250 k por GrokBot abierto (reloj 2), + medido.
+test("relojes del total: reloj 1 = agentes × 250 k + medido de agentes; reloj 2 = + GrokBot × 250 k + medido de consejeros", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
-  assert.match(js, /if \(apps && apps\.suelo > 0 && !\(total >= apps\.suelo\)\) \{ total = apps\.suelo; fuente = 'suelo'; \}/);
+  assert.match(js, /var medido = mA\.total \+ mC\.total, total = sA \+ sG \+ medido, fuente;/);
+  assert.match(js, /var sA = su \? su\.sueloAgentes : 0, sG = su && conConsejeros \? su\.sueloGrokBot : 0;/);
+  assert.match(js, /var rF = ritmoTotal\(d, sin, false\);/);
+  assert.match(js, /var rT = ritmoTotal\(d \|\| \{\}, sin, true\);/);
   assert.match(js, /tokHoy: d\.tokHoy != null \? Math\.round\(Number\(d\.tokHoy\)\) : null, fuente: fuente/);
-  assert.match(js, /incluye mínimo de 100 k\/h por app abierta/);
   assert.match(js, /if \(ev && ev\.detail && ev\.detail\.tarjetas\) TRAB = ev\.detail;/);
+});
+
+test("suelos: 4 DeepAgents abiertos (deepagents-estado) y GrokBot por Mac y cuenta con fuente «app»; sin señal no cuenta", () => {
+  const c = {}; vm.createContext(c);
+  vm.runInContext(readFileSync(new URL("./assets/consumos-velocimetro-elegir.js", import.meta.url), "utf8"), c);
+  vm.runInContext(readFileSync(new URL("./assets/deepagents-estado.js", import.meta.url), "utf8"), c);
+  const app = (maquina, a) => ({ tipo: "app", maquina, app: a, fuente: "pulso" });
+  const trab = {
+    tarjetas: [
+      { agente: "Trinity", grupo: "agentes", superficies: [app("MacStudio", "Codex")] },
+      { agente: "Neo", grupo: "agentes", superficies: [app("MacStudio", "Claude")] },
+      { agente: "Oráculo", grupo: "agentes", superficies: [app("MacMini", "Codex")] },
+      { agente: "Morfeo", grupo: "agentes", superficies: [app("MacMini", "Claude")] },
+      { agente: "Smith", grupo: "agentes", superficies: [{ tipo: "cli", maquina: "MacMini", sesion: "smith", fuente: "pulso" }] },
+      { agente: "Jobs", grupo: "consejeros", superficies: [app("MacStudio", "GrokBot")] },
+    ],
+    appsGrokBot: [{ maquina: "MacStudio", cuenta: "a@b.com", fuente: "app" }, { maquina: "MacMini", cuenta: "a@b.com", fuente: "app" }, { maquina: "MacBookPro16", cuenta: null, fuente: "desconocida" }],
+  };
+  for (const dae of [c.DeepAgentsEstado, null]) {
+    const s = c.ConsumosElegir.suelos(trab, dae);
+    assert.equal(s.nAgentes, 4); assert.equal(s.sueloAgentes, 1e6);
+    assert.equal(s.nGrokBot, 2); assert.equal(s.sueloGrokBot, 5e5);
+  }
+  const nada = c.ConsumosElegir.suelos({ tarjetas: [], appsGrokBot: [] }, null);
+  assert.equal(nada.sueloAgentes + nada.sueloGrokBot, 0);
+  assert.equal(c.ConsumosElegir.esFilaConsejeros({ agente: "Consejeros (Cloudflare)" }), true);
+  assert.equal(c.ConsumosElegir.esFilaConsejeros({ agente: "Grok Bot (Consejo)" }), false);
 });
 
 test("Trabajando ahora: «parados (N con app abierta)», sin contar como trabajando", () => {
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
   assert.match(js, /con app abierta/);
   assert.match(js, /cifras\(g\.n, g\.tarjetas\)/);
-  assert.match(js, /app abierta · en espera/);
+  assert.match(js, /app abierta · 250k\/h/); assert.match(js, /txtAb \+ T\(. · en espera./);
 });

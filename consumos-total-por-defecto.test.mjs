@@ -25,8 +25,8 @@ test("«Toda la flota» es la 1.ª del de agentes; «Automático» es opción ap
 });
 
 test("el total usa la cadena honesta de r225 (15 min → última hora → Cursor → sin dato en vivo) y una escala que lo abarca", () => {
-  assert.match(js, /function ritmoTotal\(d, sin\)/);
-  assert.match(js, /var vivo = v15 > 0 \? v15 : vH, total = vivo \+ cur, fuente;/, "en vivo (15 min → última hora) + ventana de Cursor");
+  assert.match(js, /function ritmoTotal\(d, sin, conConsejeros\)/);
+  assert.match(js, /var vivo = v15 > 0 \? v15 : vH, total = vivo \+ cur;/, "en vivo (15 min → última hora) + ventana de Cursor");
   assert.match(js, /total = hayVerdes\(\) \? null : 0; fuente = total == null \? 'sinvivo' : null;/, "sin nada medido: «sin dato en vivo» o 0");
   assert.match(js, /if \(nombre === TODOS\) return pintaTodos\(d, sin, lista\);/);
   assert.match(js, /function escalaTotal\(d, v\)/);

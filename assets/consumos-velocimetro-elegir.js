@@ -170,9 +170,43 @@
     Object.keys(out).forEach(function (m) { n += out[m]; });
     return { n: n, suelo: n * SUELO_POR_APP, porMaquina: out, detectadas: detectadas, base: base };
   }
+  /** r229 (Carlos, 21-11 20:50: «le vamos a sumar 250.000 tokens por cada GrokBot Abierto … y en los agentes del primer
+   *  reloj cada agente también vale 250.000 tokens … la diferencia será si hay consejeros o no ejecutandose»).
+   *  Agentes abiertos: los DeepAgents con su app abierta en su Mac según assets/deepagents-estado.js (la MISMA fuente que
+   *  «Agentes (trabajando/abiertos)»: pulso fresco del Mac o latido vivo de la app), si está cargado; si no, cada ficha de
+   *  agente con una app Claude o Codex abierta con señal fresca. GrokBot abiertos: appsGrokBot de /api/flota/trabajando con
+   *  fuente «app» (proceso de la app GrokBot visto por el pulso del Mac), uno por Mac y cuenta; sin esa lista, la app
+   *  GrokBot de las fichas de consejero. Nada sin señal real.
+   *  → { agentes: [nombres], nAgentes, sueloAgentes, grokbots: [{maquina, cuenta}], nGrokBot, sueloGrokBot } */
+  var SUELO_AGENTE = 250000, SUELO_GROKBOT = 250000;
+  function suelos(trab, dae) {
+    var ag = [], gb = [], vistos = {};
+    var ts = (trab && trab.tarjetas) || [];
+    if (dae && dae.resumen && dae.contadores && ts.length) {
+      dae.resumen(ts, null).forEach(function (a) { if (a && a.abierto && a.abierto.estado === 'verde') ag.push(a.visible || a.agente); });
+    } else {
+      ts.forEach(function (t) {
+        if (!t || t.grupo === 'consejeros' || t.consejero) return;
+        var ok = (t.superficies || []).some(function (x) { return superficieViva(x) && x.tipo === 'app' && /^(claude|codex)$/i.test(String(x.app || '')); });
+        if (ok) ag.push(t.agente);
+      });
+    }
+    var apuntaGB = function (maq, cuenta) { var k = claveMaq(maq) + '|' + String(cuenta || ''); if (!claveMaq(maq) || vistos[k]) return; vistos[k] = 1; gb.push({ maquina: nombreMaq(claveMaq(maq), maq), cuenta: cuenta || null }); };
+    var lista = trab && trab.appsGrokBot;
+    if (Array.isArray(lista) && lista.length) lista.forEach(function (a) { if (a && a.maquina && a.fuente === 'app') apuntaGB(a.maquina, a.cuenta); });
+    else ts.forEach(function (t) {
+      if (!t || !(t.grupo === 'consejeros' || t.consejero)) return;
+      (t.superficies || []).forEach(function (x) { if (superficieViva(x) && x.tipo === 'app' && /^grokbot$/i.test(String(x.app || ''))) apuntaGB(x.maquina, null); });
+    });
+    var vistosMaq = {};
+    gb = gb.filter(function (g) { if (g.cuenta) return true; if (vistosMaq[g.maquina]) return false; vistosMaq[g.maquina] = 1; return true; });
+    return { agentes: ag, nAgentes: ag.length, sueloAgentes: ag.length * SUELO_AGENTE, grokbots: gb, nGrokBot: gb.length, sueloGrokBot: gb.length * SUELO_GROKBOT };
+  }
+  /** r229: fila de consumo de los consejeros (motor Cloudflare) frente a la de un agente. */
+  function esFilaConsejeros(a) { return !!a && /^consejeros\b/i.test(String(a.agente || '')); }
   /** r227: ¿la ficha tiene una app o sesión abierta (señal fresca) aunque esté parada? (para «abierta», distinto de parado) */
   function conAppAbierta(t) { return ((t && t.superficies) || []).some(superficieViva); }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos, filaDe: filaDe, actividad: actividad, respaldo: respaldo, lineasRespaldo: lineasRespaldo, appsAbiertas: appsAbiertas, conAppAbierta: conAppAbierta, SUELO_POR_APP: SUELO_POR_APP };
+  var api = { agenteUnicoActivo: agenteUnicoActivo, proyectoUnicoActivo: proyectoUnicoActivo, proyectosActivos: proyectosActivos, proyectoRotando: proyectoRotando, ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos, filaDe: filaDe, actividad: actividad, respaldo: respaldo, lineasRespaldo: lineasRespaldo, appsAbiertas: appsAbiertas, conAppAbierta: conAppAbierta, suelos: suelos, esFilaConsejeros: esFilaConsejeros, SUELO_AGENTE: SUELO_AGENTE, SUELO_GROKBOT: SUELO_GROKBOT, SUELO_POR_APP: SUELO_POR_APP };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

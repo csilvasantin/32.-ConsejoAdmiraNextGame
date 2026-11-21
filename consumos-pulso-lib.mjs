@@ -32,6 +32,9 @@ export const KEY_INDICE = "consumos:pulso:v1:_maquinas";
 export const RETENCION_MS = 26 * 3600 * 1000;
 export const MIN_ESCRITURA_MS = 50 * 1000;
 export const STALE_MS = 3 * 60 * 1000;
+/** r225: un agente que solo pulsa cuando gasta (consejeros del motor Cloudflare, porEventos) no está «parado» por no pulsar
+ *  cada minuto: su silencio es 0 tokens medidos. Pasa a parado tras 1 h sin pulso. */
+export const STALE_EVENTOS_MS = 60 * 60 * 1000;
 export const VENTANA_MS = 15 * 60 * 1000;
 const M = 60000;
 const MOTORES = new Set(["claude", "codex", "cursor", "grok"]);
@@ -79,6 +82,7 @@ export function normalizarPulso(body) {
     if (a.fuente) extra.fuente = texto(a.fuente, 30);
     if (Array.isArray(a.cubre)) extra.cubre = a.cubre.slice(0, 12).map((x) => texto(x, 40)).filter(Boolean);
     if (a.nota) extra.nota = texto(a.nota, 240);
+    if (a.porEventos === true) extra.porEventos = true;
     if (motor === "cursor" && Array.isArray(a.serie)) {
       const sr = normalizarSerie(a.serie);
       if (!sr) return { ok: false, error: "serie: lista de [tsSeg, tokHoy, cacheHoy, {proyecto: tok}?] creciente en el tiempo (≤ 400 puntos)" };
@@ -268,7 +272,7 @@ export function aplicarPulso(doc, pulso, ahora) {
     const ultimaActividad = ultimaActividadDe(prev, a, ahora);
     d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, ultimaActividad, porProyecto: a.porProyecto || null,
       conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlosDesde || null,
-      ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}), ...(a.serie ? { serieEventos: true } : {}) };
+      ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}), ...(a.serie ? { serieEventos: true } : {}), ...(a.porEventos ? { porEventos: true } : {}) };
   }
   if (pulso.grokbotApp) d.grokbotApp = { ...pulso.grokbotApp, ts: ahora };
   if (pulso.superficies) d.superficies = { lista: pulso.superficies, ts: ahora };
@@ -437,7 +441,7 @@ export function medirAgente(a, ahora) {
       ...tasaCursor(a, ahora, !stale && serie.length >= 2 && ahora - v.hasta <= RETRASO_RECIENTE_MS ? tok60 : null),
     };
   }
-  const stale = !a.ultimoPulso || ahora - a.ultimoPulso > STALE_MS;
+  const stale = !a.ultimoPulso || ahora - a.ultimoPulso > (a.porEventos ? STALE_EVENTOS_MS : STALE_MS);
   const primero = serie.length ? serie[0][0] * 1000 : ahora;
   const cubierto = Math.min(VENTANA_MS, ahora - primero); // si el agente acaba de empezar, la ventana real es menor
   const tok5 = tokensEnVentana(serie, ahora - 5 * M, ahora);

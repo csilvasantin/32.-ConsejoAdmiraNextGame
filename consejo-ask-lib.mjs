@@ -3,6 +3,7 @@
  * No pasa por el Mac Mini. Usa secrets del entorno (XAI_API_KEY, etc.).
  * Nunca envía informes a Telegram (report queda ignorado y no se implementa).
  */
+import { registrarConsumoConsejo } from './consejo-consumo-lib.mjs';
 import { CONSEJEROS, fichaDe, listarConsejeros, personaCanonica, ROLES, GENERACIONES } from './consejo-sillas-lib.mjs';
 
 export { CONSEJEROS, fichaDe, listarConsejeros, ROLES, GENERACIONES };
@@ -236,6 +237,8 @@ export async function preguntarConsejero(env, { rol, mensaje, generacion = 'leye
   const text = limpiarTexto(out.text);
   if (!text) throw Object.assign(new Error('respuesta vacía'), { code: 'vacio' });
   const coste = costeEur(out.input_tokens, out.output_tokens, cfg);
+  // r225 (21-11): los tokens reales del API cuentan en /consumos (máquina «Cloudflare»). Nunca rompe la respuesta.
+  await registrarConsumoConsejo(env, { input_tokens: out.input_tokens, output_tokens: out.output_tokens, llm: elegido.key });
   return {
     name: ficha.rol,
     role: ficha.cargo,

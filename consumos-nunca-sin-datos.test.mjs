@@ -17,19 +17,34 @@ test("alias: «Merovingio» (flota/trabajando) encuentra la fila «Grok Bot (Con
   assert.equal(E.actividad(pa[0]), 0);
 });
 
-test("respaldo: nunca null; real sin etiqueta, todo lo demás etiquetado «estimado»", () => {
-  const real = E.respaldo({ tokHora: 1200, tokHoy: 5000, horasDia: 10 });
-  assert.deepEqual([real.tokHora, real.tokHoy, real.estimado], [1200, 5000, false]);
-  const cur = E.respaldo({ tokHora: null, cursor: 2e6, tokHoy: 9e6, horasDia: 17 });
-  assert.equal(cur.fuente, "cursor"); assert.equal(cur.tokHora, 2e6); assert.equal(cur.estimado, true);
-  const media = E.respaldo({ tokHora: null, cursor: null, tokHoy: 1000, horasDia: 10 });
-  assert.equal(media.fuente, "media"); assert.equal(media.tokHora, 100);
-  const ult = E.respaldo({ tokHora: null, tokHoy: null, horasDia: 10, ultimo: { tokHora: 777, tokHoy: 4000 } });
-  assert.equal(ult.fuente, "ultimo"); assert.equal(ult.tokHora, 777); assert.equal(ult.tokHoy, 4000);
+// 21-11-2026 (Carlos: «como me puedes decir 0 Tokens por hora !! y estan las agujas moviendose, y los consejeros y los
+// agentes trabajando»): sustituye a «nunca sin datos» — ritmo REAL, sin media/último/plausible inventados.
+test("respaldo: ritmo real → última hora con datos → Cursor → «sin dato en vivo» (null) → 0 medido", () => {
+  const real = E.respaldo({ tokHora: 1200, ultimaHora: 9000, tokHoy: 5000 });
+  assert.deepEqual([real.tokHora, real.tokHoy, real.estimado, real.fuente], [1200, 5000, false, null]);
+  const hora = E.respaldo({ tokHora: 0, ultimaHora: 165937, tokHoy: 3266177, trabajando: true, ultimoEvento: "2026-11-21T17:07:37Z" });
+  assert.deepEqual([hora.tokHora, hora.fuente, hora.ultimoEvento], [165937, "hora", "2026-11-21T17:07:37Z"]);
+  const cur = E.respaldo({ tokHora: null, cursor: 2e6, tokHoy: 9e6 });
+  assert.equal(cur.fuente, "cursor"); assert.equal(cur.tokHora, 2e6);
+  const sinVivo = E.respaldo({ tokHora: 0, ultimaHora: 0, tokHoy: 1000, trabajando: true });
+  assert.equal(sinVivo.tokHora, null, "hay trabajo y ningún token medido: nunca un 0 falso");
+  assert.equal(sinVivo.fuente, "sinvivo");
+  const parado = E.respaldo({ tokHora: 0, ultimaHora: 0, tokHoy: 1000, trabajando: false });
+  assert.deepEqual([parado.tokHora, parado.fuente], [0, null]);
   const nada = E.respaldo({});
-  assert.equal(nada.fuente, "plausible"); assert.ok(nada.tokHora > 0); assert.ok(nada.tokHoy > 0, "odómetro no en ceros con estimado");
-  const parte = E.respaldo({ tokHora: null, tokHoy: 0, horasDia: 4, plausible: 300000 });
-  assert.equal(parte.tokHora, 300000); assert.ok(parte.tokHoy > 0);
+  assert.equal(nada.tokHora, null); assert.equal(nada.fuente, "sinvivo");
+  assert.equal(E.respaldo({ tokHora: null, tokHoy: 0, plausible: 300000 }).tokHora, null, "ya no hay «plausible»");
+});
+
+test("aguja = cifra: sin ralentí, sin cambios de marcha, sin vibración", () => {
+  const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
+  assert.match(js, /function amplitud\(\) \{ return 0; \}/);
+  assert.ok(!/if \(f < this\.ralenti\) f = this\.ralenti/.test(js), "sin suelo de ralentí");
+  assert.ok(!/^\s*programaMarcha\(\);/m.test(js), "los cambios de marcha no se programan");
+  assert.match(js, /var vibra = false;/);
+  assert.match(js, /sin dato en vivo/);
+  assert.match(js, /ritmo de la última hora con datos/);
+  assert.ok(!/T\('sin datos', 'no data'\)/.test(js));
 });
 
 test("líneas de código: con tokens y 0 líneas → estimadas; con líneas reales, reales", () => {
@@ -44,4 +59,5 @@ test("el velocímetro ya no escribe «Este agente no aparece…: sin cifra» ni 
   assert.ok(!/sin cifra\.'/.test(js));
   assert.ok(!/no se enseña ninguna cifra/i.test(js));
   assert.ok(/E\.respaldo\(/.test(js) && /resp\('ag:'/.test(js) && /resp\('p:'/.test(js) && /resp\('flota'/.test(js));
+  assert.ok(!/plausible: plausibleDe/.test(js), "ningún dial pide ya una cifra plausible");
 });

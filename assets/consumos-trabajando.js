@@ -148,8 +148,19 @@
    *  que el reloj «Agentes (x/y)»: «con Carlos» no cuenta como trabajando), y = total del grupo en el panel. Puro. */
   function xyGrupo(n) { var t = (n && n.total) || 0, x = Math.min((n && n.trabajando) || 0, t); return x + '/' + t; }
   function rotGrupo(g) { return g.titulo + ' (' + xyGrupo(g.n) + ')'; }
-  function cifras(n) {
-    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle');
+  /** r227 (Carlos): una ficha parada pero con su app de escritorio o sesión CLI abierta (señal fresca: pulso < 3 min o
+   *  latido < 15 min) no es lo mismo que apagada. Sigue sin contar como «trabajando» (no gasta tokens), pero se dice. */
+  function conAppAbierta(t) {
+    return ((t && t.superficies) || []).some(function (x) {
+      if (!x || !x.maquina || (x.fuente !== 'pulso' && x.fuente !== 'latido')) return false;
+      return x.tipo === 'app' || (x.tipo === 'cli' && Object.prototype.hasOwnProperty.call(x, 'sesion'));
+    });
+  }
+  function nAbiertas(ts) { return (ts || []).filter(function (t) { return t.estado !== 'verde' && t.estado !== 'amarillo' && conAppAbierta(t); }).length; }
+  function cifras(n, ts) {
+    var ab = ts ? nAbiertas(ts) : 0;
+    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle') +
+      (ab ? ' (<b class="tr-abiertas">' + ab + '</b> ' + T('con app abierta', 'with app open') + ')' : '');
   }
   /** r11: «MBA16 · +C» ↔ «Claude» (o «OpenCode · Nemotron 3 Ultra»); si falta un lado, se repite el otro. */
   /** r26: foco de la ficha: «admira.live · Morfeo» (consejero: proyecto principal · deepagent; agente: proyecto actual). */
@@ -220,7 +231,8 @@
     function chip(t) {
       var gris = t.estado === 'gris', rojo = t.estado === 'rojo';
       var est = gris ? T('en espera', 'idle') : rojo ? T('sin actividad > 1 h (activo hoy)', 'inactive > 1 h (active today)') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
-      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc(hace(t.haceS) || T('hoy', 'today')) + '</small>' : '') + '</span>';
+      var abierta = (gris || rojo) && conAppAbierta(t);
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + (gris ? ' <small class="tr-espera">' + esc(abierta ? T('app abierta · en espera', 'app open · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? T('app abierta · ', 'app open · ') : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
     }
     return vivos.map(chip).join('') + rojos.map(chip).join('') + grises.map(chip).join('');
   }
@@ -232,13 +244,13 @@
     var gs = grupos(ts);
     // r43: una cabecera por grupo (ocupa toda la fila de la rejilla) con sus cuentas, y debajo sus tarjetas.
     ul.innerHTML = gs.map(function (g) {
-      return '<li class="tr-grupo" id="trabajando-' + g.id + '"><b>' + esc(rotGrupo(g)) + '</b> <small>' + cifras(g.n) + '</small></li>' +
+      return '<li class="tr-grupo" id="trabajando-' + g.id + '"><b>' + esc(rotGrupo(g)) + '</b> <small>' + cifras(g.n, g.tarjetas) + '</small></li>' +
         (g.tarjetas.length ? g.tarjetas.map(tarjeta).join('') : '<li class="tr-vacio">' + T('Nadie en este grupo ahora.', 'Nobody in this group right now.') + '</li>');
     }).join('');
     // r31/r43: fila compacta (zona plegada), también por grupo.
     var ch = document.getElementById('trabajando-chips');
     ponFase(ch); ponFase(ul); if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(rotGrupo(g)) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
-    if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n) + '</span>'; }).join(' — ') + aviso(d);
+    if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n, g.tarjetas) + '</span>'; }).join(' — ') + aviso(d);
     if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
       T('verde = en un agente, SOLO si gasta tokens de verdad (tokens en los últimos 15 min o en la última hora) o su app de escritorio está en uso (proceso vivo o encargos abiertos no bastan); en un consejero, tokens, latido «trabajando», CPU del proceso, latido con encargo en curso o su consejero_latido «trabajando» vigente · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · rojo = sin actividad desde hace más de 1 h, pero activo hoy (Madrid) · gris = sin actividad hoy · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
         'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · red = no activity for over 1 h, but active today (Madrid) · grey = no activity today · councillors = the 16 of the Council (legends and contemporaries) · Terminal (CLI) = the agent\'s working channel; only Carlos uses the desktop app («Desktop app · Carlos» when he is using it; «App open, not in use», dimmed, never counts as work) · sources: ') +

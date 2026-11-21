@@ -250,6 +250,8 @@
   function txtRitmo(fuente, iso) {
     var h = horaMadrid(iso);
     if (fuente === 'hora') return T('ritmo de la última hora con datos', 'rate of the last hour with data') + (h ? ' · ' + T('último uso ', 'last use ') + h : '');
+    if (fuente === 'suelo' && SUELO) return T('incluye mínimo de 100 k/h por app abierta', 'includes a 100 k/h minimum per open app') + ' (' + txtApps(SUELO) + ') · ' + T('medido: ', 'measured: ') +
+      (SUELO.medido == null ? T('sin dato en vivo', 'no live data') : fmt(SUELO.medido) + ' ' + T('tokens/hora', 'tokens/hour'));
     if (fuente === '15+cursor') return T('suma de la flota: últimos 15 min + última ventana de Cursor (con retraso)', 'fleet sum: last 15 min + last Cursor window (delayed)');
     if (fuente === 'hora+cursor') return T('suma de la flota: última hora con datos', 'fleet sum: last hour with data') + (h ? ' (' + T('último uso ', 'last use ') + h + ')' : '') + T(' + última ventana de Cursor (con retraso)', ' + last Cursor window (delayed)');
     if (fuente === 'cursor') return T('ritmo de la última ventana publicada (Cursor, con retraso)', 'rate of the last published window (Cursor, delayed)');
@@ -267,6 +269,13 @@
    *  (15 min; si es 0, la última hora con datos de los agentes en vivo) + la última ventana publicada de Cursor de los que
    *  llegan con retraso (Grok Bot (Consejo)), que la velocidad en vivo no incluye (r39) → no se cuenta dos veces.
    *  Sin nada medido: «sin dato en vivo» si hay trabajo, 0 si no. */
+  var TRAB = null, SUELO = null;
+  /** r227: «12 apps: MacStudio 4 · MacMini 5 · MacBookPro16 3». */
+  function txtApps(su) {
+    if (!su) return '';
+    var det = Object.keys(su.porMaquina || {}).map(function (m) { return m + ' ' + su.porMaquina[m]; }).join(' · ');
+    return su.n + ' ' + T(su.n === 1 ? 'app' : 'apps', su.n === 1 ? 'app' : 'apps') + (det ? ': ' + det : '');
+  }
   function ritmoTotal(d, sin) {
     if (sin || !d) return { tokHora: null, tokHoy: null, fuente: 'sinvivo', ultimoEvento: null, estimado: false };
     var vivos = (d.porAgente || []).filter(function (a) { return a && !a.conRetraso; });
@@ -276,8 +285,14 @@
     var vivo = v15 > 0 ? v15 : vH, total = vivo + cur, fuente;
     if (total > 0) fuente = v15 > 0 ? (cur ? '15+cursor' : null) : vH > 0 ? (cur ? 'hora+cursor' : 'hora') : 'cursor';
     else { total = hayVerdes() ? null : 0; fuente = total == null ? 'sinvivo' : null; }
+    // r227 (decisión de Carlos): mínimo de 100 k tokens/hora por app abierta de agentes y consejeros (señal real de
+    // /api/flota/trabajando; pilares MacStudio y MacMini con sus 4 apps de base mientras estén en línea).
+    // Cifra = max(medido, mínimo). El odómetro (tokens hoy) sigue siendo el real.
+    var apps = TRAB ? E.appsAbiertas(TRAB) : null, medido = total, fuenteMedida = fuente;
+    if (apps && apps.suelo > 0 && !(total >= apps.suelo)) { total = apps.suelo; fuente = 'suelo'; }
+    SUELO = apps ? { n: apps.n, porMaquina: apps.porMaquina, suelo: apps.suelo, medido: medido, fuenteMedida: fuenteMedida, manda: fuente === 'suelo' } : null;
     return { tokHora: total == null ? null : Math.round(total), tokHoy: d.tokHoy != null ? Math.round(Number(d.tokHoy)) : null, fuente: fuente,
-      ultimoEvento: ultimoUso(vivos), estimado: false, vivo: vivo, cursor: cur };
+      ultimoEvento: ultimoUso(vivos), estimado: false, vivo: vivo, cursor: cur, medido: medido, apps: apps };
   }
   /** Ritmo honesto de una fila (agente o proyecto) para listas y desplegables: el mismo criterio que los diales. */
   function ritmoFila(o) {
@@ -606,7 +621,7 @@
     var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null, tokHoy: null };
     var estT = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
     var nConHoy = lista.filter(function (p) { return p.tokHoy > 0; }).length;
-    var cifT = (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data'));
+    var cifT = (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + desglose(rT) + '<b>';
     // r226: «Todos los proyectos» (la suma) es la 1.ª opción y la de partida; «Automático» queda 2.ª.
     var items = [{ valor: TODOS, estado: estT,
       html: '<span class="dd-fila"><span class="dd-tit">' + punto(estT) + T('Todos los proyectos', 'All projects') + '</span><small><b>' + cifT + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + nConHoy + T(' proyectos con tokens hoy', ' projects with tokens today') + '</small></span>',
@@ -664,7 +679,7 @@
     var rT = d ? ritmoTotal(d, !!d.sinDatos) : { tokHora: null };
     var estF = d && d.tokHoy != null ? E.estadoFila(rT.tokHora, d.tokHoy) : 'rojo';
     var items = [{ valor: '', estado: estF,
-      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (rT.tokHora != null ? fmt(rT.tokHora) + ' ' + T('tokens/hora', 'tokens/hour') : T('sin dato en vivo', 'no live data')) + '</b>' + desglose(rT) + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + textoCuenta(nAgTrab(), nAgCon(), ACT && ACT.total != null ? ACT.total : ags.length) + (!ACT && conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
       boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
     var unico = agUnico(d);
     // r226: «Automático» (el único activo o el que más gasta) es la 2.ª opción, nunca la de partida.
@@ -792,6 +807,11 @@
         (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
   }
 
+  /** r227: desglose medido del total para los desplegables: « (mínimo 12 apps × 100 k · medido 0)». */
+  function desglose(rT) {
+    if (!rT || rT.fuente !== 'suelo' || !rT.apps) return '';
+    return ' (' + T('mínimo ', 'minimum ') + rT.apps.n + ' apps × 100 k · ' + T('medido ', 'measured ') + (rT.medido == null ? '—' : fmt(rT.medido)) + ')';
+  }
   /** r226: dial de PROYECTOS en «Todos los proyectos» = suma de todos (mismo total y mismas reglas que «Toda la flota»). */
   function pintaTodos(d, sin, lista) {
     var rT = ritmoTotal(d || {}, sin);
@@ -907,7 +927,7 @@
   function nProyHoy() { return proysPP().filter(function (p) { return Number(p.tokHoy) > 0; }).length; }
   function rotProy() { return T('Proyectos', 'Projects') + ' (' + xy(nProyTrab(), nProyHoy()) + ')'; }
   function rotAg() { return T('Agentes', 'Agents') + ' (' + xy(nAgTrab(), nAgCon()) + ')'; }
-  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (!a) return; ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
+  try { root.addEventListener('flota:trabajando', function (ev) { var a = ev && ev.detail && ev.detail.activos; if (ev && ev.detail && ev.detail.tarjetas) TRAB = ev.detail; if (!a) return; ACT = a; rotulos(); if (estado.datos) { pintaSelectorAgente(estado.datos); pintaIzquierdo(estado.datos, !!estado.datos.sinDatos); pintaSelector(estado.datos); pintaProyecto(estado.datos, !!estado.datos.sinDatos); } }); } catch (e) {}
   var H1_ES = null, TIT_ES = null;
   function rotulos() {
     var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');

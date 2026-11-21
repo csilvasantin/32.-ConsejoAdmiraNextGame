@@ -172,14 +172,15 @@ test('el intérprete de la home despacha /idioma en local, antes que /help y sin
 
 // ── La barra común, traducida igual en la home y en las subpáginas ──
 test('barra de subpáginas: todo enlace y grupo lleva su inglés', () => {
-  for (const block of [between(BAR, 'var MENU = [', '\n  ];'), between(BAR, 'var ADV = [', '\n  ];')]) {
+  // Barra única (21-11-2026): fila plana TOP + desplegable OPCIONES (izquierda) + ADV.
+  for (const block of [between(BAR, 'var TOP = [', '\n  ];'), between(BAR, 'var OPCIONES = [', '\n  ];'), between(BAR, 'var ADV = [', '\n  ];')]) {
     const items = [...block.matchAll(/\{ t: "([^"]+)",\s*en: "([^"]+)"/g)];
     const all = [...block.matchAll(/\{ t: "/g)];
     assert.equal(items.length, all.length, 'hay rótulos sin en:');
   }
-  assert.match(BAR, /\{ t: "Avanzado ▾", en: "Advanced ▾", items: ADV \}/);
+  assert.match(BAR, /btn\.setAttribute\("data-en-title", "Options"\)/);
   assert.match(BAR, /\(i\.en \? ' data-en="' \+ i\.en \+ '"' : ""\)/);
-  for (const t of ['Avanzado · panel izquierdo', 'Opciones · panel derecho', 'Menú avanzado y consola · abajo'])
+  for (const t of ['Avanzado · panel derecho', 'Menú avanzado y consola · abajo'])
     assert.match(BAR, new RegExp('title: "' + t + '", en: "'));
 });
 

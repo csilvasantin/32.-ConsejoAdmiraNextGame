@@ -222,27 +222,33 @@
   // EQUIPO y STATUS salieron del menú superior (Carlos, 2026-07-23): son
   // navegación de gestión, no del flujo de trabajo → viven ahora en el raíl
   // OPCIONES (ver buildRailFoot), encima de «Panel de control».
+  // BARRA ÚNICA (Carlos, 21-11-2026: «la barra superior igual en TODAS las páginas de
+  // admira.live»): mismas pestañas, mismo orden y mismos rótulos que la home (index.html
+  // .top-bar) y que las subpáginas (admira-bar.js TOP). DeepAgents va justo ANTES de Consumo
+  // con su contador como insignia. Lo que no cabe en la fila (Incidencias, Supervisor,
+  // Informes, Notificaciones, Comunicaciones) sigue a un clic en el raíl OPCIONES (icono a la
+  // izquierda del todo) — ver APP_NAV_OPCIONES. barra-unica.test.mjs vigila que no diverjan.
+  // [clave, ruta, rótulo, rótulo en inglés]
   var APP_NAV = [
-    ["DASHBOARD",   "/dashboard"],
-    ["OBJETIVOS",   "/objetivos"],
-    ["DECISIONES",  "/decisiones"],
-    ["MISIONES",    "/misiones"],
-    ["TAREAS",      "/tareas"],
-    ["INCIDENCIAS", "/incidencias"],
-    ["SUPERVISOR",  "/supervisor"],
-    ["INFORMES",    "/informes-flota"],
-    // FLT-1020: un diálogo del sistema en cualquier equipo lo deja PARADO. Va en la
-    // barra para que se vea desde cualquier página, no sólo si entras a buscarlo.
-    ["NOTIFICACIONES", "/notificaciones"],
-    // FLT-1321 (Carlos, 2026-08-08): el Highscore es la foto de cómo va la flota y
-    // sólo se alcanzaba desde el raíl AVANZADO, que hay que abrir para verlo. A la
-    // derecha de NOTIFICACIONES y en todas las páginas de la plataforma.
-    ["HIGHSCORE",   "/highscore"],
-    // Carlos, 21-11-2026: Consumo y DeepAgents son secciones de admira.live y perdían el menú
-    // (caían al de la home pública). Van en el menú único, como las demás.
-    ["CONSUMO",     "/consumos"],
-    ["DEEPAGENTS",  "/deepagents"],
-    ["COMUNICACIONES", "/comunicaciones"]
+    ["DASHBOARD",    "/dashboard",     "📊 Dashboard",    "📊 Dashboard"],
+    ["OBJETIVOS",    "/objetivos",     "🎯 Objetivos",    "🎯 Goals"],
+    ["DECISIONES",   "/decisiones",    "⚖️ Decisiones",   "⚖️ Decisions"],
+    ["MISIONES",     "/misiones",      "🚀 Misiones",     "🚀 Missions"],
+    ["TAREAS",       "/tareas",        "✅ Tareas",       "✅ Tasks"],
+    ["HIGHSCORE",    "/highscore",     "🏆 Highscore",    "🏆 Highscore"],
+    ["ASIGNACIONES", "/asignaciones",  "🧩 Asignaciones", "🧩 Assignments"],
+    ["DEEPAGENTS",   "/deepagents",    "🤖 DeepAgents",   "🤖 DeepAgents"],
+    ["CONSUMO",      "/consumos",      "💸 Consumo",      "💸 Usage"]
+  ];
+  // Fuera de la fila, dentro del raíl OPCIONES (siempre visible al abrirlo).
+  // FLT-1020/FLT-1321 pedían NOTIFICACIONES e INFORMES a la vista: siguen en el raíl con su
+  // contador, y el aviso de diálogo parado del sistema no depende de la barra.
+  var APP_NAV_OPCIONES = [
+    ["INCIDENCIAS",    "/incidencias",    "🚨 Incidencias",    "🚨 Incidents"],
+    ["SUPERVISOR",     "/supervisor",     "🛰️ Supervisor",     "🛰️ Supervisor"],
+    ["INFORMES",       "/informes-flota", "📑 Informes",       "📑 Reports"],
+    ["NOTIFICACIONES", "/notificaciones", "🔔 Notificaciones", "🔔 Notifications"],
+    ["COMUNICACIONES", "/comunicaciones", "💬 Comunicaciones", "💬 Communications"]
   ];
 
   // Secciones con CONTADOR real «curso/pend» en la barra (Carlos, 2026-07-23):
@@ -829,14 +835,20 @@
   // menú de la barra: zona app (body[data-yk-zone="app"]) → APP_NAV único con
   // activo por pathname; si no, por página (body[data-yk-nav], JSON o lista
   // «Label:href|…»); sin nada, el menú global de la home.
+  function usaBarraUnica() {
+    return document.body.getAttribute("data-yk-zone") === "app" || !document.body.getAttribute("data-yk-nav");
+  }
   function pageNav() {
-    if (document.body.getAttribute("data-yk-zone") === "app") {
+    // Barra única (21-11-2026): en admira.live toda página con marco lleva APP_NAV, salvo
+    // que declare un menú propio (data-yk-nav). El NAV de abajo es el de la landing de yokup.
+    if (usaBarraUnica()) {
       /* Las vistas detalle declaran su sección padre; el menú sigue saliendo de
          APP_NAV y no necesitan copiarlo ni falsificar enlaces propios. */
       var parentPath = document.body.getAttribute("data-yk-parent");
       var path = (parentPath || location.pathname.replace(/\/+$/, "") || "/").toLowerCase();
       return APP_NAV.map(function (r) {
-        return { label: r[0], href: r[1], active: (path === r[1] || path === r[1] + ".html") };
+        return { label: r[0], href: r[1], text: r[2], en: r[3],
+                 active: (path === r[1] || path === r[1] + ".html" || path === r[1] + "/index.html") };
       });
     }
     var raw = document.body.getAttribute("data-yk-nav");
@@ -1872,6 +1884,13 @@
   function build() {
     if (document.getElementById("yk-frame")) return;
     document.documentElement.classList.add("yk-framed"); // aplica padding-top al body
+    // Barra única de admira.live: la fuente pixel de la home (Press Start 2P).
+    if (!document.querySelector('link[href*="Press+Start+2P"]')) {
+      var pf = document.createElement("link");
+      pf.rel = "stylesheet";
+      pf.href = "https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap";
+      document.head.appendChild(pf);
+    }
 
     var root = el("div", "yk-frame");
     root.id = "yk-frame";
@@ -1881,7 +1900,8 @@
     bar.setAttribute("role", "banner");
 
     // [icono OPCIONES] al extremo izquierdo
-    var icoL = icon("yk-ico yk-ico-left", "left", "▤", "Opciones");
+    // Mismo dibujo de panel que la home y admira-bar.js (barra única, 21-11-2026).
+    var icoL = icon("yk-ico yk-ico-left", "left", '<svg class="yk-pf-svg" viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>', "Opciones");
 
     // logotipo YO KUP (→ /)
     // El logo es el de Admira pixelado estilo retro (Carlos, 17-09-2026), el mismo
@@ -1901,14 +1921,16 @@
     // menú (p.ej. /ticket → «TICKET») el rótulo sigue mostrándose.
     var pt = pageTitle();
     var page = el("span", "yk-page", pt);
-    if (!pt || (activeLbl && pt === activeLbl)) page.style.display = "none";
+    if (!pt || (activeLbl && pt === activeLbl) || usaBarraUnica()) page.style.display = "none";
 
     // menú de la barra: por página (body[data-yk-nav]) o el global por defecto
     var nav = el("nav", "yk-nav");
     nav.setAttribute("aria-label", "Secciones de Yokup");
     navItems.forEach(function (it) {
-      var a = el("a", it.active ? "on" : null, it.label);
+      var a = el("a", it.active ? "on" : null, it.text || it.label);
       a.href = it.href || "#";
+      if (it.en) a.setAttribute("data-en", it.en);
+      if (it.label === "DEEPAGENTS") a.id = "badge-comunicaciones";
       if (it.active) a.setAttribute("aria-current", "page");
       if (it.panel) {
         // MISIONES/TAREAS: abre/enfoca el raíl izquierdo/derecho en vez de navegar
@@ -1931,9 +1953,9 @@
     // (el reloj de la barra se retiró — canon 2026-07-13, Carlos)
 
     // [icono AVANZADO] [icono EXPERTO] al extremo derecho
-    var icoR = icon("yk-ico yk-ico-adv", "right", "◨", "Avanzado");
+    var icoR = icon("yk-ico yk-ico-adv", "right", '<svg class="yk-pf-svg" viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>', "Avanzado");
     var langBtn = buildLangButton();
-    var icoB = icon("yk-ico yk-ico-exp", "bottom", "&gt;_", "Experto");
+    var icoB = icon("yk-ico yk-ico-exp", "bottom", '<svg class="yk-pf-svg" viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/></svg>', "Experto");
 
     bar.appendChild(icoL);
     bar.appendChild(logo);
@@ -1943,6 +1965,7 @@
     bar.appendChild(icoR);
     bar.appendChild(langBtn);
     bar.appendChild(icoB);
+    setTimeout(loadDeepAgentsCounter, 0);
 
     // ------------------------- PANELES (raíles) ----------------------------
     // Rótulos por página: <body data-yk-rail-left="…" data-yk-rail-right="…">.
@@ -1962,6 +1985,7 @@
     // incidencias, que además rotulan el cajón MISIONES—, las secciones van
     // DETRÁS: medido a 320px, el bloque empujaba los filtros 387px hacia abajo y
     // obligaba a desplazar el cajón entero para llegar a ellos.
+    if (usaBarraUnica()) railL.appendChild(buildOpcionesNav());
     var hasOwnPanel = !!document.querySelector('[data-yk-slot="left"]');
     var railNav = buildRailNav(navItems);
     if (!hasOwnPanel) railL.appendChild(railNav);
@@ -2761,12 +2785,43 @@
   // barra, misma fuente única (pageNav), mismo activo. Filas de 44px, activo
   // marcado con aria-current, y al navegar el cajón se deja CERRADO para no
   // aterrizar en la página siguiente con el panel tapando el contenido.
+  // Raíl OPCIONES de la zona app: las secciones que no caben en la barra única.
+  function buildOpcionesNav() {
+    var nav = el("nav", "yk-adv-nav yk-op-nav");
+    nav.setAttribute("aria-label", "Más secciones");
+    var path = (location.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+    APP_NAV_OPCIONES.forEach(function (r) {
+      var on = path === r[1] || path === r[1] + ".html";
+      var a = el("a", "yk-set-btn yk-adv-link" + (on ? " on" : ""), r[2]);
+      a.href = r[1];
+      a.setAttribute("data-en", r[3]);
+      if (on) a.setAttribute("aria-current", "page");
+      var c = counterSpan(r[0], "yk-rail-navc");
+      if (c) a.appendChild(c);
+      nav.appendChild(a);
+    });
+    return nav;
+  }
+
+  // Contador de DeepAgents: /comunicaciones-widget.js pinta la insignia en #badge-comunicaciones.
+  function loadDeepAgentsCounter() {
+    if (!document.getElementById("badge-comunicaciones")) return;
+    if (document.querySelector('script[src*="comunicaciones-widget.js"]')) {
+      if (window.AdmiraDeepAgentsContador) window.AdmiraDeepAgentsContador();
+      return;
+    }
+    var s = document.createElement("script");
+    s.src = "/comunicaciones-widget.js?v=" + encodeURIComponent(VERSION);
+    s.defer = true;
+    document.head.appendChild(s);
+  }
+
   function buildRailNav(items) {
     var nav = el("nav", "yk-rail-nav");
     nav.setAttribute("aria-label", "Secciones de Yokup");
     nav.appendChild(el("div", "yk-rail-navhd", "SECCIONES"));
     items.forEach(function (it) {
-      var a = el("a", "yk-rail-navlink" + (it.active ? " on" : ""), it.label);
+      var a = el("a", "yk-rail-navlink" + (it.active ? " on" : ""), it.text || it.label);
       a.href = it.href || "#";
       if (it.active) a.setAttribute("aria-current", "page");
       if (it.panel) {

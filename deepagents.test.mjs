@@ -149,7 +149,9 @@ test("menú: DeepAgents y Consumo llevan el menú de la plataforma, y la secció
     assert.ok(h.includes("/yk-frame.js"), f + " sin marco");
   }
   const marco = lee("./yk-frame.js");
-  assert.ok(marco.includes('["CONSUMO",     "/consumos"]') && marco.includes('["DEEPAGENTS",  "/deepagents"]'));
+  // Barra única (21-11-2026): DeepAgents va justo ANTES de Consumo.
+  const iDA = marco.search(/\["DEEPAGENTS",\s+"\/deepagents"/), iCO = marco.search(/\["CONSUMO",\s+"\/consumos"/);
+  assert.ok(iDA > 0 && iCO > iDA, "DeepAgents antes de Consumo en APP_NAV");
   assert.ok(lee("./admira-bar.js").includes("https://www.admira.live/deepagents"));
   const home = lee("./index.html");
   assert.ok(!home.includes("💬 Comunicaciones"));

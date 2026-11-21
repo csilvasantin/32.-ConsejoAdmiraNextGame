@@ -33,28 +33,32 @@
   // Versión interna (solo console, ya no se pinta en el menú superior — Carlos 2026-07-13).
   var VERSION = "v.2026.09.27.r39";
 
-  // Nav de FLUJO DE TRABAJO, junto a la marca (Carlos, 18-09-2026): las secciones del
-  // trabajo diario van primero y en el MISMO orden que la barra de plataforma (yk-frame),
-  // para que las dos superficies no divergan. Rutas limpias (todas 200 en producción).
-  // Cuadratura #4494: menú fijo horizontal; cada grupo se abre en vertical.
-  // STATUS sigue fuera de la barra (Carlos, 11-08-2026): vive en /status con su propio cuadro.
-  // en: rótulo en inglés (/idioma ENG). Mismos textos que la barra de la home (index.html).
-  var MENU = [
-    { t: "Flujo ▾", en: "Flow ▾", items: [
-      { t: "📊 Dashboard",   en: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
-      { t: "🎯 Objetivos",   en: "🎯 Goals",       h: "https://www.admira.live/objetivos" },
-      { t: "⚖️ Decisiones",  en: "⚖️ Decisions",   h: "https://www.admira.live/decisiones" },
-      { t: "🚀 Misiones",    en: "🚀 Missions",    h: "https://www.admira.live/misiones" },
-      { t: "✅ Tareas",      en: "✅ Tasks",       h: "https://www.admira.live/tareas" },
-      { t: "🎙️ Hola Admira", en: "🎙️ Hey Admira",  h: "https://www.admira.live/hola/" }
-    ]},
-    { t: "Flota ▾", en: "Fleet ▾", items: [
-      { t: "🏆 Highscore",   en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
-      { t: "🧩 Asignaciones", en: "🧩 Assignments", h: "https://www.admira.live/asignaciones/" },
-      { t: "💸 Consumo",     en: "💸 Usage",       h: "https://www.admira.live/consumos" },
-      { t: "🤖 DeepAgents",  en: "🤖 DeepAgents",  h: "https://www.admira.live/deepagents" },
-      { t: "💬 Comunicaciones", en: "💬 Communications", h: "https://www.admira.live/comunicaciones" }
-    ]}
+  // BARRA ÚNICA (Carlos, 21-11-2026: «la barra superior igual en TODAS las páginas»):
+  // [opciones] [admira] Dashboard · Objetivos · Decisiones · Misiones · Tareas · Highscore ·
+  // Asignaciones · DeepAgents · Consumo … [avanzado] [experto]. Mismo orden y mismos rótulos
+  // que la home (index.html .top-bar) y que el marco de plataforma (yk-frame.js APP_NAV);
+  // barra-unica.test.mjs vigila que las tres sigan iguales. DeepAgents (antes la pastilla
+  // «N comunicaciones») va justo ANTES de Consumo y lleva el contador como insignia.
+  var TOP = [
+    { t: "📊 Dashboard",    en: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
+    { t: "🎯 Objetivos",    en: "🎯 Goals",       h: "https://www.admira.live/objetivos" },
+    { t: "⚖️ Decisiones",   en: "⚖️ Decisions",   h: "https://www.admira.live/decisiones" },
+    { t: "🚀 Misiones",     en: "🚀 Missions",    h: "https://www.admira.live/misiones" },
+    { t: "✅ Tareas",       en: "✅ Tasks",       h: "https://www.admira.live/tareas" },
+    { t: "🏆 Highscore",    en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
+    { t: "🧩 Asignaciones", en: "🧩 Assignments", h: "https://www.admira.live/asignaciones/" },
+    { t: "🤖 DeepAgents",   en: "🤖 DeepAgents",  h: "https://www.admira.live/deepagents", id: "badge-comunicaciones" },
+    { t: "💸 Consumo",      en: "💸 Usage",       h: "https://www.admira.live/consumos" }
+  ];
+  // OPCIONES (icono a la izquierda del todo): lo que no cabe en la fila — mismas secciones
+  // que el raíl de la home y del marco, a un clic desde cualquier página.
+  var OPCIONES = [
+    { t: "🎙️ Hola Admira",    en: "🎙️ Hey Admira",      h: "https://www.admira.live/hola/" },
+    { t: "💬 Comunicaciones", en: "💬 Communications",  h: "https://www.admira.live/comunicaciones" },
+    { t: "🚨 Incidencias",    en: "🚨 Incidents",       h: "https://www.admira.live/incidencias" },
+    { t: "🛰️ Supervisor",     en: "🛰️ Supervisor",      h: "https://www.admira.live/supervisor" },
+    { t: "📑 Informes",       en: "📑 Reports",         h: "https://www.admira.live/informes-flota" },
+    { t: "🔔 Notificaciones", en: "🔔 Notifications",   h: "https://www.admira.live/notificaciones" }
   ];
   // AVANZADO (Carlos, 18-09-2026): Control, Players y Diario son gestión/infra, no el
   // flujo de trabajo → se recogen tras el botón «Avanzado» para no saturar la barra.
@@ -73,13 +77,13 @@
      * de navegación se colapsan tras un botón ☰ (hamburguesa) y se abren en un panel
      * desplegable, mientras la marca y los iconos de panel siguen
      * visibles. Nunca hay scroll horizontal de página ni elementos cortados. */
-    "#admira-topbar{position:fixed;top:0;left:0;right:0;z-index:99990;display:flex;gap:6px;align-items:stretch;" +
-    "padding:5px 10px;background:#5a3a1e;border-bottom:3px solid #8b5a14;border-top:2px solid #a07828;box-shadow:0 3px 0 #000;" +
+    "#admira-topbar{position:fixed;top:0;left:0;right:0;z-index:99990;display:flex;gap:5px;align-items:center;min-height:46px;" +
+    "padding:4px 10px;background:#5a3a1e;border-bottom:3px solid #8b5a14;border-top:2px solid #a07828;box-shadow:0 3px 0 #000;" +
     "font-family:'Press Start 2P',monospace;box-sizing:border-box;max-width:100vw;flex-wrap:nowrap}" +
     "#admira-topbar *{box-sizing:border-box}" +
     "#admira-topbar a{display:flex;align-items:center;color:#ffdd66;text-decoration:none;" +
-    "font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;letter-spacing:.5px;" +
-    "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
+    "font-family:'Press Start 2P',monospace;font-size:7px;line-height:1.5;letter-spacing:0;" +
+    "border:2px solid #8b5a14;border-radius:0;padding:0 6px;height:30px;gap:4px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     "#admira-topbar a.active{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     /* Grupo AVANZADO: botón + desplegable (Control/Players/Diario) */
@@ -94,11 +98,9 @@
     ".admira-adv-menu[hidden]{display:none}" +
     ".admira-adv-menu a{box-shadow:none;margin:0}" +
     /* Contenedor de los enlaces de navegación (para poder colapsarlos en móvil) */
-    "#admira-nav{order:0;display:flex;gap:6px;align-items:stretch;flex:1 1 auto;min-width:0;overflow-x:auto;" +
-    "scrollbar-width:thin;scrollbar-color:#a07828 #3a2410}" +
-    "#admira-nav::-webkit-scrollbar{height:7px}" +
-    "#admira-nav::-webkit-scrollbar-track{background:#3a2410}" +
-    "#admira-nav::-webkit-scrollbar-thumb{background:#a07828;border:1px solid #5a3a1e}" +
+    "#admira-nav{order:0;display:flex;gap:4px;align-items:center;flex:1 1 auto;min-width:0;overflow-x:auto;padding:0 3px 3px 0;" +
+    "scrollbar-width:none}" +
+    "#admira-nav::-webkit-scrollbar{display:none}" +
     /* Botón hamburguesa (oculto por defecto; solo aparece en móvil vía media query) */
     "#admira-burger{order:-1;display:none;align-items:center;justify-content:center;cursor:pointer;" +
     "min-width:44px;min-height:38px;align-self:center;font-size:16px;color:#ffdd66;" +
@@ -107,23 +109,29 @@
     /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
      * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
     /* Marca del proyecto (izquierda del todo) */
-    "#pf-brand{order:-2;display:flex;flex-direction:column;align-items:center;gap:0;white-space:nowrap;text-decoration:none;flex:0 0 auto;" +
+    "#pf-brand{order:-2;display:flex;align-items:center;gap:0;white-space:nowrap;text-decoration:none;flex:0 0 auto;height:30px;" +
     "font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.5px;color:#ffdd66;" +
-    "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:6px 10px;margin-right:6px}" +
+    "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:0 8px !important;margin-right:0}" +
     "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
     "#pf-brand .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}" +
-    "#pf-brand .pf-logo{height:20px;width:auto;vertical-align:middle;margin-right:7px;image-rendering:pixelated;image-rendering:-moz-crisp-edges}" +
+    "#pf-brand .pf-logo{height:22px;width:auto;vertical-align:middle;margin-right:0;image-rendering:pixelated;image-rendering:-moz-crisp-edges}" +
     /* Sello de versión (#pf-ver-foot) retirado del menú superior — Carlos 2026-07-13 */
     /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
-    "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px;flex:0 0 auto}" +
+    "#pf-opciones{order:-3;position:relative;display:flex;align-items:center;align-self:center;flex:0 0 auto}" +
+    ".pf-opciones-menu{left:0;right:auto;min-width:210px}" +
+    ".pf-opciones-menu .pf-op-panel{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;color:#ffdd66;text-align:left;cursor:pointer;" +
+    "border:2px solid #a07828;background:#3a2410;padding:6px 9px}" +
+    ".pf-opciones-menu .pf-op-panel:hover{background:#8b5a14;color:#fff}" +
+    ".pf-op-sep{height:2px;background:#8b5a14;margin:2px 0}" +
+    "#badge-comunicaciones .admira-da-n{display:inline-block;margin-left:5px;padding:2px 4px;font-size:7px;line-height:1;color:#1b130a;background:#ffb454;border:1px solid #000}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
     "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;flex:0 0 auto}" +
     "#admira-ro{order:90;display:flex;align-items:center;align-self:center;flex:0 0 auto;max-width:42vw;overflow:hidden;text-overflow:ellipsis;" +
     "font-family:'Press Start 2P',monospace;font-size:7px;line-height:1.4;letter-spacing:.4px;color:#1b130a;background:#ffb454;" +
     "border:2px solid #8b5a14;box-shadow:2px 2px 0 #000;padding:6px 8px;white-space:nowrap}" +
-    ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
+    ".pf-ico{width:30px;height:29px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
     "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}" +
-    ".pf-ico svg{width:15px;height:14px;display:block}" +
+    ".pf-ico svg{width:16px;height:15px;display:block}" +
     ".pf-ico .frame{fill:none;stroke:#a07828;stroke-width:1.4}" +
     ".pf-ico .panel{fill:#5a4020}" +
     ".pf-ico.on .frame{stroke:#ffdd66}" +
@@ -133,22 +141,16 @@
      * ≤820px: los enlaces de navegación se esconden tras el botón ☰. Al abrirlo,
      * caen como panel desplegable bajo la barra (look SCUMM). La marca y los
      * iconos de panel siguen SIEMPRE visibles. Sin overflow horizontal de página. */
+    /* ≤820px (barra única, 21-11-2026): la misma fila que la home y la plataforma — las
+       pestañas se deslizan en horizontal; opciones, marca e iconos quedan siempre a la vista. */
     "@media (max-width:820px){" +
-      "#admira-burger{display:flex}" +
-      "#admira-nav{order:99;position:absolute;top:100%;left:0;right:0;flex-direction:column;flex:1 1 100%;" +
-        "gap:0;overflow-x:visible;background:#5a3a1e;border-bottom:3px solid #8b5a14;box-shadow:0 4px 0 #000;" +
-        "padding:6px;max-height:calc(100vh - 46px);overflow-y:auto}" +
-      "#admira-nav[hidden]{display:none}" +
-      "#admira-nav a{min-height:44px;font-size:9px;padding:10px 12px;box-shadow:none;margin:0 0 5px}" +
-      "#admira-nav a:last-child{margin-bottom:0}" +
-      /* En móvil el grupo Avanzado se apila en la columna y su menú va estático (no flotante) */
-      "#admira-nav .admira-adv{flex-direction:column}" +
-      "#admira-nav .admira-adv-btn{min-height:44px;font-size:9px;padding:10px 12px;box-shadow:none;margin:0 0 5px}" +
-      "#admira-nav .admira-adv-menu{position:static;right:auto;margin:0 0 5px;min-width:0;border-width:2px;box-shadow:none}" +
+      "#admira-burger{display:none !important}" +
+      "#pf-brand .pf-logo{height:16px}" +
+      "#pf-brand{padding:0 5px !important}" +
     "}" +
     "@media (max-width:400px){" +
       /* móvil muy estrecho: compacta la marca */
-      "#pf-brand{font-size:7px;padding:6px 7px}" +
+      "#pf-brand{font-size:7px}" +
     "}" +
     /* Respeta prefers-reduced-motion: sin transición en el desplegable */
     "@media (prefers-reduced-motion:reduce){#admira-nav,#admira-burger{transition:none !important}}" +
@@ -163,13 +165,10 @@
       "font-family:'Press Start 2P',monospace !important;font-size:8px !important;color:#c9a86a !important;letter-spacing:1px !important;" +
       "text-transform:uppercase !important;padding:8px 8px 5px !important;border:0 !important;background:none !important}" +
     "html.admira-bar-on body{padding-top:46px !important}" +
-    /* Cuadratura #4494, heredada: opciones (.rail-left) a la DERECHA,
-       avanzado (.rail-right) a la IZQUIERDA. Solo raíles con clase .rail
-       (portería fixed). El pliegue sigue a cada lado nuevo. */
-    ".rail.rail-left{left:auto !important;right:0 !important}" +
-    ".rail.rail-right{right:auto !important;left:0 !important}" +
-    "body.pf-left-off .rail.rail-left{transform:translateX(103%) !important}" +
-    "body.pf-right-off .rail.rail-right{transform:translateX(-103%) !important}" +
+    /* Barra única (21-11-2026): se retira el cruce de la cuadratura #4494. Opciones vuelve a
+       la izquierda (icono y panel) y Avanzado a la derecha, igual que en la home. */
+    "body.pf-left-off .rail.rail-left{transform:translateX(-103%) !important}" +
+    "body.pf-right-off .rail.rail-right{transform:translateX(103%) !important}" +
     ".cuadratura-hbar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}" +
     ".cuadratura-hbar a{font-family:'Press Start 2P',monospace;font-size:7px;color:#ffdd66;" +
       "text-decoration:none;border:2px solid #8b5a14;background:#2a1a08;padding:6px 8px;box-shadow:2px 2px 0 #000}" +
@@ -209,37 +208,17 @@
       return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") +
         (i.en ? ' data-en="' + i.en + '"' : "") + ">" + i.t + "</a>";
     }
-    // Menú horizontal de grupos; cada uno abre un desplegable vertical (#4494).
-    MENU.concat([{ t: "Avanzado ▾", en: "Advanced ▾", items: ADV }]).forEach(function (group) {
-      var wrap = document.createElement("div");
-      wrap.className = "admira-adv";
-      var on = group.items.some(function (i) { return isHere(i.h); });
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "admira-adv-btn" + (on ? " active" : "");
-      btn.setAttribute("aria-haspopup", "true");
-      btn.setAttribute("aria-expanded", "false");
-      btn.textContent = group.t;
-      if (group.en) btn.setAttribute("data-en", group.en);
-      var menu = document.createElement("div");
-      menu.className = "admira-adv-menu";
-      menu.setAttribute("hidden", "");
-      menu.innerHTML = group.items.map(linkHTML).join("");
-      function setOpen(open) {
-        if (open) menu.removeAttribute("hidden"); else menu.setAttribute("hidden", "");
-        btn.setAttribute("aria-expanded", open ? "true" : "false");
-      }
-      btn.addEventListener("click", function () { setOpen(menu.hasAttribute("hidden")); });
-      document.addEventListener("click", function (e) {
-        if (!wrap.contains(e.target) && !menu.hasAttribute("hidden")) setOpen(false);
-      });
-      document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
-      wrap.appendChild(btn);
-      wrap.appendChild(menu);
-      nav.appendChild(wrap);
-    });
+    // Fila plana, idéntica a la home: cada sección es una pestaña.
+    nav.innerHTML = TOP.map(function (i) {
+      var cur = isHere(i.h);
+      return '<a href="' + i.h + '"' + (i.id ? ' id="' + i.id + '"' : "") +
+        (cur ? ' class="active" aria-current="page"' : "") +
+        (i.en ? ' data-en="' + i.en + '"' : "") + ">" + i.t + "</a>";
+    }).join("");
     top.appendChild(nav);
     ensureBottomMenu(linkHTML);
+    buildOpciones(top, linkHTML, isHere);
+    cargaContador();
 
     // Botón hamburguesa (☰): oculto en desktop vía CSS; en móvil abre/cierra el nav.
     // Empieza cerrado (hidden) para que en móvil el panel no tape el contenido.
@@ -264,7 +243,8 @@
     // — usamos [hidden] únicamente dentro del @media ≤820px). Para que en desktop se vea
     // aunque tenga hidden, lo quitamos si el viewport es ancho; y lo re-evaluamos al resize.
     function syncNav() {
-      var narrow = window.matchMedia("(max-width:820px)").matches;
+      // Barra única: la fila de pestañas nunca se esconde; en móvil se desliza.
+      var narrow = false;
       if (!narrow) {
         nav.removeAttribute("hidden");
         burger.setAttribute("aria-expanded", "false");
@@ -283,7 +263,9 @@
     brand.href = "https://www.admira.live/";
     // La versión YA NO va en la marca (Carlos): la marca es solo el nombre → home.
     // El logo es el de Admira pixelado estilo retro (Carlos, 17-09-2026): /admira-logo-retro.svg.
-    brand.innerHTML = '<img class="pf-logo" src="/admira-logo-retro.svg" alt="admira" width="119" height="25">' + PROJECT;
+    brand.innerHTML = '<img class="pf-logo" src="/admira-logo-retro.svg" alt="admira" width="119" height="25">';
+    brand.title = PROJECT;
+    brand.setAttribute("aria-label", PROJECT);
     top.appendChild(brand);
 
     document.body.appendChild(top);
@@ -355,24 +337,15 @@
     return b;
   }
 
-  // Iconos toggle. Cuadratura #4494:
-  //   · AVANZADO (.rail-right) → icono a la IZQUIERDA (el panel queda a la izquierda).
-  //   · OPCIONES (.rail-left) + EXPERTO (abajo) → icono a la DERECHA.
+  // Iconos de panel a la DERECHA, como en la home: AVANZADO (.rail-right, panel derecho)
+  // y EXPERTO (.rail-bottom). Solo si la página tiene ese panel. OPCIONES va a la
+  // izquierda del todo (buildOpciones), en TODAS las páginas — Carlos, 21-11-2026.
   function buildToggles(top) {
-    var left = makeToggle({ sel: ".rail-right", cls: "pf-right-off", ls: "pf_right",
-      title: "Avanzado · panel izquierdo", en: "Advanced · left panel",
-      svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/>' });
-    if (left) {
-      var lw = document.createElement("div");
-      lw.id = "pf-toggle-left";
-      lw.appendChild(left);
-      top.insertBefore(lw, top.firstChild);
-    }
     var box = document.createElement("div");
     box.id = "pf-toggles";
     var any = false;
     [
-      { sel: ".rail-left", cls: "pf-left-off", ls: "pf_left", title: "Opciones · panel derecho", en: "Options · right panel",
+      { sel: ".rail-right", cls: "pf-right-off", ls: "pf_right", title: "Avanzado · panel derecho", en: "Advanced · right panel",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>' },
       { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Menú avanzado y consola · abajo", en: "Advanced menu and console · bottom",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>' }
@@ -381,6 +354,69 @@
       if (b) { any = true; box.appendChild(b); }
     });
     if (any) top.appendChild(box);
+  }
+
+  // OPCIONES: icono a la izquierda del todo (mismo dibujo que la home: panel izquierdo).
+  // Abre un desplegable con lo que no cabe en la fila (Hola Admira, Comunicaciones,
+  // Incidencias, Supervisor, Informes, Notificaciones) y lo de AVANZADO (Control, Hackeo,
+  // Players, Diario). Si la página tiene su propio panel de opciones (.rail-left), el
+  // primer elemento lo abre o lo cierra.
+  function buildOpciones(top, linkHTML, isHere) {
+    var wrap = document.createElement("div");
+    wrap.id = "pf-opciones";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "pf-ic-opcion";
+    btn.className = "pf-ico";
+    btn.title = "Opciones";
+    btn.setAttribute("aria-label", "Opciones");
+    btn.setAttribute("data-en-title", "Options");
+    btn.setAttribute("data-en-aria-label", "Options");
+    btn.setAttribute("aria-haspopup", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML = '<svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>';
+    var menu = document.createElement("div");
+    menu.className = "admira-adv-menu pf-opciones-menu";
+    menu.setAttribute("hidden", "");
+    var html = "";
+    if (document.querySelector(".rail-left")) {
+      if (localStorage.getItem("pf_left") !== "1") document.body.classList.add("pf-left-off");
+      html += '<button type="button" class="pf-op-panel" data-en="▤ Options panel">▤ Panel de opciones</button>';
+    }
+    html += OPCIONES.map(linkHTML).join("") + '<span class="pf-op-sep" aria-hidden="true"></span>' + ADV.map(linkHTML).join("");
+    menu.innerHTML = html;
+    var on = OPCIONES.concat(ADV).some(function (i) { return isHere(i.h); });
+    if (on) btn.classList.add("on");
+    function setOpen(open) {
+      if (open) menu.removeAttribute("hidden"); else menu.setAttribute("hidden", "");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); setOpen(menu.hasAttribute("hidden")); });
+    var panel = menu.querySelector(".pf-op-panel");
+    if (panel) panel.addEventListener("click", function () {
+      var off = document.body.classList.toggle("pf-left-off");
+      localStorage.setItem("pf_left", off ? "0" : "1");
+      setOpen(false);
+    });
+    document.addEventListener("click", function (e) { if (!wrap.contains(e.target)) setOpen(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    top.insertBefore(wrap, top.firstChild);
+  }
+
+  // Contador de DeepAgents (antes «N comunicaciones»): lo pinta /comunicaciones-widget.js
+  // sobre #badge-comunicaciones. Se carga una vez, con el mismo ?v= de la barra.
+  function cargaContador() {
+    if (document.querySelector('script[src*="comunicaciones-widget.js"]')) {
+      if (window.AdmiraDeepAgentsContador) window.AdmiraDeepAgentsContador();
+      return;
+    }
+    var v = ""; try { v = new URL(BAR_SRC, location.href).searchParams.get("v") || ""; } catch (e) {}
+    var s = document.createElement("script");
+    s.src = "/comunicaciones-widget.js" + (v ? "?v=" + encodeURIComponent(v) : "");
+    s.defer = true;
+    (document.head || document.documentElement).appendChild(s);
   }
 
   // Inserta el enlace "👥 Usuarios" en la barra superior si el usuario logueado

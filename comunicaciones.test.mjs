@@ -218,9 +218,11 @@ test('la home y Conversación enlazan la sección visible', () => {
   assert.match(pagina, /yk-frame\.js/);
   assert.doesNotMatch(pagina, /APP_NAV|admira-topbar/);
   const marco = fs.readFileSync('yk-frame.js', 'utf8');
-  assert.match(marco, /\["COMUNICACIONES", "\/comunicaciones"\]/);
+  // Barra única (21-11-2026): Comunicaciones sale de la fila y vive en el raíl Opciones.
+  assert.match(marco, /var APP_NAV_OPCIONES = \[[\s\S]*\["COMUNICACIONES",\s+"\/comunicaciones"/);
   assert.match(marco, /b\.id = "yk-lang"/);
-  assert.match(marco, /&gt;_/);
+  // Barra única (21-11-2026): el modo experto usa el mismo icono de panel inferior que la home.
+  assert.match(marco, /icon\("yk-ico yk-ico-exp", "bottom", [\s\S]{0,200}"Experto"\)/);
   assert.match(fs.readFileSync('admira-bar.js', 'utf8'), /www\.admira\.live\/comunicaciones/);
   for (const file of ['comunicaciones-page.js', 'comunicaciones-widget.js', 'comunicaciones.html']) {
     const src = fs.readFileSync(file, 'utf8');

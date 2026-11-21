@@ -724,3 +724,72 @@ html[data-yk-expert-min] body{padding-bottom:34px}
 .yk-expert-cmd-send{min-height:34px;padding:0 12px;border:1px solid #3d5275;border-radius:4px;background:#14233b;color:#eef3fb;cursor:pointer}
 .yk-expert-cmd-out{display:block;min-height:1.3em;color:#c9d6e8;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
 .yk-expert-cmd-out.err{color:#ffb4a8}
+
+/* ===================== BARRA ÚNICA admira.live (21-11-2026) =====================
+ * Carlos: «la barra superior igual en TODAS las páginas de admira.live». La plataforma
+ * (zona app) pinta la MISMA barra que la home (index.html .top-bar) y las subpáginas
+ * (admira-bar.js): madera SCUMM, pestañas ámbar cuadradas con sombra pixel, Press Start 2P,
+ * [opciones] a la izquierda del todo, DeepAgents justo antes de Consumo y los iconos de
+ * avanzado/experto a la derecha. Solo cambia el CHROME; raíles y contenido siguen igual. */
+.yk-bar{
+  gap: 5px; padding: 0 10px;
+  background: #5a3a1e; border-top: 2px solid #a07828; border-bottom: 3px solid #8b5a14;
+  box-shadow: 0 3px 0 #000;
+  font-family: 'Press Start 2P', monospace; color: #ffdd66;
+}
+.yk-bar .yk-logo{
+  align-self: center; height: 30px; padding: 0 8px; margin-right: 1px;
+  border: 2px solid #a07828; background: #3a2410; box-shadow: 2px 2px 0 #000;
+}
+.yk-bar .yk-nav{ gap: 4px; padding: 0 3px 3px 0; align-items: center }
+.yk-bar .yk-nav a{
+  flex-direction: row; gap: 4px; min-height: 30px; height: 30px; padding: 0 6px;
+  font-family: 'Press Start 2P', monospace; font-size: 7px; line-height: 1.5; letter-spacing: 0;
+  text-transform: none; font-weight: 400; color: #ffdd66;
+  border: 2px solid #8b5a14; border-radius: 0; background: #2a1a08; box-shadow: 2px 2px 0 #000;
+}
+.yk-bar .yk-nav a:hover, .yk-bar .yk-nav a:focus-visible,
+.yk-bar .yk-nav a.on, .yk-bar .yk-nav a.yk-nuevo:hover{
+  background: #8b5a14; border-color: #f0c040; color: #fff; font-weight: 400;
+}
+.yk-bar .yk-nav a.yk-nuevo{ border-color: #f0c040 }
+.yk-bar .yk-nav a .yk-nav-c{ line-height: 1; font-size: 7px; color: #ffb454 }
+#badge-comunicaciones .admira-da-n{
+  display:inline-block; padding:2px 4px; font-size:7px; line-height:1;
+  color:#1b130a; background:#ffb454; border:1px solid #000;
+}
+.yk-bar .yk-ico, .yk-bar .yk-proj-btn{
+  height: 29px; min-width: 30px; padding: 0 6px; border-radius: 0;
+  border: 2px solid #8b5a14; background: #2a1a08; box-shadow: 2px 2px 0 #000; color: #ffdd66;
+  font-family: 'Press Start 2P', monospace; font-size: 7px; letter-spacing: .5px;
+}
+.yk-bar .yk-ico:hover, .yk-bar .yk-proj-btn:hover{ border-color: #f0c040; background: #2a1a08; box-shadow: 2px 2px 0 #000 }
+.yk-bar .yk-ico[aria-pressed="true"]{ background: #2a1a08; border-color: #f0c040; box-shadow: 2px 2px 0 #000; color: #ffdd66 }
+.yk-bar .yk-ico-left{ margin-right: 2px }
+.yk-bar .yk-ico-adv{ margin-left: auto }
+.yk-bar .yk-pf-svg{ width: 16px; height: 15px; display: block }
+.yk-bar .yk-pf-svg .frame{ fill: none; stroke: #a07828; stroke-width: 1.4 }
+.yk-bar .yk-pf-svg .panel{ fill: #5a4020 }
+.yk-bar .yk-ico[aria-pressed="true"] .yk-pf-svg .frame{ stroke: #ffdd66 }
+.yk-bar .yk-ico[aria-pressed="true"] .yk-pf-svg .panel{ fill: #ffdd66 }
+.yk-bar .yk-ico-lang .yk-ico-gl{ font-size: 7px; letter-spacing: .5px }
+.yk-bar .yk-proj-btn b{ color: #fff }
+.yk-bar .yk-proj-cx{ color: #c9a86a }
+/* Hasta 1440px el selector de proyecto se queda en punto + cifra + ▾ (el nombre, en su menú). */
+@media (max-width: 1440px){ .yk-bar .yk-proj-nm{ display: none } }
+/* Raíl OPCIONES: las secciones que no caben en la fila, siempre visibles al abrirlo. */
+.yk-op-nav .yk-adv-link.on{ border-color: var(--yk-brand); color: var(--yk-brand) }
+.yk-op-nav .yk-adv-link{ display:flex; align-items:center; gap:8px }
+.yk-op-nav .yk-rail-navc{ margin-left:auto }
+/* Móvil: la misma fila que la home y las subpáginas — las pestañas se deslizan en horizontal
+   (el cajón OPCIONES sigue teniendo las secciones, como antes). */
+@media (max-width: 820px){
+  .yk-bar .yk-logo{ padding: 0 5px }
+  .yk-bar .yk-logo-img{ height: 16px }
+  .yk-bar .yk-ico-lang{ display: none }
+}
+@media (max-width: 520px){
+  .yk-bar{ gap: 5px }
+  .yk-bar .yk-nav{ display: flex }
+  .yk-bar .yk-ico{ min-width: 30px; padding: 0 6px }
+}

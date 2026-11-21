@@ -20,11 +20,12 @@ test('t1341u: /conversacion mal formada no se envía como texto', () => {
   assert.equal(H.parseLinea('/conversacion').accion, 'error');
 });
 
-test('t1341u: el encargo pide 10 líneas cada uno, alternando, por mensajes entre consejeros', () => {
-  const p = H.promptConversacion(H.parseLinea('/conversacion jobs vs elon PortAventuraNeXT'));
-  assert.match(p, /20 intervenciones en total, 10 de cada uno, alternando y empezando Steve Jobs/);
-  assert.match(p, /consejero_mensaje de Jobs a Musk/);
-  assert.match(p, /PortAventuraNeXT/);
+test('t1341u: /conversacion arranca un duelo en el orquestador de Cloudflare, no un prompt a un GrokBot', () => {
+  assert.match(integ, /accion:'duelo'/);
+  assert.match(integ, /\/api\/consejo\/sesion/);
+  assert.match(integ, /accion:'turno'/);
+  assert.match(integ, /linea\.tema/);
+  assert.ok(!/sendPreviewTexto\(prompt\)/.test(integ));
 });
 
 test('t1341u: @mención habla con otro consejero; sin nombre conocido es texto normal', () => {
@@ -36,7 +37,7 @@ test('t1341u: @mención habla con otro consejero; sin nombre conocido es texto n
 test('t1341u: integración y selector de destinatario', () => {
   assert.match(integ, /linea\.accion==='conversacion'/);
   assert.match(integ, /linea\.accion==='mencion'/);
-  assert.match(integ, /C\.promptConversacion\(linea\)/);
+  assert.match(integ, /accion:'duelo'/);
   assert.match(gb, /data-chat-destinatario/);
   assert.match(gb, /for\(const name of Object\.keys\(PEOPLE\)\)/);
 });

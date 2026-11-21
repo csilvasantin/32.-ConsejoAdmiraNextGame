@@ -49,7 +49,7 @@ export const MESA = {
     { persona: 'Ruth Porat', rol: 'CFO', fuentes: [agente('Oraculo')] },
     { persona: 'John Lasseter', rol: 'CCO', fuentes: [agente('Mouse')] },
     { persona: 'Jony Ive', rol: 'CDO', fuentes: [agente('Arquitecto', { excluir_maquina: 'CursorCloud' })] },
-    { persona: 'Carlos Ratti', rol: 'CXO', fuentes: [agente('Link')] },
+    { persona: 'Carlo Ratti', rol: 'CXO', fuentes: [agente('Link')] },
     { persona: 'Ryan Reynolds', rol: 'CSO', fuentes: [] },
   ],
 };

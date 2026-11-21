@@ -187,13 +187,22 @@
     // en su recuadro y locuta con las voces de cada consejero (nunca la del sistema).
     if(linea.accion==='conversacion'){
       const a=linea.a,b=linea.b;
-      if(!(bridge&&bridge.has(a))||!(bridge&&bridge.has(b))){avisoHablar('Para /conversacion los dos consejeros necesitan línea: Jobs, Woz, Disney, Lucas, Elon o Jensen.');return;}
       pararHablarMic();
-      if(bridge.selected!==a)await bridge.select(a);
-      preview?.select(a);
-      const prompt=C&&typeof C.promptConversacion==='function'?C.promptConversacion(linea):('Conversación entre '+a+' y '+b+' sobre: '+linea.tema);
-      await sendPreviewTexto(prompt);
-      avisoHablar('Conversación '+a+' vs '+b+' sobre «'+linea.tema+'»: '+(linea.turnos||10)+' líneas cada uno, alternando. La transcripción y sus voces salen en Conversación.');
+      try{
+        const rs=await fetch('/api/consejo/sesion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accion:'duelo',tema:linea.tema,a,b,turnos:Math.min(20,(linea.turnos||10)*2),llm:'auto',tope_eur:0.5,max_tokens:250,report:false})});
+        const d=await rs.json().catch(()=>({}));
+        if(!rs.ok){avisoHablar(d.error||('No se pudo arrancar la conversación ('+rs.status+').'));return;}
+        const url=d.url||('/conversacion#sesion-'+(d.id||''));
+        avisoHablar('Conversación '+a+' vs '+b+' sobre «'+linea.tema+'» arrancada en Cloudflare. Transcript: '+url);
+        const max=Math.min(20,(linea.turnos||10)*2);
+        for(let i=0;i<max && d.estado==='en_curso';i++){
+          const rt=await fetch('/api/consejo/sesion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accion:'turno',id:d.id,report:false})});
+          const n=await rt.json().catch(()=>({}));
+          if(!rt.ok){avisoHablar((n.error||'turno falló')+' · '+url);break;}
+          Object.assign(d,n);
+        }
+        avisoHablar('Conversación '+a+' vs '+b+': '+(d.estado||'')+' · '+(d.motivo_parada||'')+' · '+url);
+      }catch(e){avisoHablar('No se pudo arrancar la conversación: '+(e.message||e));}
       return;
     }
     if(linea.accion==='conectar'||linea.accion==='preguntar'){

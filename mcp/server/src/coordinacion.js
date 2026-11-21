@@ -46,7 +46,7 @@ export const CENSO_COETANEOS = [
   { id: 'Oráculo', role: 'CFO', persona: 'Ruth Porat', agente: 'Oraculo' },
   { id: 'Mouse', role: 'CCO', persona: 'John Lasseter', agente: 'Mouse' },
   { id: 'Arquitecto', role: 'CDO', persona: 'Jony Ive', agente: 'Arquitecto', excluir_maquina: 'CursorCloud' },
-  { id: 'Link', role: 'CXO', persona: 'Carlos Ratti', agente: 'Link' },
+  { id: 'Link', role: 'CXO', persona: 'Carlo Ratti', agente: 'Link' },
 ];
 export const BOTS_EXTRA = [
   { id: 'Smith', role: 'Soporte', persona: 'Agent Smith', agente: 'Smith', nota: 'Smith es del otro GrokBot (otra cuenta): no es el CEO. El CEO coetáneo Elon Musk es MuskGrokBot con su deepagent Merovingio.' },

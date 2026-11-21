@@ -11,8 +11,9 @@
  */
 import { emailGoogle, tokenMaquina } from "../../../chat-hilo-lib.mjs";
 import { cabeceras, json } from "../../../chat-hilo-http.mjs";
+import { ENTRE_CONSEJEROS } from "../../../consejo-sillas-lib.mjs";
 
-export const SILLAS = { jobs: "Jobs", wozniak: "Wozniak", lucas: "Lucas", disney: "Disney", musk: "Musk", elon: "Musk", huang: "Huang", jensen: "Huang", y: "Y" };
+export const SILLAS = { ...ENTRE_CONSEJEROS };
 // 19-10-2026: también agentes de la flota (mensajes consejero ↔ agente).
 export const AGENTES = ["Neo", "Morfeo", "Trinity", "Oraculo", "Smith", "Cypher", "Switch", "Niobe", "Link", "Persefone", "Seraph", "Arquitecto", "Merovingio"];
 const sinTilde = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();

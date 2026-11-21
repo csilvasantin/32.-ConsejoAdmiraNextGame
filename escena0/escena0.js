@@ -56,11 +56,17 @@ const API = '/api/consejo/escena0';
 // Carlos 16-11 09:59: la API directa del Consejo exige token (401/403) y el navegador no lo lleva, así que cada turno
 // caía al relleno «Dejadme encajar…» en bucle. Primero el proxy del Mini (/demo/consejo, pone su clave y fuerza
 // grok-4.6, CORS admira.live), igual que app.js; la API directa queda de reserva. URLs completas de ask-one.
-const COUNCIL_API_URLS = (location.protocol === 'https:' ? [] : ['http://localhost:8420/api/council/ask-one']).concat([
+// 21-11-2026: motor de ask en Cloudflare (Pages /api/council). Mini/hub y Render, reserva al final.
+const COUNCIL_API_URLS = (location.protocol === 'https:' ? [] : ['http://localhost:8788/api/council/ask-one']).concat([
+  '/api/council/ask-one',
+  'https://www.admira.live/api/council/ask-one',
   '/hub/demo/consejo/ask-one',
   '/hub/council/api/council/ask-one',
   'https://three2-consejoadmiranextgame.onrender.com/api/council/ask-one',
 ]);
+const SESION_API = '/api/consejo/sesion';
+let modeloElegido = null;
+let sesionId = null;
 
 const DEMO_EN = {
   _: ['Keep it simple: one park, every story.', 'What does the visitor actually feel here? Start there.'],
@@ -768,7 +774,7 @@ async function askConsejero(persona, message) {
             message,
             agent_name: ROLES[persona] || persona,
             generation: mesaDeSafe(persona),
-            llm: 'grok-4.6',
+            llm: (modeloElegido && modeloElegido.key) || 'auto',
             report: false,
           }),
           signal: (window.AbortSignal && AbortSignal.timeout) ? AbortSignal.timeout(55000) : undefined,
@@ -808,33 +814,58 @@ function hablar(persona, texto) {
 
 async function unTurno(st) {
   const sig = st && st.siguiente;
-  if (!sig || sig.mesa !== mesa || ocupado) return;
+  if (ocupado) return;
+  if (!(sesionId && !demo) && (!sig || sig.mesa !== mesa)) return;
+  if (!sig && !(sesionId && !demo)) return;
   ocupado = true;
   try {
-    await pedirReservar(sig.persona);
-    mostrarGlobo(sig.persona, '', true);
-    estado(sig.persona + T(' pensando…', ' thinking…'));
+    if (!(sesionId && !demo)) await pedirReservar(sig.persona);
+    const pendiente = (sig && sig.persona) || T('el Consejo', 'the Council');
+    mostrarGlobo(pendiente, '', true);
+    estado(pendiente + T(' pensando…', ' thinking…'));
     const snap = local ? publicState(docLocal, Date.now()) : st;
     const hist = { tema: (snap && snap.tema) || temaActual || TEMA_DEFECTO, turnos: (snap && snap.turnos) || [] };
     let texto;
+    let hablante = sig.persona;
     const idiomaTurno = idioma;
     try {
-      texto = await askConsejero(sig.persona, prefijoIdioma(idioma) + promptDe(sig.persona, hist) + sufijoIdioma(idioma));
+      if (sesionId && !demo) {
+        const rs = await fetch(SESION_API, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accion: 'turno', id: sesionId, report: false }),
+        });
+        const d = await rs.json().catch(() => ({}));
+        if (!rs.ok) throw new Error(d.error || ('HTTP ' + rs.status));
+        const last = (d.turnos || []).slice(-1)[0];
+        if (last && last.persona) hablante = last.persona;
+        texto = last && last.texto ? last.texto : '';
+        if (d.estado === 'parada') {
+          /* se publicará este turno y luego se para */
+          setTimeout(() => { try { pararConversacion(); estado(T('Sesión cerrada: ', 'Session closed: ') + (d.motivo_parada || '')); } catch (e2) {} }, 50);
+        }
+        if (!texto) throw new Error(last && last.error || 'vacío');
+      } else {
+        texto = await askConsejero(sig.persona, prefijoIdioma(idioma) + promptDe(sig.persona, hist) + sufijoIdioma(idioma));
+      }
     } catch (e) {
-      estado(T('Sin respuesta de ', 'No answer from ') + sig.persona + ' (' + (e.message || e) + ').');
-      // Sin backend: una línea propia del consejero (rota), nunca la misma frase en bucle para todos.
+      estado(T('Sin backend · ', 'No backend · ') + sig.persona + ' (' + (e.message || e) + '). ' + T('Consejo autónomo en pausa.', 'Autonomous council paused.'));
+      if (!demo) {
+        try { setAutonomo(false); } catch (err) {}
+        pararConversacion();
+        return;
+      }
       const bag = idioma === 'en' ? (DEMO_EN[sig.persona] || DEMO_EN._) : (DEMO[sig.persona] || ['Seguimos.']);
       const i = demoIdx[sig.persona] || 0; demoIdx[sig.persona] = i + 1;
       texto = bag[i % bag.length];
     }
-    const pub = await publicar(sig.persona, texto);
+    let pub = null;
+    if (!(sesionId && !demo)) pub = await publicar(hablante, texto);
     const dicho = (pub && pub.turno && pub.turno.texto) || texto;
-    mostrarGlobo(sig.persona, dicho, false);
-    lastSeenId = pub && pub.turno && pub.turno.id;
+    mostrarGlobo(hablante, dicho, false);
+    lastSeenId = (pub && pub.turno && pub.turno.id) || lastSeenId;
     pintarEscucha(pub);
-    estado(sig.persona + T(' habla', ' speaking'));
-    // Si cambiaron el idioma mientras se escribía la frase, no se locuta (nada en el idioma viejo).
-    if (idioma === idiomaTurno && enCurso) await hablar(sig.persona, dicho);
+    estado(hablante + T(' habla', ' speaking'));
+    if (idioma === idiomaTurno && enCurso) await hablar(hablante, dicho);
     await new Promise((r) => setTimeout(r, 800));
   } catch (e) {
     if (e.status !== 409) estado(e.message || String(e));
@@ -858,7 +889,8 @@ async function tick() {
     }
     const cruce = st.cruce ? T(' · cruce con la otra mesa', ' · crossing with the other table') : T(' · solo esta mesa', ' · this table only');
     if (!ocupado) estado((st.siguiente ? (T('Siguiente: ', 'Next: ') + st.siguiente.persona) : T('Esperando turno', 'Waiting for a turn')) + cruce);
-    if (st.siguiente && st.siguiente.mesa === mesa) await unTurno(st);
+    if (sesionId && !demo) await unTurno(st);
+    else if (st.siguiente && st.siguiente.mesa === mesa) await unTurno(st);
   } finally {
     ticking = false;
   }
@@ -897,7 +929,25 @@ async function arrancarConversacion() {
   } else {
     docLocal.tema = tema;
   }
-  estado(T('Consejo autónomo · ', 'Autonomous council · ') + etiquetaTema(tema));
+  try {
+    const rm = await fetch('/api/council/models', { headers: { accept: 'application/json' } });
+    if (rm.ok) {
+      const d = await rm.json();
+      modeloElegido = d.elegido || (d.models || []).find((m) => m.available) || null;
+    }
+  } catch (e) { modeloElegido = modeloElegido || null; }
+  try {
+    const rs = await fetch(SESION_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'arrancar', tema, turnos: 12, llm: (modeloElegido && modeloElegido.key) || 'auto', tope_eur: 0.5, max_tokens: 250, report: false }),
+    });
+    if (rs.ok) {
+      const d = await rs.json();
+      sesionId = d.id || null;
+    }
+  } catch (e) { sesionId = sesionId || null; }
+  const modeloTxt = modeloElegido ? (modeloElegido.key + (modeloElegido.free ? '' : ' · de pago')) : 'auto';
+  estado(T('Consejo autónomo · ', 'Autonomous council · ') + etiquetaTema(tema) + ' · ' + modeloTxt + (sesionId ? ' · ' + sesionId : ''));
   pintarControles();
   await tick();
   if (tickTimer) clearInterval(tickTimer);

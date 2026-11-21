@@ -43,6 +43,9 @@ export function crearCliente(env = {}, deps = {}) {
   const hubPara = (u) => (env.HUB_GUARDIA && /^https:\/\/macmini\.tail48b61c\.ts\.net\//.test(String(u))) ? { 'x-admira-hub': env.HUB_GUARDIA } : {};
   const councilBase = limpiar(env.COUNCIL_BASE || 'https://macmini.tail48b61c.ts.net/council');
   const fleetBase = limpiar(env.FLEET_BASE || 'https://macmini.tail48b61c.ts.net/api');
+  // Motor de ask en Cloudflare (Pages Functions de www.admira.live). Mini y Render, solo reserva.
+  const askBase = limpiar(env.CONSEJO_ASK_BASE || `${env.SITIO || 'https://www.admira.live'}/api`);
+  const renderBase = limpiar(env.RENDER_COUNCIL_BASE || 'https://three2-consejoadmiranextgame.onrender.com');
   // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
   const agoraBase = limpiar(env.AGORA_WORKER || 'https://api.admira.store');
 
@@ -75,20 +78,75 @@ export function crearCliente(env = {}, deps = {}) {
     return { 'content-type': 'application/json', 'x-council-token': env.COUNCIL_MACHINE_TOKEN };
   }
 
+  function cabecerasAsk() {
+    const tok = env.CONSEJERO_MENSAJES_TOKEN || env.COUNCIL_MACHINE_TOKEN;
+    if (!tok) {
+      throw new Error('falta CONSEJERO_MENSAJES_TOKEN o COUNCIL_MACHINE_TOKEN en el worker: sin token de máquina el motor Cloudflare no responde (401)');
+    }
+    return { 'content-type': 'application/json', 'x-mensajes-token': tok, 'x-council-token': tok };
+  }
+
+  async function enCascada(primero, reservaMini, reservaRender) {
+    try { return await primero(); }
+    catch (e1) {
+      try { return await reservaMini(); }
+      catch (e2) {
+        try { return await reservaRender(); }
+        catch (e3) {
+          const err = new Error(`motor Cloudflare: ${e1 && e1.message || e1}; reserva Mini: ${e2 && e2.message || e2}; reserva Render: ${e3 && e3.message || e3}`);
+          err.cause = e1;
+          throw err;
+        }
+      }
+    }
+  }
+
   return {
-    bases: { consejo: councilBase, flota: fleetBase, agora: agoraBase },
+    bases: { consejo: councilBase, flota: fleetBase, agora: agoraBase, ask: askBase, render: renderBase },
 
-    modelos: () => llamar(`${councilBase}/api/council/models`),
+    modelos: () => enCascada(
+      () => llamar(`${askBase}/council/models`),
+      () => llamar(`${councilBase}/api/council/models`),
+      () => llamar(`${renderBase}/api/council/models`),
+    ),
 
-    saludConsejo: () => llamar(`${councilBase}/api/council/health`),
+    saludConsejo: () => enCascada(
+      () => llamar(`${askBase}/council/health`),
+      () => llamar(`${councilBase}/api/council/health`),
+      () => llamar(`${renderBase}/api/council/health`),
+    ),
 
     preguntarConsejo: ({ mensaje, generacion = 'leyendas', llm = 'grok-4.6', contexto }) =>
-      llamar(`${councilBase}/api/council/ask`, { method: 'POST', headers: cabecerasConsejo(),
-        body: JSON.stringify({ message: mensaje, generation: generacion, llm, context: contexto || null }) }),
+      enCascada(
+        () => llamar(`${askBase}/council/ask`, { method: 'POST', headers: cabecerasAsk(),
+          body: JSON.stringify({ message: mensaje, generation: generacion, llm, context: contexto || null, report: false }) }),
+        () => llamar(`${councilBase}/api/council/ask`, { method: 'POST', headers: cabecerasConsejo(),
+          body: JSON.stringify({ message: mensaje, generation: generacion, llm, context: contexto || null, report: false }) }),
+        () => llamar(`${renderBase}/api/council/ask`, { method: 'POST', headers: cabecerasConsejo(),
+          body: JSON.stringify({ message: mensaje, generation: generacion, llm, context: contexto || null, report: false }) }),
+      ),
 
     preguntarConsejero: ({ rol, mensaje, generacion = 'leyendas', llm = 'grok-4.6', contexto, max_tokens = 300 }) =>
-      llamar(`${councilBase}/api/council/ask-one`, { method: 'POST', headers: cabecerasConsejo(),
-        body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, max_tokens, context: contexto || null }) }),
+      enCascada(
+        () => llamar(`${askBase}/council/ask-one`, { method: 'POST', headers: cabecerasAsk(),
+          body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, max_tokens, context: contexto || null, report: false }) }),
+        () => llamar(`${councilBase}/api/council/ask-one`, { method: 'POST', headers: cabecerasConsejo(),
+          body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, max_tokens, context: contexto || null, report: false }) }),
+        () => llamar(`${renderBase}/api/council/ask-one`, { method: 'POST', headers: cabecerasConsejo(),
+          body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, max_tokens, context: contexto || null, report: false }) }),
+      ),
+
+    conversacionAutonoma: async ({ tema, turnos, llm, tope_eur, max_tokens, a, b }) => {
+      const inicio = await llamar(`${askBase}/consejo/sesion`, { method: 'POST', headers: cabecerasAsk(),
+        body: JSON.stringify({ accion: (a && b) ? 'duelo' : 'arrancar', tema, turnos, llm, tope_eur, max_tokens, a, b, report: false }) });
+      let sesion = inicio;
+      const t0 = Date.now();
+      while (sesion && sesion.estado === 'en_curso' && Date.now() - t0 < 110_000) {
+        sesion = await llamar(`${askBase}/consejo/sesion`, { method: 'POST', headers: cabecerasAsk(),
+          body: JSON.stringify({ accion: 'turno', id: sesion.id, report: false }) }, { timeoutMs: 60_000 });
+      }
+      return sesion;
+    },
 
     saludBots: () => llamar(`${fleetBase}/council/health`),
     flota: () => llamar(`${fleetBase}/council/machine-status`),

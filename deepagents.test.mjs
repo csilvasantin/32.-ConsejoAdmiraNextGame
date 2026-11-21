@@ -145,7 +145,7 @@ test("página: lo primero son los cuatro deepagents fijos, sin rótulos de motor
   assert.ok(js.indexOf('agente: "Trinity"') < js.indexOf('agente: "Neo"') && js.indexOf('agente: "Neo"') < js.indexOf('agente: "Oraculo"'));
   // Desplegable solo con más de un equipo; luz verde/rojo/amarillo; la pastilla abre la captura en vivo.
   assert.ok(js.includes("maqs.length > 1") && js.includes('el("select", "ag-maq")'));
-  assert.ok(js.includes('verde: "Trabajando", rojo: "Sin hacer nada", amarillo: "No se sabe"'));
+  assert.ok(js.includes('verde: "trabajando", rojo: "sin hacer nada", amarillo: "no se sabe"'));
   assert.ok(js.includes('"/control/?rc="') && js.includes('"&ver=1"') && js.includes('"&lado="') && !js.includes('"&pantalla="'));
   assert.ok(js.includes("Sin tarea declarada"));
 });
@@ -201,4 +201,25 @@ test("r230: /control elige el monitor por posición (etiqueta del equipo o geome
   assert.equal(f(geo, "izquierda"), 2);
   assert.equal(f([{ indice: 0, nombre: "Principal · 1920x1080" }, { indice: 1, nombre: "Pantalla 2 · 1920x1080" }], "derecha"), null);
   assert.ok(html.includes("q.get('lado')"));
+});
+
+test("r231: borde = abierto en la máquina, punto = actividad; GitHub firma la actividad de Trinity", async () => {
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("./deepagents/deepagents.css", import.meta.url), "utf8");
+  assert.ok(js.includes('"ag ab-" + ab.estado + " act-" + l.luz'));
+  assert.ok(/\.ag\.ab-verde\{border-top-color:var\(--good\)\}/.test(css) && /\.act-rojo \.ag-led\{/.test(css));
+  assert.ok(!/\.ag\.(verde|rojo|amarillo)\{border-top/.test(css), "el borde ya no usa el color de actividad");
+  assert.ok(js.includes("/api/deepagents/actividad"));
+  const { actividadDeEventos } = await import("./deepagents-actividad-lib.mjs");
+  const ev = [
+    { type: "PullRequestEvent", created_at: "2026-11-21T19:19:55Z", repo: { name: "csilvasantin/admira-studio" }, payload: { action: "merged", pull_request: { number: 168, head: { ref: "trinity/content-title-es-en-20261121" } } } },
+    { type: "PullRequestEvent", created_at: "2026-11-21T19:08:07Z", repo: { name: "csilvasantin/admira-tv" }, payload: { action: "closed", pull_request: { merged: true, number: 221, head: { ref: "trinity/content-title-es-en-20261121" } } } },
+    { type: "PullRequestEvent", created_at: "2026-11-21T19:11:03Z", repo: { name: "csilvasantin/admira-store" }, payload: { action: "opened", pull_request: { number: 274, head: { ref: "neo/suite-cinco-soluciones-2" } } } },
+    { type: "PushEvent", created_at: "2026-11-21T19:30:00Z", repo: { name: "csilvasantin/x" }, payload: { ref: "refs/heads/main" } },
+    { type: "PushEvent", created_at: "2026-11-21T19:31:00Z", repo: { name: "csilvasantin/x" }, payload: { ref: "refs/heads/woz/algo" } },
+  ];
+  const a = actividadDeEventos(ev);
+  assert.deepEqual(Object.keys(a).sort(), ["Neo", "Trinity"]);
+  assert.equal(a.Trinity.repo, "admira-studio"); assert.equal(a.Trinity.accion, "merged");
+  assert.equal(a.Neo.repo, "admira-store");
 });

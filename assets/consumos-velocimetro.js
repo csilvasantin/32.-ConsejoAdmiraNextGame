@@ -146,47 +146,69 @@
     if (real > mostrado) v = Math.max(v, (real - mostrado) / ALCANCE_S);      // el real va por delante: alcanzarlo en ~30 s
     return Math.max(v, minimo);
   }
-  function Odometro(el) { this.el = el; this.real = null; this.objetivo = null; this.ritmo = 0; this.activo = false; this.finHora = 0; this.mostrado = null; this.dia = ''; this.tPrev = 0; this.vel = 0; this.corre = false; }
-  Odometro.prototype.pon = function (n, tokHora, activo, nVivo) {
+  /* r228 (Carlos, 21-11: «el contador no está sumando?»). Decisión del dueño: el cuentakilómetros de HOY suma en vivo al
+   * ritmo que enseña el dial (la cifra grande, incluido el mínimo por apps abiertas): + ritmo/3600 tokens por segundo.
+   * Base = total real de hoy de la API; en cada lectura, si el real va por delante salta al real; si el acumulado va por
+   * encima, NO retrocede (monótono durante la visita). Reinicio a medianoche de Madrid. El acumulado del día se guarda en
+   * localStorage por dial y selección, y al recargar arranca en max(real, guardado del mismo día).
+   * Si lo mostrado supera lo medido, el rótulo lo dice: «incluye estimado en curso». Reloj de pared (no frames). */
+  var LS_ODO = 'consumos.odo.v1';
+  function odoGuardados(dia) { try { var o = JSON.parse((root.localStorage && root.localStorage.getItem(LS_ODO)) || '{}') || {}; return o.dia === dia && o.k ? o.k : {}; } catch (e) { return {}; } }
+  function odoGuarda(dia, clave, v) {
+    if (!clave) return;
+    try { var k = odoGuardados(dia); k[clave] = Math.floor(v); root.localStorage && root.localStorage.setItem(LS_ODO, JSON.stringify({ dia: dia, k: k })); } catch (e) {}
+  }
+  /** Siguiente valor del acumulado: monótono; salta al real si va por delante. Puro (testeable). */
+  function odoSiguiente(mostrado, real, ritmoTokH, dt) {
+    var m = Math.max(Number(mostrado) || 0, Number(real) || 0);
+    return m + Math.max(0, Number(ritmoTokH) || 0) / 3600 * Math.max(0, dt || 0);
+  }
+  function Odometro(el) { this.el = el; this.real = null; this.ritmo = 0; this.mostrado = null; this.dia = ''; this.clave = ''; this.tPrev = 0; this.tGuarda = 0; this.corre = false; }
+  Odometro.prototype.pon = function (n, ritmoTokH, clave, vivo) {
     var el = this.el;
     if (!el.querySelector('.odo-rueda')) el.innerHTML = odometroHTML();
     var sin = n == null || !isFinite(n);
     el.classList.toggle('odo-sin', sin);
-    if (sin) { this.real = null; this.mostrado = null; this.dibuja(null); return; }
-    var ahora = Date.now(), rel = relojMadrid(ahora);
-    if (rel.dia !== this.dia || this.mostrado == null) { this.mostrado = n; this.dia = rel.dia; } // primer valor o día nuevo
-    this.real = n; this.activo = !!activo;
-    // r39: la media del día de reserva sale solo de fuentes en vivo (sin los tokens con retraso de Cursor).
-    this.ritmo = ritmoPronostico(Number(tokHora) || 0, nVivo == null ? n : nVivo, this.activo, rel.s);
-    var seg = segundosFinHora(ahora);
-    this.finHora = ahora + seg * 1000;
-    this.objetivo = n + this.ritmo * seg;
+    if (sin) { this.real = null; this.mostrado = null; this.dibuja(null); this.nota(); return; }
+    var dia = relojMadrid(Date.now()).dia;
+    if (dia !== this.dia || clave !== this.clave || this.mostrado == null) {
+      this.dia = dia; this.clave = clave || '';
+      this.mostrado = vivo ? Math.max(n, Number(odoGuardados(dia)[this.clave]) || 0) : n;
+    } else this.mostrado = Math.max(this.mostrado, n);
+    this.real = n; this.vivo = !!vivo;
+    this.ritmo = vivo ? Math.max(0, Number(ritmoTokH) || 0) : 0;
     el.setAttribute('aria-label', Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES') + ' ' + rotuloPeriodo(this.periodo || 'hoy') + (el.getAttribute('role') === 'button' ? ' · ' + T('pulsa para cambiar de periodo', 'press to change period') : ''));
+    this.nota();
     this.arranca();
+  };
+  /** Rótulo discreto bajo el cuentakilómetros cuando lo mostrado va por encima de lo medido. */
+  Odometro.prototype.nota = function () {
+    var caja = this.el.parentNode; if (!caja) return;
+    var p = caja.querySelector('.odo-est');
+    if (!p) { p = document.createElement('p'); p.className = 'odo-est'; caja.appendChild(p); }
+    var extra = this.real != null && this.mostrado != null ? Math.floor(this.mostrado - this.real) : 0;
+    var txt = this.vivo && extra >= 1 ? T('tokens hoy · incluye estimado en curso (+', 'tokens today · includes running estimate (+') + fmt(extra) + T(' sobre lo medido)', ' over measured)') : '';
+    if (p.textContent !== txt) p.textContent = txt;
   };
   Odometro.prototype.avanza = function (ahora) {
     if (this.real == null) return;
     var dt = this.tPrev ? Math.max(0, Math.min(86400, (ahora - this.tPrev) / 1000)) : 0;
     this.tPrev = ahora;
-    var rel = relojMadrid(ahora);
-    if (rel.dia !== this.dia) { this.dia = rel.dia; this.mostrado = 0; this.real = 0; this.objetivo = this.ritmo * segundosFinHora(ahora); this.finHora = ahora + segundosFinHora(ahora) * 1000; }
-    // Pasó la hora sin lectura nueva (pestaña en segundo plano, red caída): el pronóstico se alarga otra hora.
-    while (ahora >= this.finHora) { this.finHora += 3600e3; this.objetivo += this.ritmo * 3600; }
-    // Paso en trozos de ≤ 1 s para que, al volver de segundo plano, la velocidad se recalcule por el camino.
-    while (dt > 0) {
-      var h = Math.min(1, dt); dt -= h;
-      this.vel = velocidadOdometro({ mostrado: this.mostrado, real: this.real, objetivo: this.objetivo, segundosRestantes: (this.finHora - ahora) / 1000, ritmo: this.ritmo, activo: this.activo });
-      this.mostrado += this.vel * h;
-    }
+    var dia = relojMadrid(ahora).dia;
+    if (this.vivo && dia !== this.dia) { this.dia = dia; this.mostrado = 0; this.real = 0; dt = relojMadrid(ahora).s; } // medianoche de Madrid
+    this.mostrado = odoSiguiente(this.mostrado, this.real, this.ritmo, dt);
+    if (this.vivo && ahora - this.tGuarda > 2000) { this.tGuarda = ahora; odoGuarda(this.dia, this.clave, this.mostrado); }
   };
   Odometro.prototype.arranca = function () {
     if (this.corre) return;
     this.corre = true; this.tPrev = Date.now();
-    var self = this;
+    var self = this, tNota = 0;
     var paso = function () {
       if (self.real == null) { self.corre = false; return; }
-      self.avanza(Date.now());
+      var ahora = Date.now();
+      self.avanza(ahora);
       self.dibuja(menosMovimiento() ? Math.floor(self.mostrado) : self.mostrado);
+      if (ahora - tNota > 1000) { tNota = ahora; self.nota(); }
       if (menosMovimiento() || document.hidden) setTimeout(paso, 1000); else requestAnimationFrame(paso);
     };
     if (!this.visto) { this.visto = true; document.addEventListener && document.addEventListener('visibilitychange', function () { if (self.real != null) { self.avanza(Date.now()); self.dibuja(self.mostrado); } }); }
@@ -201,15 +223,13 @@
       ruedas[i].firstChild.style.transform = 'translateY(' + (-pos[i] * 100 / 11).toFixed(3) + '%)';
     }
   };
-  function odometro(el, n, tokHora, activo, nVivo, periodo, quieto) {
+  function odometro(el, n, ritmoTokH, clave, periodo) {
     if (!el) return;
     if (!el._odo) el._odo = new Odometro(el);
     var o = el._odo, p = periodo || 'hoy';
-    // Sin uso reciente: si el pronóstico se había adelantado, vuelve al real (no se enseñan tokens que no existen).
-    if (quieto && o.mostrado != null && n != null && o.mostrado > n) o.mostrado = n;
-    // Al cambiar de periodo el valor salta al nuevo (sin rodar hacia atrás ni alcanzar a 30 s); fuera de HOY queda quieto.
+    // Al cambiar de periodo el valor salta al nuevo (sin rodar); fuera de HOY queda quieto en su cifra real.
     if (o.periodo !== p) { o.periodo = p; o.mostrado = null; o.dia = ''; }
-    if (p === 'hoy') o.pon(n, tokHora, activo, nVivo); else o.pon(n, 0, false, 0);
+    if (p === 'hoy') o.pon(n, ritmoTokH, clave, true); else o.pon(n, 0, 'per:' + p, false);
   }
   /* Periodos del cuentakilómetros de la flota (Carlos, 21-10-2026): cada pulsación HOY → AYER → SEMANA → MES → HOY.
    * Días de Europe/Madrid: semana = lunes … hoy, mes = día 1 … hoy. Cifras de /api/consumos/velocidad → periodos
@@ -374,7 +394,21 @@
   /** Amplitud de la vibración (grados) para una fracción de escala: 0 si parada; 0,5° → 1,5° a fondo. */
   // 21-11 (Carlos: «estan las agujas moviendose» con 0 tokens/hora): la aguja marca EXACTAMENTE la cifra. Sin
   // vibración de carretera, sin ralentí (r114) y sin cambios de marcha (r113): solo el muelle al cambiar de valor.
-  function amplitud() { return 0; }
+  // r228 (Carlos: «la flecha del velocímetro tiene que tener una vibración que representa el calculo y el refresco»):
+  // temblor fino continuo CENTRADO en la cifra (±0,5 % → ±1 % de la escala según el ritmo; 1 % = 1,8°), tipo motor
+  // ~10 Hz, solo con ritmo > 0; y en cada lectura de la API un pulso visible (~400 ms) que se asienta en el valor nuevo.
+  // Con ritmo 0 o sin dato: quieta. prefers-reduced-motion: sin vibración ni pulso. Sigue sin ralentí ni marchas.
+  function amplitud(frac, sin) { return sin || !(frac > 0) ? 0 : 0.9 + 0.9 * Math.min(1, frac); }
+  var PULSO_MS = 420, PULSO_GRADOS = 4.5, TEMBLOR_HZ = 10;
+  /** Desviación (grados) del temblor + pulso en el instante t (ms). Media 0: el centro es la cifra. Puro (testeable). */
+  function temblor(t, amp, tPulso, fase) {
+    if (!(amp > 0)) return 0;
+    var s = t / 1000, w = 2 * Math.PI * TEMBLOR_HZ;
+    var fino = amp * (0.7 * Math.sin(w * s + (fase || 0)) + 0.3 * Math.sin(w * 1.37 * s + 2 * (fase || 0)));
+    var dp = tPulso ? t - tPulso : Infinity;
+    var pulso = dp >= 0 && dp < PULSO_MS ? PULSO_GRADOS * Math.exp(-dp / 110) * Math.sin(2 * Math.PI * 14 * dp / 1000) : 0;
+    return fino + pulso;
+  }
   Dial.prototype.cuadro = function (t) {
     var self = this, dt = Math.min(0.05, Math.max(0.001, ((t - (this.tPrev || t)) / 1000) || 0.016));
     this.tPrev = t;
@@ -387,9 +421,8 @@
       this.frac += this.vel * dt;
       this.valor += (this.v - this.valor) * Math.min(1, dt * 6);
       var amp = amplitud(this.destino, this.sin);
-      if (t - this.tRuido > 66) { this.tRuido = t; this.ruidoObj = (Math.random() * 2 - 1) * amp; }
-      this.ruido += (this.ruidoObj - this.ruido) * Math.min(1, dt * 22);
-      if (!amp) this.ruido *= 0.8;
+      if (this.fase == null) this.fase = Math.random() * 6.28;
+      this.ruido = temblor(t, amp, this.tPulso || 0, this.fase);
     }
     var b = this.box, ag = b.querySelector('.vel-aguja'), val = b.querySelector('.vel-valor'), cifra = b.querySelector('.vel-cifra');
     var f = Math.max(-0.02, Math.min(1.03, this.frac));
@@ -406,7 +439,7 @@
     b.classList.toggle('en-roja', !this.sin && f >= 0.8);
     if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
-    var vibra = false; // 21-11: la aguja se asienta en la cifra y se queda quieta
+    var vibra = !quieto && amplitud(this.destino, this.sin) > 0; // r228: temblor mientras el ritmo > 0
     if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };
@@ -428,6 +461,8 @@
     }
     var v = sin ? 0 : (Number(tokHora) || 0);
     this.sin = !!sin; this.v = v;
+    // r228: cada lectura/cálculo de datos = un pulso visible en la aguja (si hay ritmo).
+    if (v > 0 && !menosMovimiento()) this.tPulso = (root.performance && performance.now) ? performance.now() : Date.now();
     this.destino = Math.max(0, Math.min(1, v / max));
     var cifra = b.querySelector('.vel-cifra');
     if (sin) cifra.textContent = T('sin dato en vivo', 'no live data');
@@ -436,12 +471,15 @@
     var rm = ritmoMedio(tokHoy); // 21-11: la media del día es medida aunque no haya ritmo en vivo
     // r57 (Carlos): sin uso real reciente (último evento > 3 min) no hay pronóstico: el cuentakilómetros se queda en tokHoy.
     var fresco = this.fresco !== false;
-    odometro(b.querySelector('.odo'), tokHoy, fresco ? v : 0, fresco && (v > 0 || hayVerdes()), tokHoyVivo, this.periodo, !fresco);
+    // r228: el cuentakilómetros suma al ritmo de la cifra grande (v), monótono; ver Odometro.
+    void fresco; void tokHoyVivo;
+    odometro(b.querySelector('.odo'), tokHoy, v, this.pfx + ':' + (this.clave || ''), this.periodo);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
-    if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '');
+    if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '') +
+      ' · ' + T('refresco cada ', 'refresh every ') + Math.round(POLL / 1000) + ' s';
   };
-  root.ConsumosVelocimetroAguja = { amplitud: amplitud };
+  root.ConsumosVelocimetroAguja = { amplitud: amplitud, temblor: temblor, odoSiguiente: odoSiguiente, POLL_MS: POLL };
 
   var LS_PROY = 'consumos.vel.proyecto', LS_AG = 'consumos.vel.agente', AUTO = '__auto__', TODOS = '__todos__';
   function lsGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) || '' : ''; } catch (e) { return ''; } }
@@ -730,6 +768,7 @@
     if (!r.agente) {
       // r226: total de toda la flota (agentes + consejeros: Grok Bot (Consejo), Consejeros (Cloudflare)…), escala que lo abarca.
       var rF = ritmoTotal(d, sin);
+      estado.d1.clave = 'flota';
       max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, rF.tokHora);
       var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
       estado.d1.ultimoEvento = rF.ultimoEvento;
@@ -761,7 +800,7 @@
       cursor: f && f.conRetraso ? (tasaVista(f) != null ? tasaVista(f) : f.tokHoraRetraso) : null,
       tokHoy: f ? f.tokHoy : null, trabajando: hayVerdes(), ultimoEvento: f ? ultimoUso([f]) : null });
     estado.estAg = { agente: r.agente, tokHoy: rA.tokHoy, estimado: rA.estimado };
-    estado.d1.ultimoEvento = rA.ultimoEvento;
+    estado.d1.ultimoEvento = rA.ultimoEvento; estado.d1.clave = 'ag:' + r.agente;
     estado.d1.pinta(rA.tokHora, max, rA.tokHoy, false, f && !f.conRetraso ? f.tokHoy : 0, rA.fuente);
     if (tit) tit.textContent = rotAg();
     if (rot) rot.textContent = vis(r.agente) + ' · ' + T('tokens hoy', 'tokens today');
@@ -792,7 +831,7 @@
       trabajando: hayVerdes(), ultimoEvento: ultimoUso(agsP) });
     var estP = rPr.fuente || (p && p.estimado && !(rate > 0) ? 'cursor' : null);
     var sinP = false;
-    estado.d2.ultimoEvento = rPr.ultimoEvento;
+    estado.d2.ultimoEvento = rPr.ultimoEvento; estado.d2.clave = 'p:' + (nombre || '');
     // 21-11: el cuentakilómetros del proyecto solo adelanta (pronóstico) con uso real de hace ≤ 3 min, como el de la flota.
     estado.d2.fresco = usoFresco(sin ? [] : agsP, Date.now());
     estado.d2.pinta(rPr.tokHora, escala(maxRate, 5e6), rPr.tokHoy, false, Math.max(0, (hoy || 0) - retrasoEnProyecto(d, nombre)), estP);
@@ -815,7 +854,7 @@
   /** r226: dial de PROYECTOS en «Todos los proyectos» = suma de todos (mismo total y mismas reglas que «Toda la flota»). */
   function pintaTodos(d, sin, lista) {
     var rT = ritmoTotal(d || {}, sin);
-    estado.d2.ultimoEvento = rT.ultimoEvento;
+    estado.d2.ultimoEvento = rT.ultimoEvento; estado.d2.clave = 'todos';
     estado.d2.fresco = usoFresco(sin ? [] : (d && d.porAgente) || [], Date.now());
     estado.d2.pinta(rT.tokHora, sin ? 2e6 : escalaTotal(d, rT.tokHora), rT.tokHoy, false, sin ? rT.tokHoy : tokHoyVivo(d), rT.fuente);
     var nom = document.getElementById('vel-proy-nombre');

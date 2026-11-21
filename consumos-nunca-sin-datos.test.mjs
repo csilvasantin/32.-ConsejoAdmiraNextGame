@@ -36,12 +36,11 @@ test("respaldo: ritmo real → última hora con datos → Cursor → «sin dato 
   assert.equal(E.respaldo({ tokHora: null, tokHoy: 0, plausible: 300000 }).tokHora, null, "ya no hay «plausible»");
 });
 
-test("aguja = cifra: sin ralentí, sin cambios de marcha, sin vibración", () => {
+test("aguja = cifra: sin ralentí ni marchas; r228: temblor centrado en la cifra solo con ritmo > 0", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
-  assert.match(js, /function amplitud\(\) \{ return 0; \}/);
   assert.ok(!/if \(f < this\.ralenti\) f = this\.ralenti/.test(js), "sin suelo de ralentí");
   assert.ok(!/^\s*programaMarcha\(\);/m.test(js), "los cambios de marcha no se programan");
-  assert.match(js, /var vibra = false;/);
+  assert.match(js, /var vibra = !quieto && amplitud\(this\.destino, this\.sin\) > 0;/);
   assert.match(js, /sin dato en vivo/);
   assert.match(js, /ritmo de la última hora con datos/);
   assert.ok(!/T\('sin datos', 'no data'\)/.test(js));

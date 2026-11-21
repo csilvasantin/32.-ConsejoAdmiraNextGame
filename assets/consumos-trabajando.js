@@ -133,7 +133,8 @@
     var motor = rt([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
     var que = t.tarea || t.foco || '';
     var linea;
-    if (t.ciego && (t.estado === 'rojo' || t.estado === 'gris')) linea = '<span class="tr-est">' + T('actividad no medible', 'activity not measurable') + '</span> · ' + esc(T('app ', 'app ') + t.ciego.app + T(' abierta en ', ' open on ') + maqNombre(t.ciego.maquina) + T(': el pulso de ese Mac no ve sus sesiones', ': that Mac\'s pulse cannot see its sessions'));
+    if (t.abiertoDA && t.estado === 'verde') linea = '<span class="tr-est">' + T('abierto · 250k/h', 'open · 250k/h') + '</span> · ' + esc(t.abiertoDA) + (que ? ' · ' + esc(que) : '');
+    else if (t.ciego && (t.estado === 'rojo' || t.estado === 'gris')) linea = '<span class="tr-est">' + T('actividad no medible', 'activity not measurable') + '</span> · ' + esc(T('app ', 'app ') + t.ciego.app + T(' abierta en ', ' open on ') + maqNombre(t.ciego.maquina) + T(': el pulso de ese Mac no ve sus sesiones', ': that Mac\'s pulse cannot see its sessions'));
     else if (t.estado === 'rojo') linea = '<span class="tr-est">' + T('sin actividad', 'inactive') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
     else if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
     else if (t.sinActividad) linea = sinAct(t) + via(t) + (que ? ' · ' + esc(que) : '');
@@ -151,7 +152,8 @@
     (ts || []).forEach(function (t) { (t.grupo === 'consejeros' || (!t.grupo && t.consejero) ? g.consejeros : g.agentes).push(t); });
     function cuenta(l) {
       var v = l.filter(function (t) { return t.estado === 'verde'; }).length, a = l.filter(function (t) { return t.estado === 'amarillo'; }).length;
-      return { trabajando: v, conCarlos: a, parados: l.length - v - a, total: l.length };
+      var ab = l.filter(function (t) { return t.estado === 'verde' && t.abiertoDA; }).length; // r235
+      return { trabajando: v, abiertos: ab, conCarlos: a, parados: l.length - v - a, total: l.length };
     }
     return [{ id: 'agentes', titulo: T('Agentes', 'Agents'), tarjetas: g.agentes, n: cuenta(g.agentes) },
             { id: 'consejeros', titulo: T('Consejeros', 'Councillors'), tarjetas: g.consejeros, n: cuenta(g.consejeros) }];
@@ -174,7 +176,8 @@
     // r232: los de «actividad no medible» no son parados: se cuentan aparte.
     var nc = (ts || []).filter(function (t) { return t.ciego && (t.estado === 'rojo' || t.estado === 'gris'); }).length;
     ab = Math.max(0, ab - nc); // los «sin medir» siempre tienen la app abierta: no se cuentan dos veces
-    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + (nc ? ' · <b class="tr-abiertas">' + nc + '</b> ' + T('sin medir', 'not measurable') : '') + ' · <b>' + Math.max(0, n.parados - nc) + '</b> ' + T('parados', 'idle') +
+    // r235: los deepagents abiertos sin tokens cuentan en «trabajando» (son verdes) y se dice cuántos: «3 trabajando (2 abiertos)».
+    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + (n.abiertos ? ' (<b class="tr-abiertas">' + n.abiertos + '</b> ' + T(n.abiertos === 1 ? 'abierto' : 'abiertos', 'open') + ')' : '') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + (nc ? ' · <b class="tr-abiertas">' + nc + '</b> ' + T('sin medir', 'not measurable') : '') + ' · <b>' + Math.max(0, n.parados - nc) + '</b> ' + T('parados', 'idle') +
       (ab ? ' (<b class="tr-abiertas">' + ab + '</b> ' + T('con app abierta', 'with app open') + ')' : '');
   }
   /** r11: «MBA16 · +C» ↔ «Claude» (o «OpenCode · Nemotron 3 Ultra»); si falta un lado, se repite el otro. */
@@ -242,11 +245,13 @@
   /** r24 (Carlos, 18:00 — «Trinity ni siquiera sale»): todos con nombre. Primero los que trabajan / con Carlos; después
    *  los parados como chips atenuados «Trinity · Codex · CLI · en espera» (antes, caras anónimas en un montón). */
   function chipsDe(l) {
+    // r235: el orden de la lista manda (deepagents primero): verdes y amarillos juntos en ese orden.
     var vivos = l.filter(function (t) { return t.estado !== 'gris' && t.estado !== 'rojo'; }), ciegos = l.filter(function (t) { return t.ciego && (t.estado === 'rojo' || t.estado === 'gris'); }),
       rojos = l.filter(function (t) { return t.estado === 'rojo' && !t.ciego; }), grises = l.filter(function (t) { return t.estado === 'gris' && !t.ciego; });
     function chip(t) {
       if (t.ciego && (t.estado === 'rojo' || t.estado === 'gris')) return chipCiego(t);
       var gris = t.estado === 'gris', rojo = t.estado === 'rojo';
+      if (t.abiertoDA && t.estado === 'verde') return chipAbiertoDA(t);
       var est = gris ? T('en espera', 'idle') : rojo ? T('sin actividad > 1 h (activo hoy)', 'inactive > 1 h (active today)') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
       var abierta = (gris || rojo) && conAppAbierta(t);
       // r229: un agente con su app Claude/Codex abierta vale 250 k/h en el reloj de agentes (y en el de proyectos).
@@ -254,19 +259,49 @@
       var txtAb = cuenta250 ? T('app abierta · 250k/h', 'app open · 250k/h') : T('app abierta', 'app open');
       return '<span class="tr-chipa tr-' + esc(t.estado) + (abierta ? ' tr-abierta' : '') + (t.fuera && t.fuera.length ? ' tr-fuera6' : '') + '" title="' + esc(t.porqueColor ? t.porqueColor : vis(t.agente) + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + ((gris || rojo) && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + (gris ? ' <small class="tr-espera">' + esc(abierta ? txtAb + T(' · en espera', ' · idle') : T('en espera', 'idle')) + '</small>' : rojo ? ' <small class="tr-espera">' + esc((abierta ? txtAb + ' · ' : '') + (hace(t.haceS) || T('hoy', 'today'))) + '</small>' : '') + '</span>';
     }
+    /* r235: deepagent abierto (verde) sin tokens recientes: «abierto · 250k/h», sin «hace 12 h» ni «en espera». */
+    function chipAbiertoDA(t) {
+      return '<span class="tr-chipa tr-verde tr-abiertoda" title="' + esc(t.porqueColor || t.abiertoDA) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + ' <small class="tr-espera">' + esc(T('abierto · 250k/h', 'open · 250k/h')) + '</small></span>';
+    }
     /* r232: app de escritorio abierta que el pulso no puede medir → ni rojo ni «hace 3 h»: «actividad no medible» (azul, «?»). */
     function chipCiego(t) {
       var txt = T('app abierta · 250k/h · sin medir', 'app open · 250k/h · not measured');
       return '<span class="tr-chipa tr-ciego tr-abierta" title="' + esc(t.porqueColor || t.ciego.motivo) + '">' + retrato(t) + '<i></i>' + esc(vis(t.agente)) + sufMaq(t) + altChip(t, true) + ' <small class="tr-espera">' + esc(txt) + '</small></span>';
     }
-    return vivos.map(chip).join('') + ciegos.map(chip).join('') + rojos.map(chip).join('') + grises.map(chip).join('');
+    // r235: los deepagents (t._da ≥ 0, de conDeepAgents) van SIEMPRE primero, en el orden de /deepagents, sea cual sea su color.
+    var esDA = function (t) { return t._da >= 0; }, noDA = function (t) { return !esDA(t); };
+    return l.filter(esDA).map(chip).join('') + vivos.filter(noDA).map(chip).join('') + ciegos.filter(noDA).map(chip).join('') + rojos.filter(noDA).map(chip).join('') + grises.filter(noDA).map(chip).join('');
+  }
+  /* r235 (Carlos, 21-11 22:15: «Trabajando Ahora tiene que empezar por los DeepAgents y si estan abiertos como en
+   * deepagents que aparezcan en verde»). Los cuatro deepagents (orden de /deepagents: Trinity, Neo, Oráculo, Morfeo) van
+   * primero; después el resto en su orden. Un deepagent ABIERTO según la misma regla de /deepagents
+   * (DeepAgentsEstado.abiertoEn: app/sesión en el pulso de su Mac) sale VERDE aunque no gaste tokens ahora
+   * (t.abiertoDA = el porqué); «con Carlos» (amarillo) sigue mandando. Rojo/gris solo si no está abierto. Copia: los
+   * datos originales (los del evento flota:trabajando, que usan los relojes) no se tocan. Puro. */
+  function normN(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  function conDeepAgents(ts) {
+    var DA = root.DeepAgentsEstado;
+    if (!DA || !DA.resumen || !ts) return ts;
+    var res = DA.resumen(ts), pos = {};
+    res.forEach(function (a, i) { pos[normN(a.agente)] = i; });
+    var out = ts.map(function (t, i) {
+      var k = t && pos.hasOwnProperty(normN(t.agente)) ? pos[normN(t.agente)] : -1;
+      var c = {}; for (var p in t) if (Object.prototype.hasOwnProperty.call(t, p)) c[p] = t[p];
+      c._i = i; c._da = k;
+      if (k >= 0 && res[k].abierto.estado === 'verde' && (t.estado === 'rojo' || t.estado === 'gris')) {
+        c.estado = 'verde'; c.abiertoDA = res[k].abierto.porque; c.ciego = null;
+        c.porqueColor = T('abierto', 'open') + ': ' + res[k].abierto.porque + (t.porqueColor ? ' · ' + t.porqueColor : '');
+      }
+      return c;
+    });
+    return out.sort(function (a, b) { var da = a._da < 0 ? 99 : a._da, db = b._da < 0 ? 99 : b._da; return da - db || a._i - b._i; });
   }
   function pinta(d) {
     var ul = document.getElementById('trabajando-lista'), pie = document.getElementById('trabajando-pie'), res = document.getElementById('trabajando-resumen');
     if (!ul) return;
     var ts = d && d.ok ? d.tarjetas || [] : null;
     if (!ts) { ul.innerHTML = '<li class="tr-vacio">' + T('Sin datos de presencia ni de pulso ahora: no se enseña nadie.', 'No presence or pulse data right now: nobody is shown.') + '</li>'; return; }
-    var gs = grupos(ts);
+    var gs = grupos(conDeepAgents(ts));
     // r43: una cabecera por grupo (ocupa toda la fila de la rejilla) con sus cuentas, y debajo sus tarjetas.
     ul.innerHTML = gs.map(function (g) {
       return '<li class="tr-grupo" id="trabajando-' + g.id + '"><b>' + esc(rotGrupo(g)) + '</b> <small>' + cifras(g.n, g.tarjetas) + '</small></li>' +
@@ -277,8 +312,8 @@
     ponFase(ch); ponFase(ul); if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(rotGrupo(g)) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
     if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n, g.tarjetas) + '</span>'; }).join(' — ') + aviso(d);
     if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
-      T('verde = en un agente, SOLO si gasta tokens de verdad (tokens en los últimos 15 min o en la última hora) o su app de escritorio está en uso (proceso vivo o encargos abiertos no bastan); en un consejero, tokens, latido «trabajando», CPU del proceso, latido con encargo en curso o su consejero_latido «trabajando» vigente · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · rojo = sin actividad desde hace más de 1 h, pero activo hoy (Madrid) · gris = sin actividad hoy · azul «actividad no medible» = su app de escritorio está abierta pero el pulso de ese Mac no ve sus sesiones (ni se da por trabajando ni por parado) · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
-        'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · red = no activity for over 1 h, but active today (Madrid) · grey = no activity today · blue «activity not measurable» = its desktop app is open but that Mac\'s pulse cannot see its sessions (neither working nor idle) · councillors = the 16 of the Council (legends and contemporaries) · Terminal (CLI) = the agent\'s working channel; only Carlos uses the desktop app («Desktop app · Carlos» when he is using it; «App open, not in use», dimmed, never counts as work) · sources: ') +
+      T('verde = los cuatro DeepAgents (van primero) con su app o sesión abierta en el pulso de su Mac, como en /deepagents; en otro agente, SOLO si gasta tokens de verdad (tokens en los últimos 15 min o en la última hora) o su app de escritorio está en uso (proceso vivo o encargos abiertos no bastan); en un consejero, tokens, latido «trabajando», CPU del proceso, latido con encargo en curso o su consejero_latido «trabajando» vigente · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · rojo = sin actividad desde hace más de 1 h, pero activo hoy (Madrid) · gris = sin actividad hoy · azul «actividad no medible» = su app de escritorio está abierta pero el pulso de ese Mac no ve sus sesiones (ni se da por trabajando ni por parado) · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
+        'green = the four DeepAgents (listed first) with their app or session open in their Mac\'s pulse, as on /deepagents; otherwise tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · red = no activity for over 1 h, but active today (Madrid) · grey = no activity today · blue «activity not measurable» = its desktop app is open but that Mac\'s pulse cannot see its sessions (neither working nor idle) · councillors = the 16 of the Council (legends and contemporaries) · Terminal (CLI) = the agent\'s working channel; only Carlos uses the desktop app («Desktop app · Carlos» when he is using it; «App open, not in use», dimmed, never counts as work) · sources: ') +
       '<a href="https://bot.yokup.com/api/presence">' + T('presencia de Yokup', 'Yokup presence') + '</a> + <a href="/api/consumos/velocidad">' + T('pulso de tokens', 'token pulse') + '</a>' +
       (d.presencia === 'cache' ? ' · ⚠ ' + T('presencia de caché (hace ', 'cached presence (') + esc(String(d.presenciaEdadS)) + T(' s)', ' s ago)') : d.presencia !== 'ok' ? ' · ⚠ ' + T('presencia sin respuesta', 'no presence answer') : '') + ' · ' + T('cada 10 s', 'every 10 s');
   }
@@ -290,7 +325,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { conDeepAgents: conDeepAgents, grupos: grupos, xyGrupo: xyGrupo, rotGrupo: rotGrupo, focoTxt: focoTxt, altChip: altChip, maqNombre: maqNombre, maqCanon: maqCanon, maqActual: maqActual, misionTxt: misionTxt, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

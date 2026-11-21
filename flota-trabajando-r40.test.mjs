@@ -174,8 +174,12 @@ test("caso de Carlos (12:49): Neo y Trinity con él en el MBP16 → «con Carlos
   for (const n of ["Neo", "Trinity"]) assert.notEqual(de(sinUso, n).estado, "amarillo", n + " (app abierta sin uso)");
   const enUso = { ...vel1249, superficies: [{ maquina: "MacBookPro16", tipo: "app", app: "Claude", agente: "Neo", enUso: true }, { maquina: "MacBookPro16", tipo: "app", app: "Codex", agente: "Trinity", enUso: true }] };
   const t = tarjetas({ presencia: [...air(14), ...mbp16Activo], velocidad: enUso, ahoraS: T });
+  // r241 (Carlos, 21-11-2026 22:39): Neo quema tokens ahora (pulso del Air, último evento hace 0 s) → verde «trabajando ·
+  // con Carlos»; Trinity, sin actividad propia, sigue amarillo esperando a Carlos. Los dos conservan conCarlosEn.
+  assert.equal(de(t, "Neo").estado, "verde");
+  assert.ok(de(t, "Neo").conCarlosTrabajando);
+  assert.equal(de(t, "Trinity").estado, "amarillo");
   for (const n of ["Neo", "Trinity"]) {
-    assert.equal(de(t, n).estado, "amarillo", n);
     assert.equal(de(t, n).conCarlosEn, "MBP16", n);
     assert.equal(de(t, n).maquina, "MacBook Pro 16", n);
   }

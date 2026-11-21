@@ -150,11 +150,15 @@ export function registrarTurno(sesion, { persona, texto, llm, input_tokens, outp
 }
 
 export function pareceAcuerdo(sesion) {
-  const last = (sesion.turnos || []).slice(-2);
-  if (last.length < 2) return false;
+  const turnos = sesion.turnos || [];
+  // "coincido" o un "de acuerdo" suelto no cierran: el prompt invita a matizar.
+  // Hace falta cierre explícito de las dos mesas y al menos 6 turnos.
+  if (turnos.length < 6) return false;
+  const last = turnos.slice(-2);
   if (last[0].mesa === last[1].mesa) return false;
-  const rx = /\b(de acuerdo|estamos de acuerdo|coincido|cerramos|así se hace|trato hecho|veredicto)\b/i;
-  return last.every((t) => rx.test(t.texto || ''));
+  const rx = /\b(estamos de acuerdo|trato hecho|veredicto|cerramos|así se hace)\b/i;
+  const contraste = /\b(pero|sin embargo|aunque|salvo)\b/i;
+  return last.every((t) => rx.test(t.texto || '') && !contraste.test(t.texto || ''));
 }
 
 export function aplicarParada(sesion, { stop } = {}) {

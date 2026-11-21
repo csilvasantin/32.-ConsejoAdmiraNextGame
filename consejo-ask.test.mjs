@@ -109,3 +109,23 @@ test('métricas de cruce, identidad, español y relleno 0', () => {
   assert.equal(pub.url, 'https://www.admira.live/conversacion#sesion-' + s.id);
   assert.ok(pub.turnos[0].ts_madrid);
 });
+
+test('un coincido temprano no cierra; hace falta cierre explícito tras 6 turnos', () => {
+  let d = nuevaSesion({ tema: 'x', turnos: 12 });
+  const frases = [
+    ['Steve Jobs', 'Hay un solo producto esta semana.'],
+    ['Elon Musk', 'Steve, coincido: un solo producto, lo simulamos ya.'],
+    ['Steve Wozniak', 'Elon, coincido, pero lo construyo simple y abierto.'],
+    ['Jensen Huang', 'Yo pongo la infraestructura para medirlo hoy.'],
+    ['Tim Cook', 'Operamos con calendario y no improvisamos el cierre.'],
+    ['Mira Murati', 'Coordinamos el despliegue con el mismo tope.'],
+  ];
+  for (const [persona, texto] of frases) {
+    d = registrarTurno(d, { persona, texto, llm: 'grok-4.6', ms: 200 });
+  }
+  assert.equal(d.estado, 'en_curso');
+  d = registrarTurno(d, { persona: 'Steve Jobs', texto: 'Trato hecho: un solo producto y lo medimos esta noche.', llm: 'grok-4.6', ms: 200 });
+  d = registrarTurno(d, { persona: 'Elon Musk', texto: 'Trato hecho. Lo desplegamos hoy en admira.live.', llm: 'grok-4.6', ms: 200 });
+  assert.equal(d.estado, 'parada');
+  assert.equal(d.motivo_parada, 'acuerdo');
+});

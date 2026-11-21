@@ -54,7 +54,7 @@ const ALIAS = Object.freeze({
   ive: 'Jony Ive', jony: 'Jony Ive', jonyive: 'Jony Ive',
   ratti: 'Carlo Ratti', carlo: 'Carlo Ratti', carloratti: 'Carlo Ratti',
   // typo histórico en consejo_bots: no redirigir «Carlos Silva».
-  carloratti: 'Carlo Ratti', carlosratti: 'Carlo Ratti',
+  carlosratti: 'Carlo Ratti',
   reynolds: 'Ryan Reynolds', ryan: 'Ryan Reynolds', ryanreynolds: 'Ryan Reynolds',
 });
 

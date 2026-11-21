@@ -388,11 +388,46 @@
     nota.hidden = !avisos.length; nota.textContent = avisos.join(" ");
   }
 
+  /* Actividad firmada en GitHub. Primero el servidor (/api/deepagents/actividad, caché de borde); si GitHub le niega la
+   * consulta (sin token, 403 por IP compartida de Cloudflare), el navegador la pide él mismo a la API pública de GitHub
+   * (CORS abierto, 60/h por IP: aquí como mucho 20/h) y la interpreta igual que deepagents-actividad-lib.mjs. */
+  var GH_EVENTOS = "https://api.github.com/users/csilvasantin/events/public?per_page=100";
+  var AGENTES_RAMA = { trinity: "Trinity", neo: "Neo", oraculo: "Oráculo", "oráculo": "Oráculo", morfeo: "Morfeo" };
+  var ghUltima = 0;
+  function actividadDeEventos(eventos) {
+    var out = {};
+    (Array.isArray(eventos) ? eventos : []).forEach(function (e) {
+      if (!e || !e.created_at || !e.repo) return;
+      var p = e.payload || {}, rama = null, accion = null, pr = null;
+      if (e.type === "PullRequestEvent" && p.pull_request) {
+        rama = p.pull_request.head && p.pull_request.head.ref;
+        accion = p.action === "closed" && p.pull_request.merged ? "merged" : p.action;
+        pr = p.pull_request.number || p.number || null;
+      } else if (e.type === "PushEvent" || e.type === "CreateEvent") {
+        rama = e.type === "CreateEvent" ? (p.ref_type === "branch" ? p.ref : null) : p.ref;
+        accion = e.type === "PushEvent" ? "push" : "rama creada";
+      }
+      var r = String(rama || "").replace(/^refs\/heads\//, "").toLowerCase(), pre = r.split("/")[0];
+      var agente = r.indexOf("/") > 0 && AGENTES_RAMA[pre] ? AGENTES_RAMA[pre] : null;
+      var ts = Date.parse(e.created_at);
+      if (!agente || !isFinite(ts)) return;
+      if (!out[agente] || out[agente].ts < ts) out[agente] = { ts: ts, hora: new Date(ts).toISOString(), accion: accion, repo: String(e.repo.name || "").split("/").pop(), rama: String(rama).replace(/^refs\/heads\//, ""), pr: pr };
+    });
+    return out;
+  }
+  function actividadDesdeNavegador() {
+    if (Date.now() - ghUltima < 180000) return Promise.resolve();
+    ghUltima = Date.now();
+    return fetch(GH_EVENTOS, { headers: { accept: "application/vnd.github+json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (ev) { if (ev) { actividadGit = actividadDeEventos(ev); pintarAhora(); } })
+      .catch(function () {});
+  }
   function cargarActividad() {
     return fetch("/api/deepagents/actividad", { cache: "no-store", headers: { accept: "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { if (d && d.ok && d.agentes) { actividadGit = d.agentes; pintarAhora(); } })
-      .catch(function () {});
+      .then(function (d) { if (d && d.ok && d.agentes) { actividadGit = d.agentes; pintarAhora(); } else return actividadDesdeNavegador(); })
+      .catch(function () { return actividadDesdeNavegador(); });
   }
   function cargarFlota() {
     return fetch(FLOTA, { cache: "no-store", headers: { accept: "application/json" } })

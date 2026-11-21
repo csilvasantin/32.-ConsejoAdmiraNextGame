@@ -20,7 +20,12 @@ export async function onRequestGet({ request, env }) {
     const r = await fetch(FUENTE, { headers: h, signal: AbortSignal.timeout(8000) });
     if (r.ok) eventos = await r.json(); else error = "GitHub respondió " + r.status;
   } catch (e) { error = "GitHub no responde"; }
-  if (!eventos) return json({ ok: false, agentes: {}, error, fuente: "github events" }, 200);
+  if (!eventos) {
+    // El fallo también se guarda 120 s: no se insiste contra GitHub en cada visita (el navegador tira de su propia IP).
+    const fallo = json({ ok: false, agentes: {}, error, fuente: "github events" }, 200);
+    if (cache) { try { const g = new Response(fallo.clone().body, fallo); g.headers.set("cache-control", "public, max-age=" + CACHE_S); await cache.put(clave, g); } catch (_) {} }
+    return fallo;
+  }
   const res = json({ ok: true, agentes: actividadDeEventos(eventos), generado: new Date().toISOString(), fuente: "github events (ramas trinity/, neo/, oraculo/, morfeo/)" });
   const guardar = new Response(res.clone().body, res);
   guardar.headers.set("cache-control", "public, max-age=" + CACHE_S);

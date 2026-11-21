@@ -223,3 +223,18 @@ test("r231: borde = abierto en la máquina, punto = actividad; GitHub firma la a
   assert.equal(a.Trinity.repo, "admira-studio"); assert.equal(a.Trinity.accion, "merged");
   assert.equal(a.Neo.repo, "admira-store");
 });
+
+test("r232: si el servidor no llega a GitHub, el navegador lee los eventos públicos y los interpreta igual que la lib", async () => {
+  const js = readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8");
+  assert.ok(js.includes("https://api.github.com/users/csilvasantin/events/public") && js.includes("actividadDesdeNavegador()"));
+  const ini = js.indexOf("  var AGENTES_RAMA"), fin = js.indexOf("  function actividadDesdeNavegador(");
+  const nav = new Function(js.slice(ini, fin) + "return actividadDeEventos;")();
+  const { actividadDeEventos } = await import("./deepagents-actividad-lib.mjs");
+  const ev = [
+    { type: "PullRequestEvent", created_at: "2026-11-21T19:19:55Z", repo: { name: "csilvasantin/admira-studio" }, payload: { action: "merged", pull_request: { number: 168, head: { ref: "trinity/x" } } } },
+    { type: "PushEvent", created_at: "2026-11-21T19:31:00Z", repo: { name: "csilvasantin/admira-store" }, payload: { ref: "refs/heads/neo/y" } },
+    { type: "CreateEvent", created_at: "2026-11-21T19:32:00Z", repo: { name: "csilvasantin/z" }, payload: { ref_type: "branch", ref: "morfeo/z" } },
+    { type: "PushEvent", created_at: "2026-11-21T19:33:00Z", repo: { name: "csilvasantin/z" }, payload: { ref: "refs/heads/main" } },
+  ];
+  assert.deepEqual(nav(ev), actividadDeEventos(ev));
+});

@@ -17,7 +17,7 @@
  * r20: proyectoAhora = el que más quema AHORA (max tokHora; si todos a 0, max tokHoy) — el dial de proyecto lo sigue en auto.
  */
 import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora, madrid, KEY_DIAS, anotarDia, yokupPorDia, periodosTokens, diasPeriodo } from "../../../consumos-velocidad-lib.mjs";
-import { mezclar, appsGrokBot, superficiesDePulso, limitesDePulso } from "../../../consumos-pulso-lib.mjs";
+import { mezclar, appsGrokBot, grokbotPulso, superficiesDePulso, limitesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
 import { volcarSiPendiente } from "../../../consejo-consumo-lib.mjs";
 import { KEY_HIST, anotarHistorico } from "../../../historico-lib.mjs";
@@ -110,7 +110,7 @@ export async function calcular({ env, fetchImpl }) {
   const periodos = { ...periodosTokens({ tokHoy: Number.isFinite(tokHoyFlota) ? tokHoyFlota : null, libro, yokup: dMes ? yokupPorDia(dMes) : null,
     yokupDesde: dMes ? (() => { const x = new Date(diasPeriodo(ahora).hoy + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() - 30); return x.toISOString().slice(0, 10); })() : null, ahora }),
     fuentes: { hoy: "tokHoy en vivo (pulso + Cursor + Yokup)", pasado: "libro diario KV " + KEY_DIAS + " (máximo tokHoy de cada día); si falta, " + FUENTE_MES + " sin caché" }, yokupMes: dMes ? "ok" : "sin respuesta" };
-  const base = { grokbotApps: appsGrokBot(docs, ahora), superficies: superficiesDePulso(docs, ahora), limites: limitesDePulso(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
+  const base = { grokbotApps: appsGrokBot(docs, ahora), grokbotPulso: grokbotPulso(docs, ahora), superficies: superficiesDePulso(docs, ahora), limites: limitesDePulso(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
   if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", periodos, ...base };
   return { ok: true, ...m, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), periodos, ...base };
 }

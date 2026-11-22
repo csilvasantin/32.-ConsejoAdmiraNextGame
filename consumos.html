@@ -332,6 +332,9 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 @keyframes vel-da-pend{0%,100%{opacity:1}50%{opacity:.2}}
 .vel-da-p.pend{animation:vel-da-pend .8s ease-in-out infinite;border-color:#ffb627}
 .vel-da-p.err{border-color:#ff3b30}
+.vel-gb .vel-da-p.sindato{border-style:dashed;border-color:#56646a}
+.vel-gb .vel-da-p.sel{transform:scale(1.25);outline:2px solid #e6f2ec;outline-offset:3px}
+#vel-proy-rotulo.vel-gb-pilar{color:#e6f2ec;letter-spacing:.12em}
 .vel-gb .vel-da-txt{white-space:pre-line;width:max-content;max-width:min(340px,86vw);text-align:center;line-height:1.35}
 @media (prefers-reduced-motion: reduce){.vel-da-p.pend{animation:none;border-style:dashed}}
 .vel-g.sin-datos .led-vivo{fill:#1c2420;filter:none}.vel-g.sin-datos .led-sin{fill:#ffb627;filter:drop-shadow(0 0 4px #ffb627)}
@@ -384,7 +387,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
       </div>
       <div class="vel-g" id="vel-g-proy">
         <h3><span id="vel-proy-titulo">Proyectos (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-proy-dd"></span><span class="vel-sep" aria-hidden="true"> · </span><a class="vel-hist" href="/historico?tipo=proyecto" title="Qué se hizo en cada proyecto: hoy, ayer, semana y mes">Histórico</a></h3>
-        <div class="vel-dial"><div class="vel-dial-svg"></div><div class="vel-da vel-gb" id="vel-gb" role="group" aria-label="Grok Bot Leyendas y Coetáneos"></div><div class="odo" title="Total de tokens de ayer, todos los proyectos (Madrid)"></div><p class="odo-rotulo" id="vel-proy-rotulo" data-en="Yesterday · total tokens">Ayer · total tokens</p></div>
+        <div class="vel-dial"><div class="vel-dial-svg"></div><div class="vel-da vel-gb" id="vel-gb" role="group" aria-label="Grok Bot por pilar"></div><div class="odo" title="Total de tokens de ayer, todos los proyectos (Madrid)"></div><p class="odo-rotulo" id="vel-proy-rotulo" data-en="Yesterday · total tokens">Ayer · total tokens</p></div>
         <div class="vel-lectura"><span class="vel-cifra">…</span><span class="vel-unidad">tokens hoy</span><p class="vel-que"></p><p class="vel-extra" id="vel-proy-metodo"></p></div>
       </div>
     </div>
@@ -567,9 +570,9 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-trabajando.js?v=20261122-r248-trabajos-hoy"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/deepagents-estado.js?v=20261122-r246-actividad"></script>
-<script src="/assets/consumos-velocimetro.js?v=20261122-r250-marchas-gb"></script>
+<script src="/assets/consumos-velocimetro.js?v=20261122-r251-pilares"></script>
 <script src="/assets/consumos-marchas-deepagents.js?v=20261122-r249"></script>
-<script src="/assets/consumos-marchas-grokbot.js?v=20261122-r250"></script>
+<script src="/assets/consumos-marchas-grokbot.js?v=20261122-r251-pilares"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=20261010-r25"></script>
 <script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>

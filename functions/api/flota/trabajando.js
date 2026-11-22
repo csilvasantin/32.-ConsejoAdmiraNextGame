@@ -173,6 +173,8 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
     // r17: qué cuenta(s) tiene en uso la app Grok Bot de cada Mac (cuenta null = app abierta, cuenta desconocida).
     appsGrokBot: (v && Array.isArray(v.grokbotApps) ? v.grokbotApps : []).map((a) => ({ maquina: a.maquina, cuenta: a.cuenta || null,
       alFrente: !!a.alFrente, usoS: a.usoS ?? null, fuente: a.fuente || null })),
+    // r251: qué Mac informa de su Grok Bot en el pulso (para «apagado» frente a «sin dato» en el reloj de Proyectos).
+    grokbotPulso: (v && Array.isArray(v.grokbotPulso) ? v.grokbotPulso : []).map((g) => ({ maquina: g.maquina, abierta: !!g.abierta, haceS: g.haceS ?? null, fresco: !!g.fresco })),
     presencia: pr.estado, presenciaEdadS: pr.edadS, pulso: v && v.ok ? "ok" : "sin datos",
     latidoConsejeros: lat ? "ok" : "sin datos", fuentes: [PRESENCIA, "/api/consumos/velocidad", LATIDO_CONSEJEROS], generado: new Date(ahoraMs).toISOString(),
   };

@@ -452,7 +452,7 @@
       this.vel += (k * (this.destino - this.frac) - c * this.vel) * dt;
       this.frac += this.vel * dt;
       this.valor += (this.v - this.valor) * Math.min(1, dt * 6);
-      var amp = this.vivoFn ? (this.ritmoVivo > 0 && !this.sin ? 0.9 + 0.9 * Math.min(1, this.ritmoVivo / 3e6) : 0) : amplitud(this.destino, this.sin);
+      var amp = this.cerrado ? 0 : this.vivoFn ? (this.ritmoVivo > 0 && !this.sin ? 0.9 + 0.9 * Math.min(1, this.ritmoVivo / 3e6) : 0) : amplitud(this.destino, this.sin);
       if (this.fase == null) this.fase = Math.random() * 6.28;
       this.ruido = temblor(t, amp, this.tPulso || 0, this.fase);
     }
@@ -469,9 +469,9 @@
     if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
     if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
     b.classList.toggle('en-roja', !this.sin && f >= 0.8);
-    if (cifra && !this.sin) cifra.textContent = this.vivoFn ? fmtM(this.v) : fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
+    if (cifra && !this.sin) cifra.textContent = this.vivoFn || this.cerrado ? fmtM(this.v) : fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
     var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
-    var vibra = !quieto && (this.vivoFn ? this.ritmoVivo > 0 && !this.sin : amplitud(this.destino, this.sin) > 0); // r228: temblor mientras el ritmo > 0
+    var vibra = !quieto && !this.cerrado && (this.vivoFn ? this.ritmoVivo > 0 && !this.sin : amplitud(this.destino, this.sin) > 0); // r228: temblor mientras el ritmo > 0
     if (!asentado || vibra || this.marcha || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
     else this.corriendo = false;
   };
@@ -487,9 +487,10 @@
     if (sin || tokHora == null || !isFinite(Number(tokHora))) { sin = true; est = est || 'sinvivo'; }
     b.classList.toggle('estimado', est === 'cursor');
     b.classList.toggle('sin-datos', !!sin);
-    if (max !== this.max || !b.querySelector('.vel-svg')) {
+    this.cerrado = false; this.vivoFn = null; this.rotuloEscala = 'TOKENS/HORA'; // r253: vuelve de un periodo cerrado
+    if (max !== this.max || !b.querySelector('.vel-svg') || this.rotuloPintado !== this.rotuloEscala) {
       var fracVieja = this.max ? (this.frac * this.max) / max : 0;
-      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta, this.rotuloEscala); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja));
+      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta, this.rotuloEscala); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja)); this.rotuloPintado = this.rotuloEscala;
     }
     var v = sin ? 0 : (Number(tokHora) || 0);
     this.sin = !!sin; this.v = v;
@@ -557,10 +558,38 @@
     return { tok: tok, media: tok == null ? null : tok / h, horas: h, dia: a ? a.desde : null, fuente: fuente };
   }
   root.ConsumosAyer = { ayerDe: ayerDe, horasDeDia: horasDeDia };
+  /* r253 (Carlos, 22-11 23:05): relojes interactivos partidos por la mitad. Ciclo de periodos (día de Madrid):
+   * mitad IZQUIERDA = hacia atrás: Hoy → Ayer → Semana anterior (lunes–domingo) → Mes anterior (natural) → Hoy;
+   * mitad DERECHA = al revés. Fuente: /api/consumos/velocidad → periodos.{ayer, semanaAnterior, mesAnterior} = libro diario
+   * KV consumos:vel:dias:v1 o, si falta, partes de Yokup sin caché (62 días). Días sin dato no suman ni cuentan horas. */
+  var CICLO = ['hoy', 'ayer', 'semanaAnterior', 'mesAnterior'];
+  function nombrePer(p) { return ({ hoy: T('Hoy', 'Today'), ayer: T('Ayer', 'Yesterday'), semanaAnterior: T('Semana anterior', 'Previous week'), mesAnterior: T('Mes anterior', 'Previous month') })[p] || p; }
+  function mesNombre(dia) { return new Date(dia + 'T12:00:00Z').toLocaleDateString(en() ? 'en-GB' : 'es-ES', { timeZone: 'UTC', month: 'long', year: 'numeric' }); }
+  function rangoPer(p, pd) {
+    if (!pd || !pd.desde) return '';
+    if (p === 'mesAnterior') return mesNombre(pd.desde);
+    return pd.desde === pd.hasta ? fechaCorta(pd.desde) : fechaCorta(pd.desde) + ' – ' + fechaCorta(pd.hasta);
+  }
+  /** Periodo cerrado → { tok, media, horas, conDatos, total, fuentes[], desde, hasta } (tok/media null = sin dato). */
+  function periodoDe(d, p) {
+    var pd = d && d.periodos && d.periodos[p];
+    if (!pd || !Array.isArray(pd.dias)) return { tok: null, media: null, horas: 0, conDatos: 0, total: 0, fuentes: [], pd: null };
+    var tok = 0, horas = 0, con = 0, fu = {};
+    pd.dias.forEach(function (x) {
+      if (!x || x.tok == null || !isFinite(Number(x.tok)) || /ninguno|sin datos/.test(x.fuente || '')) return;
+      tok += Number(x.tok); horas += horasDeDia(x.dia); con++; fu[x.fuente] = 1;
+    });
+    return { tok: con ? tok : null, media: con && horas ? tok / horas : null, horas: horas, conDatos: con, total: pd.dias.length, fuentes: Object.keys(fu), pd: pd };
+  }
+  function textoCerrado(p, P, que) {
+    if (P.tok == null) return esc(nombrePer(p) + (P.pd ? ' (' + rangoPer(p, P.pd) + ')' : '') + T(': sin dato en el libro diario ni en los partes de Yokup', ': no data in the daily ledger or Yokup reports'));
+    return esc(nombrePer(p) + ' · ' + rangoPer(p, P.pd) + ' (Madrid) · ') + que + ' · ' + P.conDatos + '/' + P.total + T(' días con datos', ' days with data') + ' · ' + esc(P.fuentes.join(' + '));
+  }
+  root.ConsumosPeriodos = { CICLO: CICLO, periodoDe: periodoDe, nombre: nombrePer };
   /** Odómetro quieto con una cifra cerrada (sin suma por segundo ni nota de estimado). */
-  function odoAyer(dial, n, rotEl, rotulo, titulo) {
+  function odoAyer(dial, n, rotEl, rotulo, titulo, per) {
     var el = dial.box.querySelector('.odo');
-    odometro(el, n, 0, dial.pfx + ':ayer', 'ayer');
+    odometro(el, n, 0, dial.pfx + ':' + (per || 'ayer'), per || 'ayer');
     if (el) { el.title = titulo; el.setAttribute('aria-label', (n == null ? '—' : Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES')) + ' · ' + rotulo); }
     // r251: si una bola de pilar ha tomado el rótulo (data-r251), se guarda ahí el texto para devolverlo al soltarla.
     if (rotEl && rotEl.hasAttribute('data-r251')) rotEl.setAttribute('data-r251', rotulo);
@@ -576,12 +605,43 @@
     if (estado.d2) odoAyer(estado.d2, A.tok, document.getElementById('vel-proy-rotulo'),
       T('Ayer · total tokens', 'Yesterday · total tokens') + (A.tok == null ? sinH : ''),
       A.tok == null ? T('Sin histórico de ayer', 'No history for yesterday') : T('Ayer ', 'Yesterday ') + fecha + ' (Madrid), ' + T('todos los proyectos', 'all projects') + fu + T(' · medido, sin mínimos por app', ' · measured, no per-app minimums'));
+    // r253: con un periodo elegido, el odómetro y su rótulo son de ESE periodo (Agentes: media/hora; Proyectos: total).
+    [[estado.d1, estado.perAg, 'vel-ag-rotulo', true], [estado.d2, estado.perPr, 'vel-proy-rotulo', false]].forEach(function (x) {
+      var dial = x[0], per = x[1]; if (!dial || !per || per === 'hoy') return;
+      var P = sin ? periodoDe(null, per) : periodoDe(d, per), n = x[3] ? (P.media == null ? null : Math.round(P.media)) : P.tok;
+      var rot = nombrePer(per) + ' · ' + (x[3] ? T('media tokens/hora', 'avg tokens/hour') : T('total tokens', 'total tokens')) + (n == null ? ' · ' + T('sin dato', 'no data') : '');
+      var tit = n == null ? nombrePer(per) + T(': sin dato', ': no data') : nombrePer(per) + ' ' + rangoPer(per, P.pd) + ' (Madrid): ' + Math.round(P.tok).toLocaleString('es-ES') + ' tokens' + (x[3] ? ' / ' + P.horas + ' h' : '') + ' · ' + P.conDatos + '/' + P.total + T(' días · ', ' days · ') + P.fuentes.join(' + ');
+      odoAyer(dial, n, document.getElementById(x[2]), rot, tit, per);
+    });
     return A;
   }
+  /* r253 (Carlos, 22-11 23:05): periodo CERRADO (ayer, semana anterior, mes anterior). Aguja y cifra quietas en el valor
+   * real del periodo (sin temblor ni suma en vivo); rótulo de escala con el nombre del periodo. o = { valor|null, max,
+   * rotulo, unidad, texto }. valor null = «sin dato» (nunca un 0 inventado). */
+  Dial.prototype.pintaCerrado = function (o) {
+    var b = this.box, sin = o.valor == null || !isFinite(Number(o.valor));
+    this.rotuloEscala = o.rotulo;
+    b.classList.toggle('estimado', false);
+    b.classList.toggle('sin-datos', sin);
+    var max = o.max;
+    if (max !== this.max || !b.querySelector('.vel-svg') || this.rotuloPintado !== this.rotuloEscala) {
+      var fracVieja = this.max ? (this.frac * this.max) / max : 0;
+      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta, this.rotuloEscala); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja)); this.rotuloPintado = this.rotuloEscala;
+    }
+    this.cerrado = true; this.sin = sin; this.vivoFn = null; this.ritmoVivo = 0; this.tPulso = 0;
+    var v = sin ? 0 : Number(o.valor);
+    this.v = v; this.valor = v; this.destino = Math.max(0, Math.min(1, v / max));
+    var cifra = b.querySelector('.vel-cifra');
+    if (sin && cifra) cifra.textContent = T('sin dato', 'no data');
+    b.querySelector('.vel-unidad').textContent = sin ? '' : o.unidad;
+    var que = b.querySelector('.vel-que');
+    if (que) que.innerHTML = o.texto || '';
+    this.arranca();
+  };
   /** o = { valor: fn, ritmo, sin, texto } — r231: el odómetro lo pinta pintaOdosAyer (ayer cerrado). */
   Dial.prototype.pintaHoy = function (o) {
     var b = this.box, sin = !!o.sin;
-    this.rotuloEscala = 'TOKENS HOY';
+    this.rotuloEscala = 'TOKENS HOY'; this.cerrado = false;
     b.classList.toggle('estimado', false);
     b.classList.toggle('sin-datos', sin);
     var v0 = sin ? 0 : (o.valor() || 0);
@@ -610,7 +670,7 @@
   try { if (root.localStorage) { root.localStorage.removeItem('consumos.vel.proyecto'); root.localStorage.removeItem('consumos.vel.agente'); } } catch (e) {}
   function lsSet(k, v) { try { if (!root.localStorage) return; if (v) root.localStorage.setItem(k, v); else root.localStorage.removeItem(k); } catch (e) {} }
   var E = root.ConsumosElegir;
-  var estado = { periodo: 'hoy', datos: null, recibido: 0, proyecto: TODOS, agente: '', d1: null, d2: null };
+  var estado = { periodo: 'hoy', perAg: 'hoy', perPr: 'hoy', datos: null, recibido: 0, proyecto: TODOS, agente: '', d1: null, d2: null };
   function hace(s) {
     if (s == null || !isFinite(s)) return '';
     if (s < 90) return T('hace ', '') + Math.round(s) + ' s' + T('', ' ago');
@@ -903,8 +963,18 @@
     var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
     var max;
     estado.d1.fresco = usoFresco(sin ? [] : (r.agente ? (r.fila ? [r.fila] : []) : d.porAgente), Date.now());
-    var per = estado.periodo, pd = per !== 'hoy' && !sin && d.periodos ? d.periodos[per] : null;
+    var per = estado.perAg || 'hoy', pd = null;
     estado.d1.periodo = per;
+    if (per !== 'hoy' && !r.agente) {
+      // r253: toda la flota en un periodo cerrado = total del periodo / horas con datos (media tokens/hora).
+      var P = periodoDe(sin ? null : d, per);
+      if (tit) tit.textContent = rotAg();
+      estado.d1.pintaCerrado({ valor: P.media, max: escala(P.media || 0, 1e6), rotulo: 'MEDIA/H · ' + nombrePer(per).toUpperCase(),
+        unidad: T('tokens/hora · media', 'tokens/hour · average'),
+        texto: textoCerrado(per, P, T('total ', 'total ') + '<b>' + fmtM(P.tok) + '</b> / ' + P.horas + ' h') });
+      if (met) met.textContent = T('Pulsa la mitad izquierda o derecha del reloj para cambiar de periodo', 'Click the left or right half to change period');
+      return estado.d1.max;
+    }
     if (!r.agente) {
       // r226: total de toda la flota (agentes + consejeros: Grok Bot (Consejo), Consejeros (Cloudflare)…), escala que lo abarca.
       var rF = ritmoTotal(d, sin, false);
@@ -912,24 +982,22 @@
       estado.d1.clave = 'flota';
       // r229: la misma escala en los dos relojes del total (la del mayor, el de proyectos) para que se vea la diferencia.
       max = sin ? (estado.d1.max || 2e6) : escalaTotal(d, rF.tokHora); // r230: el reloj 2 ya es de tokens hoy: escala propia de nuevo
-      var nOdo = per === 'hoy' ? rF.tokHoy : (pd && pd.tok != null ? pd.tok : null);
+      var nOdo = rF.tokHoy;
       estado.d1.ultimoEvento = rF.ultimoEvento;
       estado.d1.pinta(rF.tokHora, max, nOdo, false, sin ? rF.tokHoy : tokHoyVivo(d), rF.fuente);
       if (tit) tit.textContent = rotAg(); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       void rot; void nOdo;
-      if (met) met.innerHTML = per === 'hoy' ? '' : textoPeriodo(pd);
+      if (met) met.innerHTML = '';
+      void pd;
       return max;
     }
     if (per !== 'hoy') {
-      // Histórico solo de la flota: con un agente elegido, fuera de HOY no hay cifra honesta → «—».
-      var maxA = escala(((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0), 5e6);
-      var rP = resp('ag:' + r.agente, { tokHora: r.fila && r.fila.tokHora != null ? r.fila.tokHora : null, ultimaHora: r.fila ? r.fila.tokUltimaHora : null, cursor: r.fila ? (tasaVista(r.fila) != null ? tasaVista(r.fila) : r.fila.tokHoraRetraso) : null, tokHoy: r.fila ? r.fila.tokHoy : null, trabajando: hayVerdes(), ultimoEvento: r.fila ? ultimoUso([r.fila]) : null });
-      estado.d1.ultimoEvento = rP.ultimoEvento;
-      estado.d1.pinta(rP.tokHora, maxA, null, false, null, rP.fuente);
+      // r253: el histórico es de la flota; con un agente elegido no hay cifra honesta del periodo → «sin dato».
+      estado.d1.pintaCerrado({ valor: null, max: estado.d1.max || 5e6, rotulo: 'MEDIA/H · ' + nombrePer(per).toUpperCase(), unidad: '',
+        texto: esc(vis(r.agente) + ' · ' + nombrePer(per) + T(': sin histórico por agente (solo «Toda la flota»)', ': no per-agent history (only «Whole fleet»)')) });
       if (tit) tit.textContent = rotAg();
-      if (rot) rot.textContent = vis(r.agente) + ' · ' + rotuloPeriodo(per) + ' · —';
-      if (met) met.textContent = T('Sin histórico por agente: AYER/SEMANA/MES solo para «Toda la flota».', 'No per-agent history: YESTERDAY/WEEK/MONTH only for «Whole fleet».');
-      return d && d.escalaMax || maxA;
+      if (met) met.textContent = T('Elige «Toda la flota» para ver el periodo', 'Choose «Whole fleet» to see the period');
+      return estado.d1.max;
     }
     var f = r.fila;
     var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0, a.tokUltimaHora || 0); }, 0);
@@ -959,6 +1027,17 @@
     if (!estado.d2) estado.d2 = new Dial(box, 'vg2', T('Reloj de tokens consumidos hoy', 'Tokens used today gauge'));
     var nombre = proyectoActual(d);
     var lista = (d && d.porProyecto) || [];
+    var perP = estado.perPr || 'hoy';
+    if (perP !== 'hoy') {
+      // r253: total de tokens del periodo cerrado, todos los proyectos (el histórico por proyecto no existe → «sin dato»).
+      var metP = document.getElementById('vel-proy-metodo');
+      var todosP = nombre === TODOS || !nombre, PP = periodoDe(sin || !todosP ? null : d, perP);
+      estado.d2.pintaCerrado({ valor: todosP ? PP.tok : null, max: escala((PP.tok || 0) / 1.5 * 1.25, 1e6), rotulo: 'TOKENS · ' + nombrePer(perP).toUpperCase(),
+        unidad: T('tokens en total', 'tokens in total'),
+        texto: todosP ? textoCerrado(perP, PP, T('todos los proyectos', 'all projects')) : esc(nomP(nombre) + ' · ' + nombrePer(perP) + T(': sin histórico por proyecto (solo «Todos»)', ': no per-project history (only «All»)')) });
+      if (metP) metP.textContent = T('Pulsa la mitad izquierda o derecha del reloj para cambiar de periodo', 'Click the left or right half to change period');
+      return;
+    }
     // Total de hoy de todos los proyectos (+ estimado en curso al ritmo del total): aguja con «Todos».
     var rT = ritmoTotal(d || {}, sin, true);
     estado.d2.suelo = rT.suelo; estado.d2.ultimoEvento = rT.ultimoEvento;
@@ -1145,7 +1224,40 @@
     el.addEventListener('click', cambiaPeriodo);
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cambiaPeriodo(); } });
   }
-  root.ConsumosPeriodo = { PERIODOS: PERIODOS, rotulo: function (p) { return rotuloPeriodo(p); }, actual: function () { return estado.periodo; } };
+  /* r253: dos mitades por reloj (sobre la esfera, no sobre las bolas ni el odómetro). Izquierda = atrás en CICLO;
+   * derecha = adelante (Hoy → Mes anterior → Semana anterior → Ayer → Hoy). Flecha ‹ › al pasar el ratón. */
+  function pasoPeriodo(p, dir) { var i = CICLO.indexOf(p); if (i < 0) i = 0; return CICLO[(i + (dir < 0 ? 1 : CICLO.length - 1)) % CICLO.length]; }
+  function cambiaReloj(cual, dir) {
+    if (cual === 'ag') { estado.perAg = pasoPeriodo(estado.perAg, dir); pintaIzquierdo(estado.datos, !estado.datos); }
+    else { estado.perPr = pasoPeriodo(estado.perPr, dir); pintaProyecto(estado.datos, !estado.datos); }
+    marcaMitades();
+  }
+  function marcaMitades() {
+    [['vel-g-total', estado.perAg], ['vel-g-proy', estado.perPr]].forEach(function (x) {
+      var g = document.getElementById(x[0]); if (!g) return;
+      g.setAttribute('data-periodo', x[1]);
+      g.querySelectorAll('.vel-mitad').forEach(function (b) {
+        var dir = b.classList.contains('izq') ? -1 : 1, sig = pasoPeriodo(x[1], dir);
+        var t = nombrePer(x[1]) + ' → ' + nombrePer(sig);
+        b.title = t; b.setAttribute('aria-label', T('Periodo: ', 'Period: ') + t);
+        var e = b.querySelector('.vel-mitad-sig'); if (e) e.textContent = nombrePer(sig);
+      });
+    });
+  }
+  function preparaMitades() {
+    [['vel-g-total', 'ag'], ['vel-g-proy', 'pr']].forEach(function (x) {
+      var dial = document.querySelector('#' + x[0] + ' .vel-dial'); if (!dial || dial.querySelector('.vel-mitad')) return;
+      ['izq', 'der'].forEach(function (lado) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'vel-mitad ' + lado;
+        b.innerHTML = '<span class="vel-mitad-fl" aria-hidden="true">' + (lado === 'izq' ? '‹' : '›') + '</span><span class="vel-mitad-sig" aria-hidden="true"></span>';
+        b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); cambiaReloj(x[1], lado === 'izq' ? -1 : 1); });
+        dial.appendChild(b);
+      });
+    });
+    marcaMitades();
+  }
+  root.ConsumosPeriodo = { PERIODOS: PERIODOS, CICLO: CICLO, paso: pasoPeriodo, rotulo: function (p) { return rotuloPeriodo(p); }, actual: function () { return estado.periodo; }, relojes: function () { return { ag: estado.perAg, pr: estado.perPr }; }, cambia: cambiaReloj };
   function arranca() {
     if (!document.getElementById('velocimetro')) return;
     // r231: el odómetro izquierdo es fijo (media por hora de ayer): sin rotación hoy→ayer→semana→mes al pulsar.
@@ -1180,6 +1292,7 @@
     var rg = document.getElementById('vel-rango');
     if (rg) rg.addEventListener('click', function (ev) { var b = ev.target && ev.target.closest ? ev.target.closest('button[data-r]') : null; if (b) ponRango(b.getAttribute('data-r')); });
     ponRango(LIN.rango);
+    preparaMitades();
     leer();
     leerMargen();
     setInterval(function () { if (!document.hidden) leerLineas(); }, 60000);

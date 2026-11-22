@@ -24,7 +24,7 @@ test("sin histórico de ayer: null (nunca un 0 falso), también si Yokup dice «
 });
 
 test("odómetros quietos (periodo ayer, ritmo 0) con rótulos «Ayer · media tokens/hora» y «Ayer · total tokens»", () => {
-  assert.match(js, /odometro\(el, n, 0, dial\.pfx \+ ':ayer', 'ayer'\);/);
+  assert.match(js, /odometro\(el, n, 0, dial\.pfx \+ ':' \+ \(per \|\| 'ayer'\), per \|\| 'ayer'\);/);
   assert.match(html, /id="vel-ag-rotulo"[^>]*>Ayer · media tokens\/hora<\/p>/);
   assert.match(html, /id="vel-proy-rotulo"[^>]*>Ayer · total tokens<\/p>/);
   assert.doesNotMatch(js, /odometro\(b\.querySelector\('\.odo'\), (tokHoy|o\.odoN)/);

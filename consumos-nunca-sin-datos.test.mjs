@@ -40,7 +40,7 @@ test("aguja = cifra: sin ralentí ni marchas; r228: temblor centrado en la cifra
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
   assert.ok(!/if \(f < this\.ralenti\) f = this\.ralenti/.test(js), "sin suelo de ralentí");
   assert.ok(!/^\s*programaMarcha\(\);/m.test(js), "los cambios de marcha no se programan");
-  assert.match(js, /var vibra = !quieto && \(this\.vivoFn \? this\.ritmoVivo > 0 && !this\.sin : amplitud\(this\.destino, this\.sin\) > 0\);/);
+  assert.match(js, /var vibra = !quieto && !this\.cerrado && \(this\.vivoFn \? this\.ritmoVivo > 0 && !this\.sin : amplitud\(this\.destino, this\.sin\) > 0\);/);
   assert.match(js, /sin dato en vivo/);
   assert.match(js, /ritmo de la última hora con datos/);
   assert.ok(!/T\('sin datos', 'no data'\)/.test(js));

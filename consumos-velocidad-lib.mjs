@@ -214,7 +214,10 @@ const sumaDias = (dia, n) => { const d = new Date(dia + "T12:00:00Z"); d.setUTCD
 export function diasPeriodo(ahora) {
   const hoy = madrid(ahora).dia;
   const dow = (new Date(hoy + "T12:00:00Z").getUTCDay() + 6) % 7; // lunes = 0
-  return { hoy, ayer: sumaDias(hoy, -1), lunes: sumaDias(hoy, -dow), dia1: hoy.slice(0, 8) + "01" };
+  const lunes = sumaDias(hoy, -dow), dia1 = hoy.slice(0, 8) + "01";
+  // r253: semana natural anterior (lunes–domingo) y mes natural anterior.
+  const finMesAnt = sumaDias(dia1, -1);
+  return { hoy, ayer: sumaDias(hoy, -1), lunes, dia1, lunesAnt: sumaDias(lunes, -7), domingoAnt: sumaDias(lunes, -1), dia1Ant: finMesAnt.slice(0, 8) + "01", finMesAnt };
 }
 
 /** Anota en el libro diario el tokHoy de la flota (se queda el máximo del día) y poda lo anterior a 40 días. */
@@ -262,5 +265,7 @@ export function periodosTokens({ tokHoy, libro, yokup, yokupDesde, ahora }) {
     const con = dias.filter((x) => x.tok != null);
     return { tok: con.length ? con.reduce((s, x) => s + x.tok, 0) : null, desde, hasta, dias, cobertura: { conDatos: con.length, total: dias.length } };
   };
-  return { zona: "Europe/Madrid", hoy: rango(p.hoy, p.hoy), ayer: rango(p.ayer, p.ayer), semana: rango(p.lunes, p.hoy), mes: rango(p.dia1, p.hoy) };
+  return { zona: "Europe/Madrid", hoy: rango(p.hoy, p.hoy), ayer: rango(p.ayer, p.ayer), semana: rango(p.lunes, p.hoy), mes: rango(p.dia1, p.hoy),
+    // r253 (Carlos, 22-11 23:05): periodos CERRADOS para los relojes interactivos.
+    semanaAnterior: rango(p.lunesAnt, p.domingoAnt), mesAnterior: rango(p.dia1Ant, p.finMesAnt) };
 }

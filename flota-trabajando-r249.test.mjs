@@ -49,7 +49,7 @@ test("html: 4 botones con title y clase on", () => {
 
 test("velocímetro: vg1 sin los 3 testigos, vg2 los conserva; HTML con #vel-da entre reloj y odómetro", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
-  assert.match(js, /pfx === 'vg1' \? '' :/);
+  assert.match(js, /pfx === 'vg1'( \|\| pfx === 'vg2')? \? '' :/);
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.match(html, /<div class="vel-dial-svg"><\/div><div class="vel-da" id="vel-da"[^>]*><\/div><div class="odo" title="Media de tokens por hora de ayer/);
   assert.ok(html.indexOf("/assets/consumos-marchas-deepagents.js") > 0);

@@ -325,7 +325,15 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .vel-da-txt{display:none;position:absolute;bottom:calc(100% + 4px);left:var(--x,50%);transform:translateX(-50%);white-space:nowrap;background:#0b0f11;color:#e6f2ec;border:1px solid #3a4a52;border-radius:6px;padding:4px 8px;font-size:11px;letter-spacing:.02em;box-shadow:0 4px 12px rgba(0,0,0,.6);pointer-events:none}
 .vel-da.ver .vel-da-txt{display:block}
 @media (max-width:560px){.vel-da{gap:18px}.vel-da-p{width:14px;height:14px}.vel-da-txt{white-space:normal;width:max-content;max-width:78vw;text-align:center}}
-#vel-g-total .vel-da+.odo{margin-top:2px}
+#vel-g-total .vel-da+.odo,#vel-g-proy .vel-da+.odo{margin-top:2px}
+.vel-gb .vel-da-p.def-on{box-shadow:0 0 0 2px #0b0f11,0 0 0 3.5px #3dff8c}
+.vel-gb .vel-da-p.def-on.on{box-shadow:0 0 0 2px #0b0f11,0 0 0 3.5px #3dff8c,0 0 7px #3dff8c}
+.vel-gb .vel-da-p.def-off.on{box-shadow:0 0 0 2px #0b0f11,0 0 0 3.5px #6b7a80,0 0 6px #3dff8c}
+@keyframes vel-da-pend{0%,100%{opacity:1}50%{opacity:.2}}
+.vel-da-p.pend{animation:vel-da-pend .8s ease-in-out infinite;border-color:#ffb627}
+.vel-da-p.err{border-color:#ff3b30}
+.vel-gb .vel-da-txt{white-space:pre-line;width:max-content;max-width:min(340px,86vw);text-align:center;line-height:1.35}
+@media (prefers-reduced-motion: reduce){.vel-da-p.pend{animation:none;border-style:dashed}}
 .vel-g.sin-datos .led-vivo{fill:#1c2420;filter:none}.vel-g.sin-datos .led-sin{fill:#ffb627;filter:drop-shadow(0 0 4px #ffb627)}
 .en-roja .led-roja{fill:#ff3b30;filter:drop-shadow(0 0 5px #ff3b30);animation:vel-late .7s steps(2) infinite}
 .vel-g{background:radial-gradient(closest-side,rgba(0,0,0,.6),rgba(0,0,0,0))}
@@ -376,7 +384,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
       </div>
       <div class="vel-g" id="vel-g-proy">
         <h3><span id="vel-proy-titulo">Proyectos (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-proy-dd"></span><span class="vel-sep" aria-hidden="true"> · </span><a class="vel-hist" href="/historico?tipo=proyecto" title="Qué se hizo en cada proyecto: hoy, ayer, semana y mes">Histórico</a></h3>
-        <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Total de tokens de ayer, todos los proyectos (Madrid)"></div><p class="odo-rotulo" id="vel-proy-rotulo" data-en="Yesterday · total tokens">Ayer · total tokens</p></div>
+        <div class="vel-dial"><div class="vel-dial-svg"></div><div class="vel-da vel-gb" id="vel-gb" role="group" aria-label="Grok Bot Leyendas y Coetáneos"></div><div class="odo" title="Total de tokens de ayer, todos los proyectos (Madrid)"></div><p class="odo-rotulo" id="vel-proy-rotulo" data-en="Yesterday · total tokens">Ayer · total tokens</p></div>
         <div class="vel-lectura"><span class="vel-cifra">…</span><span class="vel-unidad">tokens hoy</span><p class="vel-que"></p><p class="vel-extra" id="vel-proy-metodo"></p></div>
       </div>
     </div>
@@ -559,8 +567,9 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-trabajando.js?v=20261122-r248-trabajos-hoy"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/deepagents-estado.js?v=20261122-r246-actividad"></script>
-<script src="/assets/consumos-velocimetro.js?v=20261122-r249-marchas-da"></script>
+<script src="/assets/consumos-velocimetro.js?v=20261122-r250-marchas-gb"></script>
 <script src="/assets/consumos-marchas-deepagents.js?v=20261122-r249"></script>
+<script src="/assets/consumos-marchas-grokbot.js?v=20261122-r250"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=20261010-r25"></script>
 <script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>

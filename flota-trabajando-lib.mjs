@@ -223,7 +223,51 @@ export function misionesDe(items, p, norm = (x) => String(x || "").toLowerCase()
   const ult = hechas.filter((x) => !esChat(x)).sort((a, b) => b.done_at - a.done_at)[0] || null;
   const chat = hechas.filter(esChat).sort((a, b) => b.done_at - a.done_at)[0] || null;
   return { enCurso: cur ? fic(cur, ts(cur)) : null, ultima: ult ? fic(ult, Number(ult.done_at)) : null, ultimoChat: chat ? fic(chat, Number(chat.done_at)) : null,
-    hechas: hechas.filter((x) => !esChat(x)).map((x) => ({ id: "#" + x.id, titulo: tituloEncargo(x.text), ts: Number(x.done_at), maquina: x.target_machine || null })) };
+    hechas: hechas.filter((x) => !esChat(x)).map((x) => ({ id: "#" + x.id, titulo: tituloEncargo(x.text), ts: Number(x.done_at), maquina: x.target_machine || null })),
+    // r247: todas las misiones (sin chats) con su estado y su hora de cierre (done_at; si no, aceptación o alta).
+    todas: mias.filter((x) => !esChat(x)).map((x) => ({ id: "#" + x.id, estado: String(x.status || ""), ts: Number(x.done_at) || Number(x.ack_at) || Number(x.ts) || 0, alta: Number(x.ts) || 0, titulo: tituloEncargo(x.text) })) };
+}
+/** r247: estados de Yokup que cuentan como «misión no acabada bien» (rojo). «cancelled» NO: en la bandeja lo usa Carlos
+ *  al sustituir o retirar un encargo (p. ej. #7650 cancelado 1 min después de crearse), no es un fallo del agente; sale
+ *  en el desglose como «cancelada» pero no da color. */
+export const MISION_MAL = /^(failed|error|blocked|rejected|fallida|bloqueada)$/;
+export const MISION_EN_CURSO = /^(ack|in_progress)$/;
+export const MISION_HECHA = /^(done|completed|hecho)$/;
+export const MISION_VIVA_S = 24 * 3600;
+/**
+ * r247 (Carlos, 22-11-2026 10:26: «los numeros también tienen que mostrar colores … gris … 0 … amarillo si esta
+ * trabajando en la misión o en verde si ya se ha acabado con exito sino será rojo»). Color del «(N)» con la bandeja de
+ * Yokup (sin chats): amarillo = alguna misión en curso (ack / in_progress) aceptada o creada en las últimas 24 h
+ * (MISION_VIVA_S); las abiertas más antiguas no dan color (no es que esté trabajando: es que nadie las cerró) pero salen
+ * en el desglose como «sin cerrar desde dd-mm» para poder cerrarlas; si no, manda la ÚLTIMA misión cerrada HOY (Madrid) entre hechas (verde) y no acabadas
+ * bien (MISION_MAL → rojo); si no, gris. → { luz, hechas, enCurso, fallidas, canceladas, pendientes, enCursoDesde,
+ * ultima: {id, estado, ts} | null, texto: «2 hechas · 1 en curso · 1 fallida» }. Pura.
+ */
+export function misionesLuzDe(misiones, ahoraS) {
+  if (!misiones || !Array.isArray(misiones.todas)) return null;
+  const hoy = diaMadrid(ahoraS * 1000), vistos = new Set();
+  const l = misiones.todas.filter((m) => m && m.id && !vistos.has(m.id) && vistos.add(m.id));
+  const deHoy = (m) => m.ts && diaMadrid(m.ts * 1000) === hoy;
+  const abiertas = l.filter((m) => MISION_EN_CURSO.test(m.estado));
+  const cur = abiertas.filter((m) => ahoraS - (m.ts || 0) <= MISION_VIVA_S);
+  const viejas = abiertas.filter((m) => !cur.includes(m));
+  const hechas = l.filter((m) => MISION_HECHA.test(m.estado) && deHoy(m));
+  const mal = l.filter((m) => MISION_MAL.test(m.estado) && deHoy(m));
+  const canc = l.filter((m) => m.estado === "cancelled" && deHoy(m));
+  const pend = l.filter((m) => m.estado === "pending");
+  const ult = [...hechas, ...mal].sort((a, b) => b.ts - a.ts)[0] || null;
+  const luz = cur.length ? "amarillo" : ult ? (MISION_HECHA.test(ult.estado) ? "verde" : "rojo") : "gris";
+  const desde = viejas.length ? Math.min(...viejas.map((m) => m.ts || m.alta || ahoraS)) : null;
+  const dm = (x) => diaMadrid(x * 1000).slice(8, 10) + "-" + diaMadrid(x * 1000).slice(5, 7);
+  const pl = (n, a, b) => n + " " + (n === 1 ? a : b);
+  const partes = [pl(hechas.length, "hecha", "hechas")];
+  if (cur.length) partes.push(pl(cur.length, "en curso", "en curso"));
+  if (viejas.length) partes.push(pl(viejas.length, "sin cerrar", "sin cerrar") + " desde " + dm(desde));
+  if (mal.length) partes.push(pl(mal.length, "fallida", "fallidas"));
+  if (canc.length) partes.push(pl(canc.length, "cancelada", "canceladas"));
+  if (pend.length) partes.push(pl(pend.length, "pendiente", "pendientes"));
+  return { luz, hechas: hechas.length, enCurso: cur.length, sinCerrar: viejas.length, sinCerrarDesde: desde, fallidas: mal.length, canceladas: canc.length, pendientes: pend.length,
+    enCursoIds: cur.map((m) => m.id), sinCerrarIds: viejas.map((m) => m.id), fallidasIds: mal.map((m) => m.id + " " + m.estado), ultima: ult ? { id: ult.id, estado: ult.estado, ts: ult.ts } : null, texto: partes.join(" · ") };
 }
 /** r244 (Carlos, 21-11-2026 23:31: «al lado del nombre del consejero entre parentesis (x) ponga las misiones que ha
  *  cumplido hoy» · «y los agentes igual»). Misiones HECHAS (done) cerradas HOY (día natural de Madrid), de la bandeja de
@@ -689,6 +733,8 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     // consejeros «vía» un agente usan la suya, no la del agente) y la máquina mostrada.
     const cgT = carga && typeof carga.get === "function" ? carga.get(personaCenso(t.agente)) || null : null;
     t.hechasHoy = cgT && cgT.misiones ? hechasHoyDe(cgT.misiones, ahoraS).map((m) => ({ id: m.id, titulo: m.titulo, ts: m.ts, maquina: m.maquina ? maquinaCorta(m.maquina) : null })) : null; // r244
+    // r247: color del «(N)» y su desglose (campos nuevos; hechasHoy sigue igual).
+    { const ml = cgT && cgT.misiones ? misionesLuzDe(cgT.misiones, ahoraS) : null; t.misionesLuz = ml ? ml.luz : null; t.misionesDesglose = ml; }
     t.queHace = queHaceDe({ misiones: cgT && cgT.misiones, latido: t.via ? null : t._lat, maquina: t.maquina, consejero: !!t.consejero, ahoraS });
     delete t._lat;
     t.superficies = superficiesDe(t, { latidos: (porAg.get(t.agente) || {}).latidos || [], supPulso, apps: (velocidad && velocidad.grokbotApps) || [], ahoraS });

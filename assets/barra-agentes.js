@@ -35,6 +35,8 @@
     /* r246: borde = conectado; punto = actividad real (verde / amarillo sin dato / rojo parado) */
     "#agentes-rail .rojo .ar-dot{background:#ff5a5a}#agentes-rail a.ar.con{border-color:#3ddc4a}#agentes-rail a.ar.descon{border-style:dashed;opacity:.72}" +
     "#agentes-rail .ar-n{color:#fff}" +
+    /* r247: «(N)» misiones hechas hoy con color: gris nada · amarillo en curso · verde hecha · rojo no acabada bien */
+    "#agentes-rail .ar-nh{color:#9aa}#agentes-rail .ar-nh.amarillo{color:#ffcc33}#agentes-rail .ar-nh.verde{color:#3ddc4a}#agentes-rail .ar-nh.rojo{color:#ff5a5a}" +
     "#agentes-rail .ar-enc{color:#ffcc66}#agentes-rail .ar-enc.cero{color:#886633}" +
     "#agentes-rail .ar-q{color:#9fe0ff}#agentes-rail .ar-q.alto{color:#ff9a4a}#agentes-rail .ar-q.lleno{color:#ff5a5a}" +
     "#agentes-rail .ar-q.nd{color:#886633}" +
@@ -74,6 +76,13 @@
   }
   function ventanaTxt(v) { return v === "7d" ? T("sem", "wk") : v || ""; }
 
+  /** r247: «(N)» = misiones hechas hoy (Yokup) con el color de misionesLuz y el desglose en el title. */
+  function nHoy(t) {
+    if (!t || !Array.isArray(t.hechasHoy)) return "";
+    var ml = /^(gris|amarillo|verde|rojo)$/.test(t.misionesLuz || "") ? t.misionesLuz : t.hechasHoy.length ? "verde" : "gris";
+    var d = t.misionesDesglose && t.misionesDesglose.texto ? t.misionesDesglose.texto : t.hechasHoy.length + T(" hechas hoy", " done today");
+    return '<span class="ar-nh ' + ml + '" title="' + esc(d) + '">(' + t.hechasHoy.length + ")</span>";
+  }
   function chip(t) {
     // r246 (Carlos, 22-11 09:57): punto = actividad real (actividadLuz de la API), borde = conectado (app / CLI lanzada).
     var est = /^(verde|amarillo|rojo)$/.test(t.actividadLuz || "") ? t.actividadLuz : t.estado === "verde" || t.estado === "amarillo" ? t.estado : "gris";
@@ -101,7 +110,7 @@
     var title = t.agente + " · " + estTxt + (t.actividadPorque ? " — " + t.actividadPorque : t.motivo ? " — " + t.motivo : "") + (t.conectadoPor ? " · " + t.conectadoPor : "") + "\n" +
       (ab == null ? "" : T("Encargos abiertos: ", "Open tasks: ") + ab + (t.bloqueados ? " (" + t.bloqueados + T(" bloqueados", " blocked") + ")" : "") + "\n") + tq;
     return '<a class="ar ' + est + (con === true ? " con" : con === false ? " descon" : "") + '" href="/asignaciones/" title="' + esc(title) + '" aria-label="' + esc(title) + '">' +
-      '<span class="ar-dot" aria-hidden="true"></span><span class="ar-n">' + esc(t.agente) + "</span>" + enc + q + "</a>";
+      '<span class="ar-dot" aria-hidden="true"></span><span class="ar-n">' + esc(t.agente) + "</span>" + nHoy(t) + enc + q + "</a>";
   }
 
   var ORDEN = { verde: 0, amarillo: 1, rojo: 2, gris: 2 };

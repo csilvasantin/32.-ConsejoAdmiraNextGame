@@ -103,7 +103,7 @@ test("r246: legenda, CSS y versiones", () => {
   assert.match(html, /\.tr-chipa\.tr-con\{/); assert.match(html, /\.tr-chipa\.tr-luz-amarillo i/);
   assert.match(html, /deepagents-estado\.js\?v=20261122-r246-actividad/);
   const idx = readFileSync(new URL("./index.html", import.meta.url), "utf8");
-  assert.match(idx, /barra-agentes\.js\?v=20261122-r246-actividad/); assert.match(idx, /consejo-rotulo\.js\?v=20261122-r246-actividad/);
+  assert.match(idx, /barra-agentes\.js\?v=20261122-r247-misiones/); assert.match(idx, /consejo-rotulo\.js\?v=20261122-r246-actividad/);
   const api = readFileSync(new URL("./functions/api/flota/trabajando.js", import.meta.url), "utf8");
   assert.ok(api.indexOf("aplicarConectadoActividad(ts") > api.indexOf("aplicarMedicionCiega(ts)"));
 });

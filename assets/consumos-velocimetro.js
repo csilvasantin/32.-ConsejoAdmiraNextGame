@@ -77,9 +77,12 @@
       '<path d="' + arco(0, 1, R + 1) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
       ticks +
       '<text x="' + CX + '" y="' + (CY - 46) + '" class="vel-escala">' + (rotulo || 'TOKENS/HORA') + '</text>' +
+      /* r249 (Carlos): en el reloj de Agentes (vg1) los 3 testigos se sustituyen por los 4 puntos de DeepAgents
+       * (#vel-da, assets/consumos-marchas-deepagents.js), bajados entre el reloj y el odómetro. El de Proyectos los conserva. */
+      (pfx === 'vg1' ? '' :
       '<circle cx="' + (CX - 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-vivo"><title>' + esc(T('en vivo', 'live')) + '</title></circle>' +
       '<circle cx="' + CX + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-sin"><title>' + esc(T('sin dato en vivo', 'no live data')) + '</title></circle>' +
-      '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>' +
+      '<circle cx="' + (CX + 16) + '" cy="' + (base - 6) + '" r="4.2" class="vel-led led-roja"><title>' + esc(T('zona roja', 'red zone')) + '</title></circle>') +
       /* r112 (Carlos): escudo Ducati simplificado, dibujado a mano en SVG (no es el fichero de marca), en el eje. */
       '<g class="vel-escudo" transform="translate(' + CX + ' ' + CY + ')" aria-hidden="true">' +
         '<path d="M-15 -14 H15 V-2 C15 7 7 11 0 14 C-7 11 -15 7 -15 -2 Z" class="vel-escudo-borde"/>' +

@@ -318,6 +318,14 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .led-vivo.led-marcha{animation:led-marcha .5s ease-out 2}
 @media (prefers-reduced-motion: reduce){.odo.odo-vibra,.led-vivo.led-marcha{animation:none}}
 .led-vivo{fill:#3dff8c;filter:drop-shadow(0 0 4px #3dff8c)}
+.vel-da{position:relative;display:flex;justify-content:center;align-items:center;gap:14px;width:max-content;margin:-4px auto 0;padding:3px 10px;z-index:2}
+.vel-da-p{width:12px;height:12px;padding:0;border-radius:50%;background:#050607;border:1.5px solid #3a4a52;box-shadow:inset 0 1px 2px rgba(0,0,0,.9);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.vel-da-p.on{background:#3dff8c;border-color:#1f8f4f;box-shadow:0 0 6px #3dff8c}
+.vel-da-p:focus-visible{outline:2px solid #75aab9;outline-offset:2px}
+.vel-da-txt{display:none;position:absolute;bottom:calc(100% + 4px);left:var(--x,50%);transform:translateX(-50%);white-space:nowrap;background:#0b0f11;color:#e6f2ec;border:1px solid #3a4a52;border-radius:6px;padding:4px 8px;font-size:11px;letter-spacing:.02em;box-shadow:0 4px 12px rgba(0,0,0,.6);pointer-events:none}
+.vel-da.ver .vel-da-txt{display:block}
+@media (max-width:560px){.vel-da{gap:18px}.vel-da-p{width:14px;height:14px}.vel-da-txt{white-space:normal;width:max-content;max-width:78vw;text-align:center}}
+#vel-g-total .vel-da+.odo{margin-top:2px}
 .vel-g.sin-datos .led-vivo{fill:#1c2420;filter:none}.vel-g.sin-datos .led-sin{fill:#ffb627;filter:drop-shadow(0 0 4px #ffb627)}
 .en-roja .led-roja{fill:#ff3b30;filter:drop-shadow(0 0 5px #ff3b30);animation:vel-late .7s steps(2) infinite}
 .vel-g{background:radial-gradient(closest-side,rgba(0,0,0,.6),rgba(0,0,0,0))}
@@ -363,7 +371,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <div class="vel-par">
       <div class="vel-g" id="vel-g-total">
         <h3><span id="vel-ag-titulo">Agentes (0/0)</span><span class="vel-sep" aria-hidden="true"> · </span><span class="vel-sel" id="vel-ag-dd"></span><span class="vel-sep" aria-hidden="true"> · </span><a class="vel-hist" href="/historico?tipo=agente" title="Qué hizo cada agente: hoy, ayer, semana y mes">Histórico</a></h3>
-        <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Media de tokens por hora de ayer (Madrid)"></div><p class="odo-rotulo" id="vel-ag-rotulo" data-en="Yesterday · avg tokens/hour">Ayer · media tokens/hora</p></div>
+        <div class="vel-dial"><div class="vel-dial-svg"></div><div class="vel-da" id="vel-da" role="group" aria-label="DeepAgents"></div><div class="odo" title="Media de tokens por hora de ayer (Madrid)"></div><p class="odo-rotulo" id="vel-ag-rotulo" data-en="Yesterday · avg tokens/hour">Ayer · media tokens/hora</p></div>
         <div class="vel-lectura"><span class="vel-cifra" id="vel-cifra">…</span><span class="vel-unidad" id="vel-unidad">tokens/hora</span><p class="vel-que"></p><p class="vel-extra" id="vel-ag-metodo"></p><p class="vel-extra vel-ag-lineas" id="vel-ag-lineas"></p></div>
       </div>
       <div class="vel-g" id="vel-g-proy">
@@ -551,7 +559,8 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-trabajando.js?v=20261122-r248-trabajos-hoy"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/deepagents-estado.js?v=20261122-r246-actividad"></script>
-<script src="/assets/consumos-velocimetro.js?v=20261121-r231-odos-ayer"></script>
+<script src="/assets/consumos-velocimetro.js?v=20261122-r249-marchas-da"></script>
+<script src="/assets/consumos-marchas-deepagents.js?v=20261122-r249"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=20261010-r25"></script>
 <script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>

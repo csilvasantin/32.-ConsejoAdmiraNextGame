@@ -562,7 +562,9 @@
     var el = dial.box.querySelector('.odo');
     odometro(el, n, 0, dial.pfx + ':ayer', 'ayer');
     if (el) { el.title = titulo; el.setAttribute('aria-label', (n == null ? '—' : Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES')) + ' · ' + rotulo); }
-    if (rotEl && rotEl.textContent !== rotulo) rotEl.textContent = rotulo;
+    // r251: si una bola de pilar ha tomado el rótulo (data-r251), se guarda ahí el texto para devolverlo al soltarla.
+    if (rotEl && rotEl.hasAttribute('data-r251')) rotEl.setAttribute('data-r251', rotulo);
+    else if (rotEl && rotEl.textContent !== rotulo) rotEl.textContent = rotulo;
   }
   function pintaOdosAyer(d, sin) {
     var A = ayerDe(d, sin), fecha = A.dia ? fechaCorta(A.dia) : '';

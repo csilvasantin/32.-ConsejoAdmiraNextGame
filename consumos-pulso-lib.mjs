@@ -235,6 +235,19 @@ export function appsGrokBot(docs, ahora) {
   return out;
 }
 
+/** r251 (Carlos, 22-11 18:56): qué Mac informa de su app Grok Bot en el pulso y cuándo (abierta o cerrada), para que
+ *  el reloj de Proyectos distinga «apagado» (el pulso fresco dice cerrada / otra cuenta) de «sin dato» (no hay pulso). */
+export function grokbotPulso(docs, ahora) {
+  const out = [];
+  for (const d of docs || []) {
+    const g = d && d.grokbotApp;
+    if (!g || !d.maquina || !g.ts) continue;
+    const haceS = Math.max(0, Math.round((ahora - g.ts) / 1000));
+    out.push({ maquina: d.maquina, abierta: !!g.abierta, haceS, fresco: ahora - g.ts < STALE_MS });
+  }
+  return out;
+}
+
 /** r27: serie en hora del evento (Cursor) → puntos validados, ordenados, ts únicos; null si no vale. */
 export function normalizarSerie(serie) {
   if (!Array.isArray(serie) || serie.length > 400) return null;

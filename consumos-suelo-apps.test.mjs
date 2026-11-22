@@ -78,9 +78,8 @@ test("suelos: 4 DeepAgents abiertos (deepagents-estado) y GrokBot por Mac y cuen
   assert.equal(c.ConsumosElegir.esFilaConsejeros({ agente: "Grok Bot (Consejo)" }), false);
 });
 
-test("Trabajando ahora: «parados (N con app abierta)», sin contar como trabajando", () => {
+test("Trabajando ahora (r246): app abierta = «conectado · 250k/h» (borde), sin contar como trabajando (punto)", () => {
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
-  assert.match(js, /con app abierta/);
   assert.match(js, /cifras\(g\.n, g\.tarjetas\)/);
-  assert.match(js, /app abierta · 250k\/h/); assert.match(js, /txtAb \+ T\(. · en espera./);
+  assert.match(js, /T\('conectado', 'connected'\) \+ \(cuenta250 \? ' · 250k\/h' : ''\)/);
 });

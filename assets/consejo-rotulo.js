@@ -65,10 +65,13 @@
     return "sin medición";
   }
 
+  function luz(t) { return t && /^(verde|amarillo|rojo)$/.test(t.actividadLuz || "") ? t.actividadLuz : t && (t.estado === "verde" || t.estado === "amarillo") ? t.estado : "rojo"; }
   function estado(t, np) {
     var maquina = np && np.classList.contains("gold") ? "máquina encendida" : "máquina apagada";
     if (!t) return "sin latido · " + maquina;
-    var vivo = t.estado === "verde" ? (t.abiertoApp ? "abierto" : "trabajando") : t.estado === "amarillo" ? "con Carlos" : "parado";
+    // r246: «conectado · trabajando / sin dato / parado» (actividad real de la API); «con Carlos» ya no es estado.
+    var l = luz(t);
+    var vivo = (typeof t.conectado === "boolean" ? (t.conectado ? "conectado · " : "no conectado · ") : "") + (l === "verde" ? "trabajando" : l === "amarillo" ? "sin dato" : "parado");
     return vivo + " · " + maquina;
   }
 
@@ -113,9 +116,10 @@
       np.setAttribute("data-r-proyecto", proy);
       np.setAttribute("data-r-estado", estado(t, np));
       np.setAttribute("data-r-meta", encargos(t) + " · " + consumo(t));
-      np.setAttribute("data-r-led", t ? (t.estado === "verde" ? "verde" : t.estado === "amarillo" ? "amarillo" : "parado") : "nodata");
-      np.classList.toggle("np-estado-verde", !!(t && t.estado === "verde"));
-      np.classList.toggle("np-estado-amarillo", !!(t && t.estado === "amarillo"));
+      np.setAttribute("data-r-led", t ? (luz(t) === "rojo" ? "parado" : luz(t)) : "nodata");
+      np.classList.toggle("np-estado-verde", !!(t && luz(t) === "verde"));
+      np.classList.toggle("np-estado-amarillo", !!(t && luz(t) === "amarillo"));
+      np.classList.toggle("np-conectado", !!(t && t.conectado === true));
       var slug = CHAT[persona];
       var link = np.querySelector(":scope > .np-chat");
       if (slug) {
@@ -145,6 +149,7 @@
       "#nameplates .np .np-meta{font-size:.34rem;opacity:.95}",
       "#nameplates .np.np-estado-verde{box-shadow:0 0 8px rgba(61,220,74,.75)}",
       "#nameplates .np.np-estado-amarillo{box-shadow:0 0 8px rgba(255,204,51,.8)}",
+      "#nameplates .np.np-conectado{outline:1px solid rgba(61,220,74,.85);outline-offset:1px}",
       "#nameplates .np .np-chat{pointer-events:auto;display:inline-block;margin-top:2px;color:#fff;text-decoration:underline;font-size:.4rem;text-transform:none}"
     ].join("");
     document.head.appendChild(s);
@@ -168,7 +173,7 @@
     }
   }
 
-  window.ConsejoRotulo = { tarjeta: tarjeta, proyecto: proyecto, consumo: consumo, estado: estado, encargos: encargos, fase: fase, TITULO: TITULO };
+  window.ConsejoRotulo = { tarjeta: tarjeta, proyecto: proyecto, consumo: consumo, estado: estado, luz: luz, encargos: encargos, fase: fase, TITULO: TITULO };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arranca);
   else arranca();
 })();

@@ -37,6 +37,6 @@ test("r244: cliente — «(N)» junto al nombre con tooltip; «(0)» atenuado; s
   assert.match(nHoy({ hechasHoy: [] }), /tr-nhoy tr-nhoy0".*>\(0\)</);
   assert.equal(nHoy({ hechasHoy: null }), "");
   assert.equal(nHoy({}), "");
-  assert.equal((js.match(/esc\(vis\(t\.agente\)\) \+ nHoy\(t\)/g) || []).length, 5);
+  assert.equal((js.match(/esc\(vis\(t\.agente\)\) \+ nHoy\(t\)/g) || []).length, 2); // r246: tarjeta + chip único
   assert.match(readFileSync(new URL("./deepagents/deepagents.js", import.meta.url), "utf8"), /ag-nhoy/);
 });

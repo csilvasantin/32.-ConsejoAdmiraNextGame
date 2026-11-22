@@ -281,14 +281,14 @@ export function superficiesDe(t, { latidos = [], supPulso = [], apps = [], ahora
   const vivo = (e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S;
   if (asistente) out.push({ tipo: "asistente", maquina: null, corta: null, runtime: RUNTIME_ASISTENTE, fuente: "mapa" });
   else {
-    for (const e of latidos) if (e && e.machine && vivo(e) && e.host === "cli" && canonico(e.persona) === yo) add({ tipo: "cli", maquina: e.machine, corta: maquinaCorta(e.machine), runtime: RT_CLI(e.runtime), sesion: e.session_id || null, fuente: "latido" });
+    for (const e of latidos) if (e && e.machine && vivo(e) && e.host === "cli" && canonico(e.persona) === yo) add({ tipo: "cli", maquina: e.machine, corta: maquinaCorta(e.machine), runtime: RT_CLI(e.runtime), sesion: e.session_id || null, fuente: "latido", cpu: cpuProceso(e) });
     for (const s of supPulso) if (s && s.tipo === "cli" && canonico(s.agente) === yo) add({ tipo: "cli", maquina: s.maquina, corta: maquinaCorta(s.maquina), runtime: s.runtime || RT_CLI(s.motor), sesion: s.sesion || null, fuente: "pulso" });
     // Merovingio (Elon): su sesión de terminal es la del Grok CLI del servidor GrokBot (latido-merovingio), siempre vivo.
     if (yo === "Merovingio" && !out.some((o) => o.tipo === "cli")) out.push({ tipo: "cli", maquina: t.maquina || "GrokBot", corta: maquinaCorta(t.maquina || "GrokBot"), runtime: "GrokBot CLI", fuente: "latido" });
     // Apps Claude / Codex: latidos host «app» (abierta) + pulso (abierta y si Carlos la usa).
-    for (const e of latidos) if (e && e.machine && vivo(e) && (e.host === "app" || String(e.session_id || "").startsWith("desktop:")) && canonico(e.persona) === yo) add({ tipo: "app", maquina: e.machine, corta: maquinaCorta(e.machine), app: claveApp(e.runtime) === "codex" ? "Codex" : claveApp(e.runtime) === "claude" ? "Claude" : e.runtime || "app", enUso: false, fuente: "latido" });
+    for (const e of latidos) if (e && e.machine && vivo(e) && (e.host === "app" || String(e.session_id || "").startsWith("desktop:")) && canonico(e.persona) === yo) add({ tipo: "app", maquina: e.machine, corta: maquinaCorta(e.machine), app: claveApp(e.runtime) === "codex" ? "Codex" : claveApp(e.runtime) === "claude" ? "Claude" : e.runtime || "app", enUso: false, fuente: "latido", cpu: cpuProceso(e) });
   }
-  for (const s of supPulso) if (s && s.tipo === "app" && s.app !== "GrokBot" && s.agente && canonico(s.agente) === yo && !asistente) add({ tipo: "app", maquina: s.maquina, corta: maquinaCorta(s.maquina), app: s.app, enUso: !!s.enUso, alFrente: !!s.alFrente, fuente: "pulso" });
+  for (const s of supPulso) if (s && s.tipo === "app" && s.app !== "GrokBot" && s.agente && canonico(s.agente) === yo && !asistente) add({ tipo: "app", maquina: s.maquina, corta: maquinaCorta(s.maquina), app: s.app, enUso: !!s.enUso, alFrente: !!s.alFrente, fuente: "pulso", cpu: s.cpu != null && isFinite(Number(s.cpu)) ? Number(s.cpu) : null });
   const cuenta = CUENTA_APP_GROKBOT[yo];
   if (cuenta) for (const a of apps) if (a && a.cuenta === cuenta && a.maquina) add({ tipo: "app", maquina: a.maquina, corta: maquinaCorta(a.maquina), app: "GrokBot", enUso: !!(a.alFrente && a.reposoS != null && a.reposoS < REPOSO_CON_CARLOS_S), alFrente: !!a.alFrente, fuente: "pulso" });
   const ord = (x) => (x.tipo === "cli" ? 0 : x.tipo === "asistente" ? 1 : x.enUso ? 2 : 3);
@@ -634,6 +634,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
+      pulsoMedible: x.pulsos.some((a) => a && !a.stale && !a.conRetraso), // r246: pulso de tokens fresco y atribuible
       conCarlosEn, conCarlosTrabajando: st.estado === "verde" && st.conCarlos ? st.conCarlos : null,
       maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && cuentaLatido(l) && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: modeloCard,
@@ -832,7 +833,7 @@ export const APP_GROKBOT_FRESCA_S = 900;
 export const ACTIVIDAD_CONSEJERO_S = 900;
 /**
  * r243 (Carlos, 21-11-2026 23:17): los consejeros son bots en la nube; con la app Grok Bot de SU cuenta abierta en algún
- * Mac (pulso fresco, < 15 min) están accesibles → VERDE «abierto» (t.abiertoApp), igual que los DeepAgents abiertos
+ * Mac (pulso fresco, < 15 min) están accesibles → t.abiertoApp (r246: CONECTADO, ya no verde), como los DeepAgents abiertos
  * (r235). Con actividad propia reciente (mensaje / encargo / acción del consejero < 15 min) → VERDE «trabajando».
  * Sin app abierta ni actividad reciente: no se toca (aplicarRojo lo deja rojo si hubo actividad hoy, gris si no).
  * Amarillo («con Carlos») no se toca. Pura sobre ts.
@@ -840,10 +841,10 @@ export const ACTIVIDAD_CONSEJERO_S = 900;
 export function aplicarConsejerosAbiertos(ts, apps, ahoraS) {
   if (!Array.isArray(ts)) return ts;
   for (const t of ts) {
-    if (!t || !CONSEJEROS_GROK.includes(t.agente) || t.estado === "verde" || t.estado === "amarillo") continue;
+    if (!t || !CONSEJEROS_GROK.includes(t.agente)) continue;
     const act = t.actividad && isFinite(t.actividad.ts) ? ahoraS - t.actividad.ts : null;
-    if (act != null && act >= 0 && act <= ACTIVIDAD_CONSEJERO_S) {
-      t.estado = "verde"; t.motivo = (t.actividad.fuente || "actividad") + " hace " + Math.round(act / 60) + " min"; continue;
+    if (t.estado !== "verde" && t.estado !== "amarillo" && act != null && act >= 0 && act <= ACTIVIDAD_CONSEJERO_S) {
+      t.estado = "verde"; t.motivo = (t.actividad.fuente || "actividad") + " hace " + Math.round(act / 60) + " min";
     }
     const cuenta = CUENTA_GROKBOT[t.agente];
     const vistos = new Set();
@@ -851,9 +852,81 @@ export function aplicarConsejerosAbiertos(ts, apps, ahoraS) {
       && !vistos.has(claveMaquina(a.maquina)) && vistos.add(claveMaquina(a.maquina)));
     if (!abiertas.length) continue;
     const donde = abiertas.map((a) => maquinaCorta(a.maquina)).join(" + ");
-    t.estado = "verde";
+    // r246 (Carlos, 22-11-2026 09:57): «abierto» ya no pinta verde: es CONECTADO (borde), no actividad (punto).
     t.abiertoApp = "Grok Bot abierto en " + donde + " (cuenta " + (cuenta === "csilva@admira.com" ? "Leyendas" : "Coetáneos") + ")";
-    t.motivo = "abierto: " + t.abiertoApp + (t.motivo ? " · antes: " + t.motivo : "");
+  }
+  return ts;
+}
+
+/** r246: los cuatro DeepAgents (mismo reparto que /deepagents). */
+export const DEEPAGENTS = ["Trinity", "Neo", "Oráculo", "Morfeo"];
+/** r246: umbrales de «actividad real». Tokens propios: el ÚLTIMO EVENTO con tokens (hora del evento en el log), no el
+ *  tok/h de 15 min (que saltaba con relecturas del reportero, p. ej. +5,6 M de Trinity al cambiar el colector).
+ *  App de escritorio (Claude/Codex, árbol de procesos): una app abierta sin trabajar mide 0–35 % → umbral 40 %.
+ *  CLI (CPU del propio proceso): 10 %. Consejeros: mensaje / encargo / acción propia < 10 min. */
+export const TOKENS_RECIENTES_S = 300;
+export const CPU_CLI_TRABAJANDO = 10;
+export const ACTIVIDAD_PROPIA_CONSEJERO_S = 600;
+const viva = (s) => s && s.maquina && (s.fuente === "pulso" || s.fuente === "latido");
+/**
+ * r246 (Carlos, 22-11-2026 09:57: «tenemos que diferenciar entre Conectados y Trabajando … el punto es el que marca la
+ * actividad real, y tiene que estar amarillo sino se sabe o rojo sino estan haciendo nada»). Dos señales
+ * independientes por ficha (campos nuevos; «estado» se mantiene por compatibilidad):
+ *  · conectado (borde): su aplicación está lanzada — consejeros: el Grok Bot de SU cuenta abierto en algún Mac;
+ *    DeepAgents: su Desktop App Claude/Codex (o, si no, su CLI); agentes: su CLI. conectadoPor = el porqué.
+ *  · actividadLuz (punto) 'verde'|'amarillo'|'rojo' + actividadPorque:
+ *      verde   = actividad propia demostrada y reciente: tokens propios < 5 min (último evento), su app > 40 % CPU,
+ *                su CLI > 10 % CPU, tokens autodeclarados < 5 min, latido «trabajando» del consejero vigente o
+ *                mensaje / encargo / acción propia del consejero < 10 min;
+ *      rojo    = hay señal de que no hace nada: nada lanzado, o lanzado con pulso / CPU medibles y ni tokens ni CPU;
+ *      amarillo= no se sabe: lanzado pero sin señal medible (pulso del Mac caducado, Grok Bot compartido sin actividad
+ *                atribuible, app Grok Bot abierta con cuenta desconocida).
+ *  «Con Carlos» deja de ser un color: queda en conCarlosEn (el cliente lo indica como texto). Pura sobre ts.
+ */
+export function aplicarConectadoActividad(ts, { apps = [], ahoraS } = {}) {
+  if (!Array.isArray(ts)) return ts;
+  const hace = (s) => (s < 90 ? Math.max(0, Math.round(s)) + " s" : Math.round(s / 60) + " min");
+  for (const t of ts) {
+    if (!t) continue;
+    const cons = CONSEJEROS_GROK.includes(t.agente), da = DEEPAGENTS.includes(t.agente);
+    const sup = (t.superficies || []).filter(viva);
+    const appIA = sup.filter((s) => s.tipo === "app" && /^(claude|codex)$/i.test(String(s.app || "")));
+    const clis = sup.filter((s) => s.tipo === "cli");
+    // ── CONECTADO ──
+    let conectado = false, por = null;
+    if (cons) { conectado = !!t.abiertoApp; por = t.abiertoApp || null; }
+    else if (da && appIA.length) { conectado = true; por = "Desktop App " + appIA.map((s) => s.app + " en " + (s.corta || maquinaCorta(s.maquina))).join(" + "); }
+    else if (clis.length) { conectado = true; por = clis.map((s) => (/cli/i.test(String(s.runtime || "")) ? s.runtime : "CLI " + (s.runtime || "")).trim() + " en " + (s.corta || maquinaCorta(s.maquina))).join(" + "); }
+    // ── ACTIVIDAD REAL ──
+    let luz = null, porque = null;
+    const ult = t.ultimoToken ? Math.floor(Date.parse(t.ultimoToken) / 1000) : NaN;
+    const auto = String(t.motivo || "").match(/^tokens autodeclarados hace (\d+) s/);
+    const appCpu = cons ? null : appIA.filter((s) => s.fuente === "pulso" && Number(s.cpu) > CPU_APP_TRABAJANDO).sort((a, b) => b.cpu - a.cpu)[0];
+    const cliCpu = cons ? null : clis.filter((s) => s.cpu != null && Number(s.cpu) > CPU_CLI_TRABAJANDO).sort((a, b) => b.cpu - a.cpu)[0];
+    const act = t.actividad && isFinite(t.actividad.ts) ? ahoraS - t.actividad.ts : null;
+    if (isFinite(ult) && ahoraS - ult <= TOKENS_RECIENTES_S) { luz = "verde"; porque = "tokens propios hace " + hace(ahoraS - ult); }
+    else if (auto && Number(auto[1]) <= TOKENS_RECIENTES_S) { luz = "verde"; porque = "tokens autodeclarados hace " + hace(Number(auto[1])); }
+    else if (appCpu) { luz = "verde"; porque = "app " + appCpu.app + " al " + Math.round(appCpu.cpu) + " % de CPU en " + (appCpu.corta || maquinaCorta(appCpu.maquina)); }
+    else if (cliCpu) { luz = "verde"; porque = (cliCpu.runtime || "CLI") + " al " + Math.round(cliCpu.cpu) + " % de CPU en " + (cliCpu.corta || maquinaCorta(cliCpu.maquina)); }
+    else if (cons && t.latidoConsejero && Number(t.latidoConsejero.hasta) > ahoraS) { luz = "verde"; porque = "latido «trabajando» del consejero" + (t.latidoConsejero.mision ? ": " + limpio(t.latidoConsejero.mision, 80) : ""); }
+    else if (cons && act != null && act >= 0 && act <= ACTIVIDAD_PROPIA_CONSEJERO_S) { luz = "verde"; porque = (t.actividad.fuente || "actividad propia") + " hace " + hace(act); }
+    else if (cons) {
+      const cuenta = CUENTA_GROKBOT[t.agente];
+      const sinCuenta = (apps || []).filter((a) => a && a.maquina && !a.cuenta && (a.haceS == null || Number(a.haceS) <= APP_GROKBOT_FRESCA_S));
+      if (conectado) { luz = "amarillo"; porque = "Grok Bot compartido (cuenta " + (cuenta === "csilva@admira.com" ? "Leyendas" : "Coetáneos") + "): sin actividad propia atribuible"; }
+      else if (sinCuenta.length) { luz = "amarillo"; porque = "app Grok Bot abierta en " + sinCuenta.map((a) => maquinaCorta(a.maquina)).join(" + ") + " con cuenta desconocida: no se sabe si es la suya"; }
+      else { luz = "rojo"; porque = "Grok Bot de su cuenta cerrado y sin actividad propia reciente" + (act != null ? " (última: " + (t.actividad.fuente || "actividad") + " hace " + hace(act) + ")" : ""); }
+    } else {
+      const medible = !!t.pulsoMedible || appIA.some((s) => s.fuente === "pulso" && s.cpu != null) || clis.some((s) => s.cpu != null);
+      const ultTxt = isFinite(ult) ? " (último token hace " + hace(ahoraS - ult) + ")" : "";
+      if (!conectado) { luz = "rojo"; porque = (da ? "ni Desktop App ni CLI lanzadas" : "CLI no lanzada") + ultTxt; }
+      else if (medible) { luz = "rojo"; porque = "conectado sin tokens recientes ni CPU" + ultTxt; }
+      else { const maqs = [...new Set(sup.map((s) => s.corta || maquinaCorta(s.maquina)))].join(" + "); luz = "amarillo"; porque = "sin señal medible: el pulso de " + (maqs || "su Mac") + " no da tokens ni CPU" + ultTxt; }
+    }
+    t.conectado = conectado;
+    t.conectadoPor = por;
+    t.actividadLuz = luz;
+    t.actividadPorque = porque;
   }
   return ts;
 }

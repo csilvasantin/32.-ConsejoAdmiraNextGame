@@ -61,5 +61,5 @@ test("r55: tooltip verde con último token y su traducción EN", () => {
   assert.equal(tr(es), "last token 3 min ago · app open and in use");
   assert.equal(tr("encargo aceptado a las 07:10 · sin tokens desde hace 2 h"), "task acknowledged at 07:10 · no tokens for 2 h");
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
-  assert.match(js, /t\.porqueColor \? t\.porqueColor/);
+  assert.match(js, /t\.actividadPorque \? ' — ' \+ t\.actividadPorque : t\.porqueColor \? ' — ' \+ t\.porqueColor/); // r246
 });

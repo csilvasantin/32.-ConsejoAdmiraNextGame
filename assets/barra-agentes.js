@@ -32,6 +32,8 @@
     "#agentes-rail .ar-dot{width:7px;height:7px;flex:0 0 7px;border:1px solid #000}" +
     "#agentes-rail .verde .ar-dot{background:#3ddc4a}#agentes-rail .amarillo .ar-dot{background:#ffcc33}#agentes-rail .gris .ar-dot{background:#6b6b6b}" +
     "#agentes-rail .gris{opacity:.78}" +
+    /* r246: borde = conectado; punto = actividad real (verde / amarillo sin dato / rojo parado) */
+    "#agentes-rail .rojo .ar-dot{background:#ff5a5a}#agentes-rail a.ar.con{border-color:#3ddc4a}#agentes-rail a.ar.descon{border-style:dashed;opacity:.72}" +
     "#agentes-rail .ar-n{color:#fff}" +
     "#agentes-rail .ar-enc{color:#ffcc66}#agentes-rail .ar-enc.cero{color:#886633}" +
     "#agentes-rail .ar-q{color:#9fe0ff}#agentes-rail .ar-q.alto{color:#ff9a4a}#agentes-rail .ar-q.lleno{color:#ff5a5a}" +
@@ -73,8 +75,11 @@
   function ventanaTxt(v) { return v === "7d" ? T("sem", "wk") : v || ""; }
 
   function chip(t) {
-    var est = t.estado === "verde" || t.estado === "amarillo" ? t.estado : "gris";
-    var estTxt = est === "verde" ? (t.abiertoApp || t.abiertoDA ? T("abierto", "open") : T("trabajando", "working")) : est === "amarillo" ? T("con Carlos", "with Carlos") : T("parado", "idle");
+    // r246 (Carlos, 22-11 09:57): punto = actividad real (actividadLuz de la API), borde = conectado (app / CLI lanzada).
+    var est = /^(verde|amarillo|rojo)$/.test(t.actividadLuz || "") ? t.actividadLuz : t.estado === "verde" || t.estado === "amarillo" ? t.estado : "gris";
+    var con = typeof t.conectado === "boolean" ? t.conectado : null;
+    var estTxt = (con === true ? T("conectado", "connected") + " · " : con === false ? T("no conectado", "not connected") + " · " : "") +
+      (est === "verde" ? T("trabajando", "working") : est === "amarillo" ? T("sin dato", "no data") : T("parado", "idle")) + (t.conCarlosEn ? " · 👤 " + T("con Carlos", "with Carlos") : "");
     var ab = t.abiertos;
     var enc = ab == null ? '<span class="ar-enc cero" title="' + esc(T("Sin datos de la bandeja de encargos", "No task inbox data")) + '">📋–</span>'
       : '<span class="ar-enc' + (ab ? "" : " cero") + '">📋' + ab + "</span>";
@@ -93,18 +98,19 @@
       q = '<span class="ar-q nd">' + T("cuota s/d", "quota n/a") + "</span>";
       tq = T("Sin dato fresco de cuota de su cuenta (su CLI no lo informa o no ha trabajado en 6 h)", "No fresh quota data for its account");
     }
-    var title = t.agente + " · " + estTxt + (t.motivo ? " — " + t.motivo : "") + "\n" +
+    var title = t.agente + " · " + estTxt + (t.actividadPorque ? " — " + t.actividadPorque : t.motivo ? " — " + t.motivo : "") + (t.conectadoPor ? " · " + t.conectadoPor : "") + "\n" +
       (ab == null ? "" : T("Encargos abiertos: ", "Open tasks: ") + ab + (t.bloqueados ? " (" + t.bloqueados + T(" bloqueados", " blocked") + ")" : "") + "\n") + tq;
-    return '<a class="ar ' + est + '" href="/asignaciones/" title="' + esc(title) + '" aria-label="' + esc(title) + '">' +
+    return '<a class="ar ' + est + (con === true ? " con" : con === false ? " descon" : "") + '" href="/asignaciones/" title="' + esc(title) + '" aria-label="' + esc(title) + '">' +
       '<span class="ar-dot" aria-hidden="true"></span><span class="ar-n">' + esc(t.agente) + "</span>" + enc + q + "</a>";
   }
 
-  var ORDEN = { verde: 0, amarillo: 1, gris: 2 };
+  var ORDEN = { verde: 0, amarillo: 1, rojo: 2, gris: 2 };
+  function luzDe(t) { return /^(verde|amarillo|rojo)$/.test(t.actividadLuz || "") ? t.actividadLuz : t.estado; }
   function pintar(d) {
     if (!rail) return;
     var ts = (d && Array.isArray(d.tarjetas) ? d.tarjetas : []).slice();
     ts.sort(function (a, b) {
-      return ((ORDEN[a.estado] != null ? ORDEN[a.estado] : 3) - (ORDEN[b.estado] != null ? ORDEN[b.estado] : 3)) ||
+      return ((ORDEN[luzDe(a)] != null ? ORDEN[luzDe(a)] : 3) - (ORDEN[luzDe(b)] != null ? ORDEN[luzDe(b)] : 3)) || ((b.conectado === true) - (a.conectado === true)) ||
         ((b.abiertos || 0) - (a.abiertos || 0)) || String(a.agente).localeCompare(String(b.agente));
     });
     var h = '<span class="ar-tit">' + T("AGENTES", "AGENTS") + "</span>";

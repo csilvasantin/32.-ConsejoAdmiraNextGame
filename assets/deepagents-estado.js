@@ -132,24 +132,31 @@
     return { estado: "amarillo", porque: "sin pulso de " + maq + ": no se sabe si está abierto" };
   }
   function haceTexto(seg) { return seg < 90 ? "hace " + Math.max(0, Math.round(seg)) + " s" : "hace " + Math.round(seg / 60) + " min"; }
+  /* r246 (Carlos, 22-11-2026 09:57): el punto es la ACTIVIDAD REAL, no «abierto» (r235 deshecho; abierto = borde).
+   * Con la API nueva (t.actividadLuz / t.actividadPorque, misma regla que /consumos): en su Mac principal, esa luz tal
+   * cual; en otro Mac elegido, cerrado → rojo; si no, el verde solo vale si el porqué nombra ese Mac (si no, «sin dato»).
+   * Sin esos campos (API antigua): tokens / encargos / GitHub / actividad propia reciente → verde; abierto → amarillo
+   * (no se sabe); cerrado → rojo. «En uso» o «con Carlos» son de Carlos, no del agente: ya no dan verde. */
   function actividadEn(t, maq, principal, abierto, nombre, actividadGit) {
     actividadGit = actividadGit || {};
     if (!t) return { luz: "amarillo", porque: "sin datos de actividad" };
     var k = claveLista(maq), esPrincipal = k === claveLista(principal), ahora = Date.now() / 1000;
-    var sup = (t.superficies || []).filter(function (s) { return s && claveLista(s.maquina) === k; });
-    for (var i = 0; i < sup.length; i++) if (sup[i].enUso || sup[i].alFrente) return { luz: "verde", porque: nombreSup(sup[i]) + " en uso en " + maq };
-    if (t.conCarlosEn && claveLista(t.conCarlosEn) === k) return { luz: "verde", porque: "con Carlos en " + maq };
+    if (/^(verde|amarillo|rojo)$/.test(t.actividadLuz || "")) {
+      if (esPrincipal) return { luz: t.actividadLuz, porque: t.actividadPorque || "" };
+      if (abierto.estado === "rojo") return { luz: "rojo", porque: "nada lanzado en " + maq };
+      var aqui = (t.superficies || []).some(function (s) { return s && claveLista(s.maquina) === k && (t.actividadPorque || "").indexOf(" en " + (s.corta || "")) >= 0; });
+      if (t.actividadLuz === "verde" && aqui) return { luz: "verde", porque: t.actividadPorque };
+      return { luz: t.actividadLuz === "rojo" ? "rojo" : "amarillo", porque: (t.actividadLuz === "rojo" ? "" : "sin dato de actividad en " + maq + " · ") + (t.actividadPorque || "") };
+    }
     if (esPrincipal) {
-      if (t.enCurso > 0) return { luz: "verde", porque: t.enCurso + " encargo en curso" };
-      if (t.estado === "verde") return { luz: "verde", porque: t.porqueColor || t.motivo || "trabajando" };
+      if (t.enCurso > 0 && t.estado === "verde") return { luz: "verde", porque: t.enCurso + " encargo en curso" };
+      if (t.estado === "verde" && !t.abiertoApp && !t.abiertoDA) return { luz: "verde", porque: t.porqueColor || t.motivo || "trabajando" };
       var g = actividadGit[nombre] || actividadGit[NOMBRE[nombre] || nombre];
       if (g && isFinite(g.ts) && ahora - g.ts / 1000 < RECIENTE_S) return { luz: "verde", porque: "GitHub: " + (g.accion === "merged" ? "PR fusionado" : g.accion === "opened" ? "PR abierto" : g.accion) + " en " + g.repo + " " + haceTexto(ahora - g.ts / 1000) + " (" + g.rama + ")" };
       if (t.actividad && isFinite(t.actividad.ts) && ahora - t.actividad.ts < RECIENTE_S) return { luz: "verde", porque: (t.actividad.fuente || "actividad") + " " + haceTexto(ahora - t.actividad.ts) };
     }
-    // r235 (Carlos, 21-11 22:15: «si estan abiertos como en deepagents que aparezcan en verde»): abierto = verde también
-    // en el punto; rojo solo si está cerrado. El porqué dice que es por estar abierto (sin tokens recientes).
-    if (abierto.estado === "verde") return { luz: "verde", porque: "abierto en " + maq + " (" + abierto.porque.replace(/^.* abierto en [^(]*\(|\)$/g, "") + ") · sin tokens recientes", porAbierto: true };
-    if (abierto.estado === "rojo") return { luz: "rojo", porque: "cerrado en " + maq };
+    if (abierto.estado === "verde") return { luz: "amarillo", porque: "conectado en " + maq + ": no se sabe qué hace" };
+    if (abierto.estado === "rojo") return { luz: "rojo", porque: "nada lanzado en " + maq };
     return { luz: "amarillo", porque: "no se sabe qué hace en " + maq };
   }
   /* r230 (Carlos, 21-11-2026 20:02: «Neo está con admira.store, no con admira.live»). La pastilla enseña el proyecto en

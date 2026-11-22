@@ -115,7 +115,7 @@ test("r24: fila plegada con todos por nombre (parados atenuados «en espera») y
     { agente: "Musk", estado: "amarillo", conCarlosEn: "MBP16", motor: "GrokBot (asistente)", runtime: "GrokBot (asistente)", maqCorta: "MBP16", superficies: [{ tipo: "asistente" }, { tipo: "app", enUso: true }] },
   ]);
   assert.ok(html.indexOf("Musk") < html.indexOf("Trinity"), "los vivos primero");
-  assert.match(html, /tr-chipa tr-gris[^>]*>.*Trinity.*Codex · CLI.*en espera/);
+  assert.match(html, /tr-chipa tr-descon tr-luz-rojo[^>]*>.*Trinity.*Codex · CLI.*parado/); // r246: borde = conectado, punto = actividad
   assert.doesNotMatch(html, /tr-grises/);
   assert.match(html, /GrokBot \(asistente\) · App · Carlos</);
   assert.doesNotMatch(html, /asistente\) · asistente/);

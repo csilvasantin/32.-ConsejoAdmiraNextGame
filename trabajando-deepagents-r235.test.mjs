@@ -24,31 +24,35 @@ const TS = [
   { agente: "Jobs", estado: "gris", grupo: "consejeros", superficies: [] },
 ];
 
-test("deepagents primero (Trinity, Neo, Oráculo, Morfeo) y abiertos en verde; «con Carlos» sigue amarillo", () => {
+test("deepagents primero (Trinity, Neo, Oráculo, Morfeo); r246: abierto ya NO cambia el estado (es conectado)", () => {
   const ctx = carga();
   const out = JSON.parse(JSON.stringify(ctx.ConsumosTrabajando.conDeepAgents(TS)));
   assert.deepEqual(out.map((t) => t.agente), ["Trinity", "Neo", "Oráculo", "Morfeo", "Merovingio", "Niobe", "Jobs"]);
-  assert.deepEqual(out.slice(0, 4).map((t) => t.estado), ["amarillo", "verde", "verde", "verde"]);
-  assert.match(out[3].abiertoDA, /abierto en MacMini/);
-  assert.equal(out[4].estado, "rojo");
-  assert.equal(TS[3].estado, "rojo", "no muta los datos originales (relojes)");
+  assert.deepEqual(out.slice(0, 4).map((t) => t.estado), ["amarillo", "verde", "gris", "rojo"]);
+  assert.equal(out[3].abiertoDA, undefined);
   const g = JSON.parse(JSON.stringify(ctx.ConsumosTrabajando.grupos(out)));
-  assert.deepEqual({ ...g[0].n }, { trabajando: 3, abiertos: 2, conCarlos: 1, parados: 2, total: 6 });
+  // sin campos r246: conectado = superficie fresca; punto = estado (amarillo → sin dato)
+  assert.deepEqual({ ...g[0].n }, { conectados: 4, trabajando: 1, parados: 4, sinDato: 1, conCarlos: 1, total: 6 });
 });
 
-test("chips: deepagents abiertos dicen «abierto · 250k/h» (sin «hace» ni «en espera») y van primero", () => {
+test("chips r246: borde = conectado («conectado · 250k/h»), punto = actividad; deepagents primero", () => {
   const ctx = carga();
   const html = ctx.ConsumosTrabajando.chipsDe(ctx.ConsumosTrabajando.conDeepAgents(TS).filter((t) => t.grupo === "agentes"));
   const orden = [...html.matchAll(/<\/i>([^<]+)/g)].map((m) => m[1].trim());
   assert.deepEqual(orden, ["Trinity", "Neo", "Oráculo", "Morfeo", "Merovingio", "Niobe"]);
-  const morfeo = html.slice(html.indexOf("</i>Morfeo"), html.indexOf("</i>Merovingio"));
-  assert.match(morfeo, /abierto · 250k\/h/);
-  assert.doesNotMatch(morfeo, /hace|en espera/);
+  const morfeo = html.slice(html.lastIndexOf("<span class=\"tr-chipa", html.indexOf("</i>Morfeo")), html.indexOf("</i>Merovingio"));
+  assert.match(morfeo, /tr-chipa tr-con tr-luz-rojo/);
+  assert.match(morfeo, /conectado · 250k\/h · parado/);
+  assert.doesNotMatch(morfeo, /hace|en espera|abierto/);
 });
 
-test("/deepagents: abierto = punto verde; rojo solo cerrado", () => {
+test("/deepagents r246: abierto = borde; sin actividad demostrada el punto es amarillo (no se sabe) o rojo (cerrado)", () => {
   const D = carga().DeepAgentsEstado;
   const r = JSON.parse(JSON.stringify(D.resumen(TS)));
-  assert.deepEqual(r.map((a) => [a.visible, a.abierto.estado, a.actividad.luz]), [["Trinity", "verde", "verde"], ["Neo", "verde", "verde"], ["Oráculo", "verde", "verde"], ["Morfeo", "verde", "verde"]]);
-  assert.equal(r[3].actividad.porAbierto, true);
+  assert.deepEqual(r.map((a) => [a.visible, a.abierto.estado, a.actividad.luz]), [["Trinity", "verde", "amarillo"], ["Neo", "verde", "verde"], ["Oráculo", "verde", "amarillo"], ["Morfeo", "verde", "amarillo"]]);
+  assert.equal(r[3].actividad.porAbierto, undefined);
+  // con la API nueva manda actividadLuz
+  const ts2 = TS.map((t) => t.agente === "Neo" ? { ...t, actividadLuz: "rojo", actividadPorque: "conectado sin tokens recientes ni CPU" } : t);
+  const neo = JSON.parse(JSON.stringify(D.resumen(ts2)))[1];
+  assert.deepEqual([neo.abierto.estado, neo.actividad.luz, neo.actividad.porque], ["verde", "rojo", "conectado sin tokens recientes ni CPU"]);
 });

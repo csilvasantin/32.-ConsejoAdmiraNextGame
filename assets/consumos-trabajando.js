@@ -269,9 +269,11 @@
     var tr = t && Array.isArray(t.trabajosHoy) ? t.trabajosHoy : null;
     var l = tr || (t && t.hechasHoy);
     if (!Array.isArray(l)) return '';
-    var linea = function (m) { var a = madrid(m.ts); return (m.tipo === 'pr' ? 'PR ' + (m.prs || []).join(' + ') : m.id) + (a ? ' · ' + a.hour + ':' + a.minute : '') + (m.maquina ? ' · ' + (maqCanon(m.maquina) || m.maquina) : '') + (m.titulo ? ' · ' + m.titulo : '') + (m.tipo === 'mision' && m.prs && m.prs.length ? ' (PR ' + m.prs.join(' + ') + ')' : '') + (m.deDestinatario ? ' · ' + T('encargada a ', 'assigned to ') + m.deDestinatario : ''); };
+    // r252: cada trabajo contado, numerado, para auditar el (N): PR = rama + repos#número; misión = #id (+ sus PRs).
+    var linea = function (m, i) { var a = madrid(m.ts); return (i + 1) + '. ' + (m.tipo === 'pr' ? 'PR ' + (m.rama ? m.rama + ' · ' : '') + (m.prs || []).join(' + ') : T('misión ', 'mission ') + m.id) + (a ? ' · ' + a.hour + ':' + a.minute : '') + (m.maquina ? ' · ' + (maqCanon(m.maquina) || m.maquina) : '') + (m.titulo && m.titulo !== m.rama ? ' · ' + m.titulo : '') + (m.tipo === 'mision' && m.prs && m.prs.length ? ' (PR ' + m.prs.join(' + ') + ')' : '') + (m.deDestinatario ? ' · ' + T('encargada a ', 'assigned to ') + m.deDestinatario : ''); };
     var tip = l.length ? (tr ? T('Trabajos hechos hoy', 'Work done today') : T('Misiones cumplidas hoy', 'Missions completed today')) + ' (' + l.length + '):\n' + l.map(linea).join('\n')
       : T('Ningún trabajo hecho hoy (bandeja de Yokup y PRs fusionados)', 'No work done today (Yokup inbox and merged PRs)');
+    if (t && Array.isArray(t.trabajosCedidos) && t.trabajosCedidos.length) tip += '\n' + T('Cedidas a quien las hizo (no cuentan aquí): ', 'Credited to whoever did them: ') + t.trabajosCedidos.join(', ');
     // r247 (Carlos, 22-11 10:26): el número lleva color — gris nada hoy · amarillo misión en curso · verde última de hoy
     // hecha · rojo última de hoy no acabada bien (failed / blocked); desglose «2 hechas · 1 en curso · 1 fallida».
     var luz = nLuz(t), d = t.misionesDesglose;

@@ -11,12 +11,17 @@
  * Los repos privados no salen en los eventos públicos de GitHub (no se cuentan: se dice en el pie).
  * Color (r247, misma regla): amarillo misión en curso < 24 h · verde lo último de hoy acabó bien (misión done o PR
  * fusionado) · rojo lo último de hoy acabó mal (failed / blocked) · gris nada hoy.
+ * r252 (Carlos, 22-11 20:53: «esta claro que el contador no funciona»): los eventos públicos de GitHub llegan de 100 en
+ *   100 y r248 solo leía la PRIMERA página, que a las 20:53 empezaba a las 11:47: todo lo fusionado antes se perdía
+ *   (Trinity 3 PRs, Neo 3, Wozniak 2). Ahora se leen páginas (máx. 3 = el límite de la API) hasta pasar la medianoche
+ *   de Madrid, con caché de 5 min. Además el tooltip lista cada trabajo contado (rama, repos, hora) y la ficha que cede
+ *   una misión a quien la hizo lo dice («#7658 → Neo»), para poder auditar el número.
  * Uso: TrabajosHoy.combinar(tarjetas, eventosGitHub, ahoraMs) → copias con trabajosHoy, nHoyTotal, misionesLuz y
  * misionesDesglose recalculados; TrabajosHoy.asegurar(d) → Promise<d> (lee los eventos con caché compartida de 3 min). */
 (function (root) {
   "use strict";
-  var GH = "https://api.github.com/users/csilvasantin/events/public?per_page=100";
-  var CACHE_MS = 180000, CLAVE = "admira:gh-eventos:v1";
+  var GH = "https://api.github.com/users/csilvasantin/events/public?per_page=100", PAGINAS = 3;
+  var CACHE_MS = 300000, CLAVE = "admira:gh-eventos:v2";
   /** Prefijo de rama → nombre de la ficha (mismo nombre que /api/flota/trabajando). */
   var RAMA = { trinity: "Trinity", neo: "Neo", oraculo: "Oráculo", "oráculo": "Oráculo", morfeo: "Morfeo", niobe: "Niobe", smith: "Smith",
     merovingio: "Merovingio", link: "Link", whiterabbit: "WhiteRabbit", cypher: "Cypher", woz: "Wozniak", wozniak: "Wozniak", jobs: "Jobs",
@@ -58,7 +63,7 @@
         if (hecho || !t._tr) return;
         for (var i = 0; i < t._tr.length; i++) if (t._tr[i].tipo === "mision" && t._tr[i].id === p.encargo) {
           var m = t._tr[i];
-          if (t !== dueño) { t._tr.splice(i, 1); m.deDestinatario = t.agente; dueño._tr.push(m); }
+          if (t !== dueño) { t._tr.splice(i, 1); m.deDestinatario = t.agente; dueño._tr.push(m); (t._ced = t._ced || []).push(m.id + " → " + dueño.agente + " (" + p.rama + ")"); }
           m.prs.push(p.repo + "#" + p.pr); m.ts = Math.max(m.ts || 0, p.ts); hecho = true; return;
         }
       });
@@ -69,7 +74,8 @@
     });
     // 3) N, color y desglose
     ts.forEach(function (t) {
-      var l = t._tr; delete t._tr;
+      var l = t._tr, ced = t._ced; delete t._tr; delete t._ced;
+      if (ced) t.trabajosCedidos = ced;
       if (!l) return;
       l.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
       t.trabajosHoy = l; t.nHoyTotal = l.length;
@@ -88,19 +94,39 @@
   /** Lee los eventos de GitHub (caché compartida entre páginas, 3 min) y enriquece d.tarjetas. Nunca rompe: sin GitHub,
    *  d queda con las misiones de la API (y d.trabajosGit = 'sin datos'). */
   var memo = null;
+  function adelgaza(e) {
+    var p = e.payload || {}, pr = p.pull_request || {};
+    return { id: e.id, type: e.type, created_at: e.created_at, repo: { name: e.repo && e.repo.name }, payload: { action: p.action, number: p.number, pull_request: { merged: pr.merged, number: pr.number, title: pr.title, head: { ref: pr.head && pr.head.ref } } } };
+  }
+  /** r252: páginas de eventos hasta cubrir el día de Madrid (o PAGINAS). Devuelve { ev, completo } (completo = llegó a ayer). */
+  function leerPaginas(f, ahoraMs) {
+    var hoy = diaMadrid(ahoraMs), todos = [], vistos = {};
+    function pagina(n) {
+      return f(GH + "&page=" + n, { headers: { accept: "application/vnd.github+json" } }).then(function (r) { return r.ok ? r.json() : null; }).then(function (ev) {
+        if (!Array.isArray(ev)) { if (n === 1) return null; return { ev: todos, completo: false }; }
+        var masViejo = null;
+        ev.forEach(function (e) {
+          // Solo los PullRequestEvent marcan el corte: los Push/Create llegan a veces con created_at de días atrás.
+          if (!e || e.type !== "PullRequestEvent") return; var ms = Date.parse(e.created_at); if (isFinite(ms) && (masViejo == null || ms < masViejo)) masViejo = ms; var k = e.id || (e.created_at + (e.repo && e.repo.name) + (e.payload && e.payload.number) + (e.payload && e.payload.action));
+          if (vistos[k]) return; vistos[k] = 1; todos.push(adelgaza(e));
+        });
+        var llegoAyer = masViejo != null && diaMadrid(masViejo) !== hoy;
+        if (llegoAyer || ev.length < 100) return { ev: todos, completo: true };
+        if (n >= PAGINAS) return { ev: todos, completo: false };
+        return pagina(n + 1);
+      });
+    }
+    return pagina(1);
+  }
   function leerEventos(f) {
     var ahora = Date.now();
-    if (memo && ahora - memo.t < CACHE_MS) return Promise.resolve(memo.ev);
-    try { var c = JSON.parse(root.localStorage.getItem(CLAVE) || "null"); if (c && ahora - c.t < CACHE_MS && Array.isArray(c.ev)) { memo = c; return Promise.resolve(c.ev); } } catch (e) {}
-    return f(GH, { headers: { accept: "application/vnd.github+json" } }).then(function (r) { return r.ok ? r.json() : null; }).then(function (ev) {
-      if (!Array.isArray(ev)) return memo ? memo.ev : null;
-      var slim = ev.filter(function (e) { return e && e.type === "PullRequestEvent"; }).map(function (e) {
-        var p = e.payload || {}, pr = p.pull_request || {};
-        return { type: e.type, created_at: e.created_at, repo: { name: e.repo && e.repo.name }, payload: { action: p.action, number: p.number, pull_request: { merged: pr.merged, number: pr.number, title: pr.title, head: { ref: pr.head && pr.head.ref } } } };
-      });
-      memo = { t: Date.now(), ev: slim };
+    if (memo && ahora - memo.t < CACHE_MS && memo.dia === diaMadrid(ahora)) return Promise.resolve(memo.ev);
+    try { var c = JSON.parse(root.localStorage.getItem(CLAVE) || "null"); if (c && ahora - c.t < CACHE_MS && c.dia === diaMadrid(ahora) && Array.isArray(c.ev)) { memo = c; return Promise.resolve(c.ev); } } catch (e) {}
+    return leerPaginas(f, ahora).then(function (r) {
+      if (!r) return memo ? memo.ev : null;
+      memo = { t: Date.now(), dia: diaMadrid(ahora), ev: r.ev, completo: r.completo };
       try { root.localStorage.setItem(CLAVE, JSON.stringify(memo)); } catch (e) {}
-      return slim;
+      return r.ev;
     }).catch(function () { return memo ? memo.ev : null; });
   }
   function asegurar(d, fetchImpl) {
@@ -109,9 +135,9 @@
     return leerEventos(f).then(function (ev) {
       var out = {}; for (var k in d) if (Object.prototype.hasOwnProperty.call(d, k)) out[k] = d[k];
       out.tarjetas = combinar(d.tarjetas, ev || [], Date.now());
-      out.trabajosGit = ev ? "ok" : "sin datos";
+      out.trabajosGit = ev ? (memo && memo.completo === false ? "incompleto" : "ok") : "sin datos";
       return out;
     });
   }
-  root.TrabajosHoy = { RAMA: RAMA, prsHoy: prsHoy, combinar: combinar, asegurar: asegurar, leerEventos: leerEventos, diaMadrid: diaMadrid };
+  root.TrabajosHoy = { RAMA: RAMA, prsHoy: prsHoy, combinar: combinar, asegurar: asegurar, leerEventos: leerEventos, leerPaginas: leerPaginas, diaMadrid: diaMadrid };
 })(typeof window !== "undefined" ? window : globalThis);

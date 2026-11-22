@@ -80,9 +80,9 @@ test("r248: app Grok Bot sin uso en 1 h conserva la última cuenta usada si fue 
 
 test("r248: páginas cargan trabajos-hoy.js y lo usan antes de pintar", () => {
   const c = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
-  assert.ok(c.indexOf("trabajos-hoy.js?v=20261122-r248") < c.indexOf("consumos-trabajando.js?v=20261122-r248-trabajos-hoy"));
-  assert.match(readFileSync(new URL("./deepagents/index.html", import.meta.url), "utf8"), /trabajos-hoy\.js\?v=20261122-r248/);
-  assert.match(readFileSync(new URL("./index.html", import.meta.url), "utf8"), /trabajos-hoy\.js\?v=20261122-r248/);
+  assert.ok(c.indexOf("trabajos-hoy.js?v=20261122-r252-paginas") < c.indexOf("consumos-trabajando.js?v=20261122-r252-auditable"));
+  assert.match(readFileSync(new URL("./deepagents/index.html", import.meta.url), "utf8"), /trabajos-hoy\.js\?v=20261122-r252-paginas/);
+  assert.match(readFileSync(new URL("./index.html", import.meta.url), "utf8"), /trabajos-hoy\.js\?v=20261122-r252-paginas/);
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
   assert.match(js, /then\(avisa\)\.then\(conTrabajos\)\.then\(pinta\)/);
   assert.match(js, /trabajos hechos hoy \(día de Madrid\)/);

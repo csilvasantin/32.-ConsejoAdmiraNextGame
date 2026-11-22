@@ -32,7 +32,7 @@ test("r244: cliente — «(N)» junto al nombre con tooltip; «(0)» atenuado; s
   new Function("window", "document", "location", "localStorage", "URL", js.replace(/\(typeof window !== 'undefined' \? window : globalThis\)\s*;?\s*$/, "(window);"))(win, doc, { href: "https://x/consumos" }, { getItem: () => null }, URL);
   const { nHoy, chipsDe } = win.ConsumosTrabajando;
   const h = nHoy({ hechasHoy: [{ id: "#7645", ts: T - 5000, maquina: "macstudio", titulo: "Actualiza FleetControl" }, { id: "#7647", ts: T - 3000, maquina: "MBP16", titulo: "X" }] });
-  assert.match(h, /class="tr-nhoy tr-nhoy-verde" title="Misiones cumplidas hoy \(2\):\n#7645 · \d\d:\d\d · MacStudio · Actualiza FleetControl\n#7647/);
+  assert.match(h, /class="tr-nhoy tr-nhoy-verde" title="Misiones cumplidas hoy \(2\):\n1\. misión #7645 · \d\d:\d\d · MacStudio · Actualiza FleetControl\n2\. misión #7647/);
   assert.match(h, />\(2\)<\/span>$/);
   assert.match(nHoy({ hechasHoy: [] }), /tr-nhoy tr-nhoy-gris tr-nhoy0".*>\(0\)</);
   assert.equal(nHoy({ hechasHoy: null }), "");

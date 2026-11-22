@@ -26,5 +26,5 @@ test("página: la superficie corta es la del Mac mostrado (Trinity // MacStudio 
   assert.match(js, /T\('sin dato', 'no data'\)/); // r246: lo no medible es el punto amarillo «sin dato»
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.match(html, /\.tr-chipa\.tr-ciego i\{background:#5fd3ff/);
-  assert.match(html, /consumos-trabajando\.js\?v=20261122-r248-trabajos-hoy/);
+  assert.match(html, /consumos-trabajando\.js\?v=20261122-r252-auditable/);
 });

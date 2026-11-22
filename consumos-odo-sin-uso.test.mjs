@@ -32,7 +32,7 @@ test("Odometro: sin ritmo ni actividad no avanza: se queda en el real", () => {
 // r228 (Carlos, 21-11: «el contador no está sumando?»): el odómetro suma al ritmo de la cifra grande y nunca retrocede.
 test("odómetro: monótono si es de hoy; r231: los de /consumos enseñan ayer cerrado (quietos, sin suma por segundo)", () => {
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
-  assert.match(js, /odometro\(el, n, 0, dial\.pfx \+ ':ayer', 'ayer'\);/);
+  assert.match(js, /odometro\(el, n, 0, dial\.pfx \+ ':' \+ \(per \|\| 'ayer'\), per \|\| 'ayer'\);/);
   assert.ok(!/o\.mostrado = n;\s*\n/.test(js.slice(js.indexOf("function odometro(el"), js.indexOf("function odometro(el") + 600)), "ya no recorta hacia atrás");
   assert.match(js, /incluye estimado en curso/);
 });

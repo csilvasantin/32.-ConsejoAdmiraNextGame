@@ -8,9 +8,9 @@ import { onRequestGet } from "./functions/api/consumos/velocidad.js";
 const AHORA = Date.parse("2026-10-21T22:30:00+02:00"); // miércoles
 
 test("diasPeriodo: semana = lunes … hoy, mes = día 1 … hoy (Madrid, también cerca de medianoche UTC)", () => {
-  assert.deepEqual(diasPeriodo(AHORA), { hoy: "2026-10-21", ayer: "2026-10-20", lunes: "2026-10-19", dia1: "2026-10-01" });
+  assert.deepEqual(diasPeriodo(AHORA), { hoy: "2026-10-21", ayer: "2026-10-20", lunes: "2026-10-19", dia1: "2026-10-01", lunesAnt: "2026-10-12", domingoAnt: "2026-10-18", dia1Ant: "2026-09-01", finMesAnt: "2026-09-30" });
   // 23:30 UTC del domingo 25 = 01:30 del lunes 26 en Madrid (CET tras el cambio de hora)
-  assert.deepEqual(diasPeriodo(Date.parse("2026-10-25T23:30:00Z")), { hoy: "2026-10-26", ayer: "2026-10-25", lunes: "2026-10-26", dia1: "2026-10-01" });
+  assert.deepEqual(diasPeriodo(Date.parse("2026-10-25T23:30:00Z")), { hoy: "2026-10-26", ayer: "2026-10-25", lunes: "2026-10-26", dia1: "2026-10-01", lunesAnt: "2026-10-19", domingoAnt: "2026-10-25", dia1Ant: "2026-09-01", finMesAnt: "2026-09-30" });
   assert.equal(diasPeriodo(Date.parse("2026-11-01T10:00:00+01:00")).ayer, "2026-10-31");
 });
 

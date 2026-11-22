@@ -26,7 +26,8 @@ import { perfilesFlota } from "../../../consumos-perfiles.mjs";
 export const FUENTE = "https://api.yokup.com/fleet/consumo?dias=1";
 export const KEY = "consumos:vel:snaps:v1";
 // Periodos del cuentakilómetros (HOY/AYER/SEMANA/MES): partes diarios de Yokup del último mes (cacheados 10 min).
-export const FUENTE_MES = "https://api.yokup.com/fleet/consumo?dias=31";
+// r253: 62 días para cubrir el mes natural anterior entero (el libro diario guarda 40).
+export const FUENTE_MES = "https://api.yokup.com/fleet/consumo?dias=62";
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 
 function json(obj, status, origin) {
@@ -108,7 +109,7 @@ export async function calcular({ env, fetchImpl }) {
     }
   }
   const periodos = { ...periodosTokens({ tokHoy: Number.isFinite(tokHoyFlota) ? tokHoyFlota : null, libro, yokup: dMes ? yokupPorDia(dMes) : null,
-    yokupDesde: dMes ? (() => { const x = new Date(diasPeriodo(ahora).hoy + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() - 30); return x.toISOString().slice(0, 10); })() : null, ahora }),
+    yokupDesde: dMes ? (() => { const x = new Date(diasPeriodo(ahora).hoy + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() - 61); return x.toISOString().slice(0, 10); })() : null, ahora }),
     fuentes: { hoy: "tokHoy en vivo (pulso + Cursor + Yokup)", pasado: "libro diario KV " + KEY_DIAS + " (máximo tokHoy de cada día); si falta, " + FUENTE_MES + " sin caché" }, yokupMes: dMes ? "ok" : "sin respuesta" };
   const base = { grokbotApps: appsGrokBot(docs, ahora), grokbotPulso: grokbotPulso(docs, ahora), superficies: superficiesDePulso(docs, ahora), limites: limitesDePulso(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
   if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", periodos, ...base };

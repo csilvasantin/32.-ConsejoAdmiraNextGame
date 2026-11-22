@@ -210,6 +210,8 @@ export function normalizarGrokbotApp(g) {
 
 /** r17: una cuenta cuenta como «abierta en ese Mac» si la app la ha usado en la última hora. */
 export const USO_CUENTA_S = 3600;
+/** r248: la app abierta sin uso en la última hora conserva la última cuenta usada si fue hace ≤ 6 h. */
+export const CUENTA_ULTIMA_S = 6 * 3600;
 /** r14/r17: apps Grok Bot abiertas con pulso fresco → una entrada por (Mac, cuenta en uso):
  *  [{ maquina, cuenta, alFrente, reposoS, haceS, usoS, fuente }]. Solo la cuenta usada más recientemente es la que
  *  está a la vista (alFrente/«con Carlos»). Sin cuenta reciente → una entrada con cuenta null: app abierta, cuenta
@@ -224,6 +226,10 @@ export function appsGrokBot(docs, ahora) {
     if (g.forzada && g.cuenta) out.push({ ...base, cuenta: g.cuenta, alFrente: !!g.alFrente, usoS: null, fuente: "forzada" });
     else if (reales.length) reales.forEach((c, i) => out.push({ ...base, cuenta: c.cuenta, alFrente: i === 0 && !!g.alFrente, usoS: c.haceS, fuente: "app" }));
     else if (!(g.cuentas || []).length && g.cuenta) out.push({ ...base, cuenta: g.cuenta, alFrente: !!g.alFrente, usoS: null, fuente: "fichero" });
+    // r248: la app sigue abierta pero nadie la ha usado en la última hora → la cuenta es la ÚLTIMA usada en ella
+    // (antes salía «desconocida» y Musk/Jensen se quedaban «no conectados» en cuanto el MBP16 pasaba 1 h sin uso).
+    // Solo si ese último uso es de hace ≤ 6 h (CUENTA_ULTIMA_S): más viejo sigue siendo «desconocida» (r17).
+    else if ((g.cuentas || []).some((c) => c && c.cuenta && c.haceS != null && c.haceS <= CUENTA_ULTIMA_S)) { const c = [...g.cuentas].filter((x) => x && x.cuenta && x.haceS != null).sort((a, b) => a.haceS - b.haceS)[0]; out.push({ ...base, cuenta: c.cuenta, alFrente: !!g.alFrente, usoS: c.haceS ?? null, fuente: "ultima" }); }
     else out.push({ ...base, cuenta: null, alFrente: !!g.alFrente, usoS: null, fuente: "desconocida" });
   }
   return out;

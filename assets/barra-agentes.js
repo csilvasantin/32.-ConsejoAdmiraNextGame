@@ -78,10 +78,11 @@
 
   /** r247: «(N)» = misiones hechas hoy (Yokup) con el color de misionesLuz y el desglose en el title. */
   function nHoy(t) {
-    if (!t || !Array.isArray(t.hechasHoy)) return "";
-    var ml = /^(gris|amarillo|verde|rojo)$/.test(t.misionesLuz || "") ? t.misionesLuz : t.hechasHoy.length ? "verde" : "gris";
-    var d = t.misionesDesglose && t.misionesDesglose.texto ? t.misionesDesglose.texto : t.hechasHoy.length + T(" hechas hoy", " done today");
-    return '<span class="ar-nh ' + ml + '" title="' + esc(d) + '">(' + t.hechasHoy.length + ")</span>";
+    var l = t && (Array.isArray(t.trabajosHoy) ? t.trabajosHoy : t.hechasHoy); // r248: trabajos de hoy
+    if (!t || !Array.isArray(l)) return "";
+    var ml = /^(gris|amarillo|verde|rojo)$/.test(t.misionesLuz || "") ? t.misionesLuz : l.length ? "verde" : "gris";
+    var d = t.misionesDesglose && t.misionesDesglose.texto ? t.misionesDesglose.texto : l.length + T(" hechas hoy", " done today");
+    return '<span class="ar-nh ' + ml + '" title="' + esc(d) + '">(' + l.length + ")</span>";
   }
   function chip(t) {
     // r246 (Carlos, 22-11 09:57): punto = actividad real (actividadLuz de la API), borde = conectado (app / CLI lanzada).
@@ -133,6 +134,7 @@
     clearTimeout(timer);
     fetch(API, { cache: "no-store", headers: { accept: "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { return d && d.ok && window.TrabajosHoy ? window.TrabajosHoy.asegurar(d).catch(function () { return d; }) : d; }) // r248
       .then(function (d) { if (d && d.ok) { ultimo = d; pintar(d); } else if (!ultimo) pintar(null); })
       .catch(function () { if (!ultimo) pintar(null); })
       .then(function () { timer = setTimeout(cargar, CADA_MS); });

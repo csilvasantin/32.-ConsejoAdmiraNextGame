@@ -74,7 +74,7 @@
       if (e.pointerType !== 'mouse' && el.getAttribute('data-abierto') === i && el.classList.contains('fijo')) { el.classList.remove('fijo'); oculta(el); return; }
       el.classList.add('fijo'); muestra(el, +i);
     });
-    document.addEventListener('click', function (e) { if (!el.contains(e.target)) { el.classList.remove('fijo'); oculta(el); } });
+    document.addEventListener('click', function (e) { if (e.target && e.target.isConnected !== false && !el.contains(e.target)) { el.classList.remove('fijo'); oculta(el); } });
   }
   root.MarchasDeepAgents = { PUNTOS: PUNTOS, puntos: puntos, html: html, maqCanon: maqCanon, pinta: pinta };
   if (root.document) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca(); }

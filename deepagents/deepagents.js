@@ -229,8 +229,11 @@
     var nom = el("div", "ag-nom", visible);
     // r244 (Carlos, 23:31): «(N)» = misiones cumplidas hoy (Madrid), bandeja de Yokup del agente en todas sus máquinas.
     if (t && Array.isArray(t.hechasHoy)) {
-      var nh = el("span", "ag-nhoy", " (" + t.hechasHoy.length + ")");
+      // r247: color del número (misionesLuz de la API): gris / amarillo en curso / verde hecha / rojo no acabada bien.
+      var ml = /^(gris|amarillo|verde|rojo)$/.test(t.misionesLuz || "") ? t.misionesLuz : t.hechasHoy.length ? "verde" : "gris";
+      var nh = el("span", "ag-nhoy ag-nhoy-" + ml, " (" + t.hechasHoy.length + ")");
       nh.title = t.hechasHoy.length ? "Misiones cumplidas hoy:\n" + t.hechasHoy.map(function (m) { return m.id + " · " + new Date(m.ts * 1000).toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }) + (m.maquina ? " · " + m.maquina : "") + (m.titulo ? " · " + m.titulo : ""); }).join("\n") : "Ninguna misión cumplida hoy (bandeja de Yokup)";
+      if (t.misionesDesglose && t.misionesDesglose.texto) nh.title = t.misionesDesglose.texto + "\n" + nh.title;
       nom.appendChild(nh);
     }
     quien.appendChild(nom);

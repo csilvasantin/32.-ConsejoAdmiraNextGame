@@ -228,11 +228,12 @@
     var quien = el("div");
     var nom = el("div", "ag-nom", visible);
     // r244 (Carlos, 23:31): «(N)» = misiones cumplidas hoy (Madrid), bandeja de Yokup del agente en todas sus máquinas.
-    if (t && Array.isArray(t.hechasHoy)) {
+    var lh = t && (Array.isArray(t.trabajosHoy) ? t.trabajosHoy : t.hechasHoy);
+    if (t && Array.isArray(lh)) {
       // r247: color del número (misionesLuz de la API): gris / amarillo en curso / verde hecha / rojo no acabada bien.
-      var ml = /^(gris|amarillo|verde|rojo)$/.test(t.misionesLuz || "") ? t.misionesLuz : t.hechasHoy.length ? "verde" : "gris";
-      var nh = el("span", "ag-nhoy ag-nhoy-" + ml, " (" + t.hechasHoy.length + ")");
-      nh.title = t.hechasHoy.length ? "Misiones cumplidas hoy:\n" + t.hechasHoy.map(function (m) { return m.id + " · " + new Date(m.ts * 1000).toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }) + (m.maquina ? " · " + m.maquina : "") + (m.titulo ? " · " + m.titulo : ""); }).join("\n") : "Ninguna misión cumplida hoy (bandeja de Yokup)";
+      var ml = /^(gris|amarillo|verde|rojo)$/.test(t.misionesLuz || "") ? t.misionesLuz : lh.length ? "verde" : "gris";
+      var nh = el("span", "ag-nhoy ag-nhoy-" + ml, " (" + lh.length + ")");
+      nh.title = lh.length ? "Trabajos hechos hoy:\n" + lh.map(function (m) { return (m.tipo === "pr" ? "PR " + (m.prs || []).join(" + ") : m.id) + " · " + new Date(m.ts * 1000).toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }) + (m.maquina ? " · " + m.maquina : "") + (m.titulo ? " · " + m.titulo : "") + (m.deDestinatario ? " · encargada a " + m.deDestinatario : ""); }).join("\n") : "Ningún trabajo hecho hoy (bandeja de Yokup y PRs fusionados)";
       if (t.misionesDesglose && t.misionesDesglose.texto) nh.title = t.misionesDesglose.texto + "\n" + nh.title;
       nom.appendChild(nh);
     }
@@ -421,6 +422,10 @@
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
       .then(function (d) {
         if (!d || !Array.isArray(d.tarjetas)) throw new Error("sin tarjetas");
+        // r248: «(N)» = trabajos de hoy (misiones de Yokup + PRs fusionados con rama del agente).
+        return window.TrabajosHoy ? window.TrabajosHoy.asegurar(d).catch(function () { return d; }) : d;
+      })
+      .then(function (d) {
         flota = { tarjetas: d.tarjetas, error: "", generado: d.generado || "", presencia: d.presencia || "" };
         pintarAhora();
       })

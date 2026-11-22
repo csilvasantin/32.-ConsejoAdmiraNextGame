@@ -252,8 +252,8 @@
     }
     cab.appendChild(quien);
     var led = el("span", "ag-led");
-    // r235: abierto = verde (punto incluido); «sin hacer nada» ya solo es «cerrado».
-    led.title = "Actividad: " + (l.porAbierto ? "abierto" : { verde: "trabajando", rojo: "cerrado", amarillo: "no se sabe" }[l.luz]) + " · " + l.porque;
+    // r246: borde = conectado (abierto); punto = actividad real: trabajando / parado / sin dato.
+    led.title = "Conectado: " + (ab.estado === "verde" ? "sí" : "no") + " · Actividad: " + { verde: "trabajando", rojo: "parado", amarillo: "sin dato" }[l.luz] + " · " + l.porque;
     led.setAttribute("aria-label", led.title);
     cab.appendChild(led);
     art.appendChild(cab);

@@ -273,7 +273,7 @@ function cargaFront() {
   return ctx.ConsumosTrabajando;
 }
 
-test("r43 · front: grupos() separa Agentes y Consejeros con cuentas propias (trabajando / con Carlos / parados)", () => {
+test("r43 · r246 front: grupos() separa Agentes y Consejeros con cuentas propias (conectados / trabajando / parados / sin dato)", () => {
   const ct = cargaFront();
   const ts = [
     { agente: "Neo", estado: "amarillo", grupo: "agentes" }, { agente: "Trinity", estado: "amarillo", grupo: "agentes" },
@@ -283,8 +283,9 @@ test("r43 · front: grupos() separa Agentes y Consejeros con cuentas propias (tr
   ];
   const g = JSON.parse(JSON.stringify(ct.grupos(ts)));
   assert.deepEqual(g.map((x) => x.id), ["agentes", "consejeros"]);
-  assert.deepEqual({ ...g[0].n }, { trabajando: 1, abiertos: 0, conCarlos: 2, parados: 1, total: 4 });
-  assert.deepEqual({ ...g[1].n }, { trabajando: 1, abiertos: 0, conCarlos: 0, parados: 2, total: 3 });
+  // sin campos r246 (API vieja): el punto sale de «estado» (amarillo = sin dato) y conectado de las superficies
+  assert.deepEqual({ ...g[0].n }, { conectados: 0, trabajando: 1, parados: 1, sinDato: 2, conCarlos: 0, total: 4 });
+  assert.deepEqual({ ...g[1].n }, { conectados: 0, trabajando: 1, parados: 2, sinDato: 0, conCarlos: 0, total: 3 });
   assert.deepEqual(Array.from(g[1].tarjetas, (t) => t.agente), ["Jobs", "Disney", "Musk"]);
 });
 

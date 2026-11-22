@@ -19,18 +19,17 @@ test("r243: Lucas y Disney están en la cuenta Leyendas con Jobs y Wozniak; Musk
   assert.equal(CUENTA_GROKBOT.Huang, "csilvasantin@gmail.com");
 });
 
-test("r243: los 6 consejeros con su Grok Bot abierto → verde «abierto» (y aplicarRojo no los toca)", () => {
+test("r243 · r246: los 6 consejeros con su Grok Bot abierto → abiertoApp (conectado), pero ya NO pintan verde", () => {
   const ts = ["Jobs", "Wozniak", "Musk", "Lucas", "Disney", "Huang"].map((n) => ficha(n, { actividad: { ts: T - 3600 * 3, fuente: "mensaje de consejero" } }));
   aplicarConsejerosAbiertos(ts, apps, T); aplicarRojo(ts, T);
-  for (const t of ts) assert.equal(t.estado, "verde", t.agente);
+  for (const t of ts) { assert.notEqual(t.estado, "verde", t.agente); assert.ok(t.abiertoApp, t.agente); }
   assert.match(ts.find((t) => t.agente === "Lucas").abiertoApp, /^Grok Bot abierto en Mini \+ MacStudio \(cuenta Leyendas\)$/);
   assert.match(ts.find((t) => t.agente === "Huang").abiertoApp, /MBP16 \(cuenta Coetáneos\)/);
-  assert.match(porqueColor(ts[0], T), /^abierto: Grok Bot abierto/);
 });
 
 test("r243: actividad propia < 15 min → verde «trabajando» (sin etiqueta de abierto)", () => {
   const [t] = aplicarConsejerosAbiertos([ficha("Jobs", { actividad: { ts: T - 300, fuente: "mensaje de consejero" } })], apps, T);
-  assert.equal(t.estado, "verde"); assert.equal(t.abiertoApp, undefined); assert.match(t.motivo, /mensaje de consejero hace 5 min/);
+  assert.equal(t.estado, "verde"); assert.match(t.abiertoApp, /MacStudio/); assert.match(t.motivo, /mensaje de consejero hace 5 min/);
 });
 
 test("r243: sin app de su cuenta (o vista hace > 15 min) ni actividad reciente → sigue rojo/gris; amarillo no se toca", () => {
@@ -44,10 +43,7 @@ test("r243: sin app de su cuenta (o vista hace > 15 min) ni actividad reciente �
   assert.equal(noGrok[0].estado, "gris");
 });
 
-test("r243: cliente — chip «Grok Bot abierto», cuenta como abierto en el contador; barra y rótulos dicen «abierto»", () => {
-  const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
-  assert.match(js, /chipAbiertoApp\(t\)/);
-  assert.match(js, /t\.estado === 'verde' && \(t\.abiertoDA \|\| t\.abiertoApp\)/);
-  assert.match(readFileSync(new URL("./assets/barra-agentes.js", import.meta.url), "utf8"), /t\.abiertoApp \|\| t\.abiertoDA \? T\("abierto"/);
-  assert.match(readFileSync(new URL("./assets/consejo-rotulo.js", import.meta.url), "utf8"), /t\.abiertoApp \? "abierto"/);
+test("r246: cliente — barra y rótulos dicen «conectado · trabajando / sin dato / parado» (ya no «abierto»)", () => {
+  assert.match(readFileSync(new URL("./assets/barra-agentes.js", import.meta.url), "utf8"), /T\("conectado", "connected"\)/);
+  assert.match(readFileSync(new URL("./assets/consejo-rotulo.js", import.meta.url), "utf8"), /"conectado · "/);
 });

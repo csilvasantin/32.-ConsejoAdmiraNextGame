@@ -23,9 +23,8 @@ test("no es ciego si el pulso vio actividad, si hay tokens, si la app está en o
 test("página: la superficie corta es la del Mac mostrado (Trinity // MacStudio → App, no CLI del MBP16) y el chip ciego no dice «hace 3 h»", () => {
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
   assert.match(js, /var m = maqActual\(t\), aqui = m \? l\.filter/);
-  assert.match(js, /function chipCiego\(t\)/);
-  assert.match(js, /actividad no medible/);
+  assert.match(js, /T\('sin dato', 'no data'\)/); // r246: lo no medible es el punto amarillo «sin dato»
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.match(html, /\.tr-chipa\.tr-ciego i\{background:#5fd3ff/);
-  assert.match(html, /consumos-trabajando\.js\?v=20261121-r244-misiones-hoy/);
+  assert.match(html, /consumos-trabajando\.js\?v=20261122-r246-conectado-actividad/);
 });

@@ -44,10 +44,11 @@ test("rojo: día de Madrid (medianoche local, no UTC)", () => {
 
 test("rojo: el panel lo pinta en rojo y la leyenda lo explica", () => {
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
-  assert.match(js, /t\.estado === 'rojo'/);
-  assert.match(js, /rojo = sin actividad desde hace más de 1 h, pero activo hoy/);
-  assert.match(js, /red = no activity for over 1 h, but active today/);
+  // r246: el rojo es el punto «parado» (actividad real), con su leyenda ES/EN
+  assert.match(js, /tr-luz-' \+ luzDe\(t\)/);
+  assert.match(js, /rojo = parado \(nada lanzado/);
+  assert.match(js, /red = idle \(nothing running/);
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
-  assert.match(html, /\.tr-chipa\.tr-rojo\{/);
+  assert.match(html, /\.tr-chipa\.tr-luz-rojo i/);
   assert.match(html, /\.tr-fuera6\{/);
 });

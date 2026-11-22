@@ -229,6 +229,11 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .tr-grises small{color:var(--dim);font-size:12px;margin-left:6px}
 .tr-alt.tr-fija{display:flex;align-items:baseline;gap:8px;font-size:12px;color:#d8e6ec;font-weight:600}.tr-alt.tr-fija>span{grid-area:auto}.tr-fija .tr-qh{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tr-fija .tr-peq{flex:none;font-size:10px;font-weight:600;color:#7f98a3;white-space:nowrap}.tr-fija.tr-sinmision .tr-qh{color:#7f98a3;font-style:italic}
 .tr-nhoy{flex:none;font-size:inherit;font-weight:700;color:#3ddc84;margin-left:2px;cursor:help}.tr-nhoy0{color:#7f98a3;font-weight:600}
+/* r246: borde = conectado, punto = actividad real (verde / amarillo / rojo) */
+.tr-chipa.tr-con{opacity:1;border-style:solid;border-color:rgba(61,220,132,.75);background:rgba(61,220,132,.08)}.tr-chipa.tr-descon{opacity:.72;border-style:dashed;border-color:var(--line);background:#06121a}.tr-chipa.tr-descon .tr-foto{filter:grayscale(1)}.tr-chipa.tr-con .tr-espera{color:#9fe8bf}
+.tr-chipa.tr-luz-verde i,.tr-card.tr-luz-verde .tr-punto{background:#3ddc84;box-shadow:0 0 6px #3ddc84}.tr-chipa.tr-luz-amarillo i,.tr-card.tr-luz-amarillo .tr-punto{background:#ffd067;box-shadow:0 0 6px rgba(255,208,103,.7)}.tr-chipa.tr-luz-rojo i,.tr-card.tr-luz-rojo .tr-punto{background:#ff5d5d;box-shadow:0 0 6px rgba(255,93,93,.7)}.tr-chipa i{width:9px;height:9px}
+.tr-card.tr-con{border-left-color:#3ddc84;background:linear-gradient(90deg,rgba(61,220,132,.10),#06121a 55%)}.tr-card.tr-descon{opacity:.75}.tr-card.tr-luz-verde .tr-punto{animation:vel-late 1.6s ease-in-out infinite}.tr-n-verde{color:#3ddc84}.tr-n-rojo{color:#ff8a8a}.tr-n-amarillo{color:#ffd067}
+@media (max-width:640px){#trabajando-resumen{white-space:normal;min-width:0}.tr-resgrupo{white-space:normal;display:block}}
 .tr-chips-fila{display:block;width:100%}.tr-chipgrupo{display:flex;flex-direction:column;align-items:stretch;gap:4px;margin:0 0 8px;width:100%}.tr-chiptit{display:block;margin:4px 0 2px}.tr-chipgrupo .tr-chipa{display:flex;width:100%;box-sizing:border-box;min-width:0}.tr-chipgrupo .tr-chipa .tr-alt{margin-left:auto;text-align:right;min-width:0;overflow:hidden}.tr-chipgrupo .tr-chipa .tr-alt>span{overflow:hidden;text-overflow:ellipsis}.tr-chipgrupo .tr-chipa .tr-espera{flex:none;margin-left:8px}
 @media (max-width:640px){.tr-fija .tr-peq{display:none}.tr-alt.tr-fija{font-size:11px}.tr-chipgrupo .tr-chipa{flex-wrap:wrap;border-radius:14px;}.tr-chipgrupo .tr-chipa .tr-alt.tr-fija{order:9;flex:1 0 100%;margin-left:31px;max-width:calc(100% - 31px);text-align:left}.tr-chipgrupo .tr-chipa .tr-espera{margin-left:auto}}
 .tr-maqsuf{flex:none;margin-left:5px;font-size:11px;font-weight:500;color:var(--dim);white-space:nowrap}.tr-maqsuf .tr-sl{opacity:.6}
@@ -542,9 +547,9 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-plegable.js?v=r31"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=20261121-r229-suelo-250k"></script>
 <script src="/assets/consumos-matriz.js?v=20261021-r46-jensen"></script>
-<script src="/assets/consumos-trabajando.js?v=20261121-r244-misiones-hoy"></script>
+<script src="/assets/consumos-trabajando.js?v=20261122-r246-conectado-actividad"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
-<script src="/assets/deepagents-estado.js?v=20261121-r240-pilares-desplegable"></script>
+<script src="/assets/deepagents-estado.js?v=20261122-r246-actividad"></script>
 <script src="/assets/consumos-velocimetro.js?v=20261121-r231-odos-ayer"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=20261010-r25"></script>

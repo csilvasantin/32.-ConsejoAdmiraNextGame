@@ -30,8 +30,12 @@ test("r17: el fichero manual solo manda si es un correo (forzada); pulsos viejos
 test("r17: el pulso lee solo NOMBRES de la persistencia (no contenido) y el modelo de la matriz se traduce", () => {
   const py = readFileSync(new URL("./fleet/pulso-tokens.py", import.meta.url), "utf8");
   assert.match(py, /def grokbot_cuentas/); assert.match(py, /os\.listdir\(GROKBOT_PERSIST_DIR\)/);
-  const cuerpo = py.slice(py.indexOf("def grokbot_cuentas"), py.indexOf("def grokbot_app"));
+  const cuerpo = py.slice(py.indexOf("def grokbot_cuentas"), py.indexOf("GROKBOT_SLOT_CLAVE ="));
   assert.doesNotMatch(cuerpo, /open\(/);
+  // r254: la única ranura que se abre es la de la cuenta activa (solo su «value», un id de cuenta).
+  const activa = py.slice(py.indexOf("def grokbot_cuenta_activa"), py.indexOf("def grokbot_app"));
+  assert.equal((activa.match(/open\(/g) || []).length, 1);
+  assert.match(activa, /if clave != GROKBOT_SLOT_CLAVE:\s*\n\s*continue/);
   const js = readFileSync(new URL("./assets/consumos-matriz.js", import.meta.url), "utf8");
   assert.match(js, /pool de \(\[\^\)\]\+\)/);
 });

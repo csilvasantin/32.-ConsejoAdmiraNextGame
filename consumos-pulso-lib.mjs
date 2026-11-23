@@ -205,6 +205,8 @@ export function normalizarGrokbotApp(g) {
     .filter((c) => esCorreo(c.cuenta) && c.haceS !== null) : [];
   return { abierta: g.abierta === true, firmada: g.firmada === true ? true : g.firmada === false ? false : null,
     cuenta: esCorreo(cuenta) ? cuenta : null, cuentas, forzada: g.forzada === true, alFrente: g.alFrente === true,
+    // r254: cuenta ACTIVA de la app (ranura account-slot de su persistencia, leída en el Mac); manda sobre las horas.
+    activa: esCorreo(texto(g.activa, 80).toLowerCase()) ? texto(g.activa, 80).toLowerCase() : null,
     reposoS: reposo, version: texto(g.version, 20) || null };
 }
 
@@ -224,6 +226,10 @@ export function appsGrokBot(docs, ahora) {
     const base = { maquina: d.maquina, reposoS: g.reposoS, firmada: g.firmada, haceS: Math.round((ahora - g.ts) / 1000) };
     const reales = (g.cuentas || []).filter((c) => c.haceS < USO_CUENTA_S);
     if (g.forzada && g.cuenta) out.push({ ...base, cuenta: g.cuenta, alFrente: !!g.alFrente, usoS: null, fuente: "forzada" });
+    // r254 (Carlos, 22-11 19:20 «he cambiado de leyendas a actuales y sigues diciendome leyendas»): si el Mac sabe qué
+    // cuenta está ACTIVA en la app, solo esa (una entrada). Las horas de las ranuras engañan: la app también escribe las
+    // de la cuenta no activa en segundo plano y al cambiar de cuenta.
+    else if (g.activa) { const c = (g.cuentas || []).find((x) => x && x.cuenta === g.activa); out.push({ ...base, cuenta: g.activa, alFrente: !!g.alFrente, usoS: c && c.haceS != null ? c.haceS : null, fuente: "activa" }); }
     else if (reales.length) reales.forEach((c, i) => out.push({ ...base, cuenta: c.cuenta, alFrente: i === 0 && !!g.alFrente, usoS: c.haceS, fuente: "app" }));
     else if (!(g.cuentas || []).length && g.cuenta) out.push({ ...base, cuenta: g.cuenta, alFrente: !!g.alFrente, usoS: null, fuente: "fichero" });
     // r248: la app sigue abierta pero nadie la ha usado en la última hora → la cuenta es la ÚLTIMA usada en ella

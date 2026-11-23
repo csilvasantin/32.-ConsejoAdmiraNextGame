@@ -55,7 +55,7 @@
         if (!a || maqCanon(a.maquina) !== p.maquina) return;
         on = true; alFrente = alFrente || !!a.alFrente;
         var g = grupoDeCuenta(a.cuenta); if (g) pon(g); else desconocida = true;
-        fuente = fuente || (a.fuente === 'ultima' ? T('pulso, última cuenta usada', 'pulse, last account used') : T('pulso', 'pulse'));
+        fuente = fuente || (a.fuente === 'activa' ? T('pulso, cuenta activa', 'pulse, active account') : a.fuente === 'ultima' ? T('pulso, última cuenta usada', 'pulse, last account used') : T('pulso', 'pulse'));
       });
       ts.forEach(function (t) {
         var g = t && grupoDeAgente(t.agente); if (!g) return;

@@ -268,6 +268,42 @@ def grokbot_cuentas(ahora=None):
     return sorted(out, key=lambda x: x["haceS"])
 
 
+# r254 (Carlos, 22-11 19:20: «he cambiado de leyendas a actuales y sigues diciendome leyendas»): la cuenta ACTIVA
+# de la app sale de la ranura «client-meta.account-slot» de su persistencia: un JSON de ~66 bytes cuyo «value» es SOLO
+# el id de cuenta (el mismo que ya está en GROKBOT_ID_CUENTA, no es una credencial). Antes se adivinaba por la hora de
+# modificación de las ranuras de cada cuenta, y la app también escribe en segundo plano las de la cuenta NO activa
+# (origin-pr.statuses, mcp.connected-app-count, weekly-usage.cache, y todas al cambiar de cuenta), así que tras
+# cambiar a Actuales el MacStudio seguía saliendo «Leyendas». No se lee ninguna otra ranura por dentro.
+GROKBOT_SLOT_CLAVE = "sand.client.slice.client-meta.account-slot"
+
+
+def grokbot_cuenta_activa():
+    """Correo de la cuenta activa en la app Grok Bot (None si no se sabe o el id no está en la tabla)."""
+    import base64
+    try:
+        nombres = os.listdir(GROKBOT_PERSIST_DIR)
+    except OSError:
+        return None
+    for f in nombres:
+        if not f.endswith(".blob"):
+            continue
+        n = f[:-5].upper()
+        try:
+            clave = base64.b32decode(n + "=" * ((8 - len(n) % 8) % 8)).decode("utf-8")
+        except Exception:
+            continue
+        if clave != GROKBOT_SLOT_CLAVE:
+            continue
+        try:
+            with open(os.path.join(GROKBOT_PERSIST_DIR, f), "rb") as fh:
+                crudo = fh.read(512)
+            valor = json.loads(crudo.decode("utf-8")).get("value")
+        except Exception:
+            return None
+        return GROKBOT_ID_CUENTA.get(str(valor or "").replace("%7C", "|").replace("%7c", "|"))
+    return None
+
+
 def grokbot_app(reposo=None, frente=None):
     estado = {}
     try:
@@ -287,9 +323,10 @@ def grokbot_app(reposo=None, frente=None):
     if forzada and "@" not in forzada:
         forzada = None
     cuentas = [c for c in grokbot_cuentas() if c["cuenta"]] if abierta else []
-    cuenta = forzada or (cuentas[0]["cuenta"] if cuentas and cuentas[0]["haceS"] < 3600 else None)
+    activa = grokbot_cuenta_activa() if abierta else None
+    cuenta = forzada or activa or (cuentas[0]["cuenta"] if cuentas and cuentas[0]["haceS"] < 3600 else None)
     return {"abierta": abierta, "firmada": estado.get("signedIn") if isinstance(estado.get("signedIn"), bool) else None,
-            "cuenta": cuenta, "cuentas": [{"cuenta": c["cuenta"], "haceS": c["haceS"]} for c in cuentas], "forzada": bool(forzada),
+            "cuenta": cuenta, "cuentas": [{"cuenta": c["cuenta"], "haceS": c["haceS"]} for c in cuentas], "forzada": bool(forzada), "activa": activa,
             "alFrente": abierta and (frente or "") == "Grok Bot", "reposoS": reposo,
             "version": str(estado.get("appVersion") or "")[:20] or None}
 

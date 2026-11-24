@@ -73,6 +73,7 @@
       '<button type="button" data-paso="1" style="' + btn + '">1 · Leyendas</button>' +
       '<button type="button" data-paso="2" style="' + btn + '">2 · Coetáneos + Bonomi</button>' +
       '<button type="button" data-paso="3" style="' + btn + '">3 · /conversación ' + NOMBRE[a] + ' vs ' + NOMBRE[b] + '</button>' +
+      '<a href="/?autonomo=leyendas&amp;tema=pan" style="color:#ffd75e;font-size:12px" title="Las cuatro leyendas hablan solas de PortAventuraNeXT, con un clic">Leyendas autónomas</a>' +
       '<a href="/escena0/?flujo=pan&amp;cabecera=bonomi" style="color:#cbb98a;font-size:12px" title="El mismo relato guionizado, sin depender de los consejeros">plan B sin red</a>' +
       '<span id="demo-consejo-estado" aria-live="polite" style="color:#cbb98a;font-weight:500;max-width:420px"></span>' +
       '<button type="button" data-cerrar style="' + btn + ';padding:4px 8px" aria-label="Cerrar la barra de demo">×</button>';

@@ -2,7 +2,7 @@
  *   https://www.admira.live/?autonomo=leyendas&tema=pan
  * Un clic desbloquea el audio (Chrome lo exige). La mesa de Leyendas muestra
  * el mapa de PortAventura en el centro y los cuatro consejeros hablan por
- * turnos, con voz (speechSynthesis es-ES) y bocadillos, hasta el resumen.
+ * turnos, con voz (AdmiraVoces: TTS del Consejo, reserva speechSynthesis es-ES) y bocadillos, hasta el resumen.
  *
  * Audio (Carlos no oía al consejo): AdmiraVoces.speak() apunta primero a
  * /api/consejo/tts (fetch async) y solo si falla cae a speechSynthesis. Ese
@@ -89,6 +89,14 @@ function hablarNativo(persona, texto, opts) {
     const fin = () => { if (fin.done) return; fin.done = true; resolve(); };
     const dicho = String(texto || '').slice(0, 600);
     if (!dicho) { fin(); return; }
+    // Misma vía que el Consejo / Escena 0 / pestaña Conversación: AdmiraVoces
+    // (Grok TTS en /api/consejo/tts, y si falla, speechSynthesis es-ES).
+    try {
+      if (window.AdmiraVoces && typeof AdmiraVoces.speak === 'function') {
+        const ok = AdmiraVoces.speak(persona, dicho, { onend: fin, onerror: fin, lang: 'es-ES' });
+        if (ok) { setTimeout(fin, Math.max(8000, dicho.length * 90 + 2000)); return; }
+      }
+    } catch (e) {}
     try {
       const s = window.speechSynthesis;
       if (!s || !window.SpeechSynthesisUtterance) { fin(); return; }

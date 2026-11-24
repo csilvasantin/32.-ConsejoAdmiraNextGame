@@ -127,9 +127,26 @@ function cajaArte() {
   return { x: ir.left - sr.left + (ir.width - w) / 2, y: ir.top - sr.top + (ir.height - h) / 2, w, h, root };
 }
 
+function inyectarCssSubtitulos() {
+  if ($('autonomo-globo-css')) return;
+  const st = document.createElement('style');
+  st.id = 'autonomo-globo-css';
+  // z-index 40: por encima del mapa de la idea (#idea-mesa.grande es 28).
+  // El subtítulo vive en la mesa, no tapa el menú ni el player.
+  st.textContent = '#autonomo-globo{position:absolute;z-index:40;max-width:min(420px,46%);padding:10px 14px;background:#fff8e8;color:#1a140a;border:2px solid #c9a227;box-shadow:4px 4px 0 #000;font:500 15px/1.35 system-ui,sans-serif;transform:translate(-50%,-110%)}'
+    + '#autonomo-globo[hidden]{display:none}'
+    + '#autonomo-globo b{display:block;color:#7a5a12;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}'
+    + '#autonomo-globo p{margin:0}'
+    + '#autonomo-subtitulo{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;max-width:min(760px,92%);padding:8px 14px;background:rgba(20,14,6,.94);color:#f3e6c4;border:2px solid #c9a227;box-shadow:4px 4px 0 #000;font:500 15px/1.35 system-ui,sans-serif;pointer-events:none}'
+    + '#autonomo-subtitulo[hidden]{display:none}'
+    + '#autonomo-subtitulo b{display:inline;color:#ffd75e;margin-right:.6em;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}'
+    + '#autonomo-subtitulo span{font:500 15px/1.35 system-ui,sans-serif}';
+  document.head.appendChild(st);
+}
+
 function asegurarGlobo() {
-  const root = document.querySelector('.council-image');
-  if (!root) return null;
+  inyectarCssSubtitulos();
+  const root = document.querySelector('.council-image') || document.body;
   let el = $('autonomo-globo');
   if (el) return el;
   el = document.createElement('div');
@@ -137,22 +154,43 @@ function asegurarGlobo() {
   el.hidden = true;
   el.innerHTML = '<b id="autonomo-globo-nombre"></b><p id="autonomo-globo-texto"></p>';
   root.appendChild(el);
-  if (!$('autonomo-globo-css')) {
-    const st = document.createElement('style');
-    st.id = 'autonomo-globo-css';
-    st.textContent = '#autonomo-globo{position:absolute;z-index:20;max-width:min(420px,46%);padding:10px 14px;background:#fff8e8;color:#1a140a;border:2px solid #c9a227;box-shadow:4px 4px 0 #000;font:500 15px/1.35 system-ui,sans-serif;transform:translate(-50%,-110%)}'
-      + '#autonomo-globo[hidden]{display:none}'
-      + '#autonomo-globo b{display:block;color:#7a5a12;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}'
-      + '#autonomo-globo p{margin:0}';
-    document.head.appendChild(st);
-  }
+  return el;
+}
+
+function asegurarSubtitulo() {
+  inyectarCssSubtitulos();
+  const root = document.querySelector('.council-image') || document.body;
+  let el = $('autonomo-subtitulo');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'autonomo-subtitulo';
+  el.hidden = true;
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.innerHTML = '<b id="autonomo-subtitulo-nombre"></b><span id="autonomo-subtitulo-texto"></span>';
+  root.appendChild(el);
   return el;
 }
 
 function mostrarBocadillo(persona, texto) {
+  // El texto se pinta siempre, aunque el verbo Conversación esté apagado y aunque la voz falle.
   const I = window.CouncilInterface;
   if (I && typeof I.show === 'function') {
     try { I.show(persona, '', texto, { messageId: 'autonomo-' + Date.now() }); } catch (e) {}
+  }
+  const bubble = document.getElementById('speech-bubble') || document.querySelector('.speech-bubble');
+  if (bubble) {
+    bubble.style.display = 'flex';
+    bubble.style.zIndex = '40';
+    bubble.hidden = false;
+  }
+  const sub = asegurarSubtitulo();
+  if (sub) {
+    const nb = $('autonomo-subtitulo-nombre');
+    const tb = $('autonomo-subtitulo-texto');
+    if (nb) nb.textContent = persona;
+    if (tb) tb.textContent = texto;
+    sub.hidden = false;
   }
   const el = asegurarGlobo();
   if (!el) return;

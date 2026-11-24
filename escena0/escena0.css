@@ -5,7 +5,7 @@ body.kiosk-idle { cursor: none; }
 #stage { position:fixed; inset:0; background:#000; }
 #mesa-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; background:#000; }
 #globo {
-  position:absolute; z-index:20; max-width:min(280px, 36vw); min-width:140px;
+  position:absolute; z-index:40; max-width:min(280px, 36vw); min-width:140px;
   padding:8px 12px 10px; background:var(--madera); color:var(--papel);
   border:2px solid var(--oro); box-shadow:3px 3px 0 #000;
   font:14px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;

@@ -9,6 +9,10 @@ import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
 } from '/escena0-guion.mjs?v=20261114-mesa4';
+import {
+  parseAutonomoUrl, siguienteTurno as siguienteTurnoAutonomo, resolverTurno as resolverTurnoAutonomo,
+  formatHoraInicio, etiquetaMision, textoTurno as textoTurnoAutonomo, TIMEOUT_BACKEND_MS,
+} from '/consejo-autonomo-leyendas.mjs?v=20261124-autonomo';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -17,7 +21,9 @@ const q = new URLSearchParams(location.search);
 // ?cabecera=bonomi sienta a Carlo Bonomi en la cabecera de los Coetáneos.
 // ?flujo=pan&guion=carlos-bonomi: el flujo de una pantalla con otro guion (Carlos Silva ↔ Carlo Bonomi).
 const guionQ = parseGuion(q.get('guion'));
-const flujo = parseGuion(q.get('flujo')) ? (guionQ || parseGuion(q.get('flujo'))) : null;
+const modoAutonomo = parseAutonomoUrl(q);
+// ?autonomo=leyendas&tema=pan gana a ?flujo=pan: las Leyendas se quedan en su mesa y no saltan a Coetáneos.
+const flujo = (modoAutonomo && modoAutonomo.soportado) ? null : (parseGuion(q.get('flujo')) ? (guionQ || parseGuion(q.get('flujo'))) : null);
 const guion = flujo || guionQ;
 const cabeceraPedida = parseCabecera(q.get('cabecera')) || (guion && guion.cabecera ? parseCabecera(guion.cabecera) : null);
 let cabecera = cabeceraPedida;
@@ -30,7 +36,7 @@ const imgDe = (m) => (m === 'leyendas' && !expertos.carlos ? IMG_SIN_CARLOS.leye
 const conIA = q.get('ia') === '1' && !(guion && guion.soloGuion);
 // ?lang=es|en|both (por defecto both) en los guiones bilingües (Carlos Silva ↔ Carlo Bonomi).
 const lang = parseLang(q.get('lang'), guion);
-let mesa = flujo ? 'leyendas' : parseMesa(q.get('mesa') || q.get('gen') || q.get('generation'));
+let mesa = (modoAutonomo && modoAutonomo.soportado) ? 'leyendas' : (flujo ? 'leyendas' : parseMesa(q.get('mesa') || q.get('gen') || q.get('generation')));
 let mesaVista = mesa;
 function silencioInicial() {
   if (q.get('silencio') === '1' || q.get('mute') === '1') return true;
@@ -1124,6 +1130,7 @@ function arrancar() {
   }).catch(() => {});
   if (!mesa) { $('elige').hidden = false; return; }
   activarMesa();
+  if (modoAutonomo && modoAutonomo.soportado) { montarAutonomoLeyendas(); return; }
   if (flujo) { montarFlujo(); return; }
   idleCursor();
   $('btn-gesto').addEventListener('click', empezar);
@@ -1355,6 +1362,160 @@ function montarFlujo() {
     $('gesto').hidden = true;
     ejecutarPaso(pq - 1);
   }
+}
+
+
+// ── Modo autónomo de Leyendas (?autonomo=leyendas&tema=pan) ─────────────────
+// Un clic desbloquea el audio. El mapa va al centro. Las cuatro leyendas
+// hablan por turnos (guion local de base; backend con tope corto) y cierran
+// con un resumen. No salta a Coetáneos.
+// Audio: no se espera al TTS de AdmiraVoces ni al backend para la primera
+// línea. En el clic: AudioContext.resume + speechSynthesis.speak(es-ES).
+let audioCtxAutonomo = null;
+const SILENCIO_WAV_AUTONOMO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+function vozEsESAutonomo() {
+  try {
+    const voces = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+    return voces.find((v) => /es[-_]ES/i.test(v.lang || '')) || voces.find((v) => /^es/i.test(v.lang || '')) || null;
+  } catch (e) { return null; }
+}
+function desbloquearAudioEnClic() {
+  try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      if (!audioCtxAutonomo) audioCtxAutonomo = new AC();
+      if (audioCtxAutonomo.state === 'suspended' && audioCtxAutonomo.resume) audioCtxAutonomo.resume();
+      const buf = audioCtxAutonomo.createBuffer(1, 1, 22050);
+      const src = audioCtxAutonomo.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtxAutonomo.destination);
+      src.start(0);
+    }
+  } catch (e) {}
+  try {
+    const a = new Audio(SILENCIO_WAV_AUTONOMO);
+    a.volume = 0.01;
+    const p = a.play();
+    if (p && typeof p.catch === 'function') p.catch(function () {});
+  } catch (e) {}
+}
+function hablarNativoAutonomo(persona, texto, opts) {
+  opts = opts || {};
+  return new Promise((resolve) => {
+    const fin = () => { if (fin.done) return; fin.done = true; if (vozFin === fin) vozFin = null; resolve(); };
+    const dicho = String(texto || '').slice(0, 600);
+    if (silencio || !dicho) { fin(); return; }
+    try {
+      const s = window.speechSynthesis;
+      if (!s || !window.SpeechSynthesisUtterance) { fin(); return; }
+      if (opts.cancelar) {
+        try { if (vozFin) vozFin(); } catch (e) {}
+        try { if (window.AdmiraVoces && AdmiraVoces.stop) AdmiraVoces.stop(); } catch (e) {}
+        try { s.cancel(); } catch (e) {}
+      }
+      const u = new SpeechSynthesisUtterance(dicho);
+      u.lang = idioma === 'en' ? 'en-US' : 'es-ES';
+      const v = idioma === 'en' ? null : vozEsESAutonomo();
+      if (v) u.voice = v;
+      vozFin = fin;
+      u.onend = fin;
+      u.onerror = fin;
+      s.speak(u);
+      setTimeout(fin, Math.max(8000, dicho.length * 90 + 2000));
+    } catch (e) { fin(); }
+  });
+}
+
+function montarAutonomoLeyendas() {
+  document.body.classList.add('autonomo-leyendas');
+  document.title = 'Leyendas autónomas · ' + (modoAutonomo.titulo || 'PortAventuraNeXT');
+  $('gesto-mesa').textContent = 'Leyendas · «El parque que se cuenta solo» · un clic para que hablen solas';
+  const gh = document.querySelector('#gesto .hint');
+  if (gh) gh.textContent = T('Los navegadores piden un clic para la voz. Al pulsar, el mapa se pone en el centro y las Leyendas conversan solas hasta un resumen.', 'Browsers need a click for voice. After you press, the map goes in the centre and the Legends talk on their own until a summary.');
+  const gb = $('btn-gesto');
+  if (gb) gb.textContent = T('Un clic para que hablen solas', 'One click to let them talk');
+  const sb = $('btn-start');
+  if (sb) sb.textContent = T('Un clic para que hablen solas', 'One click to let them talk');
+  instalarControles();
+  idleCursor();
+  const go = () => { empezarAutonomoLeyendas(); };
+  $('btn-gesto').addEventListener('click', go);
+  $('btn-start').addEventListener('click', go);
+  $('btn-fs').addEventListener('click', toggleFullscreen);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'f' || e.key === 'F') { e.preventDefault(); if (!enCurso) go(); else toggleFullscreen(); }
+    if ((e.key === ' ' || e.key === 'Enter') && !enCurso) { e.preventDefault(); go(); }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    document.body.classList.toggle('fs', !!(document.fullscreenElement || document.webkitFullscreenElement));
+  });
+  window.addEventListener('resize', () => {
+    colocarIdea();
+    const n = $('globo-nombre') && $('globo-nombre').textContent.split(' · ')[0];
+    if (n && $('globo') && !$('globo').hidden) colocarGlobo(n);
+  });
+}
+
+function empezarAutonomoLeyendas() {
+  if (enCurso) { entrarFullscreen(); return; }
+  entrarFullscreen();
+  const guionA = modoAutonomo.guion;
+  const t0 = siguienteTurnoAutonomo(guionA, 0);
+  const texto0 = textoTurnoAutonomo(t0, idioma);
+
+  // Síncrono, dentro del clic: desbloqueo + primera línea del guion. Sin await.
+  desbloquearAudioEnClic();
+  setIdea(ideaVal && ideaVal !== 'off' ? ideaVal : 'ip-portaventura', { noGuardar: true });
+  mostrarGlobo(t0.persona, texto0, false);
+  const hablaPrimero = hablarNativoAutonomo(t0.persona, texto0, { cancelar: false });
+
+  enCurso = true;
+  autonomo = true;
+  document.body.classList.add('en-curso');
+  if ($('gesto')) $('gesto').hidden = true;
+  $('hud').hidden = false;
+  const inicio = new Date();
+  const hora = formatHoraInicio(inicio);
+  const hm = $('hud-mesa');
+  if (hm) hm.textContent = 'Escena 0 · Leyendas · ' + etiquetaMision(hora, idioma);
+  estado((t0.persona || '') + T(' habla · ', ' speaking · ') + '1/' + t0.total + ' · ' + etiquetaMision(hora, idioma));
+  pintarControles();
+  seguirAutonomoLeyendas(guionA, hablaPrimero, hora, { persona: t0.persona, texto: texto0 });
+}
+
+async function seguirAutonomoLeyendas(guionA, hablaPrimero, hora, primero) {
+  const dichos = [primero];
+  const ask = async (turno) => {
+    const hist = dichos.map((d) => d.persona + ': ' + d.texto).join('\n');
+    const prompt = prefijoIdioma(idioma) + 'Eres ' + turno.persona + ' en la mesa de Leyendas del Consejo AdmiraNeXT. '
+      + 'Habláis sobre PortAventuraNeXT, «El parque que se cuenta solo». 1 o 2 frases, en tu estilo, sin presentarte. '
+      + (turno.esResumen ? 'Cierra con un resumen breve.\n' : '')
+      + (hist ? 'Hasta ahora:\n' + hist + '\n' : '')
+      + 'Idea del guion: ' + (idioma === 'en' ? (turno.textoEn || turno.texto) : turno.texto)
+      + sufijoIdioma(idioma);
+    return askConsejero(turno.persona, prompt);
+  };
+  try { await hablaPrimero; } catch (e) {}
+  await new Promise((res) => setTimeout(res, 600));
+  for (let i = 1; ; i++) {
+    if (!enCurso || !autonomo) return;
+    const t = siguienteTurnoAutonomo(guionA, i);
+    if (t.fin) break;
+    mostrarGlobo(t.persona, '', true);
+    estado((t.esResumen ? T('Resumen · ', 'Summary · ') : '') + t.persona + T(' pensando…', ' thinking…'));
+    const r = await resolverTurnoAutonomo(t, { ask, timeoutMs: TIMEOUT_BACKEND_MS, idioma });
+    if (!enCurso || !autonomo) return;
+    mostrarGlobo(r.persona, r.texto, false);
+    dichos.push({ persona: r.persona, texto: r.texto });
+    estado((r.esResumen ? T('Resumen · ', 'Summary · ') : '') + r.persona + T(' habla · ', ' speaking · ') + (t.i + 1) + '/' + t.total + (r.fuente === 'guion' ? T(' · guion local', ' · local script') : ''));
+    await hablarNativoAutonomo(r.persona, r.texto, { cancelar: true });
+    await new Promise((res) => setTimeout(res, 600));
+  }
+  estado(T('Fin · ', 'End · ') + etiquetaMision(hora, idioma) + T(' · una sala, una sola historia, un solo reloj.', ' · one room, one story, one clock.'));
+  autonomo = false;
+  enCurso = false;
+  pintarControles();
 }
 
 arrancar();

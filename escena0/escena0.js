@@ -1468,7 +1468,7 @@ function empezarAutonomoLeyendas() {
   desbloquearAudioEnClic();
   setIdea(ideaVal && ideaVal !== 'off' ? ideaVal : 'ip-portaventura', { noGuardar: true });
   mostrarGlobo(t0.persona, texto0, false);
-  const hablaPrimero = hablarNativoAutonomo(t0.persona, texto0, { cancelar: false });
+  const hablaPrimero = hablar(t0.persona, texto0);
 
   enCurso = true;
   autonomo = true;
@@ -1509,7 +1509,7 @@ async function seguirAutonomoLeyendas(guionA, hablaPrimero, hora, primero) {
     mostrarGlobo(r.persona, r.texto, false);
     dichos.push({ persona: r.persona, texto: r.texto });
     estado((r.esResumen ? T('Resumen · ', 'Summary · ') : '') + r.persona + T(' habla · ', ' speaking · ') + (t.i + 1) + '/' + t.total + (r.fuente === 'guion' ? T(' · guion local', ' · local script') : ''));
-    await hablarNativoAutonomo(r.persona, r.texto, { cancelar: true });
+    await hablar(r.persona, r.texto);
     await new Promise((res) => setTimeout(res, 600));
   }
   estado(T('Fin · ', 'End · ') + etiquetaMision(hora, idioma) + T(' · una sala, una sola historia, un solo reloj.', ' · one room, one story, one clock.'));

@@ -113,8 +113,9 @@ test('el audio se desbloquea y se locuta la primera línea dentro del clic, sin 
   assert.match(hastaSeguir, /hablarNativo\(/);
   assert.match(hastaSeguir, /mostrarBocadillo\(/);
   assert.doesNotMatch(hastaSeguir, /\bawait\s/, 'ni un await antes de la primera locución');
-  assert.doesNotMatch(hastaSeguir, /AdmiraVoces\.speak/, 'el clic no espera al TTS de AdmiraVoces');
+  assert.match(auto, /AdmiraVoces\.speak/, 'la home reutiliza AdmiraVoces, la misma vía del Consejo');
+  assert.match(hastaSeguir, /hablarNativo\(/);
   assert.doesNotMatch(hastaSeguir, /await\s+askBackend|resolverTurno\(/, 'el clic no espera al backend para la primera línea');
-  assert.match(escena, /hablarNativoAutonomo\(t0/);
+  assert.match(escena, /const hablaPrimero = hablar\(t0/);
   assert.match(escena, /desbloquearAudioEnClic\(\)/);
 });

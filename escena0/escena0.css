@@ -140,3 +140,8 @@ body.ui-off #barra-escucha { display:none !important; }
 body.ui-off #hud #btn-ui { margin-top:0; opacity:.45; padding:3px 8px; }
 body.ui-off #hud #btn-ui:hover { opacity:1; }
 body.flujo #btn-ui { display:none; }
+
+/* t403u: Leyendas / Actuales — qué consejo presenta la idea, sin saltar solo de mesa. */
+.idea-mesa-opts { display:inline-flex; gap:4px; align-items:center; }
+.idea-mesa-opts button { appearance:none; background:#1a140a; color:#ffd75e; border:1px solid var(--oro, #c9a227); padding:6px 10px; font:700 12px/1 system-ui,sans-serif; cursor:pointer; }
+.idea-mesa-opts button[aria-pressed="true"], .idea-mesa-opts button.activo { background:#c9a227; color:#1a140a; }

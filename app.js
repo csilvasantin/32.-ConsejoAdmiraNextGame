@@ -1881,6 +1881,7 @@
             li('<strong>/hablar [consejero] [mensaje] · /talk</strong>', 'habla con un consejero (Jobs en Leyendas, Elon en Coetáneos si no pones nombre). /hablar off cuelga. El literal no se envía al consejero. El mismo canal que /hola', 'talk to a counsellor (Jobs on Legends, Elon on Contemporaries if you omit the name). /talk off hangs up. The literal is never sent to the counsellor. Same channel as /hola') +
             li('<strong>/conversacion &lt;a&gt; vs &lt;b&gt; &lt;tema&gt; · /conversation</strong>', 'hace hablar a dos consejeros sobre un tema (p. ej. /conversacion jobs vs elon PortAventuraNeXT). También /conversación. Una mención @consejero en Conversación le habla a ese consejero', 'has two counsellors talk about a topic (e.g. /conversation jobs vs elon PortAventuraNeXT). An @counsellor mention in Conversation talks to that counsellor') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
+            li('<strong>/idea · show the idea</strong>', 'pone el mapa de PortAventura en el centro de la mesa y se queda en ella; /idea leyendas o /idea actuales (o «show the idea leyendas|actuales») elige qué consejo la presenta, sin saltar solo a Coetáneos; /idea off la oculta', 'places the PortAventura map in the centre of the table and stays there; /idea leyendas or /idea actuales (or “show the idea leyendas|actuales”) chooses which council presents it, without jumping to Contemporaries on its own; /idea off hides it') +
             li('<strong>/consejero · /counselor · /advisor</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa. También /consejeros, /counselors, /advisors y /consejero &lt;nombre&gt; aparecer|desaparecer', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table. Also /consejeros, /counselors, /advisors and /consejero &lt;name&gt; show|hide') +
             li('<strong>/consejeros placas [on | off]</strong>', 'enseña u oculta las placas con el nombre en la mesa de los Coetáneos (por defecto ocultas: cada consejero tiene su objeto en ese sitio — Model X, DGX, portátil, Ferrari Land); sin argumento alterna', 'shows or hides the name plates on the Contemporaries table (hidden by default: each councillor has their object there — Model X, DGX, laptop, Ferrari Land); with no argument it toggles') +
             li('<strong>Misiones (botón)</strong>', 'las cajas de misión de la mesa van ocultas por defecto, igual en Leyendas y en Coetáneos (Ferrari Land); el botón Misiones las enseña u oculta y lo recuerda. El tablero de misiones Yokup está en https://www.admira.live/misiones', 'the table mission boxes are hidden by default, the same on Legends and on Contemporaries (Ferrari Land); the Missions button shows or hides them and remembers the choice. The Yokup mission board is at https://www.admira.live/misiones') +
@@ -2228,7 +2229,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/consejero', '/ceo', '/cabecera', '/agentes', '/comandos', '/sendto',
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/idea', '/consejero', '/ceo', '/cabecera', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca',
         // Pieles de cine (FLT-101666 c): /81 … /89 = /marca 81 … /marca 89
         '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89',
@@ -2313,6 +2314,10 @@
     function handleCliCommandBase(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
+        // t402u/t403u: «show the idea» / /idea [leyendas|actuales] — mapa en el centro, sin saltar a Coetáneos.
+        if (window.IdeaMesa && typeof window.IdeaMesa.manejar === 'function' && window.IdeaMesa.manejar(text, setActionLine, addUserEntry)) {
+            return true;
+        }
         // /hablar [consejero] [mensaje] · /talk (11-11-2026): se intercepta aquí y en el panel de chat.
         // El literal nunca llega al consejero.
         if (/^\/(hablar|talk)(\s|$)/i.test(text) && window.AdmiraHablarCmd && typeof window.AdmiraHablarCmd.parseLinea === 'function') {

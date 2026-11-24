@@ -228,7 +228,33 @@ test('Carlos 19-11 (t110u): la idea encima de la mesa, por defecto PortAventura 
   assert.equal(lib.resolverIdea('off').on, false);
   assert.equal(lib.resolverIdea('https://example.com/a.png').id, 'url');
   assert.equal(lib.resolverIdea('javascript:alert(1)').on, false);
+  assert.equal(lib.parseMesa('actuales'), 'coetaneos');
+  assert.equal(lib.parseMesa('actual'), 'coetaneos');
 });
+
+test('Carlos 24-11 (t402u/t403u): «show the idea» arranca la idea y admite Leyendas o Actuales, sin irse solo a Coetáneos', async () => {
+  const lib = await import('./escena0-lib.mjs');
+  const C = (s) => lib.comandoMostrarIdea(s);
+  assert.equal(C('ping'), null);
+  assert.deepEqual(C('show the idea'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('Show the idea.'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('/show the idea'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('mostrar la idea'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('muestra la idea'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('arrancar la idea'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('hide the idea'), { tipo: 'idea', on: false, mesa: null, src: null });
+  assert.deepEqual(C('ocultar la idea'), { tipo: 'idea', on: false, mesa: null, src: null });
+  assert.deepEqual(C('show the idea leyendas'), { tipo: 'idea', on: true, mesa: 'leyendas', src: null });
+  assert.deepEqual(C('show the idea actuales'), { tipo: 'idea', on: true, mesa: 'coetaneos', src: null });
+  assert.deepEqual(C('mostrar la idea actuales'), { tipo: 'idea', on: true, mesa: 'coetaneos', src: null });
+  assert.deepEqual(C('/idea on'), { tipo: 'idea', on: true, mesa: null, src: null });
+  assert.deepEqual(C('/idea off'), { tipo: 'idea', on: false, mesa: null, src: null });
+  assert.deepEqual(C('/idea'), { tipo: 'idea', on: null, mesa: null, src: null });
+  assert.deepEqual(C('/idea leyendas'), { tipo: 'idea', on: true, mesa: 'leyendas', src: null });
+  assert.deepEqual(C('/idea actuales'), { tipo: 'idea', on: true, mesa: 'coetaneos', src: null });
+  assert.equal(C('show the idea').mesa, null, 'sin mesa: se queda en la que ya está, no salta a Coetáneos');
+});
+
 
 test('Carlos 19-11 (t111u): textos en inglés y mostrar/ocultar la interfaz', async () => {
   const { readFileSync } = await import('node:fs');
@@ -263,3 +289,20 @@ test('Carlos 19-11 (t111u): textos en inglés y mostrar/ocultar la interfaz', as
   const tts = fs.readFileSync(new URL('./functions/api/consejo/tts.js', import.meta.url), 'utf8');
   assert.match(tts, /lang = "en"/);
 }
+
+test('Carlos 24-11: Escena 0 pausa el flujo al mostrar la idea y ofrece Leyendas y Actuales', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
+  assert.match(js, /comandoMostrarIdea/);
+  assert.match(js, /detenerFlujoParaIdea/);
+  assert.match(js, /token \+= 1/);
+  assert.match(js, /btn-idea-leyendas/);
+  assert.match(js, /btn-idea-actuales/);
+  assert.doesNotMatch(js, /document\.body\.classList\.contains\('flujo'\)\) \{ el\.hidden = true/);
+  assert.match(html, /id="btn-idea-leyendas"/);
+  assert.match(html, /id="btn-idea-actuales"/);
+  const home = readFileSync(new URL('./assets/idea-mesa.js', import.meta.url), 'utf8');
+  assert.match(home, /IdeaMesa/);
+  assert.match(home, /data-idea-mesa="coetaneos"/);
+});

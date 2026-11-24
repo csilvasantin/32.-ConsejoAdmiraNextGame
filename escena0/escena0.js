@@ -3,8 +3,8 @@ import {
   ANCLA, TEMA_DEFECTO, TEMA_AUTONOMO, LS_SILENCIO, promptDe, canalVacio,
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
   quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma, prefijoIdioma,
-  IDEAS_PRESET, LS_IDEA, resolverIdea,
-} from '/escena0-lib.mjs?v=20261120-idea-off';
+  IDEAS_PRESET, LS_IDEA, resolverIdea, comandoMostrarIdea,
+} from '/escena0-lib.mjs?v=20261124-show-idea';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -206,7 +206,8 @@ function montarCabecera() {
 function colocarIdea() {
   const el = $('idea'); if (!el) return;
   const box = cajaArte();
-  if (!idea.on || !box || !mesaCargada() || document.body.classList.contains('flujo')) { el.hidden = true; return; }
+  // t402u: la idea se ve también en ?flujo=pan; el flujo se pausa al mostrarla para no saltar a Coetáneos.
+  if (!idea.on || !box || !mesaCargada()) { el.hidden = true; return; }
   el.hidden = false;
   const img = $('idea-img');
   if (img.getAttribute('src') !== idea.src) img.src = idea.src;
@@ -370,6 +371,18 @@ function pintarControles() {
     bi.setAttribute('aria-pressed', idea.on ? 'true' : 'false');
     bi.classList.toggle('activo', idea.on);
   }
+  const bl = $('btn-idea-leyendas');
+  const ba = $('btn-idea-actuales');
+  if (bl) {
+    bl.textContent = T('Leyendas', 'Legends');
+    bl.setAttribute('aria-pressed', idea.on && mesa === 'leyendas' ? 'true' : 'false');
+    bl.classList.toggle('activo', idea.on && mesa === 'leyendas');
+  }
+  if (ba) {
+    ba.textContent = T('Actuales', 'Contemporaries');
+    ba.setAttribute('aria-pressed', idea.on && mesa === 'coetaneos' ? 'true' : 'false');
+    ba.classList.toggle('activo', idea.on && mesa === 'coetaneos');
+  }
   const si = $('sel-idea');
   if (si) {
     si.value = idea.id === 'url' ? 'url' : idea.id;
@@ -468,6 +481,34 @@ async function cambiarMesa(m) {
   if (seguia) { autonomo = false; await arrancarConversacion(); }
   return mesa;
 }
+function detenerFlujoParaIdea() {
+  if (!flujo) return;
+  pausa = true;
+  token += 1; // cancela el avance automático (paso 2 · Coetáneos)
+}
+
+function aplicarIdeaComando(cmd) {
+  detenerFlujoParaIdea();
+  if (cmd.mesa && cmd.mesa !== mesa) {
+    if (flujo) {
+      mesa = cmd.mesa;
+      lastSeenId = null;
+      verMesa(mesa);
+      rotularMesa();
+      try { const u = new URL(location.href); u.searchParams.set('mesa', mesa); history.replaceState(null, '', u.toString()); } catch (e) {}
+    } else {
+      cambiarMesa(cmd.mesa);
+    }
+  }
+  if (cmd.on === false) setIdea('off');
+  else if (cmd.src) setIdea(cmd.src);
+  else if (cmd.on === true) setIdea(ideaVal && ideaVal !== 'off' ? ideaVal : IDEAS_PRESET[0].id);
+  else setIdea(idea.on ? 'off' : (ideaVal && ideaVal !== 'off' ? ideaVal : IDEAS_PRESET[0].id));
+  pintarControles();
+  const mesaTxt = idea.on ? (mesa === 'coetaneos' ? T(' · Actuales', ' · Contemporaries') : T(' · Leyendas', ' · Legends')) : '';
+  return { ok: true, texto: idea.on ? T('💡 Idea encima de la mesa', '💡 Idea on the table') + mesaTxt : T('💡 Idea oculta', '💡 Idea hidden'), idea: idea.on, mesa };
+}
+
 function comandoNuevo(texto) {
   const s = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   let m = s.match(/^\/?(idioma|lang|language|voces|voices)\s+(\S+)$/i);
@@ -490,15 +531,10 @@ function comandoNuevo(texto) {
     setUi(!a ? !uiVisible : /^(on|si|1|mostrar|show)$/.test(a));
     return { ok: true, texto: uiVisible ? T('☰ Interfaz visible', '☰ Interface shown') : T('☰ Interfaz oculta (H para volver)', '☰ Interface hidden (H to show)') };
   }
-  m = String(texto || '').trim().match(/^\/?(idea)(?:\s+(.+))?$/i);
-  if (m) {
-    const a = (m[2] || '').trim();
-    if (!a) setIdea(idea.on ? 'off' : (ideaVal && ideaVal !== 'off' ? ideaVal : IDEAS_PRESET[0].id));
-    else if (/^(off|no|fuera|ocultar|hide)$/i.test(a)) setIdea('off');
-    else if (/^(on|si|sí|mostrar|show|defecto|default)$/i.test(a)) setIdea(ideaVal && ideaVal !== 'off' && !/^(defecto|default)$/i.test(a) ? ideaVal : IDEAS_PRESET[0].id);
-    else if (/^https:\/\//i.test(a) || IDEAS_PRESET.some((x) => x.id === a)) setIdea(a);
-    else return { ok: false, texto: 'Usa /idea, /idea on|off o /idea https://…' };
-    return { ok: true, texto: idea.on ? T('💡 Idea encima de la mesa', '💡 Idea on the table') : T('💡 Idea oculta', '💡 Idea hidden'), idea: idea.on };
+  const ideaCmd = comandoMostrarIdea(texto);
+  if (ideaCmd) {
+    if (ideaCmd.error) return { ok: false, texto: ideaCmd.error };
+    return aplicarIdeaComando(ideaCmd);
   }
   m = String(texto || '').trim().match(/^\/?(tema|topic)\s+(.+)$/i);
   if (m) {
@@ -606,7 +642,7 @@ if (window.opener) { try { window.opener.postMessage({ tipo: 'escena0-lista', me
 // Modo experto mínimo (Carlos 15-11 19:42): la tecla «\» abre una línea de comandos abajo, DENTRO de la pantalla
 // completa (el fullscreen es documentElement, así que un fijo en body se ve). Esc la cierra, Enter ejecuta.
 // Mientras está abierta, las teclas de la escena (F, espacio, flechas, P) no llegan: el input para la propagación.
-const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /idea on|off|https://… · /ui on|off (tecla H) · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
+const AYUDA_EXPERTO = 'Comandos: /consejero carlos silva · /consejero carlo bonomi (o bononi) · /silencio · /autonomo · /idioma en|es · /mesa leyendas|coetaneos · /tema <texto>|defecto · /idea on|off|https://… · show the idea [leyendas|actuales] · /ui on|off (tecla H) · /cerrar · añade «desaparece» o «fuera» / «on» o «off» · sin verbo, alterna · /help';
 function abrirLinea() {
   let box = $('experto-linea');
   if (!box) {
@@ -1041,6 +1077,8 @@ function instalarControles() {
     }
   }
   bind('btn-idea', () => ejecutarExperto(idea.on ? '/idea off' : '/idea on'));
+  bind('btn-idea-leyendas', () => ejecutarExperto('/idea on leyendas'));
+  bind('btn-idea-actuales', () => ejecutarExperto('/idea on actuales'));
   const ci = $('idea-cerrar'); if (ci) ci.addEventListener('click', (e) => { e.stopPropagation(); ejecutarExperto('/idea off'); });
   const fi = $('idea'); if (fi) fi.addEventListener('click', () => { ideaGrande = !ideaGrande; colocarIdea(); });
   const si = $('sel-idea');

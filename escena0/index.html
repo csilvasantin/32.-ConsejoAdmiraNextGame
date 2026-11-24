@@ -58,7 +58,11 @@ html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;p
       <button type="button" id="btn-idioma" aria-pressed="false">🌐 Voces: español → EN</button>
       <button type="button" id="btn-mesa">🔀 Ir a Coetáneos</button>
       <label class="tema-ctl"><span id="lbl-tema">Tema</span> <select id="sel-tema" aria-label="Tema de la conversación"></select></label>
-      <button type="button" id="btn-idea" aria-pressed="true">💡 Ocultar la idea</button>
+      <button type="button" id="btn-idea" aria-pressed="false">💡 Mostrar la idea</button>
+      <span class="idea-mesa-opts" role="group" aria-label="Qué consejo presenta la idea">
+        <button type="button" id="btn-idea-leyendas" aria-pressed="false">Leyendas</button>
+        <button type="button" id="btn-idea-actuales" aria-pressed="false">Actuales</button>
+      </span>
       <label class="tema-ctl"><span id="lbl-idea">Idea</span> <select id="sel-idea" aria-label="Imagen de la idea"></select></label>
       <input type="text" id="idea-url" maxlength="2000" autocomplete="off" spellcheck="false" hidden aria-label="URL de la imagen de la idea">
       <input type="file" id="idea-file" accept="image/*" hidden>
@@ -69,6 +73,6 @@ html.misiones-off .consejo-globo.globo-proyectos *{visibility:hidden!important;p
   <div id="cmd-experto" role="status" aria-live="polite" hidden></div>
   <div id="sello"></div>
   <script src="/consejeros-voces.js?v=20261119-voces-en"></script>
-  <script type="module" src="/escena0/escena0.js?v=20261120-guardia"></script>
+  <script type="module" src="/escena0/escena0.js?v=20261124-show-idea"></script>
 </body>
 </html>

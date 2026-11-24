@@ -140,7 +140,7 @@ export function comandoCerrar(texto) {
 export function parseMesa(v) {
   const s = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
     .replace(/[^a-z]/g, '');
-  if (['coetaneos', 'coetaneo', 'peers', 'contemporaries', 'contemporaneos'].includes(s)) return 'coetaneos';
+  if (['coetaneos', 'coetaneo', 'peers', 'contemporaries', 'contemporaneos', 'actuales', 'actual'].includes(s)) return 'coetaneos';
   if (['leyendas', 'leyenda', 'legends', 'legend'].includes(s)) return 'leyendas';
   return null;
 }
@@ -205,6 +205,59 @@ export function resolverIdea(v) {
   if (/^(https:\/\/|\/[^/]|data:image\/)/i.test(s)) return { on: true, id: 'url', src: s, es: 'Imagen propia', en: 'Custom image', pie: '', pieEn: '' };
   // Carlos 20-11 (t117u): «por defecto es sin idea». Vacío o desconocido → apagada (sigue disponible como opción).
   return { on: false, ...IDEAS_PRESET[0] };
+}
+
+/** Carlos 24-11 (t402u/t403u): «show the idea» debe arrancar la idea (mapa de PortAventura
+ *  en el centro de la mesa) y quedarse en la mesa elegida, no saltar solo a Coetáneos.
+ *  Acepta la frase natural (con o sin /), /idea on|off y un consejo opcional:
+ *  Leyendas o Actuales (coetáneos). Devuelve {tipo:'idea', on, mesa, src} o null. */
+export function comandoMostrarIdea(texto) {
+  const raw = String(texto == null ? '' : texto).trim();
+  const s = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[¿?¡!.,;:"'“”‘’]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\//, '');
+  if (!s) return null;
+
+  function mesaDeToken(tok) {
+    if (!tok) return null;
+    if (/^(actuales|actual)$/.test(tok)) return 'coetaneos';
+    return parseMesa(tok);
+  }
+  function parteMesaYValor(resto) {
+    const bits = String(resto || '').trim().split(' ').filter(Boolean);
+    let on = true;
+    let mesa = null;
+    let src = null;
+    let vioVerbo = false;
+    for (const p of bits) {
+      if (/^(on|si|mostrar|show|defecto|default)$/.test(p)) { on = true; vioVerbo = true; continue; }
+      if (/^(off|no|fuera|ocultar|hide)$/.test(p)) { on = false; vioVerbo = true; continue; }
+      const m = mesaDeToken(p);
+      if (m) { mesa = m; continue; }
+      if (/^https:\/\//i.test(p) || IDEAS_PRESET.some((x) => x.id === p)) { src = p; continue; }
+      return { error: 'Usa /idea, /idea on|off, «show the idea» o «show the idea leyendas|actuales»' };
+    }
+    return { tipo: 'idea', on: vioVerbo ? on : true, mesa, src };
+  }
+
+  if (/^(hide the idea|ocultar la idea|oculta la idea)$/.test(s)) {
+    return { tipo: 'idea', on: false, mesa: null, src: null };
+  }
+  const frase = s.match(/^(show the idea|mostrar la idea|muestra la idea|ensena la idea|arrancar la idea|lanza la idea|lanzar la idea)(?:\s+(.+))?$/);
+  if (frase) {
+    const extra = (frase[2] || '').trim();
+    if (!extra) return { tipo: 'idea', on: true, mesa: null, src: null };
+    const r = parteMesaYValor(extra);
+    if (r.error) return r;
+    r.on = true;
+    return r;
+  }
+  const m = s.match(/^idea(?:\s+(.+))?$/);
+  if (!m) return null;
+  const a = (m[1] || '').trim();
+  if (!a) return { tipo: 'idea', on: null, mesa: null, src: null }; // alterna
+  if (/^(off|no|fuera|ocultar|hide)$/.test(a)) return { tipo: 'idea', on: false, mesa: null, src: null };
+  if (/^(on|si|mostrar|show|defecto|default)$/.test(a)) return { tipo: 'idea', on: true, mesa: null, src: null };
+  return parteMesaYValor(a);
 }
 
 /** Idioma de las voces y del texto de Escena 0: 'es' (por defecto) o 'en'. */

@@ -45,7 +45,9 @@ export const ALIAS = {
   "musk": "elon-musk",
   "jensen": "jensen-huang",
   "huang": "jensen-huang",
+  "mira": "mira-murati",
   "murati": "mira-murati",
+  "trinity": "mira-murati",
   "porat": "ruth-porat",
   "lasseter": "john-lasseter",
   "ive": "jony-ive",
@@ -67,13 +69,22 @@ export function slug(s) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+// Voces Grok documentadas como femeninas (xAI TTS, 2026).
+export const VOCES_FEMENINAS_GROK = ["ara", "aurora", "carina", "celeste", "eve", "iris", "liora", "luna", "ursa"];
+
+export function esVozFemeninaGrok(id) {
+  return VOCES_FEMENINAS_GROK.includes(String(id || "").toLowerCase());
+}
+
 export function resolver(persona) {
   const s = slug(persona);
   const key = VOCES_GROK[s] ? s : (ALIAS[s] || null);
   if (!key || !VOCES_GROK[key]) return null;
   const v = VOCES_GROK[key];
+  // Mira solo puede salir con una voz Grok femenina; si el id no lo es, no se resuelve.
+  if (key === "mira-murati" && !esVozFemeninaGrok(v.voice_id)) return null;
   const speed = Math.max(0.7, Math.min(1.5, Number(v.speed) || 1));
-  return { slug: key, voice_id: v.voice_id, speed, tono: v.tono };
+  return { slug: key, voice_id: v.voice_id, speed, tono: v.tono, genero: esVozFemeninaGrok(v.voice_id) ? "f" : "m" };
 }
 
 export function limpiarTexto(text, max = TTS_MAX_CHARS) {

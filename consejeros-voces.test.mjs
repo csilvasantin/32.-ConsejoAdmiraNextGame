@@ -49,9 +49,11 @@ test('en un Mac con las voces de serie, cada consejero suena con una de sus voce
   assert.ok(nVoces >= 9 && nVoces <= 11, 'voces distintas: ' + nVoces);
   assert.equal(V.profile('Walt Disney').voiceName, 'Grandpa (Español (España))');
   assert.equal(V.profile('George Lucas').voiceName, 'Rocko (Español (España))');
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Mira Murati').voiceName, 'Mónica');
+  assert.equal(V.generoDe(V.profile('Mira Murati').voice), 'f');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
   assert.equal(V.generoDe(V.profile('Steve Jobs').voice), 'f');
-  assert.notEqual(V.profile('Mira Murati').voiceName, 'Mónica', 'Murati cede Mónica a Jobs (prioridad 1)');
+  assert.notEqual(V.profile('Steve Jobs').voiceName, V.profile('Mira Murati').voiceName);
   const usos = {}; for (const p of perf) usos[p.voiceName] = (usos[p.voiceName] || 0) + 1;
   assert.ok(Math.max(...Object.values(usos)) <= 3, JSON.stringify(usos));
   // las mujeres nunca caen en voz masculina conocida
@@ -157,31 +159,33 @@ test('Jobs y Elon: Jobs voz femenina provisional, Elon Reed, nunca la misma voz 
     if (!b.voice) assert.equal(V.speak('Elon Musk', 'hola'), false);
   }
   V._setVoicesForTest(MAC);
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
   assert.equal(V.profile('Elon Musk').voiceName, 'Reed (Español (España))');
 });
 
-test('Chrome en Mac: Jobs voz femenina (Mónica) y nunca Eddy; Elon sigue en Reed', () => {
+test('Chrome en Mac: Mira toma Mónica; Jobs voz femenina (Paulina) y nunca Eddy; Elon sigue en Reed', () => {
   const nombres = ['Eddy', 'Flo', 'Grandma', 'Grandpa', 'Reed', 'Rocko', 'Sandy', 'Shelley'];
   const CHROME = [...nombres.map(n => v(n + ' (español (España))', 'es-ES')), ...nombres.map(n => v(n + ' (español (México))', 'es-MX')),
     v('Mónica', 'es-ES'), v('Paulina', 'es-MX'), v('Google español', 'es-ES'), v('Google español de Estados Unidos', 'es-US')];
   V._setVoicesForTest(CHROME);
-  const jobs = V.profile('Steve Jobs'), elon = V.profile('Elon Musk');
-  assert.equal(jobs.voiceName, 'Mónica');
+  const jobs = V.profile('Steve Jobs'), elon = V.profile('Elon Musk'), mira = V.profile('Mira Murati');
+  assert.equal(mira.voiceName, 'Mónica');
+  assert.equal(V.generoDe(mira.voice), 'f');
+  assert.equal(jobs.voiceName, 'Paulina');
   assert.equal(V.generoDe(jobs.voice), 'f');
   assert.doesNotMatch(jobs.voiceName, /Eddy/i);
   assert.notEqual(elon.voiceName, jobs.voiceName);
   assert.equal(elon.voiceName, 'Reed (español (España))');
   assert.equal(jobs.rate, 0.95); assert.equal(jobs.pitch, 1.05);
-  // con Jorge instalado, Jobs se queda en Mónica (provisional), no vuelve a Jorge
+  // con Jorge instalado, Jobs se queda en Paulina (Mira tiene Mónica), no vuelve a Jorge
   V._setVoicesForTest([v('Jorge', 'es-ES'), ...CHROME]);
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
 });
 
 test('Jobs provisional: un Jorge guardado en localStorage o en prefs compartidas no pisa la voz femenina', async () => {
   V._setVoicesForTest(MAC);
   store['admira_voces_v1'] = JSON.stringify({ 'steve-jobs': { voice: 'Jorge', rate: 0.88, pitch: 0.75 } });
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
   assert.equal(V.profile('Steve Jobs').via, 'casting');
   // una personalización NUEVA (con sello) sí se respeta
   V.setOverride('Steve Jobs', { voice: 'Paulina' });
@@ -190,13 +194,13 @@ test('Jobs provisional: un Jorge guardado en localStorage o en prefs compartidas
   const local = JSON.parse(store['admira_voces_v1']);
   assert.equal(local['steve-jobs'].sello, V.JOBS_SELLO);
   V.resetOverride('Steve Jobs');
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
   // prefs compartidas antiguas (sin sello) tampoco pisan; las de otro consejero siguen
   const fakeFetch = async (url, opts) => ({
     json: async () => ({ ok: true, customize: { voices: { 'steve-jobs': { voice: 'Jorge' }, 'walt-disney': { voice: 'Rocko (Español (España))' } } } })
   });
   await V.loadShared(fakeFetch);
-  assert.equal(V.profile('Steve Jobs').voiceName, 'Mónica');
+  assert.equal(V.profile('Steve Jobs').voiceName, 'Paulina');
   assert.equal(V.profile('Walt Disney').voiceName, 'Rocko (Español (España))');
 });
 
@@ -280,4 +284,56 @@ test('sí se cancela si se interrumpe una locución en curso', () => {
   assert.equal(V.speaking(), true);
   assert.equal(V.speak('Elon Musk', 'la siguiente'), true);
   assert.ok(cancelled >= 1, 'cancelar al interrumpir');
+});
+
+test('Mira, Murati y Trinity son la misma consejera y solo hablan con voz de mujer', () => {
+  assert.equal(V.casting('Trinity').persona, 'Mira Murati');
+  assert.equal(V.casting('Mira').persona, 'Mira Murati');
+  assert.equal(V.casting('Murati').persona, 'Mira Murati');
+  assert.equal(V.esMira('Trinity'), true);
+  assert.equal(V.esMira('Steve Jobs'), false);
+  V._setVoicesForTest(MAC);
+  for (const n of ['Mira Murati', 'Trinity', 'Mira', 'Murati']) {
+    const p = V.profile(n);
+    assert.ok(V.esVozFemenina(p.voice), n);
+    assert.match(p.voice.lang, /^es/i, n);
+  }
+  assert.equal(V.profile('Mira Murati').voiceName, 'Mónica');
+  assert.equal(V.speak('Trinity', 'Hola, soy Mira.'), true);
+  assert.equal(spoken.at(-1).voice && spoken.at(-1).voice.name, 'Mónica');
+});
+
+test('si no hay voz femenina en español, Mira no habla: solo queda el texto', () => {
+  spoken.length = 0;
+  V._setVoicesForTest([
+    v('Jorge', 'es-ES'), v('Juan', 'es-MX'), v('Reed (Español (España))', 'es-ES'),
+    v('Eddy (Español (España))', 'es-ES'), v('Samantha', 'en-US'),
+  ]);
+  const p = V.profile('Trinity');
+  assert.equal(p.voice, null);
+  assert.equal(p.via, 'sin-voces');
+  assert.equal(V.puedeHablar('Mira Murati'), false);
+  assert.equal(V.speak('Mira Murati', 'Hola, soy Mira.'), false);
+  assert.equal(spoken.length, 0);
+});
+
+test('Google Español no cuenta como voz femenina y Mira no la usa', () => {
+  assert.notEqual(V.generoDe(v('Google español', 'es-ES')), 'f');
+  assert.notEqual(V.generoDe(v('Google español de Estados Unidos', 'es-US')), 'f');
+  V._setVoicesForTest([v('Google español', 'es-ES'), v('Jorge', 'es-ES'), v('Reed (Español (España))', 'es-ES')]);
+  const p = V.profile('Mira Murati');
+  assert.equal(p.voice, null);
+  assert.equal(p.via, 'sin-voces');
+  assert.equal(V.speak('Mira', 'Hola'), false);
+});
+
+test('un Jorge guardado en localStorage no hace hablar a Mira con voz de hombre', () => {
+  V._setVoicesForTest(MAC);
+  store['admira_voces_v1'] = JSON.stringify({ 'mira-murati': { voice: 'Jorge', rate: 1, pitch: 1 } });
+  const p = V.profile('Mira Murati');
+  assert.notEqual(p.voiceName, 'Jorge');
+  assert.equal(V.generoDe(p.voice), 'f');
+  assert.equal(p.voiceName, 'Mónica');
+  delete store['admira_voces_v1'];
+  V._setVoicesForTest(MAC);
 });

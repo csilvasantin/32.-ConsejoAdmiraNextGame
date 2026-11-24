@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolver, limpiarTexto, VOCES_GROK, vocesUsadas, TTS_MAX_CHARS } from './consejeros-voces-grok.mjs';
+import { resolver, limpiarTexto, VOCES_GROK, vocesUsadas, TTS_MAX_CHARS, esVozFemeninaGrok } from './consejeros-voces-grok.mjs';
 
 test('los 16 consejeros y los dos invitados tienen voz Grok distinta', () => {
   const personas = [
@@ -46,4 +46,14 @@ test('limpia y recorta el texto', () => {
   const largo = 'a'.repeat(TTS_MAX_CHARS + 50);
   assert.equal(limpiarTexto(largo).length, TTS_MAX_CHARS);
   assert.ok(vocesUsadas().includes('atlas'));
+});
+
+test('Mira, Murati y Trinity resuelven a la misma voz Grok femenina', () => {
+  const m = resolver('Mira Murati');
+  assert.equal(resolver('Mira').slug, 'mira-murati');
+  assert.equal(resolver('Trinity').slug, 'mira-murati');
+  assert.equal(resolver('Murati').voice_id, m.voice_id);
+  assert.ok(esVozFemeninaGrok(m.voice_id), m.voice_id);
+  assert.equal(m.genero, 'f');
+  assert.equal(m.voice_id, 'celeste');
 });

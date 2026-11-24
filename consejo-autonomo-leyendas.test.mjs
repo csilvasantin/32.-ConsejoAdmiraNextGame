@@ -87,7 +87,7 @@ test('la home y Escena 0 están cableados al modo autónomo', () => {
   const escenaHtml = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
   const demo = readFileSync(new URL('./assets/consejo-demo.js', import.meta.url), 'utf8');
   const auto = readFileSync(new URL('./assets/consejo-autonomo.js', import.meta.url), 'utf8');
-  assert.match(home, /assets\/consejo-autonomo\.js\?v=20261124-autonomo/);
+  assert.match(home, /assets\/consejo-autonomo\.js\?v=20261124-mira/);
   assert.match(auto, /parseAutonomoUrl/);
   assert.match(auto, /speechSynthesis/);
   assert.match(auto, /IdeaMesa/);
@@ -118,4 +118,24 @@ test('el audio se desbloquea y se locuta la primera línea dentro del clic, sin 
   assert.doesNotMatch(hastaSeguir, /await\s+askBackend|resolverTurno\(/, 'el clic no espera al backend para la primera línea');
   assert.match(escena, /const hablaPrimero = hablar\(t0/);
   assert.match(escena, /desbloquearAudioEnClic\(\)/);
+});
+
+test('los subtítulos del modo autónomo se ven sin el verbo Conversación y por encima del mapa', () => {
+  const auto = readFileSync(new URL('./assets/consejo-autonomo.js', import.meta.url), 'utf8');
+  const escenaCss = readFileSync(new URL('./escena0/escena0.css', import.meta.url), 'utf8');
+  const escenaJs = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(auto, /autonomo-subtitulo/);
+  assert.match(auto, /inyectarCssSubtitulos/);
+  assert.match(auto, /z-index:40/);
+  assert.match(auto, /El texto se pinta siempre/);
+  assert.doesNotMatch(auto, /CouncilConversacion/);
+  assert.doesNotMatch(auto, /verb-conversacion/);
+  const fn = auto.slice(auto.indexOf('function arrancar'));
+  const hastaSeguir = fn.slice(0, fn.indexOf('seguirResto'));
+  assert.match(hastaSeguir, /mostrarBocadillo\(/);
+  assert.match(escenaJs, /mostrarGlobo\(/);
+  const globoZ = /#globo\s*\{[^}]*z-index:\s*(\d+)/.exec(escenaCss);
+  const ideaGrandeZ = /#idea\.grande[^}]*z-index:\s*(\d+)/.exec(escenaCss);
+  assert.ok(globoZ && ideaGrandeZ, 'reglas de z-index en escena0.css');
+  assert.ok(Number(globoZ[1]) > Number(ideaGrandeZ[1]), 'el globo queda por encima del mapa agrandado');
 });

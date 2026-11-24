@@ -52,7 +52,7 @@
     // diferenciarlo rápido de Elon (Reed). Luego se pondrá su voz real. No usar Eddy.
     { persona: "Steve Jobs", role: "CEO", gen: "leyendas", genero: "f", lang: "es-ES", rate: 0.95, pitch: 1.05,
       prefer: ["Monica", "Paulina", "Marisol", "Shelley", "Sandy", "Flo", "Elvira", "Helena", "Laura", "Grandma"],
-      prioridad: 1,
+      prioridad: 2,
       timbre: "Provisional: voz femenina (Mónica) para distinguirlo al vuelo de Elon. Luego, su voz real.",
       frase: "Hola, soy Steve Jobs. Menos ruido y más foco: ¿qué vamos a crear hoy?" },
     { persona: "Steve Wozniak", role: "CTO", gen: "leyendas", genero: "m", lang: "es-ES", rate: 1.06, pitch: 1.14,
@@ -85,7 +85,7 @@
       frase: "Soy George Lucas. Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?" },
     // ── Coetáneos ──
     { persona: "Elon Musk", role: "CEO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.2, pitch: 1.3,
-      prefer: ["Reed", "Gonzalo", "Eddy", "Tomas", "Juan", "Diego"], prioridad: 2, evita: ["steve-jobs"],
+      prefer: ["Reed", "Gonzalo", "Eddy", "Tomas", "Juan", "Diego"], prioridad: 3, evita: ["steve-jobs"],
       timbre: "Rápido y agudo, ideas que se atropellan: nunca suena como Jobs.",
       frase: "Soy Elon. Pensemos desde los primeros principios. ¿Qué límite rompemos?" },
     { persona: "Jensen Huang", role: "CTO", gen: "coetaneos", genero: "m", lang: "es-ES", rate: 1.1, pitch: 1.08,
@@ -93,7 +93,8 @@
       timbre: "Enérgico y entusiasta; el keynote que nunca baja el ritmo.",
       frase: "¡Soy Jensen! Cuanto más cómputo, más lejos llegamos. ¿Qué escalamos?" },
     { persona: "Mira Murati", role: "COO", gen: "coetaneos", genero: "f", lang: "es-ES", rate: 1.04, pitch: 1.0,
-      prefer: ["Elvira", "Monica", "Laura", "Google espanol", "Shelley"],
+      prefer: ["Monica", "Paulina", "Elvira", "Laura", "Helena", "Ximena", "Lucia", "Shelley"],
+      prioridad: 1,
       timbre: "Firme y precisa; investigadora que convierte el modelo en producto.",
       frase: "Soy Mira Murati. La inteligencia se construye con rigor. ¿Qué vamos a entrenar y hasta dónde?" },
     { persona: "Ruth Porat", role: "CFO", gen: "coetaneos", genero: "f", lang: "es-ES", rate: 0.96, pitch: 0.94,
@@ -119,11 +120,15 @@
   ];
   var BY_SLUG = {};
   CASTING.forEach(function (c) { c.slug = slug(c.persona); BY_SLUG[c.slug] = c; });
+  // Carlos 24-11-2026: Mira es la única mujer; Trinity y el nombre de pila apuntan a ella.
+  [["mira", "mira-murati"], ["murati", "mira-murati"], ["trinity", "mira-murati"]].forEach(function (par) {
+    if (!BY_SLUG[par[0]]) BY_SLUG[par[0]] = BY_SLUG[par[1]];
+  });
 
   // Nombres de voces de serie habituales, para adivinar el género (tests y
   // para no mezclar Jobs/Murati con una voz masculina de su propia lista).
   var FEMENINAS = ["monica", "paulina", "elvira", "laura", "helena", "ximena", "dalia", "elena", "salome",
-    "paloma", "catalina", "sabina", "shelley", "sandy", "flo", "grandma", "google espanol", "marisol",
+    "paloma", "catalina", "sabina", "shelley", "sandy", "flo", "grandma", "marisol",
     "lucia", "conchita", "penelope", "mia", "lupe", "abril", "irene", "estrella", "triz", "vera"];
   var MASCULINAS = ["jorge", "juan", "diego", "carlos", "alvaro", "pablo", "eddy", "reed", "rocko",
     "grandpa", "gonzalo", "tomas", "alonso", "lorenzo", "sebastian", "alex", "mateo", "manuel",
@@ -133,6 +138,13 @@
     for (var i = 0; i < FEMENINAS.length; i++) if (n.indexOf(FEMENINAS[i]) >= 0) return "f";
     for (var j = 0; j < MASCULINAS.length; j++) if (n.indexOf(MASCULINAS[j]) >= 0) return "m";
     return "";
+  }
+  function vozFemeninaEs(v) {
+    return !!(v && generoDe(v) === "f" && /^es([-_]|$)/i.test(v.lang || ""));
+  }
+  function esMira(persona) {
+    var c = casting(persona);
+    return !!(c && c.slug === "mira-murati");
   }
 
   // ── Voces del navegador ─────────────────────────────────────────────────────
@@ -240,6 +252,29 @@
         if (pref) out[c.slug] = { voice: pref, via: "casting" };
       });
     });
+    // Mira solo habla con voz femenina en español. Si no hay ninguna, no se le asigna voz.
+    (function asegurarMiraFemenina() {
+      var c = BY_SLUG["mira-murati"];
+      if (!c) return;
+      var a = out[c.slug];
+      if (a && vozFemeninaEs(a.voice)) return;
+      var candidatas = pool.filter(function (v) { return vozFemeninaEs(v); });
+      candidatas.sort(function (x, y) {
+        function score(v) {
+          var l = String(v.lang || "").toLowerCase().replace("_", "-");
+          var ocupada = used[v.voiceURI || v.name] ? 1 : 0;
+          return (l === "es-es" ? 0 : 2) + ocupada;
+        }
+        return score(x) - score(y);
+      });
+      if (candidatas[0]) {
+        var k = candidatas[0].voiceURI || candidatas[0].name;
+        used[k] = (used[k] || 0) + 1;
+        out[c.slug] = { voice: candidatas[0], via: "casting" };
+      } else {
+        out[c.slug] = { voice: null, via: "sin-voces" };
+      }
+    })();
     resolved = out;
     return out;
   }
@@ -333,6 +368,10 @@
     var v = null, via = auto.via;
     if (o.voice) { v = findByName(voices, o.voice); if (v) via = "personalizada"; }
     if (!v) v = auto.voice;
+    if (c.slug === "mira-murati" && !vozFemeninaEs(v)) {
+      v = vozFemeninaEs(auto.voice) ? auto.voice : null;
+      via = v ? auto.via : "sin-voces";
+    }
     return {
       persona: c.persona, slug: c.slug, role: c.role, gen: c.gen, genero: c.genero,
       lang: (v && v.lang) || c.lang,
@@ -506,6 +545,7 @@
       return false;
     }
     var c = casting(persona);
+    var quien = c ? c.persona : persona;
     // Invitados de Escena 0 (Carlos Silva, Carlo Bonomi) no están en el CASTING
     // de los 16, pero sí tienen voz Grok en el servidor.
     if (!c && !puedeGrok()) {
@@ -517,10 +557,10 @@
     var token = {}; current = token;
     var texto = trozos.join(" ");
     if (puedeGrok()) {
-      hablarGrok(c ? c.persona : persona, texto, opts, token);
+      hablarGrok(quien, texto, opts, token);
       return true;
     }
-    return hablarNavegador(c.persona, texto, opts, token);
+    return hablarNavegador(quien, texto, opts, token);
   }
   function preview(persona, opts) {
     var c = casting(persona); if (!c) return false;
@@ -556,8 +596,14 @@
     setOverride: setOverride, resetOverride: resetOverride, localOverrides: localOverrides,
     sharedOverrides: function () { return JSON.parse(JSON.stringify(shared)); },
     portadaOn: portadaOn, setPortada: setPortada, chunks: chunks, generoDe: generoDe,
+    esMira: esMira, esVozFemenina: vozFemeninaEs,
     puedeHablar: function (persona) {
       if (!casting(persona)) return false;
+      if (casting(persona).slug === "mira-murati") {
+        if (puedeGrok()) return true;
+        var pm = profile(persona);
+        return vozFemeninaEs(pm && pm.voice);
+      }
       if (puedeGrok()) return true;
       var p = profile(persona); return !!(p && p.voice);
     },

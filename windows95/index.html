@@ -398,9 +398,13 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #shut.more .l2,#shut.more .l3{opacity:1}
 #ghost{position:absolute;left:0;top:0;width:13px;height:20px;z-index:9500;pointer-events:none;display:none}
 </style>
+<link rel="stylesheet" href="/assets/win95-crt.css?v=20261125-crt">
 </head>
 <body class="attract">
-<div id="stage">
+<div id="crt-shell">
+  <div id="crt-monitor">
+    <div id="crt-screen">
+      <div id="stage">
   <div id="desk">
     <div id="wall"><div class="art"></div></div>
     <!-- Bloc de notas -->
@@ -602,6 +606,19 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
   <div id="shut"><div class="wait">Espere mientras se apaga el equipo...</div><div class="l1">Ya puede apagar el equipo.</div><div class="l2">...o mejor, venir a 2026.</div><div class="l3">ADMIRANEXT · ADMIRA.TV</div></div>
   <canvas id="ssaver" width="640" height="480"></canvas>
   <div id="ghost"><svg width="13" height="20" viewBox="0 0 13 20"><path d="M.5.5v16l4-4 2.6 6 2.4-1-2.6-6h5.6z" fill="#fff" stroke="#000" stroke-linejoin="miter"/></svg></div>
+</div>
+      <div id="crt-fx" aria-hidden="true"><div class="vig"></div><div class="scan"></div><div class="glass"></div></div>
+    </div>
+    <div id="crt-chin">
+      <div id="crt-badge">ADMIRA</div>
+      <div id="crt-buttons" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <button type="button" id="crt-power" aria-label="Apagar. Salir (Esc).">
+        <span class="crt-led"></span>
+        <svg class="crt-glyph" viewBox="0 0 10 10" aria-hidden="true"><path d="M4.5 1.2v4.2h1V1.2z" fill="currentColor"/><path d="M5 8.6A3.3 3.3 0 1 1 7.4 2.7l-.7.7A2.3 2.3 0 1 0 5 7.6a2.3 2.3 0 0 0 2-.1l.6.8A3.3 3.3 0 0 1 5 8.6z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="crt-stand"><div class="neck"></div><div class="base"></div></div>
 </div>
 
 <script src="admira_api_content.js"></script>
@@ -1081,7 +1098,7 @@ function renderPlaylist(){
    ESCRITORIO Y VENTANAS
    ========================================================= */
 var stage,desk,ghostEl,ctaEl,hintEl,SCALE=1,Z=100;
-function fit(){ var vw=window.innerWidth, vh=window.innerHeight; SCALE=Math.min(vw/640,vh/480); var l=Math.round((vw-640*SCALE)/2), t=Math.round((vh-480*SCALE)/2); stage.style.transform='translate('+l+'px,'+t+'px) scale('+SCALE+')'; }
+function fit(){ var shell=document.getElementById('crt-shell')||stage, sw=784, sh=716, vw=window.innerWidth, vh=window.innerHeight; SCALE=Math.min(vw/sw,vh/sh); var l=Math.round((vw-sw*SCALE)/2), t=Math.round((vh-sh*SCALE)/2); shell.style.transform='translate('+l+'px,'+t+'px) scale('+SCALE+')'; if(stage&&stage!==shell) stage.style.transform=''; }
 function centerOf(el){ var r=el.getBoundingClientRect(), s=stage.getBoundingClientRect(); return {x:(r.left+r.width/2-s.left)/SCALE, y:(r.top+r.height/2-s.top)/SCALE}; }
 function bumpZ(){
   Z++;
@@ -2731,6 +2748,7 @@ function boot(){
 }
 })();
 </script>
+<script src="/assets/win95-crt.js?v=20261125-crt"></script>
 <script src="/assets/win95-fs.js?v=20261125-fs"></script>
 </body>
 </html>

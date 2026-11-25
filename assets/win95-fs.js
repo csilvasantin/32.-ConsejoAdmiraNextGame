@@ -77,6 +77,10 @@
     if (!esPagina()) return;
     salir();
   }, true);
+  document.addEventListener("win95-crt-power", function () {
+    if (esPagina()) salir();
+    else if (!elFS()) history.back();
+  });
   document.addEventListener("fullscreenchange", pinta);
   document.addEventListener("webkitfullscreenchange", pinta);
   pinta();

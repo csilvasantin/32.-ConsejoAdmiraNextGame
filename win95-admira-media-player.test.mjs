@@ -18,7 +18,7 @@ test('t1393u: la playlist de fábrica cubre #win95, #WindowsMediaPlayer y #Admir
 test('t1393u: en modo ventana el contador i/x va al lado de En Directo y no se inventa', () => {
   assert.match(html, /<span id="mpLive"><i><\/i>SIN SEÑAL<\/span><span id="mpPos" hidden><\/span>/);
   assert.match(html, /function mpPosText\(\)\{/);
-  assert.match(html, /if\(!MP\.known\) return '';/);
+  assert.match(html, /if\(!MP\.known&&!x\) return '';/);
   assert.match(html, /if\(!x\) return '0\/0';/);
   assert.match(html, /function mpUpdatePos\(\)\{/);
   assert.match(html, /#mpw\.fs #mpPos,#mpw:fullscreen #mpPos/);

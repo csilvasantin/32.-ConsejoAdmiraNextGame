@@ -245,6 +245,7 @@ export function publico(c) {
     url: c.url || "",
     thumb: c.thumb || "",
     size: Number(c.size) > 0 ? Number(c.size) : 0,
+    tipo: String(c.tipo || "").slice(0, 40),
   };
 }
 
@@ -299,4 +300,55 @@ export async function leerCatalogo(fetchImpl, { ahora = Date.now(), forzar = fal
   const at = ahora || Date.now();
   cache = { at, total: canciones.length, canciones };
   return { ok: true, total: canciones.length, canciones, at, cached: false };
+}
+
+export const TAG_WINAMP = "winamp";
+export const TAG_MEDIA = "AdmiraMediaPlayer";
+
+export function esVideoPieza(p) {
+  const typ = String((p && (p.tipo || p.type)) || "").toLowerCase();
+  const mime = String((p && p.mime) || "").toLowerCase();
+  const url = String((p && p.url) || "");
+  if (typ === "video") return true;
+  if (mime.startsWith("video/")) return true;
+  if (/\.(mp4|webm|mkv|mov)(\?|$)/i.test(url)) return true;
+  return false;
+}
+
+export function esAudioPieza(p) {
+  const typ = String((p && (p.tipo || p.type)) || "").toLowerCase();
+  const mime = String((p && p.mime) || "").toLowerCase();
+  if (typ === "audio" || typ === "music") return true;
+  if (typ === "video") return false;
+  if (mime.startsWith("audio/")) return true;
+  if (mime.startsWith("video/")) return false;
+  return !esVideoPieza(p);
+}
+
+export function tagDescarga(p) {
+  return esVideoPieza(p) ? TAG_MEDIA : TAG_WINAMP;
+}
+
+export function extDescarga(p) {
+  if (esVideoPieza(p)) {
+    const m = String((p && p.url) || "").match(/\.(mp4|webm|mkv|mov)(\?|$)/i);
+    return (m && m[1] ? m[1].toLowerCase() : "mp4");
+  }
+  return "mp3";
+}
+
+export function nombreArchivo(p) {
+  const artista = String((p && (p.artista || p.artist)) || "").trim();
+  const titulo = String((p && (p.titulo || p.title || p.id)) || "archivo").trim() || "archivo";
+  const base = (artista ? artista + " - " + titulo : titulo).replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+  return base + "." + extDescarga(p);
+}
+
+export function tieneHashtag(tags, nombre) {
+  const n = norm(nombre);
+  if (!n) return false;
+  for (const t of Array.isArray(tags) ? tags : []) {
+    if (norm(t) === n) return true;
+  }
+  return false;
 }

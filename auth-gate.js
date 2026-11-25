@@ -466,7 +466,21 @@
         ready(unlock);
         return;
       }
-      loadGoogle();
+      kioscoOGoogle();
     })
-    .catch(loadGoogle);
+    .catch(kioscoOGoogle);
+
+  // Kiosco (Carlos, 25-nov-2026, t1383u: Win95 Xperience en la tapa del iPhone Duo): una pantalla que entró por
+  // GET /puerta/kiosco ya tiene la cookie de www firmada por el servidor (HttpOnly, tipo «kiosco»), pero no sesión
+  // de FleetControl. Si el servidor la reconoce (/puerta/estado), entra como kiosco de solo lectura (sin csrf, como
+  // un agente de lectura). Sin cookie de kiosco, el login de Google de siempre.
+  function kioscoOGoogle() {
+    fetch("/puerta/estado", { credentials:"same-origin", cache:"no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (e) {
+        if (e && e.ok === true && e.tipo === "kiosco") { entrarAgente({ name: "kiosco" }); return; }
+        loadGoogle();
+      })
+      .catch(loadGoogle);
+  }
 })();

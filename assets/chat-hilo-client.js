@@ -111,6 +111,17 @@
     try { root.dispatchEvent(new root.CustomEvent("chat-hilo-sesion", { detail: { email: d.email } })); } catch (e) {}
     return true;
   }
+  function nombreDesdeEmail(email) {
+    var e = String(email || "").toLowerCase().trim();
+    if (e === "csilva@admira.com" || e === "csilvasantin@gmail.com") return "Carlos";
+    var local = (e.split("@")[0] || "").split(/[._+-]/)[0] || "";
+    if (!local) return "";
+    return local.charAt(0).toUpperCase() + local.slice(1);
+  }
+  function nombreSesion() {
+    var a = avisoSesion();
+    return a && a.email ? nombreDesdeEmail(a.email) : "";
+  }
   function credencial() {
     var s = almacen();
     if (s) {
@@ -154,7 +165,7 @@
     opts = opts || {};
     var jwt = credencial(), f = opts.fetch || root.fetch.bind(root);
     if (!jwt) return Promise.resolve({ status: 401, ok: false, turnos: [] });
-    return f((opts.base || "") + "/api/chat/hilo?persona=" + encodeURIComponent(persona) + "&limite=" + (opts.limite || 200), { cache: "no-store", headers: { Authorization: "Bearer " + jwt } })
+    return f((opts.base || "") + "/api/chat/hilo?persona=" + encodeURIComponent(persona) + "&limite=" + (opts.limite || 200), { cache: "no-store", credentials: "same-origin", headers: { Authorization: "Bearer " + jwt } })
       .then(function (r) {
         if (r.status === 401) { olvidar(); return { status: 401, ok: false, turnos: [] }; }
         return r.json().then(function (d) { return { status: r.status, ok: !!(d && d.ok), turnos: (d && d.turnos) || [] }; });
@@ -164,10 +175,12 @@
     opts = opts || {};
     var jwt = credencial(), f = opts.fetch || root.fetch.bind(root);
     if (!jwt) return Promise.resolve({ status: 401, turno: null });
-    return f((opts.base || "") + "/api/chat/enviar", { method: "POST", cache: "no-store", headers: { "content-type": "application/json", Authorization: "Bearer " + jwt }, body: JSON.stringify({ persona: persona, texto: texto, msg_id: msgId }) })
+    var cuerpo = { persona: persona, texto: texto, msg_id: msgId };
+    if (opts.canal) cuerpo.canal = opts.canal;
+    return f((opts.base || "") + "/api/chat/enviar", { method: "POST", cache: "no-store", credentials: "same-origin", headers: { "content-type": "application/json", Authorization: "Bearer " + jwt }, body: JSON.stringify(cuerpo) })
       .then(function (r) {
         if (r.status === 401) olvidar();
-        return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, turno: (d && d.turno) || null }; });
+        return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, turno: (d && d.turno) || null, error: d && d.error, espera_s: d && d.espera_s }; });
       });
   }
 
@@ -197,7 +210,7 @@
     CLIENT_ID: CLIENT_ID, CLAVE: CLAVE, ORIGEN: ORIGEN, ESTADO: ESTADO, PERSONAS: PERSONAS,
     esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado, origenTurno: origenTurno, horaMadrid: horaMadrid, metaTurno: metaTurno,
     fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
-    credencial: credencial, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion,
+    credencial: credencial, nombreSesion: nombreSesion, nombreDesdeEmail: nombreDesdeEmail, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion,
     leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
   };
   if (root.document && root.fetch && root.location && /admira\.live$|pages\.dev$|localhost$/.test(root.location.hostname || "")) restaurarSesion();

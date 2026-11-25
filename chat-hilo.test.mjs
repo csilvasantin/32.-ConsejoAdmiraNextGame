@@ -93,7 +93,7 @@ test("Google: solo ID tokens válidos de las cuentas de Carlos", async () => {
 });
 
 import * as enviarApi from "./functions/api/chat/enviar.js";
-import { textoEncargo, porSincronizar, turnoDeEncargo } from "./chat-hilo-lib.mjs";
+import { textoEncargo, porSincronizar, turnoDeEncargo, limpiarTextoVisita, identidadDeEmail, mensajeLimpio, MAX_TEXTO_WIN95 } from "./chat-hilo-lib.mjs";
 
 test("enviar: guarda turno live, crea UN encargo [chat-coetaneos] y es idempotente", async () => {
   const e = { ...env(), ADMIRA_TELEGRAM_PANEL_KEY: "panel-key" };
@@ -140,6 +140,64 @@ test("enviar: fallo del bot-inbox queda en error, sin token de panel 503", async
   const r = await enviarApi.onRequestPost({ request: req2, env: e, fetchImpl: async () => new Response("{}", { status: 500 }) });
   assert.equal(r.status, 502);
   assert.equal((await r.json()).turno.entrega, "error");
+});
+
+
+test("identidad: el nombre sale del email y se recorta el prefijo de visita", () => {
+  assert.deepEqual(identidadDeEmail("csilva@admira.com"), { corto: "Carlos", completo: "Carlos Silva", email: "csilva@admira.com" });
+  assert.deepEqual(identidadDeEmail("csilvasantin@gmail.com"), { corto: "Carlos", completo: "Carlos Silva", email: "csilvasantin@gmail.com" });
+  assert.equal(identidadDeEmail("caja").corto, "Carlos");
+  assert.equal(identidadDeEmail("ana.lopez@admira.com").corto, "Ana");
+  assert.equal(limpiarTextoVisita("[Visita ITCrowd · Win95 — charla de un visitante, no es un encargo] Hola"), "Hola");
+  assert.equal(limpiarTextoVisita("  Hola  "), "Hola");
+  const t95 = { id: "live-1", texto: "Hola desde ICQGram", canal: "win95", ts: "2026-11-25T17:00:00.000Z" };
+  const enc = textoEncargo("huang", [], t95, "https://www.admira.live", identidadDeEmail("csilva@admira.com"));
+  assert.match(enc, /\[chat-coetaneos\]/);
+  assert.match(enc, /Carlos Silva → Jensen Huang/);
+  assert.match(enc, /ICQGram \(Vuelta al 95\)/);
+  assert.match(enc, /desde ICQGram \(admira\.live\/windows95\)/);
+  assert.equal(enc.includes("no es un encargo"), false);
+  assert.equal(enc.includes("Visita ITCrowd"), false);
+  const m = mensajeLimpio("huang", t95, "csilva@admira.com");
+  assert.equal(m.autor, "Carlos Silva");
+  assert.equal(m.autor_corto, "Carlos");
+  assert.equal(m.origen, "admira.live/windows95");
+  assert.equal(m.canal, "icqgram/huang");
+  const mCaja = mensajeLimpio("jobs", { id: "live-2", texto: "Prueba", ts: t95.ts }, "caja");
+  assert.equal(mCaja.autor, "Carlos Silva");
+  assert.equal(mCaja.origen, "admira.live");
+});
+
+test("enviar win95: recorta el prefijo, firma como Carlos, tope 300 y 20 s por usuario", async () => {
+  const e = { ...env(), ADMIRA_TELEGRAM_PANEL_KEY: "panel-key" };
+  const llamadas = [];
+  const fetchImpl = async (url, init) => { llamadas.push({ url, init }); return new Response(JSON.stringify({ ok: true, id: 7708 }), { status: 200 }); };
+  const req = (body) => new Request("https://www.admira.live/api/chat/enviar", { method: "POST", headers: { "X-Council-Token": TOKEN }, body: JSON.stringify(body) });
+  const largo = await enviarApi.onRequestPost({ request: req({ persona: "huang", texto: "x".repeat(MAX_TEXTO_WIN95 + 1), msg_id: "live-w1", canal: "win95" }), env: e, fetchImpl });
+  assert.equal(largo.status, 400);
+  const r = await enviarApi.onRequestPost({ request: req({ persona: "huang", texto: "[Visita ITCrowd · Win95 — charla de un visitante, no es un encargo] Prueba de identidad ICQGram", msg_id: "live-w2", canal: "win95" }), env: e, fetchImpl });
+  assert.equal(r.status, 201);
+  const d = await r.json();
+  assert.equal(d.turno.encargo, 7708);
+  assert.equal(d.turno.autor_nombre, "Carlos");
+  const cuerpo = JSON.parse(llamadas[0].init.body);
+  assert.equal(cuerpo.from, "Admira.live · ICQGram/huang");
+  assert.equal(cuerpo.mensaje.autor, "Carlos Silva");
+  assert.equal(cuerpo.mensaje.autor_corto, "Carlos");
+  assert.equal(cuerpo.mensaje.texto, "Prueba de identidad ICQGram");
+  assert.equal(cuerpo.mensaje.origen, "admira.live/windows95");
+  assert.equal(cuerpo.target_persona, "Huang");
+  assert.match(cuerpo.text, /Carlos Silva → Jensen Huang/);
+  assert.equal(cuerpo.text.includes("no es un encargo"), false);
+  const r2 = await enviarApi.onRequestPost({ request: req({ persona: "huang", texto: "Segundo mensaje", msg_id: "live-w3", canal: "win95" }), env: e, fetchImpl });
+  assert.equal(r2.status, 429);
+  const e2 = await r2.json();
+  assert.ok(e2.espera_s >= 1 && e2.espera_s <= 20);
+  // Un reintento del mismo msg_id no cuenta como mensaje nuevo.
+  const dup = await enviarApi.onRequestPost({ request: req({ persona: "huang", texto: "Prueba de identidad ICQGram", msg_id: "live-w2", canal: "win95" }), env: e, fetchImpl });
+  assert.equal(dup.status, 200);
+  assert.equal((await dup.json()).duplicado, true);
+  assert.equal(llamadas.length, 1);
 });
 
 test("texto del encargo cabe en 4000 y sincronizar ignora lo ya respondido", () => {
@@ -192,10 +250,14 @@ test("cliente compartido: /chat/jobs/ y la home cargan el mismo módulo", () => 
   assert.match(home, /src="assets\/chat-hilo-client\.js[^"]*"><\/script>\s*<script defer src="council-grokbot\.js/);
   assert.doesNotMatch(jobs, /\/\*sondeo:inicio\*\//);
 });
-test("cliente compartido: personaDe solo activa el hilo para Steve Jobs", () => {
+test("cliente compartido: personaDe mapea a los seis consejeros y rechaza el resto", () => {
   const C = cliente();
   assert.equal(C.personaDe("Steve Jobs"), "jobs");
-  assert.equal(C.personaDe("Steve Wozniak"), null);
+  assert.equal(C.personaDe("Steve Wozniak"), "wozniak");
+  assert.equal(C.personaDe("Walt Disney"), "disney");
+  assert.equal(C.personaDe("George Lucas"), "lucas");
+  assert.equal(C.personaDe("Elon Musk"), "musk");
+  assert.equal(C.personaDe("Jensen Huang"), "huang");
   assert.equal(C.personaDe("toString"), null);
   assert.equal(C.personaDe(null), null);
 });

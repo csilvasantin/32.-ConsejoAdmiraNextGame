@@ -14,6 +14,33 @@ export const MAX_TURNOS = 500;
 export const AVISO_MIN = 10;
 export const EMAILS_DEFECTO = ["csilva@admira.com", "csilvasantin@gmail.com"];
 export const GOOGLE_CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
+export const MAX_TEXTO_WIN95 = 300;
+export const MIN_GAP_WIN95_MS = 20000;
+/** Prefijo que ICQGram ponía en el cliente; el servidor lo recorta y ya no se usa. */
+export const PREFIJO_VISITA = /^\s*\[Visita[^\]]*\]\s*/i;
+const NOMBRES_EMAIL = {
+  "csilva@admira.com": { corto: "Carlos", completo: "Carlos Silva" },
+  "csilvasantin@gmail.com": { corto: "Carlos", completo: "Carlos Silva" },
+};
+
+/** Quita la etiqueta de «Visita… no es un encargo» si un cliente antiguo aún la manda. */
+export function limpiarTextoVisita(texto) {
+  return String(texto || "").replace(/\r\n/g, "\n").replace(PREFIJO_VISITA, "").trim();
+}
+
+/**
+ * Identidad visible a partir del email de la sesión (nunca de un nombre que mande el cliente).
+ * La caja (token de máquina) sigue firmando como Carlos Silva, que es quien la usa.
+ */
+export function identidadDeEmail(email) {
+  const e = String(email || "").toLowerCase().trim();
+  if (!e || e === "caja") return { corto: "Carlos", completo: "Carlos Silva", email: e === "caja" ? null : e };
+  if (NOMBRES_EMAIL[e]) return { corto: NOMBRES_EMAIL[e].corto, completo: NOMBRES_EMAIL[e].completo, email: e };
+  const local = (e.split("@")[0] || "").split(/[._+-]/)[0] || "usuario";
+  const corto = local.charAt(0).toUpperCase() + local.slice(1);
+  return { corto, completo: corto, email: e };
+}
+export const nombreDeEmail = (email) => identidadDeEmail(email).corto;
 
 export const claveHilo = (persona) => `chat:hilo:v1:${persona}`;
 const MSG_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{3,119}$/;
@@ -261,13 +288,20 @@ export const idRespuesta = (encargo) => `enc-${Number(encargo)}-resp`;
 const corto = (t, n) => { const s = String(t || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 
 /** Texto del encargo: marca [chat-coetaneos] (no sale a Ágora/Telegram), contexto del hilo e instrucciones. */
-export function textoEncargo(persona, turnos, turno, sitio = "https://www.admira.live") {
+export function textoEncargo(persona, turnos, turno, sitio = "https://www.admira.live", autor) {
+  const quien = autor || identidadDeEmail(turno && turno.autor);
+  const nombreAutor = (quien && quien.completo) || "Carlos Silva";
+  const nombreCorto = (quien && quien.corto) || "Carlos";
   const nombre = NOMBRES[persona] || persona;
+  const win95 = turno && turno.canal === "win95";
   const previos = (turnos || []).filter((t) => t.id !== turno.id).slice(-6);
-  const contexto = previos.map((t) => `${t.rol === "carlos" ? "Carlos" : nombre} (${t.origen}): ${corto(t.texto, 220)}`);
-  const cabecera = `${MARCA_CHAT} Carlos Silva → ${nombre} · hilo compartido admira.live`;
+  const contexto = previos.map((t) => `${t.rol === "carlos" ? (t.autor_nombre || nombreCorto) : nombre} (${t.origen}): ${corto(limpiarTextoVisita(t.texto), 220)}`);
+  const via = win95 ? " · ICQGram (Vuelta al 95)" : "";
+  const cabecera = `${MARCA_CHAT} ${nombreAutor} → ${nombre} · hilo compartido admira.live${via}`;
   const instruccion = `Lee el hilo ${sitio}/api/chat/hilo?persona=${persona} antes de contestar (hilo-jobs.sh leer 20) y responde EN EL HILO con rol ${persona}, origen rutina, msg_id enc-<número de este encargo>-resp (POST /api/chat/hilo). Cierra también este encargo con telegram_responder (done + la misma respuesta). Mensaje: msg_id ${turno.id}.`;
-  const pie = `Mensaje de Carlos Silva desde admira.live:\n${turno.texto}`;
+  const pie = win95
+    ? `Mensaje de ${nombreAutor} desde ICQGram (admira.live/windows95):\n${turno.texto}`
+    : `Mensaje de ${nombreAutor} desde admira.live:\n${turno.texto}`;
   let lineas = contexto;
   const montar = () => [cabecera, "Contexto:", lineas.length ? lineas.join("\n") : "(sin historial)", instruccion, pie].join("\n");
   while (montar().length > 3900 && lineas.length) lineas = lineas.slice(1);
@@ -309,9 +343,16 @@ export function conOrigen(t) { return { ...t, origen_etiqueta: origenDe(t), hora
 
 /** Mensaje limpio para Grok Bot: autor, origen y hora por separado del texto (sin cabeceras pegadas). */
 export function mensajeLimpio(persona, turno, autorEmail) {
+  const quien = identidadDeEmail(autorEmail);
+  const win95 = turno && turno.canal === "win95";
   return {
-    autor: "Carlos Silva", autor_email: autorEmail && autorEmail !== "caja" ? autorEmail : null, rol: "carlos",
-    origen: "admira.live", canal: "chat/" + persona, para: NOMBRES[persona] || persona,
+    autor: quien.completo,
+    autor_corto: quien.corto,
+    autor_email: quien.email,
+    rol: "carlos",
+    origen: win95 ? "admira.live/windows95" : "admira.live",
+    canal: win95 ? "icqgram/" + persona : "chat/" + persona,
+    para: NOMBRES[persona] || persona,
     ts: turno.ts, hora: horaMadrid(turno.ts), zona: "Europe/Madrid", texto: turno.texto, msg_id: turno.id,
   };
 }

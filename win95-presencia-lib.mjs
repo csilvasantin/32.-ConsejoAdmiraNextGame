@@ -87,8 +87,9 @@ export function despertar(turnos) {
  * latido: cuerpo de /consejeros/latido (o null). hilos: { persona: turnos[] | null }.
  * bandejas: { persona: items[] | null } (bandeja pública de bot.yokup.com, sin texto).
  */
-export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoSeg = VIVO_SEG, respuestaSeg = RESPUESTA_SEG } = {}) {
+export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoSeg = VIVO_SEG, respuestaSeg = RESPUESTA_SEG, cupo } = {}) {
   const ahoraS = Math.floor(ahoraMs / 1000);
+  const cupoDe = (k) => (cupo && cupo[k]) || { pct: null, motivo: "sin datos" };
   const lat = latido && latido.consejeros && typeof latido.consejeros === "object" ? latido.consejeros : null;
   const h = hilos || {}, b = bandejas || {};
   // 1) Evidencia individual de cada consejero.
@@ -109,7 +110,7 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
   const cuentas = {};
   for (const k of Object.keys(CUENTAS)) {
     const de = ind.filter((x) => x.c.cuenta === k);
-    if (!de.some((x) => x.datos)) { cuentas[k] = { cuenta: k, nombre: CUENTAS[k], online: null, motivo: "sin datos", ultima_respuesta: null, quien: null }; continue; }
+    if (!de.some((x) => x.datos)) { cuentas[k] = { cuenta: k, nombre: CUENTAS[k], online: null, motivo: "sin datos", ultima_respuesta: null, quien: null, cupo: cupoDe(k) }; continue; }
     const senal = (x) => Math.max(x.resp, x.sl > 0 && ahoraS - x.sl <= vivoSeg ? x.sl : 0);
     const ultima = de.reduce((m, x) => Math.max(m, senal(x)), 0);
     const quien = ultima ? (de.find((x) => senal(x) === ultima) || {}).c : null;
@@ -121,7 +122,8 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
     else if (rotos.length) { online = false; motivo = "despertar de webhook con fallo (" + rotos.map((x) => x.c.nombre + (x.d.codigo ? " " + x.d.codigo : "")).join(", ") + ") sin respuesta posterior"; }
     else if (viva.length) { online = true; motivo = "la cuenta responde: " + viva.map((x) => x.c.nombre).join(", ") + " con señal en 24 h"; }
     else { online = false; motivo = ultima ? "ningún consejero de la cuenta ha respondido en 24 h" : "la cuenta nunca ha respondido"; }
-    cuentas[k] = { cuenta: k, nombre: CUENTAS[k], online, motivo, ultima_respuesta: ultima || null, quien: quien ? quien.persona : null };
+    cuentas[k] = { cuenta: k, nombre: CUENTAS[k], online, motivo, ultima_respuesta: ultima || null, quien: quien ? quien.persona : null,
+      cupo: cupoDe(k) };
   }
   const consejeros = ind.map((x) => {
     const cu = cuentas[x.c.cuenta];
@@ -141,4 +143,53 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
     en_linea: consejeros.filter((c) => c.online === true).length,
     consejeros,
   };
+}
+
+/**
+ * % de cupo Grok Bot semanal de cada cuenta, a partir de las lecturas ya
+ * publicadas en /api/consumos/lecturas. Nunca inventa un número: si no hay
+ * lectura, o el reset de esa lectura ya pasó y no hay otra posterior, pct es
+ * null y el motivo queda en «sin datos».
+ * Leyendas = lecturas.leyendas (csilva@admira.com).
+ * Actuales = lecturas.coetaneos (csilvasantin@gmail.com).
+ */
+export const CUPO_MEDIDOR = "Grok Bot semanal";
+export const CUPO_ORIGEN = "/api/consumos/lecturas";
+const CUPO_MAPA = { leyendas: "leyendas", actuales: "coetaneos" };
+
+function edadCupo(ts, ahoraMs) {
+  if (!ts) return { edadH: null, edadTexto: null };
+  const edadH = Math.round(((ahoraMs - Date.parse(ts)) / 3600e3) * 10) / 10;
+  if (!(edadH > 6)) return { edadH, edadTexto: null };
+  return { edadH, edadTexto: "dato de hace " + (edadH >= 48 ? Math.floor(edadH / 24) + " días" : Math.round(edadH) + " h") };
+}
+
+/** Última lectura del medidor Grok Bot semanal de una cuenta de lecturas. */
+export function ultimaLecturaCupo(lecturas, grupoLecturas) {
+  const de = (lecturas || []).filter((l) => l && (l.grupo === grupoLecturas) && l.agente === CUPO_MEDIDOR && l.pct !== null && l.pct !== undefined && Number.isFinite(Number(l.pct)));
+  de.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+  return de.length ? de[de.length - 1] : null;
+}
+
+/**
+ * Devuelve { leyendas, actuales }, cada uno: { pct, ts, fuente, medidor, reset, origen, motivo, edadTexto, anterior? }.
+ * pct es un número 0-100 o null. No incluye correos, notas ni secretos.
+ */
+export function cupoDesdeLecturas(lecturas, ahoraMs = Date.now()) {
+  const out = {};
+  for (const [dest, grupo] of Object.entries(CUPO_MAPA)) {
+    const l = ultimaLecturaCupo(lecturas, grupo);
+    const base = { pct: null, ts: l ? l.ts : null, fuente: l ? l.fuente || null : null, medidor: CUPO_MEDIDOR, reset: l && l.reset ? l.reset : null, origen: CUPO_ORIGEN, motivo: "sin datos", edadTexto: null };
+    if (!l) { out[dest] = base; continue; }
+    const { edadH, edadTexto } = edadCupo(l.ts, ahoraMs);
+    base.edadTexto = edadTexto;
+    base.edadH = edadH;
+    const resetMs = l.reset && /T/.test(l.reset) ? Date.parse(l.reset) : NaN;
+    if (Number.isFinite(resetMs) && resetMs <= ahoraMs) {
+      out[dest] = { ...base, motivo: "sin datos", anterior: Math.round(Number(l.pct) * 100) / 100 };
+      continue;
+    }
+    out[dest] = { ...base, pct: Math.round(Number(l.pct) * 100) / 100, motivo: null };
+  }
+  return out;
 }

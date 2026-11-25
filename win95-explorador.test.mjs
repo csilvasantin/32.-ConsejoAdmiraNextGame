@@ -100,7 +100,7 @@ test("Miscelánea: comunicaciones del Consejo de solo lectura, se refrescan al a
   assert.match(html, /COMMS_URL='\/api\/win95\/comunicaciones'/);
   assert.match(html, /credentials:'same-origin'/);
   assert.match(html, /if\(id===MISC_ID\) loadComms\(true\);/);
-  assert.match(html, /var ro=remote\|\|isEstiloDoc\(d\)\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /var ro=remote\|\|sys\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
   assert.match(html, /plainName\(it\.name\)==='miscelanea'/);
   assert.match(html, /<script src="\/auth-gate\.js"><\/script>/);
 });
@@ -111,8 +111,24 @@ test("Miscelánea: Estilo comunicaciones ICQGram.txt es un fichero de sistema de
   assert.match(html, /function ensureEstiloDoc\(/);
   assert.match(html, /function isEstiloDoc\(d\)/);
   assert.match(html, /parent:MISC_ID/);
-  assert.match(html, /function canMoveDef\(d\)\{ return !!d&&!isFixedDef\(d\)&&!d\.remote&&!isEstiloDoc\(d\); \}/);
-  assert.match(html, /var ro=remote\|\|isEstiloDoc\(d\)\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
-  assert.match(html, /id===ESTILO_SEED_ID\|\|id==='fld-misc'/);
+  assert.match(html, /function canMoveDef\(d\)\{ return !!d&&!isFixedDef\(d\)&&!d\.remote&&!isMiscSysDoc\(d\); \}/);
+  assert.match(html, /var ro=remote\|\|sys\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /id===LEYENDAS_SEED_ID\|\|isMiscSysId\(id\)\|\|id==='fld-misc'/);
   assert.match(html, /norma de Carlos \(estilo ICQGram\)/);
+});
+
+test("Miscelánea: traspaso del Consejo (cómo funciona, encargos y normas) es de solo lectura", () => {
+  assert.match(html, /function isMiscSysDoc\(d\)/);
+  assert.match(html, /function ensureMiscSysOne\(/);
+  assert.match(html, /id:'doc-como-funciona-win95'/);
+  assert.match(html, /name:'Cómo funciona Win95 Xperience\.txt'/);
+  assert.match(html, /id:'doc-encargos-abiertos'/);
+  assert.match(html, /name:'Encargos y misiones abiertas\.txt'/);
+  assert.match(html, /id:'doc-normas-consejo'/);
+  assert.match(html, /name:'Normas del Consejo para nuevos consejeros\.txt'/);
+  assert.match(html, /id="como-funciona-win95-seed"/);
+  assert.match(html, /id="encargos-abiertos-seed"/);
+  assert.match(html, /id="normas-consejo-seed"/);
+  assert.match(html, /documento del Consejo en Miscelánea/);
+  assert.match(html, /for\(var i=0;i<MISC_TRASPASO\.length;i\+\+\) ensureMiscSysOne\(MISC_TRASPASO\[i\]\)/);
 });

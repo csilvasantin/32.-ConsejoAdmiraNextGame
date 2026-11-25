@@ -1,0 +1,193 @@
+========================================================================
+ENCARGOS Y MISIONES ABIERTAS
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Encargos y misiones abiertas.txt».
+Es un fichero de sistema, de solo lectura. Resume lo hecho en la
+Win95 Xperience y cómo seguir lo que sigue abierto.
+
+Estados de encargos consultados en admira.live (conector Jobs,
+como=Jobs) el 25-11-2026 a las 23:50, hora de Madrid. Lo que no
+está contrastado se marca «sin verificar».
+Sin IPs, MACs, tokens, contraseñas ni secretos.
+
+------------------------------------------------------------------------
+1. BANDEJA DE JOBS
+------------------------------------------------------------------------
+A esa hora, Jobs no tenía encargos abiertos (pending, ack,
+in_progress o blocked): 0. Los de su bandeja reciente están
+cerrados (done), entre ellos los partes diarios y los hilos de
+ICQGram de hoy.
+
+------------------------------------------------------------------------
+2. HECHO HOY EN WIN95 (25-nov-2026)
+------------------------------------------------------------------------
+Publicado en Cloudflare, sello de referencia al escribir esto
+(sin verificar si alguien publica encima después):
+  v.25.11.2026.r291.23:34  ·  git 05545eb  ·  WozGrokBot
+
+  #501  Presencia ICQGram por cuenta (Leyendas / Actuales).
+  #502  Explorador 95: Miscelánea, Ver, Organizar, arrastrar,
+        Papelera y botón derecho.
+  #503  Detalles con columnas redimensionables; imágenes pegadas
+        en ICQGram.
+  #504  Norma «Estilo comunicaciones ICQGram.txt» en Miscelánea.
+  #505  Netscape: barra de marcadores oculta por defecto;
+        pantalla completa con F11 / Esc.
+  #506  Napster busca el catálogo real de Stock / admira.studio.
+  #507  Demo solo desde Inicio → Ejecutar «demo» (o ?demo=1);
+        contador real de visitas (#7728, #7729).
+  #508–#514  Admira Media Player: maximizar, pantalla completa
+        con Esc, playlist, transición, FS de solo vídeo, menú
+        Archivo; arreglo de Esc en Firefox.
+  #510  Cupo Grok Bot (%) junto a Leyendas y Actuales.
+  #511  Napster descarga a Winamp y Admira Media Player.
+  #515  Se oculta el % si la lectura tiene más de 2 h; recuento
+        de intervenciones de hoy junto a cada consejero.
+  #516  Napster v2.0 Transfer: biblioteca persistente y recuento
+        real (t1397u).
+
+Encargos de ICQGram ya cerrados:
+  #7725 (25-nov 21:12 Madrid, done). Primera conversación real
+        desde ICQGram: «por fin podemos hablar desde una interface
+        como si fuera GrokBot». De ahí salió la norma del espejo
+        con cabecera de caras.
+  #7730 (25-nov 22:25 Madrid, done). Otro hilo por ICQGram el
+        mismo día. El extracto público de la bandeja llega
+        recortado (menciona a Jensen); el detalle fino del
+        mensaje queda sin verificar aquí.
+  #7724 (25-nov 21:07 Madrid, done). Hilo ICQGram anterior
+        (texto recortado en la bandeja).
+
+Este propio traspaso (petición de Carlos t1442u, 25-nov 23:47
+Madrid): dejar en Miscelánea cómo funciona todo y los encargos,
+para que un cambio de consejeros no pierda el hilo.
+
+------------------------------------------------------------------------
+3. ABIERTO — SEGUIR AQUÍ
+------------------------------------------------------------------------
+
+A) MDAT-3  (Carlos, t1435u, 25-nov)  — NO EMPEZADO
+   No consta un número de encargo en la bandeja de Jobs
+   (sin verificar si existe en otra). Pendiente de hacer:
+
+     1. Rectángulo de selección para elegir varios iconos.
+     2. Arrastrar n archivos a la Papelera de una vez.
+     3. Botón derecho → Eliminar dentro de la Papelera.
+     4. Mover el Protector de pantalla al menú Inicio, donde
+        está Ayuda; quitarlo del reloj de la bandeja y del
+        icono del escritorio.
+     5. Corregir iconos con texto superpuesto.
+
+   Cómo seguir: rama sobre main, tocar windows95/index.html,
+   tests del explorador, PR, captura, publicar cuando esté
+   listo. No mezclarlo con escritura de etiquetas en Stock.
+
+B) Napster → escribir la etiqueta real en Stock
+   Hoy las etiquetas #winamp / #AdmiraMediaPlayer son solo
+   locales (rememberDescarga, stock:false). Falta el sí de
+   Carlos para escribirlas de verdad en el catálogo de Stock.
+   No implementar el POST hasta que lo autorice. Mientras,
+   Winamp ya lee las piezas de Stock que YA traen #winamp.
+
+C) Lecturas del cupo «Grok Bot semanal»
+   El % de ICQGram se apaga a las 2 h o al pasar el reset.
+   Hace falta una lectura periódica (propuesta: cada hora,
+   de 8:15 a 23:15, hora de Madrid) hacia
+   POST /api/consumos/lecturas, medidor «Grok Bot semanal».
+   Leyendas: la cuenta Leyendas puede dejar la suya.
+   Actuales: tiene que escribirla ESA cuenta (no vale copiar
+   la de Leyendas).
+   Estado de la rutina en el panel: sin verificar en este
+   traspaso; el que coja el testigo debe comprobar si ya está
+   creada y si Actuales tiene lectura propia.
+
+D) Encargos abiertos de otros (no son de la bandeja de Jobs)
+   Consultados uno a uno el 25-nov a las 23:50, hora de Madrid.
+
+   #7692  Trinity  ·  pending  ·  MacBook Air Rosa
+          Titular: reparar el 401 del webhook de Huang y cerrar
+          el espejo a Grok Bot (#7536). También corregir la
+          plantilla [chat-coetaneos] para que no cite el script
+          de Jobs cuando el destinatario no es Jobs.
+          Nadie lo ha cogido aún (hay una nota de reenrutado).
+          Fecha límite original: 25-nov. Cómo seguir: acusar,
+          arreglar el webhook (solo estado ok/código/fecha; sin
+          URLs ni secretos), implementar el espejo y cerrar
+          #7536 con evidencia.
+
+   #7536  Musk  ·  in_progress  ·  desde el 11-nov 14:37 Madrid
+          Carlos quiere ver en la app de Grok Bot del destinatario
+          lo que escribe en admira.live, igual que ya ocurre con
+          Jobs. Musk lo dejó en curso y lo pasó al parent. No
+          duplicar: cerrarlo desde #7692 con evidencia.
+
+   #7693  Trinity  ·  blocked
+          Prueba viva de los 6 webhooks principales y cruce
+          Elon↔Jobs con acuse visible. Bloqueado: esa sesión no
+          tenía conector de consejero autenticado ni admin para
+          auditar o firmar el cruce. No se usó la sesión Jobs
+          de otros equipos ni se extrajeron credenciales. Cómo
+          seguir: hace falta un conector de consejero o la
+          autorización expresa de Carlos; la prueba en vivo y
+          los acuses con hora siguen pendientes. Nada a Telegram.
+
+   #7695  Morfeo  ·  pending  ·  Mac Mini
+          Demo /sala-voz Jobs↔Elon en las dos pantallas de la
+          sala (una Leyendas y otra Coetáneos), con sesión;
+          cada lado locuta solo lo suyo. Nadie lo ha cogido.
+          Fecha límite original: 25-nov. No tocar players ni
+          el teclado de Carlos. Cómo seguir: acusar, abrir
+          /sala-voz con sesión en las dos pantallas, diálogo
+          de prueba y capturas.
+
+   #7677  Oráculo  ·  blocked  ·  AdmiraNeXT04
+          Seguimiento de ojos remotos (#7676): selector 01–05.
+          Oráculo dejó el selector operativo y comprobó capturas
+          en directo de su propio equipo; los otros cuatro
+          aparecen como «Sin fuente». Para seguir hace falta
+          que Carlos facilite una fuente autorizada de al menos
+          otro equipo y el acceso al repositorio del nodo ojosIA
+          (ruta y commit exactos). No poner nada encima de los
+          players.
+
+   #7621  Neo  ·  in_progress  ·  Mac Studio
+          Retoma del screen sync AdmiraNeXT01–05. Neo dejó los
+          cinco PCs listos (receta del 01 repetida; show en la
+          sesión prevista, barra oculta, sin el ejecutable
+          antiguo). Falta que Carlos pulse SINCRO en
+          admiranext.com/demo con su sesión de administrador
+          y se compruebe el latido. No pulsar SINCRO en su
+          nombre. Cerrar el encargo cuando Carlos confirme.
+
+   #7632  Neo  ·  blocked  ·  Mac Studio
+          Modo Demo del player en las ultrawide (01, 03 y 05:
+          tercio central; 02 y 04 no se tocan). Bloqueado
+          el 20-nov a las 13:10 Madrid: en el 05 se abrió y
+          se cerró enseguida porque Carlos estaba en ese PC;
+          en 01 y 03 la sesión de trabajo del show no estaba
+          disponible. Cómo seguir, cuando Carlos lo autorice:
+          volver a esa sesión en 01 y 03 (o autorizar otra) y
+          avisar cuándo se puede relanzar el 05 sin molestar.
+          Ojo: el PR #504 que cita este encargo es de
+          admiranext.com (admira-next-web), no el #504 de
+          estilo ICQGram de este repo.
+
+------------------------------------------------------------------------
+4. FUERA DE ALCANCE (NO TOCAR)
+------------------------------------------------------------------------
+Players, kiosco, puertos de control internos y estado.json.
+Nada público sin inicio de sesión. No cancelar encargos sin el
+sí de Carlos. No tocar las sesiones de Morfeo y Oráculo ni el
+monitor 1 del Mac Studio (Trinity). ALSEA: nunca envíes nada.
+No avisar a Carlos del porcentaje de uso de Grok Bot sin que
+lo pida. Fold 8 es personal.
+
+Las normas completas están en «Normas del Consejo para nuevos
+consejeros.txt», en esta misma carpeta.
+
+========================================================================
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================

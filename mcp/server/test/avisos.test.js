@@ -195,7 +195,7 @@ test('Authorization: se antepone Bearer si el secreto no lo trae', async () => {
   assert.equal(llamadas[1].headers.authorization, 'Bearer ya-completo');
 });
 
-test('firma Stripe-like: HMAC de "<t>.<cuerpo>" con los 32 bytes del secreto', () => {
+test('firma Stripe-like: HMAC de "<t>.<cuerpo>" con el secreto en UTF-8', () => {
   const secreto = 'ab'.repeat(32);
   const cuerpo = '{"tipo":"chat","encargo":1}';
   const f = firmarCuerpo(secreto, cuerpo, 1700000000);

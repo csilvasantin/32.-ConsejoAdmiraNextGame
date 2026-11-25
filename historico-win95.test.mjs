@@ -142,3 +142,27 @@ test("los iconos del escritorio son pixel-art Win95 propio, no bitmaps de tercer
   assert.match(html, /p2p:SV\('0 0 32 32'/);
   assert.match(html, /browser:SV\('0 0 32 32'/);
 });
+
+test("el escritorio permite crear carpetas y accesos directos", () => {
+  const html = src("windows95/index.html");
+  assert.match(html, /id="dm-folder"/);
+  assert.match(html, /id="dm-lnk"/);
+  assert.doesNotMatch(html, /<div class="mi2 dis">Carpeta<\/div>/);
+  assert.doesNotMatch(html, /<div class="mi2 dis">Acceso directo<\/div>/);
+  assert.match(html, /Nueva carpeta/);
+  assert.match(html, /function newFolder/);
+  assert.match(html, /function openFolder/);
+  assert.match(html, /function openShortcutWizard/);
+  assert.match(html, /Crear acceso directo/);
+  assert.match(html, /id="dm-paste"/);
+  assert.match(html, /id="dm-paste-lnk"/);
+  assert.match(html, /Pegar acceso directo/);
+  assert.match(html, /id="im-ren"/);
+  assert.match(html, /Cambiar nombre/);
+  assert.match(html, /folder:SV\('0 0 32 32'/);
+  assert.match(html, /folderOpen:SV\('0 0 32 32'/);
+  assert.match(html, /lnkarr:SV\('0 0 11 11'/);
+  assert.match(html, /class="lnk-arr"/);
+  assert.match(html, /st\.v=2/);
+  assert.match(html, /st\.items/);
+});

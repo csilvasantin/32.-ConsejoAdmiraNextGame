@@ -1149,7 +1149,7 @@ Fin del documento. Está en Miscelánea, solo lectura.
    CONFIGURACIÓN
    ========================================================= */
 var CONFIG = {
-  idleSeconds: 60,            // sin tocar → vuelve la demo
+  idleSeconds: 60,            // solo con ?demo=1: sin tocar → vuelve la demo (#7728: por defecto no arranca sola)
   screensaverSeconds: 0,      // el protector solo se lanza al pulsar la hora de la bandeja
   visitor: '',                // también por URL: ?visita=Nombre
   bootImage: '',              // opcional: imagen propia para la pantalla de carga (archivo en esta carpeta)
@@ -3156,6 +3156,32 @@ function msgBox(title,text,ico){
   makeDraggable(qs('.tb',w),w); attachResize(w); w.addEventListener('pointerdown',function(){ focusWin(w); });
   DLGS[title]=w; focusWin(w);
 }
+/* Ejecutar (Carlos #7728, 25-11-2026): la demo del ratón fantasma ya no arranca sola; se lanza aquí
+   escribiendo «demo» (viene escrito por defecto). Cualquier toque o tecla la detiene. */
+var RUNDLG=null;
+function openRunDlg(){
+  if(RUNDLG){ focusWin(RUNDLG); try{ qs('input',RUNDLG).select(); }catch(e){} return; }
+  var w=document.createElement('div'), key='rundlg'; w.className='win dlg rundlg'; w.id=key; w.style.width='330px';
+  w.innerHTML='<div class="tb"><span class="t">Ejecutar</span><span class="x gap">×</span></div>'
+    +'<div class="body" style="display:block;padding:10px 10px 4px"><div class="msg" style="margin:0 0 8px">Escriba el nombre de un programa y Admira 95 lo abrirá.<br>Escriba <b>demo</b> para ver la demostración (se detiene al tocar o pulsar una tecla).</div>'
+    +'<label style="display:flex;align-items:center;gap:6px"><u>A</u>brir: <input type="text" value="demo" spellcheck="false" autocapitalize="off" style="flex:1;height:20px;border:0;padding:2px 4px;font:inherit;background:#fff;-webkit-user-select:text;user-select:text;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf"></label></div>'
+    +'<div class="acts"><button class="btn" data-ok>Aceptar</button> <button class="btn" data-cancel>Cancelar</button></div>';
+  desk.appendChild(w); w.style.left='12px'; w.style.top=Math.round(452-w.offsetHeight-8)+'px';
+  RUNDLG=w; var inp=qs('input',w);
+  function close(){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); RUNDLG=null; }
+  function ok(){
+    var cmd=String(inp.value||'').trim().toLowerCase().replace(/\.exe$/,'');
+    close();
+    if(cmd==='demo'||cmd==='demostracion'||cmd==='demostración'){ launchDemo(); return; }
+    var apps={winamp:'amp',notepad:'readme','leeme':'readme',napster:'p2p',icq:'icq',icqgram:'icq',netscape:'browser'};
+    if(apps[cmd]){ openApp(apps[cmd]); return; }
+    msgBox('Ejecutar','No se encuentra «'+(inp.value||'')+'».\nPruebe con «demo».','warn');
+  }
+  qs('[data-ok]',w).addEventListener('click',ok); qs('[data-cancel]',w).addEventListener('click',close); qs('.x.gap',w).addEventListener('click',close);
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ok(); } else if(e.key==='Escape'){ e.preventDefault(); close(); } });
+  addTask(key,'Ejecutar','info',[w]); makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); });
+  focusWin(w); setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },30);
+}
 function closeDialogs(){ Object.keys(DLGS).forEach(function(k){ var w=DLGS[k]; if(w&&w.id) removeTask(w.id); if(w&&w.parentNode) w.parentNode.removeChild(w); delete DLGS[k]; }); closeShutdownDlg(); }
 
 /* ---------- Bloc de notas ---------- */
@@ -4225,7 +4251,7 @@ function wireIcq(){
 }
 
 /* ---------- AdmiraScape (homenaje navegador) ---------- */
-var BR={open:false,online:false,dialing:false,dialId:0,loadId:0,loaded:false,page:null,hist:[],pos:-1,visits:427,pend:null,tabs:[{hist:[],pos:-1,page:null,title:'Nueva pestaña'}],tab:0};
+var BR={open:false,online:false,dialing:false,dialId:0,loadId:0,loaded:false,page:null,hist:[],pos:-1,pend:null,visitN:null,tabs:[{hist:[],pos:-1,page:null,title:'Nueva pestaña'}],tab:0};
 var TICO={
   back:'<svg viewBox="0 0 20 20"><path d="M3 10l7-7v4h7v6h-7v4z" fill="#3a9a3a" stroke="#000"/></svg>',
   fwd:'<svg viewBox="0 0 20 20"><path d="M17 10l-7-7v4H3v6h7v4z" fill="#3a9a3a" stroke="#000"/></svg>',
@@ -4238,7 +4264,7 @@ var TICO={
 };
 var WORKER='<svg viewBox="0 0 26 26"><circle cx="9" cy="5" r="3" fill="#ffd800" stroke="#000"/><path d="M9 8v8M9 10l-4 4M9 10l5 2M9 16l-3 7M9 16l3 7" stroke="#000" stroke-width="2" fill="none"/><path d="M14 12l6 8" stroke="#8b5a2b" stroke-width="2"/><path d="M18.5 18.5l4.5 3-2 2.5-3.5-3.5z" fill="#999" stroke="#000"/></svg>';
 var SHOP='<svg viewBox="0 0 150 96"><rect width="150" height="96" fill="#9fd3ff"/><rect y="72" width="150" height="24" fill="#c8a165"/><rect x="8" y="40" width="26" height="34" fill="#e05050" stroke="#333"/><rect x="118" y="34" width="24" height="40" fill="#5070e0" stroke="#333"/><rect x="40" y="8" width="70" height="52" rx="6" fill="#d8d0c0" stroke="#333" stroke-width="2"/><rect x="47" y="14" width="56" height="40" rx="4" fill="#102010"/><text x="75" y="31" font-family="Courier New,monospace" font-weight="bold" font-size="11" fill="#33ff33" text-anchor="middle">OFERTA</text><text x="75" y="46" font-family="Courier New,monospace" font-weight="bold" font-size="11" fill="#ffff00" text-anchor="middle">-50%</text><rect x="72" y="60" width="6" height="13" fill="#555"/><rect x="60" y="72" width="30" height="4" fill="#555"/></svg>';
-function odo(n){ var s=String(n); while(s.length<6) s='0'+s; return s.split('').map(function(c){ return '<span>'+c+'</span>'; }).join(''); }
+function odo(n){ var s=(n==null||!isFinite(n))?'------':String(Math.max(0,Math.floor(n))); while(s.length<6) s='0'+s; return s.split('').map(function(c){ return '<span>'+c+'</span>'; }).join(''); }
 function back97(){ return '<p><a data-go="home">&lt;&lt; Volver al inicio</a></p>'; }
 var PAGES={
   home:{url:'http://www.admira.tv/',title:'Bienvenidos a Admira',kb:48,era:97,html:function(){ return '<div class="p97">'+
@@ -4247,7 +4273,7 @@ var PAGES={
     '<div class="p97-uc">'+WORKER+'<b>PÁGINA EN CONSTRUCCIÓN</b>'+WORKER+'</div>'+
     '<div class="p97-cols"><div class="p97-menu">» <a data-go="quienes">Quiénes somos</a><br>» <a data-go="libro">Libro de visitas</a><br>» <a data-go="cool">Enlaces cool</a><br><span class="blink">»</span> <a data-go="futuro" class="new">¡NUEVO! Ver el futuro &gt;&gt;</a></div>'+
     '<div class="p97-body"><div class="p97-img pi">'+SHOP+'</div><p>Admira lleva vídeos a las <b>pantallas de las tiendas</b>.</p><p>¿Pantallas... en una tienda? Sí. Créenos: esto va a ser <b class="blink">GRANDE</b>.</p></div></div>'+
-    '<hr class="p97-hr"><div class="p97-counter">Eres el visitante nº <span class="odo">'+odo(BR.visits)+'</span></div>'+
+    '<hr class="p97-hr"><div class="p97-counter">Eres el visitante nº <span class="odo">'+odo(BR.visitN)+'</span></div>'+
     '<div class="p97-foot">Mejor visto con Netscape Navigator 3.0 a 800×600 y 256 colores<br>© 1997 Admira · <a data-go="e404">Escribe al webmaster</a></div></div>'; }},
   quienes:{url:'http://www.admira.tv/quienes.html',title:'Quiénes somos',kb:12,era:97,html:function(){ return '<div class="p97"><h2>Quiénes somos</h2>'+
     '<p>Somos <b>Admira</b>. Ponemos vídeos en las pantallas de las tiendas.</p>'+
@@ -4343,6 +4369,20 @@ async function brNovedades(){
 function brHost(u){ return u.replace(/^https?:\/\//,'').split('/')[0]; }
 function brButtons(){ qs('#brBack').classList.toggle('dis',BR.pos<=0); qs('#brFwd').classList.toggle('dis',BR.pos>=BR.hist.length-1); }
 function setReveal(list,k){ list.forEach(function(el){ var v='inset(0 0 '+Math.round((1-k)*100)+'% 0)'; el.style.clipPath=v; el.style.webkitClipPath=v; el.style.filter=k<1?'blur('+(2.5*(1-k)).toFixed(1)+'px)':''; }); }
+/* Contador real (Carlos #7729): /api/win95/visitas suma una vez por sesión del navegador (cookie de sesión
+   en el servidor + sessionStorage aquí) y devuelve el total. La demo del ratón fantasma solo lee. */
+function contarVisita(){
+  var ya=false; try{ ya=sessionStorage.getItem('w95-visita')==='1'; }catch(e){}
+  var sumar=!ya&&MODE==='interactive';
+  fetch('/api/win95/visitas',{method:sumar?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){
+      if(!d||!d.ok) return;
+      if(sumar){ try{ sessionStorage.setItem('w95-visita','1'); }catch(e){} }
+      BR.visitN=d.total;
+      var el=qs('#brPage .p97-counter .odo'); if(el) el.innerHTML=odo(BR.visitN);
+    }).catch(function(){});
+}
 function brGo(key){ if(!PAGES[key]) return; if(!BR.online){ BR.pend=key; if(!BR.dialing) dialUp(); return; } BR.hist=BR.hist.slice(0,BR.pos+1); BR.hist.push(key); BR.pos=BR.hist.length-1; brLoad(key); }
 async function brLoad(key){
   var id=++BR.loadId, p=PAGES[key], fast=p.era===26, host=brHost(p.url);
@@ -4351,7 +4391,7 @@ async function brLoad(key){
   await sleep(fast?150:700); if(id!==BR.loadId) return;
   brStatus('Host contactado. Esperando respuesta…',0);
   await sleep(fast?150:600); if(id!==BR.loadId) return;
-  if(key==='home') BR.visits++;
+  if(key==='home') contarVisita();
   var full=!!(p.live||p.web); qs('#brPage').classList.toggle('live',full); qs('#brPage').classList.toggle('webp',!!p.web); qs('#brView').classList.toggle('live',full); qs('#brPage').innerHTML=p.html(); qs('#brView').scrollTop=0;
   if(key==='newtab'){ var nq=qs('#brNtQ'); if(nq) setTimeout(function(){ try{ qs('#brUrl').focus(); }catch(e){} },0); }
   if(p.live&&p.persona){ var fr=qs('#brLive'); if(fr){ fr.addEventListener('load',function onL(){ try{ if(!fr.contentDocument) brPintarConsejo(p); }catch(e){ brPintarConsejo(p); } }); fr.addEventListener('error',function(){ brPintarConsejo(p); }); } }
@@ -5181,7 +5221,7 @@ function buildStart(){
     'mi-settings':function(){ msgBox('Configuración','Pantalla: 640 × 480 · 256 colores\nProtector de pantalla: «Admira volando» (se lanza al pulsar la hora de la bandeja)\n(Lo más moderno del mercado.)','info'); },
     'mi-find':function(){ msgBox('Buscar','Buscando «el futuro»…\nEncontrado en C:\\ADMIRA\\NEXT\\','info'); },
     'mi-help':function(){ msgBox('Ayuda de Admira 95','¿Dudas de estrategia? Pregunta a Jensen.\n¿Todo lo demás? Pregunta a Morfeo.','info'); },
-    'mi-run':function(){ msgBox('Ejecutar','C:\\ADMIRA\\NEXT.EXE\n\nNo se puede ejecutar: aún estamos en 1997.','warn'); },
+    'mi-run':function(){ openRunDlg(); },
     'mi-shutdown':function(){ if(MODE==='interactive') openShutdownDlg(); }
   };
   Object.keys(simple).forEach(function(id){ qs('#'+id).addEventListener('click',function(){ closeStart(); simple[id](); }); });
@@ -5348,10 +5388,19 @@ function takeOver(){
   if(qs('#shut').style.display==='block'||qs('#shade').style.display==='block'){ qs('#shut').style.display='none'; qs('#shut').classList.remove('more'); qs('#shade').style.display='none'; }
   closeStart();
   if(qs('#note').style.display==='block'){ noteSetVal(leemeText(),true); NOTE.saved=noteVal(); NOTE.dirty=false; refreshNoteTitle(); }
-  hintEl.textContent='¡Ahora mandas tú! Doble clic (o un toque) en los iconos del escritorio. Si nadie toca nada en '+CONFIG.idleSeconds+' s, vuelve la demo.';
+  hintEl.textContent=DEMO_URL?'¡Ahora mandas tú! Doble clic (o un toque) en los iconos del escritorio. Si nadie toca nada en '+CONFIG.idleSeconds+' s, vuelve la demo.':'¡Ahora mandas tú! Doble clic (o un toque) en los iconos del escritorio. La demo está en Inicio → Ejecutar → «demo».';
   hintEl.style.display='block'; clearTimeout(takeOver.t); takeOver.t=setTimeout(function(){ hintEl.style.display='none'; },7000);
 }
 function backToDemo(){ hintEl.style.display='none'; resetDesktop(); startAttract(false); }
+/* Demo solo a petición (#7728): Inicio → Ejecutar → «demo», o explícita con ?demo=1 en la URL. */
+var DEMO_URL=(function(){ try{ return new URLSearchParams(location.search).get('demo')==='1'; }catch(e){ return false; } })();
+function launchDemo(){ closeStart(); lastInput=now(); lastMove=null; setTimeout(function(){ backToDemo(); },250); }
+/** Arranque normal: pantalla de carga y escritorio para el usuario, sin ratón fantasma. */
+function startDesktop(){
+  MODE='attract'; RUN.token++; var tk=RUN.token;     // durante la carga, un toque la salta
+  ghostEl.style.display='none'; ctaEl.style.display='none'; hintEl.style.display='none';
+  bootSeq(tk).then(function(){ if(RUN.token===tk) takeOver(); },function(e){ if(e!==ABORT&&RUN.token===tk) takeOver(); });
+}
 
 /* ---------- detección de visitas ---------- */
 var lastMove=null;
@@ -5450,14 +5499,14 @@ function init(){
   requestAnimationFrame(frame);
   setInterval(seqTick,25);
   setInterval(function(){
-    if(MODE!=='interactive') return;
+    if(MODE!=='interactive'||!DEMO_URL) return;   // #7728: sin ?demo=1 la inactividad ya no lanza la demo
     var idle=now()-lastInput;
     if(idle>CONFIG.idleSeconds*1000) backToDemo();
   },1000);
 
   ['pointerdown','pointermove','keydown','wheel','touchstart'].forEach(function(t){ window.addEventListener(t,onInput,{capture:true,passive:true}); });
 }
-function start(){ if(started) return; started=true; audioInit(); tryResume(); startAttract(true); }
+function start(){ if(started) return; started=true; audioInit(); tryResume(); if(DEMO_URL) startAttract(true); else startDesktop(); }
 
 // Si hay iconos originales en la carpeta (CONFIG.iconFiles), sustituyen a los homenajes antes de montar el escritorio.
 function preloadIcons(done){

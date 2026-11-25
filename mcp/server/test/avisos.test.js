@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { crearAvisos, validarUrl, exigirDueno, resumen, PREFIJO, PREFIJO_ESTADO } from '../src/avisos.js';
+import { crearAvisos, validarUrl, exigirDueno, resumen, PREFIJO, PREFIJO_ESTADO, CABECERA_FIRMA, firmarCuerpo, generarSecretoFirma } from '../src/avisos.js';
 import { crearBandeja } from '../src/mensajes.js';
 import { sandboxDe, manejar } from '../src/index.js';
 
@@ -193,4 +193,68 @@ test('Authorization: se antepone Bearer si el secreto no lo trae', async () => {
   await av.registrar({ url: 'https://hooks.example.com/huang', secreto: 'Bearer ya-completo', cabecera: 'Authorization' }, yo('Huang'));
   await av.avisar({ tipo: 'chat', id: 't2', de: 'Carlos', para: 'Huang', texto: 'y', encargo: 2 });
   assert.equal(llamadas[1].headers.authorization, 'Bearer ya-completo');
+});
+
+test('firma Stripe-like: HMAC de "<t>.<cuerpo>" con los 32 bytes del secreto', () => {
+  const secreto = 'ab'.repeat(32);
+  const cuerpo = '{"tipo":"chat","encargo":1}';
+  const f = firmarCuerpo(secreto, cuerpo, 1700000000);
+  assert.equal(f.t, '1700000000');
+  assert.equal(f.header, `t=1700000000,v1=${f.v1}`);
+  assert.equal(f.v1.length, 64);
+  assert.match(f.v1, /^[0-9a-f]{64}$/);
+  const otra = firmarCuerpo(secreto, cuerpo, 1700000000);
+  assert.equal(otra.v1, f.v1);
+  const distinta = firmarCuerpo(secreto, cuerpo, 1700000001);
+  assert.notEqual(distinta.v1, f.v1);
+  assert.equal(generarSecretoFirma().length, 64);
+  assert.throws(() => firmarCuerpo('aa', cuerpo, 1), /inválido/);
+});
+
+test('activarFirma guarda el modo firma y avisar firma el cuerpo sin Authorization', async () => {
+  const kv = kvMemoria();
+  const llamadas = [];
+  const secreto = 'cd'.repeat(32);
+  const av = crearAvisos({ ADMIRA_LIVE_DESDE: kv, SITIO: 'https://www.admira.live' }, {
+    now: () => new Date(1_700_000_000_000),
+    generarSecreto: () => secreto,
+    fetchWebhook: async (u, i) => { llamadas.push({ u, i }); return { status: 204 }; },
+  });
+  const r = await av.activarFirma({ silla: 'Huang', url: 'https://api2.cursor.sh/automations/webhook/20d34b3b-72ad-5549-84e6-4ffee0c6ffa4' });
+  assert.equal(r.ok, true);
+  assert.equal(r.silla, 'Huang');
+  assert.equal(r.modo, 'firma');
+  assert.equal(r.cabecera, CABECERA_FIRMA);
+  assert.equal(r.secreto, secreto);
+  const v = await av.ver({ silla: 'Huang' }, yo('Huang'));
+  assert.equal(v.webhook.modo, 'firma');
+  assert.equal(v.webhook.cabecera, CABECERA_FIRMA);
+  assert.equal(v.webhook.secreto, 'definido (no se muestra)');
+  assert.ok(!JSON.stringify(v).includes(secreto));
+  const aviso = await av.avisar({ tipo: 'chat', id: 'live-firma', de: 'Carlos', para: 'Huang', texto: 'hola', encargo: 7714, canal: 'win95' });
+  assert.equal(aviso.ok, true);
+  assert.equal(llamadas.length, 1);
+  const h = llamadas[0].i.headers;
+  assert.equal(h[CABECERA_FIRMA], firmarCuerpo(secreto, llamadas[0].i.body, 1700000000).header);
+  assert.equal(h.authorization, undefined);
+  assert.match(h[CABECERA_FIRMA], /^t=1700000000,v1=[0-9a-f]{64}$/);
+});
+
+test('POST /consejero/webhook-firmar exige la PANEL_KEY y devuelve el secreto una vez', async () => {
+  const kv = kvMemoria();
+  const secreto = 'ef'.repeat(32);
+  const env = { ADMIRA_LIVE_DESDE: kv, ADMIRA_TELEGRAM_PANEL_KEY: 'panel-key-despertar' };
+  const deps = { generarSecreto: () => secreto };
+  const post = (headers, body) => new Request('https://mcp.admira.live/consejero/webhook-firmar', { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  assert.equal((await manejar(post({}, { silla: 'Huang' }), env, deps)).status, 401);
+  const r = await manejar(post({ authorization: 'Bearer panel-key-despertar' }, { silla: 'Jensen', url: 'https://api2.cursor.sh/automations/webhook/20d34b3b-72ad-5549-84e6-4ffee0c6ffa4' }), env, deps);
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  assert.equal(d.silla, 'Huang');
+  assert.equal(d.modo, 'firma');
+  assert.equal(d.cabecera, CABECERA_FIRMA);
+  assert.equal(d.secreto, secreto);
+  const mal = await manejar(post({ authorization: 'Bearer panel-key-despertar' }, { silla: 'Nadie' }), env, deps);
+  assert.equal(mal.status, 400);
 });

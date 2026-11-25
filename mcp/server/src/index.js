@@ -734,8 +734,14 @@ export async function manejar(request, env, deps = {}) {
   if (ruta === '/consejero/despertar' && request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'Content-Type, Authorization', 'access-control-max-age': '86400' } });
   }
+  if (ruta === '/consejero/webhook-firmar' && request.method === 'POST') {
+    return firmarWebhookPorPanel(request, env, deps);
+  }
+  if (ruta === '/consejero/webhook-firmar' && request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'Content-Type, Authorization', 'access-control-max-age': '86400' } });
+  }
 
-  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado', '/consejero/mensajes', '/consejero/despertar'] }, 404);
+  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado', '/consejero/mensajes', '/consejero/despertar', '/consejero/webhook-firmar'] }, 404);
 }
 
 export function lecturaMensajesPermitida(request, env = {}) {
@@ -789,6 +795,29 @@ export async function despertarPorWebhook(request, env, deps = {}) {
   const resultado = (res && res.omitido) || (despertado ? ('webhook ' + res.codigo) : ((res && (res.error || ('webhook ' + res.codigo))) || 'fallo'));
   try { console.log(JSON.stringify({ despertar: para, ok: despertado, codigo: res && res.codigo || null, resultado, encargo: (b && b.encargo) || null, canal: (b && b.canal) || null })); } catch (_) {}
   return json({ ok: true, despertado, via: despertado ? 'webhook-propio' : null, resultado, codigo: (res && res.codigo) || null, para });
+}
+
+/**
+ * POST /consejero/webhook-firmar — admin (Bearer ADMIRA_TELEGRAM_PANEL_KEY).
+ * Pasa el webhook de una silla a modo firma (X-Admira-Signature, HMAC-SHA256).
+ * Genera un secreto de 32 bytes y lo devuelve UNA sola vez en la respuesta.
+ * Nunca se registra el secreto en logs.
+ */
+export async function firmarWebhookPorPanel(request, env, deps = {}) {
+  if (!panelKeyValida(request, env)) {
+    return json({ ok: false, error: 'no autorizado' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-despertar"' });
+  }
+  let b;
+  try { b = await request.json(); } catch { return json({ ok: false, error: 'json inválido' }, 400); }
+  try {
+    const r = await crearAvisos(env, deps).activarFirma({ silla: b && b.silla, url: b && b.url });
+    try { console.log(JSON.stringify({ webhook_firmar: r && r.silla, ok: true, modo: 'firma', url: r && r.url })); } catch (_) {}
+    return json(r);
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    const codigo = /silla desconocida|no es válida|tiene que ser https|host no permitido|sin KV|secreto de firma/.test(msg) ? 400 : 500;
+    return json({ ok: false, error: msg }, codigo);
+  }
 }
 
 

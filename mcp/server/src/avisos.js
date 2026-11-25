@@ -10,6 +10,9 @@
  * (tipo:'encargo' o 'chat', con el número de encargo): POST /consejero/despertar.
  * Nunca el cuerpo completo: solo un resumen corto + id; se lee con consejero_bandeja
  * o telegram_bandeja.
+ * Modo firma (POST /consejero/webhook-firmar, solo PANEL_KEY): en vez de Authorization
+ * se envía X-Admira-Signature: t=<unix>,v1=<hex HMAC-SHA256 de "<t>.<cuerpo>"> con un
+ * secreto de 32 bytes generado en el servidor (se devuelve una sola vez).
  *
  * - Registro en KV (ADMIRA_LIVE_DESDE) con prefijo propio `consejero-webhook:v1:<Silla>`.
  * - El secreto opcional se guarda y se manda en una cabecera; al leer nunca se devuelve.
@@ -23,8 +26,25 @@
  *   guardado. Último resultado (ok/código/fecha/ms) en `consejero-webhook-estado:v1:<Silla>`.
  */
 
+import { createHmac, randomBytes } from 'node:crypto';
 import { sillaCanonica } from './sillas.js';
 import { personaCanonica, AGENTES_FLOTA } from './flota.js';
+
+export const CABECERA_FIRMA = 'X-Admira-Signature';
+
+/** Secreto de 32 bytes en hex (64 caracteres). */
+export function generarSecretoFirma() {
+  return randomBytes(32).toString('hex');
+}
+
+/** Firma Stripe-like: HMAC-SHA256 de "<t>.<cuerpo>" con los 32 bytes del secreto (hex). */
+export function firmarCuerpo(secretoHex, cuerpo, t = Math.floor(Date.now() / 1000)) {
+  const ts = String(t);
+  const key = Buffer.from(String(secretoHex || ''), 'hex');
+  if (key.length !== 32) throw new Error('secreto de firma inválido');
+  const v1 = createHmac('sha256', key).update(`${ts}.${cuerpo}`, 'utf8').digest('hex');
+  return { t: ts, v1, header: `t=${ts},v1=${v1}` };
+}
 
 const agenteDe = (n) => { const a = personaCanonica(n); return a && AGENTES_FLOTA.includes(a) ? a : null; };
 
@@ -103,9 +123,9 @@ export function crearAvisos(env = {}, deps = {}) {
     return kv.get(PREFIJO_ESTADO + silla, 'json').catch(() => null);
   }
   const publico = (silla, r, estado) => (r ? {
-    silla, url: r.url, cabecera: r.cabecera, secreto: r.secreto ? 'definido (no se muestra)' : 'no', registrado: r.registrado, por: r.por,
+    silla, url: r.url, modo: r.modo || 'cabecera', cabecera: r.cabecera, secreto: r.secreto ? 'definido (no se muestra)' : 'no', registrado: r.registrado, por: r.por,
     ultimo: estado || null,
-  } : { silla, url: null, ultimo: estado || null });
+  } : { silla, url: null, modo: null, ultimo: estado || null });
 
   async function registrar({ url, secreto, cabecera, silla }, identidad) {
     const s = exigirDueno(identidad, silla, env);
@@ -130,18 +150,45 @@ export function crearAvisos(env = {}, deps = {}) {
     return { ok: true, silla: s, borrado: habia };
   }
 
+  async function activarFirma({ silla, url } = {}) {
+    const s = sillaCanonica(silla);
+    if (!s) throw new Error('silla desconocida');
+    if (!kv || typeof kv.put !== 'function') throw new Error('sin KV: los avisos no están configurados');
+    const previo = await leerRegistro(s);
+    const destino = validarUrl(url || (previo && previo.url));
+    const gen = deps.generarSecreto || generarSecretoFirma;
+    const secreto = String(gen());
+    if (!/^[0-9a-f]{64}$/.test(secreto)) throw new Error('secreto de firma inválido');
+    const r = {
+      url: destino,
+      modo: 'firma',
+      cabecera: CABECERA_FIRMA,
+      secreto,
+      registrado: ahora().toISOString(),
+      por: 'panel',
+    };
+    await kv.put(PREFIJO + s, JSON.stringify(r));
+    return { ok: true, silla: s, url: destino, modo: 'firma', cabecera: CABECERA_FIRMA, secreto };
+  }
+
   async function intentar(reg, carga) {
     const t0 = Date.now();
     const ctl = typeof AbortController === 'function' ? new AbortController() : null;
     const temporizador = ctl ? setTimeout(() => ctl.abort(), timeout) : null;
     try {
       const headers = { 'content-type': 'application/json', 'user-agent': 'admira-live-avisos/1.0', 'x-admira-aviso': String(carga && carga.tipo || 'consejero_mensaje') };
-      if (reg.secreto) {
+      const body = JSON.stringify(carga);
+      const usaFirma = (reg.modo === 'firma') || String(reg.cabecera || '').toLowerCase() === CABECERA_FIRMA.toLowerCase();
+      if (usaFirma && reg.secreto) {
+        const ahoraMs = deps.now ? deps.now() : new Date();
+        const ts = Math.floor((ahoraMs instanceof Date ? ahoraMs.getTime() : Number(ahoraMs)) / 1000);
+        headers[CABECERA_FIRMA] = firmarCuerpo(reg.secreto, body, ts).header;
+      } else if (reg.secreto) {
         const nombre = reg.cabecera || CABECERA_DEF;
         const val = String(reg.secreto);
         headers[nombre] = nombre.toLowerCase() === 'authorization' && !/^bearer /i.test(val) ? 'Bearer ' + val : val;
       }
-      const r = await fetcher(reg.url, { method: 'POST', headers, body: JSON.stringify(carga), redirect: 'manual', signal: ctl ? ctl.signal : undefined });
+      const r = await fetcher(reg.url, { method: 'POST', headers, body, redirect: 'manual', signal: ctl ? ctl.signal : undefined });
       return { ok: r.status >= 200 && r.status < 300, codigo: r.status, ms: Date.now() - t0 };
     } catch (e) {
       return { ok: false, codigo: null, error: e && e.name === 'AbortError' ? 'timeout' : 'error de red', ms: Date.now() - t0 };
@@ -194,5 +241,5 @@ export function crearAvisos(env = {}, deps = {}) {
     return { programado: true, promesa: p };
   }
 
-  return { registrar, ver, borrar, avisar, programar };
+  return { registrar, ver, borrar, activarFirma, avisar, programar };
 }

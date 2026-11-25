@@ -32,16 +32,13 @@
     "letter-spacing:0;text-decoration:none}" +
     "#win95-xperiencia:hover{color:#fff0b0;background:#79532d}" +
     "#win95-xperiencia:focus-visible{outline:2px solid #ffff00;outline-offset:2px}" +
-    "#win95-fs-wrap{position:fixed;inset:0;z-index:2147483000;background:#000;" +
-    "display:flex;flex-direction:column}" +
+    "#win95-fs-wrap{position:fixed;inset:0;z-index:2147483000;background:#0a0b0d}" +
     "#win95-fs-wrap[hidden]{display:none!important}" +
-    "#win95-fs-wrap .win95-fs-chrome{flex:none;display:flex;align-items:center;" +
-    "gap:10px;padding:6px 10px;background:#211405;border-bottom:1px solid #9c7326;" +
-    "font:8px/1.4 'Press Start 2P',monospace;color:#ffdf73}" +
-    "#win95-fs-salir{font:inherit;color:#1a1004;background:#e6c788;border:1px solid #ffe08a;" +
-    "padding:6px 10px;cursor:pointer}" +
+    "#win95-fs-salir{position:absolute;right:12px;top:10px;z-index:2;" +
+    "font:8px/1.4 'Press Start 2P',monospace;color:#1a1004;background:#e6c788;" +
+    "border:1px solid #ffe08a;padding:6px 10px;cursor:pointer;box-shadow:2px 2px #090603}" +
     "#win95-fs-salir:hover{background:#fff0b0}" +
-    "#win95-fs-frame{flex:1;width:100%;border:0;background:#000}";
+    "#win95-fs-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0a0b0d}";
   document.head.appendChild(css);
 
   var btn = document.createElement("button");
@@ -64,10 +61,7 @@
   wrap.setAttribute("aria-modal", "true");
   wrap.setAttribute("aria-label", T("Win95 · Xperiencia a pantalla completa", "Win95 · Xperience fullscreen"));
   wrap.innerHTML =
-    '<div class="win95-fs-chrome">' +
     '<button type="button" id="win95-fs-salir">' + T("Salir (Esc)", "Exit (Esc)") + "</button>" +
-    "<span>" + T("Pantalla completa · Esc para salir", "Fullscreen · Esc to exit") + "</span>" +
-    "</div>" +
     '<iframe id="win95-fs-frame" src="about:blank" title="Win95 · Xperiencia" allow="fullscreen; autoplay"></iframe>';
   document.body.appendChild(wrap);
 
@@ -117,6 +111,10 @@
   salir.addEventListener("click", function (e) {
     e.preventDefault();
     cerrar();
+  });
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    if (e.data && e.data.source === "win95-crt" && e.data.action === "exit" && !wrap.hidden) cerrar();
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !wrap.hidden) {

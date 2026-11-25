@@ -43,3 +43,21 @@ test("windows95 carga el gancho ?fs=1 y el script pide pantalla completa", () =>
   assert.match(js, /Salir \(Esc\)/);
   assert.match(js, /Escape/);
 });
+
+test("el CRT frontal envuelve la Xperiencia: placa ADMIRA, apagado y cristal", () => {
+  const html = src("windows95/index.html");
+  assert.match(html, /id="crt-shell"/);
+  assert.match(html, /id="crt-badge">ADMIRA</);
+  assert.match(html, /id="crt-power"/);
+  assert.match(html, /assets\/win95-crt\.css/);
+  assert.match(html, /assets\/win95-crt\.js/);
+  assert.match(html, /sw=784, sh=716/);
+  const css = src("assets/win95-crt.css");
+  assert.match(css, /#crt-fx/);
+  assert.match(css, /repeating-linear-gradient/);
+  assert.match(css, /#crt-screen #admira-gate/);
+  const js = src("assets/win95-crt.js");
+  assert.match(js, /win95-crt/);
+  assert.match(js, /exit/);
+  assert.match(js, /crt-power/);
+});

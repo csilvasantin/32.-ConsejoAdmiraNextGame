@@ -1,0 +1,242 @@
+/* Monitor CRT beige, vista frontal (homenaje CTX de los 90).
+ * Solo CSS/SVG propio: sin fotos ni stock. La Xperiencia vive en #crt-screen. */
+html, body { background: #0a0b0d !important; }
+
+#crt-shell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 784px;
+  height: 716px;
+  transform-origin: 0 0;
+  z-index: 0;
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  user-select: none;
+}
+
+#crt-monitor {
+  position: relative;
+  width: 784px;
+  height: 632px;
+  border-radius: 34px 34px 26px 26px;
+  background:
+    linear-gradient(180deg, #f3eee4 0%, #e6dfd2 38%, #d8d0c2 72%, #cfc6b6 100%);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, .7),
+    inset 0 -4px 0 rgba(90, 82, 68, .28),
+    inset 10px 0 14px rgba(255, 255, 255, .18),
+    inset -12px 0 16px rgba(70, 62, 50, .12),
+    0 1px 0 #9a927f,
+    0 22px 48px rgba(0, 0, 0, .62);
+}
+
+/* Labio superior del bisel, vista frontal. */
+#crt-monitor::before {
+  content: "";
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  top: 16px;
+  height: 10px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #c9c1b2, #ece6da);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .18), 0 1px 0 rgba(255, 255, 255, .5);
+  pointer-events: none;
+}
+
+#crt-screen {
+  position: absolute;
+  left: 72px;
+  top: 64px;
+  width: 640px;
+  height: 480px;
+  border-radius: 18px;
+  background: #10140f;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px #c9c0b0,
+    0 0 0 7px #3e413b,
+    inset 0 0 0 3px #1c1f1a,
+    inset 0 10px 20px rgba(0, 0, 0, .55);
+}
+
+#crt-screen #stage {
+  left: 0 !important;
+  top: 0 !important;
+  border-radius: 12px;
+  transform-origin: 0 0;
+}
+
+#crt-fx {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 12000;
+  overflow: hidden;
+}
+
+/* Viñeta suave + un dejo de barril en los bordes. */
+#crt-fx .vig {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 48%, transparent 52%, rgba(0, 0, 0, .28) 100%);
+  box-shadow: inset 0 0 60px 8px rgba(0, 0, 0, .28);
+}
+
+/* Scanlines muy suaves: se lee y se puede pinchar lo de debajo. */
+#crt-fx .scan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0 2px,
+    rgba(0, 0, 0, .07) 2px 3px
+  );
+  opacity: .7;
+}
+
+/* Reflejo del cristal, esquina superior izquierda. */
+#crt-fx .glass {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .04) 28%, transparent 46%);
+}
+
+/* Mentón del bisel: placa, botones y encendido. */
+#crt-chin {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  top: 556px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#crt-badge {
+  flex: none;
+  font: 700 10px/1 "Trebuchet MS", "Arial Narrow", Arial, sans-serif;
+  letter-spacing: .22em;
+  color: #4d5548;
+  background: linear-gradient(180deg, #efe9dd, #d4cdc0);
+  border: 1px solid #b4ac9c;
+  border-radius: 2px;
+  padding: 5px 9px 4px;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #a49c8c, 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+#crt-buttons {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  padding-right: 48px; /* un poco a la izquierda del centro, como el CRT de los 90 */
+}
+
+#crt-buttons span {
+  display: block;
+  width: 18px;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ddd6c8, #9f9686);
+  box-shadow: inset 0 1px 0 #f6f1e6, 0 1px 1px rgba(60, 54, 44, .45);
+}
+
+#crt-power {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, #f3eee4, #c2baaa 55%, #8d8678);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 3px #d8d0c2,
+    0 0 0 4px #b0a896,
+    0 2px 3px rgba(0, 0, 0, .35);
+  position: relative;
+}
+#crt-power:hover { filter: brightness(1.05); }
+#crt-power:focus-visible { outline: 2px solid #3dff6a; outline-offset: 3px; }
+#crt-power .crt-led {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #3dff6a;
+  box-shadow: 0 0 6px #2aff55, 0 0 1px #fff;
+}
+#crt-power .crt-glyph {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  color: #5a554c;
+}
+
+#crt-stand {
+  width: 784px;
+  height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+#crt-stand .neck {
+  width: 168px;
+  height: 26px;
+  background: linear-gradient(180deg, #d4cec0, #c4bcae);
+  border-radius: 0 0 8px 8px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35), 0 2px 0 rgba(0, 0, 0, .12);
+}
+#crt-stand .base {
+  width: 360px;
+  height: 46px;
+  margin-top: -4px;
+  border-radius: 50% 50% 46% 46% / 72% 72% 28% 28%;
+  background: radial-gradient(ellipse at 50% 28%, #f2ece2, #c9c1b1 58%, #aea595);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, .45),
+    inset 0 -3px 4px rgba(70, 64, 54, .2),
+    0 10px 18px rgba(0, 0, 0, .4);
+}
+
+/* La verja de acceso se ve DENTRO del cristal, no a pantalla completa. */
+html.gate-locked body { visibility: visible !important; }
+#crt-screen #admira-gate {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 12px;
+  overflow: hidden;
+}
+#crt-screen #admira-gate .frame {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  aspect-ratio: auto !important;
+  border-radius: 12px !important;
+}
+#crt-screen #admira-gate h1.title { font-size: 22px !important; }
+#crt-screen #admira-gate .kicker { font-size: 13px !important; letter-spacing: 5px !important; }
+#crt-screen #admira-gate .status,
+#crt-screen #admira-gate .prompt { font-size: 16px !important; }
+#crt-screen #admira-gate .sub { font-size: 8px !important; }
+#crt-screen #admira-gate canvas.emb,
+#crt-screen #admira-gate .emblem { width: 110px !important; height: 110px !important; }
+#crt-screen #admira-gate .gbtn { transform: scale(.85); }
+#crt-screen #admira-gate .greal > div { transform: scale(2) !important; }

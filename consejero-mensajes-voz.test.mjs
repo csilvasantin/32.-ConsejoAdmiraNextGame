@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 await import('./consejeros-voces.js');
 await import('./assets/consejero-mensajes.js');
 const AdmiraVoces = globalThis.AdmiraVoces;
@@ -116,7 +117,8 @@ test('las páginas de Jobs y Elon cargan consejeros-voces.js y la nueva versión
   for (const who of ['jobs', 'musk', 'wozniak', 'disney', 'lucas', 'huang']) {
     const html = readFileSync(new URL('./chat/' + who + '/index.html', import.meta.url), 'utf8');
     assert.match(html, /consejeros-voces.js\?v=20261116-grok-tts/);
-    assert.match(html, /consejero-mensajes.js\?v=20261112-sin-acople/);
+    assert.match(html, /consejero-mensajes.js\?v=20261125-voz-inicial/);
+    assert.match(html, /id="entre-consejeros"[^>]*data-voz-inicial="on"/);
     assert.match(html, /voz-turno-cliente\.js\?v=20261112-voz-propia/);
     const iVoces = html.indexOf('consejeros-voces.js');
     const iMsg = html.indexOf('consejero-mensajes.js');
@@ -183,6 +185,128 @@ test('voz activa por defecto; solo se silencia si localStorage dice off', () => 
   voces.escribirVozOn(false, ls);
   assert.equal(voces.leerVozOn(ls), false);
 });
+
+function paginaVoz({ ls = store(), porVisita = true, autenticada = true, turno = null } = {}) {
+  const nodes = [], events = new Map(), sonidos = [];
+  function node(tag) {
+    const attrs = {}, listeners = new Map();
+    const el = {
+      tag, children: [], hidden: false, textContent: '', style: {},
+      setAttribute(k, v) { attrs[k] = String(v); },
+      getAttribute(k) { return attrs[k] ?? null; },
+      appendChild(child) { this.children.push(child); child.parentNode = this; return child; },
+      append(...children) { children.forEach((child) => this.appendChild(child)); },
+      insertBefore(child, before) { this.children.splice(this.children.indexOf(before), 0, child); child.parentNode = this; },
+      replaceChildren(...children) { this.children = []; this.append(...children); },
+      addEventListener(k, fn) { listeners.set(k, fn); },
+      click() { listeners.get('click')?.(); },
+      querySelectorAll() { return this.children.filter((child) => child.getAttribute?.('data-filtro')); },
+    };
+    nodes.push(el);
+    return el;
+  }
+  const sec = node('section'); sec.id = 'entre-consejeros'; sec.setAttribute('data-silla', 'Jobs');
+  if (porVisita) sec.setAttribute('data-voz-inicial', 'on');
+  const lista = node('div'); lista.id = 'entre-lista'; sec.appendChild(lista);
+  const hilo = node('section'); hilo.id = 'hilo';
+  const doc = {
+    readyState: 'loading', head: node('head'),
+    createElement: node, createTextNode: (text) => ({ textContent: text }),
+    getElementById: (id) => nodes.find((el) => el.id === id) || null,
+    addEventListener(k, fn) { events.set(k, fn); },
+  };
+  let sesion = autenticada, peticiones = 0;
+  const root = {
+    document: doc, localStorage: ls, AdmiraVozTurno: turno,
+    ChatHiloClient: { credencial: () => sesion ? 'sesion' : '' },
+    AdmiraVoces: {
+      supported: () => true,
+      speak(persona, texto, opts) { sonidos.push({ persona, texto }); opts.onend(); return true; },
+      stop() {},
+    },
+    fetch() { peticiones++; return Promise.resolve({ ok: true, json: async () => ({ ok: true, mensajes: [] }) }); },
+    addEventListener(k, fn) { events.set(k, fn); }, removeEventListener() {}, setInterval() {},
+  };
+  root.window = root;
+  vm.runInNewContext(readFileSync(new URL('./assets/consejero-mensajes.js', import.meta.url), 'utf8'), root);
+  return {
+    api: root.AdmiraEntreVoces, sonidos,
+    boton: doc.getElementById('entre-activar-voz'), aviso: doc.getElementById('entre-voz-aviso'),
+    peticiones: () => peticiones,
+    async sesion(on) { sesion = on; events.get('chat-hilo-sesion')(); await new Promise(setImmediate); },
+    evento(k) { if (k === 'visibilitychange') doc.hidden = true; events.get(k)?.(); },
+  };
+}
+
+test('/chat arranca con voz aunque la portada esté silenciada; silenciar y reactivar solo afectan esta visita', () => {
+  const ls = store(); ls.setItem(voces.LS_VOZ, 'off');
+  const p = paginaVoz({ ls });
+  assert.equal(p.boton.hidden, false);
+  assert.equal(p.boton.textContent, 'Silenciar voz');
+  assert.match(p.aviso.textContent, /Voz activa/);
+  p.api.locutarHiloSiToca([{ id: 'viejo', rol: 'jobs', texto: 'histórico' }]);
+  assert.equal(p.sonidos.length, 0, 'no se relee el histórico al activar la voz');
+  p.api.locutarHiloSiToca([{ id: 'nuevo', rol: 'jobs', texto: 'respuesta nueva' }]);
+  assert.equal(p.sonidos.length, 1, 'una respuesta nueva se oye sin pulsar Activar voz');
+  p.boton.click();
+  assert.equal(p.boton.textContent, 'Activar voz');
+  p.api.locutarHiloSiToca([{ id: 'silenciado', rol: 'jobs', texto: 'no debe oírse' }]);
+  assert.equal(p.sonidos.length, 1);
+  p.boton.click();
+  assert.equal(p.boton.textContent, 'Silenciar voz');
+  const trasReactivar = p.sonidos.length;
+  p.api.locutarHiloSiToca([{ id: 'reactivado', rol: 'jobs', texto: 'vuelve a oírse' }]);
+  assert.equal(p.sonidos.length, trasReactivar + 1);
+  assert.equal(p.sonidos.at(-1).texto, 'vuelve a oírse');
+  assert.equal(voces.leerVozOn(ls), false, 'la preferencia de la portada no cambia');
+  p.boton.click();
+  assert.equal(paginaVoz({ ls }).boton.textContent, 'Silenciar voz', 'otra visita vuelve a arrancar con voz');
+});
+
+test('/chat mantiene los controles de voz ocultos hasta restaurar sesión y los oculta al salir', async () => {
+  const p = paginaVoz({ autenticada: false });
+  assert.equal(p.boton.hidden, true);
+  assert.equal(p.aviso.hidden, true);
+  assert.equal(p.peticiones(), 0);
+  await p.sesion(true);
+  assert.equal(p.boton.hidden, false);
+  assert.equal(p.aviso.hidden, false);
+  assert.equal(p.boton.textContent, 'Silenciar voz');
+  assert.equal(p.peticiones(), 1);
+  await p.sesion(false);
+  assert.equal(p.boton.hidden, true);
+  assert.equal(p.aviso.hidden, true);
+  assert.equal(p.peticiones(), 1, 'sin sesión no se pide la bandeja privada');
+});
+
+test('sin opt-in se conserva la preferencia persistente compartida de voz', () => {
+  const ls = store(); ls.setItem(voces.LS_VOZ, 'off');
+  const p = paginaVoz({ ls, porVisita: false });
+  assert.equal(p.boton.textContent, 'Activar voz');
+  p.boton.click();
+  assert.equal(voces.leerVozOn(ls), true);
+  p.boton.click();
+  assert.equal(voces.leerVozOn(ls), false);
+});
+
+for (const motivo of ['silenciar', 'cerrar sesión', 'pagehide', 'visibilitychange']) {
+  test('/chat libera un turno tardío sin hablar después de ' + motivo, async () => {
+    let conceder, liberados = 0;
+    const p = paginaVoz({ turno: { aguardarTurno: () => new Promise((resolve) => { conceder = resolve; }) } });
+    p.api.locutarHiloSiToca([]);
+    p.api.locutarHiloSiToca([{ id: 'tardío', rol: 'jobs', texto: 'respuesta pendiente de turno' }]);
+    assert.equal(typeof conceder, 'function');
+    if (motivo === 'silenciar') {
+      p.boton.click();
+      p.boton.click(); // Reactivar no debe resucitar la petición anterior al silencio.
+    } else if (motivo === 'cerrar sesión') await p.sesion(false);
+    else p.evento(motivo);
+    conceder({ concedido: true, liberar() { liberados++; } });
+    await new Promise(setImmediate);
+    assert.equal(p.sonidos.length, 0);
+    assert.equal(liberados, 1, 'se devuelve el turno concedido para que otra página pueda hablar');
+  });
+}
 
 test('hilo principal: la primera carga no relée el histórico; una respuesta NUEVA del consejero se locuta', () => {
   const ls = store();

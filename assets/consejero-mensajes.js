@@ -348,12 +348,15 @@
   var sec = doc.getElementById("entre-consejeros");
   if (!sec) return;
   var silla = sec.getAttribute("data-silla") || "";
+  // Las seis líneas directas arrancan con voz en cada visita, sin cambiar la preferencia de la portada.
+  var vozPorVisita = sec.getAttribute("data-voz-inicial") === "on";
   var lista = doc.getElementById("entre-lista");
   var estilo = doc.createElement("style");
   estilo.textContent = "#entre-consejeros .turno.otro{margin-right:auto;align-items:flex-start}#entre-consejeros .turno.otro .burbuja{background:#3a2a22;border-bottom-left-radius:5px}#entre-consejeros .turno.persona{margin-left:auto;align-items:flex-end}#entre-activar-voz,#entre-voz-aviso{font-size:12px;margin-left:8px}#entre-voz-aviso{color:var(--suave,#8b96a5)}#entre-consejeros .entre-conv{border:2px solid #8b5a14;border-radius:16px;background:#16110a;padding:14px 16px;margin:12px 0;max-width:100%}#entre-consejeros .entre-conv-cab{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:650 14px/1.3 system-ui,sans-serif;color:#f0e2c0;font-variant-numeric:tabular-nums;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #8b5a14}#entre-consejeros .entre-conv-frase{display:grid;grid-template-columns:auto auto 1fr;gap:4px 12px;align-items:baseline;margin:10px 0}#entre-consejeros .entre-conv-hora{font:700 15px/1.35 system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap}#entre-consejeros .entre-conv-quien{font:700 14px/1.35 system-ui,sans-serif;white-space:nowrap}#entre-consejeros .entre-conv-texto{margin:0;color:#f3e6c0;font:15px/1.45 system-ui,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere}#entre-consejeros .entre-conv-directo{display:inline-block;margin-right:8px;font:700 10px/1.2 system-ui,sans-serif;letter-spacing:.06em;color:#3ee0c0}";
   doc.head.appendChild(estilo);
   // 19-10-2026: también mensajes con agentes de la flota; filtro Todos / Consejeros / Agentes.
-  var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, hiloListos = false, vozOn = leerVozOn(), vozDesbloqueada = false, hablando = false, pendiente = null;
+  var filtro = "todos", ultimos = [], ultPend = 0, oidosListos = false, hiloListos = false, vozOn = vozPorVisita || leerVozOn(), vozDesbloqueada = false, hablando = false, pendiente = null;
+  var cancelacionVoz = 0;
   var barra = doc.createElement("div");
   barra.id = "entre-filtro";
   barra.className = "meta";
@@ -384,6 +387,13 @@
   barra.appendChild(btnVoz);
   barra.appendChild(avisoVoz);
   function pintarVoz() {
+    var privado = vozPorVisita && !jwt();
+    avisoVoz.hidden = privado;
+    if (privado) {
+      btnVoz.hidden = true;
+      avisoVoz.textContent = "";
+      return;
+    }
     if (!vozDisponible()) {
       btnVoz.hidden = true;
       avisoVoz.textContent = root.AdmiraVoces ? " Este navegador no tiene síntesis de voz." : "";
@@ -407,12 +417,15 @@
     pendiente = null;
     var T = root.AdmiraVozTurno;
     var ticket = null;
+    var cancelacion = cancelacionVoz;
     var terminar = function () {
       if (ticket && ticket.liberar) try { ticket.liberar(); } catch (e) {}
-      hablando = false;
+      if (cancelacion === cancelacionVoz) hablando = false;
       // No encadenar otra lectura: el siguiente mensaje espera a un sondeo nuevo.
     };
     var decir = function () {
+      // El turno puede llegar después de silenciar, salir de la página o perder la sesión.
+      if (cancelacion !== cancelacionVoz || !vozOn || (vozPorVisita && !jwt())) { terminar(); return; }
       // Solo voces de consejeros (nunca la genérica del sistema).
       if (typeof esConsejero === "function" && !esConsejero(x.persona) && !esConsejero(x.de)) { terminar(); return; }
       var ok = root.AdmiraVoces.speak(x.persona, x.texto, {
@@ -432,9 +445,9 @@
         onPerdido: callarVoz
       }).then(function (t) {
         ticket = t;
-        if (!t || !t.concedido) { hablando = false; return; }
+        if (!t || !t.concedido) { if (cancelacion === cancelacionVoz) hablando = false; return; }
         decir();
-      }).catch(function () { hablando = false; });
+      }).catch(function () { if (cancelacion === cancelacionVoz) hablando = false; });
       return;
     }
     decir();
@@ -449,6 +462,7 @@
     }
   }
   function pararPagina() {
+    cancelacionVoz++;
     pendiente = null;
     hablando = false;
     callarVoz();
@@ -467,15 +481,13 @@
     if (pendiente) encolarUno(pendiente);
   }
   function activarVoz() {
-    vozOn = escribirVozOn(true);
+    vozOn = vozPorVisita ? true : escribirVozOn(true);
     pintarVoz();
     desbloquearAudio();
   }
   function silenciarVoz() {
-    vozOn = escribirVozOn(false);
-    hablando = false;
-    pendiente = null;
-    callarVoz();
+    vozOn = vozPorVisita ? false : escribirVozOn(false);
+    pararPagina();
     pintarVoz();
   }
   function alternarVoz() { if (vozOn) silenciarVoz(); else activarVoz(); }
@@ -618,8 +630,13 @@
     try { return C && C.credencial ? C.credencial() : ""; } catch (e) { return ""; }
   }
   function cargar() {
+    pintarVoz();
     var t = jwt();
-    if (!t) { lista.textContent = "Privado: entra con tu cuenta de Google de admira.live para ver los mensajes entre consejeros."; return; }
+    if (!t) {
+      if (vozPorVisita) pararPagina();
+      lista.textContent = "Privado: entra con tu cuenta de Google de admira.live para ver los mensajes entre consejeros.";
+      return;
+    }
     root.fetch("/api/chat/entre-consejeros?con=" + encodeURIComponent(silla), { cache: "no-store", headers: { Authorization: "Bearer " + t } })
       .then(function (r) {
         if (r.status === 401) { lista.textContent = "Tu sesión no está autorizada o ha caducado. Vuelve a entrar."; return null; }

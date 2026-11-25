@@ -7,7 +7,7 @@
 <title>Vuelta al 95 · AdmiraNeXT</title>
 <!--
   «Vuelta al 95» · AdmiraNeXT — versión 0.2
-  Escenas: Léeme · Admister (P2P) → AdmirAmp (reproductor) · ICQGram (mensajería) → AdmiraScape (navegador 1997 → 2026) · apagado
+  Escenas: Léeme · Napster (P2P) → Winamp (reproductor) · ICQGram (mensajería, bandeja) → Netscape Navigator (navegador 1997 → 2026) · apagado
   - Un solo archivo, sin medios remotos (formato Xperiencia / contenido HTML5 de Admira).
   - Pensado para el motor del player HTML5 de Admira (≈ Chrome 80): sin flex-gap, sin CSS moderno.
   - Si existe admira_api_content.js en la misma carpeta, arranca en onStart; si no, arranca solo.
@@ -399,12 +399,12 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
-      <div class="tb"><span data-ico="p2p"></span><span class="t">Admister v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x">□</span><span class="x gap" data-close="nap">×</span></div>
+      <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x">□</span><span class="x gap" data-close="nap">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span>A<u>c</u>ciones</span><span>A<u>y</u>uda</span></div>
-      <div class="hdr"><span data-ico="p2p"></span><div class="brand">Admi<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
+      <div class="hdr"><span data-ico="p2p"></span><div class="brand">Nap<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
       <div class="tabs"><div class="tab" data-tab="home">Inicio</div><div class="tab on" data-tab="search">Buscar</div><div class="tab" data-tab="lib">Biblioteca</div><div class="tab" data-tab="xfer">Transferencias</div></div>
       <div class="panel home" data-panel="home">
-        <h3>Bienvenido/a a Admister</h3>
+        <h3>Bienvenido/a a Napster</h3>
         <p>La mayor comunidad musical del planeta (de 1999).</p>
         <div class="box"><b>NOTICIAS</b><br>· AdmiraNeXT anuncia pantallas que escuchan a la tienda.<br>· «Jensen &amp; Morfeo» arrasa con su nuevo single, «AdmiraNeXT».</div>
         <div class="box"><b>CONSEJO DEL DÍA</b> (por Jensen)<br>«Comparte tu música… pero con licencia: para tiendas, el catálogo de admira.tv.»</div>
@@ -427,7 +427,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- AdmiraScape (homenaje navegador) -->
     <div id="brw" class="win" style="left:40px;top:10px;width:560px;height:430px;display:none">
-      <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">AdmiraScape</span><span class="x" data-min="brw">_</span><span class="x">□</span><span class="x gap" data-close="brw">×</span></div>
+      <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">Netscape Navigator</span><span class="x" data-min="brw">_</span><span class="x">□</span><span class="x gap" data-close="brw">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>I<u>r</u></span><span><u>M</u>arcadores</span><span><u>O</u>pciones</span><span>Ay<u>u</u>da</span></div>
       <div class="brtools">
         <div class="tbtn" id="brBack" data-tico="back"><span>Atrás</span></div>
@@ -481,7 +481,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
       <div class="sbar1" id="mpSt">Listo</div>
     </div>
     <!-- ICQGram: lista de contactos -->
-    <div id="icq" class="win" style="left:462px;top:18px;width:170px;height:330px;display:none">
+    <div id="icq" class="win" style="left:462px;top:118px;width:170px;height:330px;display:none">
       <div class="tb"><span data-ico="chat"></span><span class="t">ICQGram</span><span class="x" data-min="icq">_</span><span class="x gap" data-close="icq">×</span></div>
       <div class="qhdr"><span data-ico="chat"></span><b>ICQ<span>Gram</span></b><i>Nº 25111997</i></div>
       <div class="clist" id="clist"></div>
@@ -501,7 +501,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- AdmirAmp: ventana principal -->
     <div id="amp" class="skin" data-group="amp" style="left:182px;top:16px;width:275px;height:116px">
-      <div class="atb"><i class="ln"></i><b id="ampName">ADMIRAMP</b><i class="ln"></i><span class="sbx" id="ampMin">_</span><span class="sbx" id="ampClose">×</span></div>
+      <div class="atb"><i class="ln"></i><b id="ampName">WINAMP</b><i class="ln"></i><span class="sbx" id="ampMin">_</span><span class="sbx" id="ampClose">×</span></div>
       <canvas id="lcd" width="93" height="42" style="left:9px;top:20px"></canvas>
       <canvas id="marq" width="155" height="11" style="left:110px;top:21px"></canvas>
       <canvas id="info" width="155" height="9" style="left:110px;top:36px"></canvas>
@@ -518,7 +518,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
       <div class="sk tp" id="bEject" style="left:133px;top:88px;width:22px;height:16px"></div>
       <div class="sk tog" id="tShuf" style="left:162px;top:90px;width:42px;height:12px">MEZCLA</div>
       <div class="sk tog on" id="tRep" style="left:206px;top:90px;width:30px;height:12px">REP</div>
-      <div class="alogo" style="left:247px;top:86px">A</div>
+      <div class="alogo" style="left:247px;top:86px">W</div>
     </div>
     <!-- AdmirAmp: ecualizador -->
     <div id="eqw" class="skin" data-group="amp" style="left:182px;top:132px;width:275px;height:116px">
@@ -621,7 +621,7 @@ var CONFIG = {
   // Comprobar piezas: https://admira.tv/api/emision?screen=virtual-win95&tag=win95&resumen=1
   mediaPlayer: { screen:'virtual-win95', tags:['win95','genero95'], rotateSeconds:60, inDemo:true,
     channelUrl:'https://admira.tv/canal.html?screen=virtual-win95&circuit=itcrowd-win95&playerType=virtual&clean=1&mode=local&cam=0&shot=0&muted=1' },
-  names: { player:'AdmirAmp', browser:'AdmiraScape', chat:'ICQGram', p2p:'Admister' },
+  names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster' },
   // Pistas sintetizadas de demostración (sin derechos de terceros).
   // Para el catálogo de admira.tv: añade src:'pista.mp3' (mismo directorio) y se usará el archivo.
   tracks: [
@@ -652,12 +652,12 @@ var CONFIG = {
       interactivo: { msgs:['Como esta demo: un interactivo hecho con ainimation.studio que emite el player de admira.tv.'], opts:[['¿Y quién hace los vídeos?','director']] },
       musica:      { msgs:['admira.tv lleva la música con licencia, la cartelería y hasta los turnos de la cola. Todo en un mismo canal.'], opts:[['¿Y quién hace los vídeos?','director']] },
       director:    { msgs:['Admira Director: le das una idea y la IA te devuelve el vídeo. Sin disquetes y sin esperar descargas. ;-)'], opts:[['¡Quiero verlo!','si'],['Me quedo en 1997','no']] },
-      si:          { msgs:['¡Hecho! Abre AdmiraScape y entra en el futuro: te dejo el enlace. :-D'], opts:[['Abrir AdmiraScape','@browser']] },
+      si:          { msgs:['¡Hecho! Abre Netscape Navigator y entra en el futuro: te dejo el enlace. :-D'], opts:[['Abrir Netscape Navigator','@browser']] },
       no:          { msgs:['Respetable. Pero apunta: admira.tv. Te espero en el futuro. ;-)'], end:true, then:'morfeo' }
     }},
     morfeo: { start:'hola', nodes:{
       hola: { msgs:['¡Hola! Soy Morfeo, el que mueve el ratón cuando no hay nadie. ;-)'], opts:[['¿Qué me recomiendas?','reco']] },
-      reco: { msgs:['Busca «admira» en Admister y escúchalo en AdmirAmp. Y sube el ecualizador, que para eso está.'], opts:[['Abrir Admister','@p2p'],['Abrir AdmirAmp','@amp']] }
+      reco: { msgs:['Busca «admira» en Napster y escúchalo en Winamp. Y sube el ecualizador, que para eso está.'], opts:[['Abrir Napster','@p2p'],['Abrir Winamp','@amp']] }
     }}
   }
 };
@@ -681,16 +681,16 @@ var ICONS={
   mypc:SV('0 0 32 32','<rect x="4.5" y="3.5" width="23" height="18" fill="#c0c0c0" stroke="#000"/><rect x="7" y="6" width="18" height="13" fill="#008080"/><rect x="8" y="7" width="7" height="2" fill="#7fffff"/><rect x="12" y="22" width="8" height="3" fill="#808080"/><rect x="5.5" y="25.5" width="21" height="4" fill="#c0c0c0" stroke="#000"/><rect x="21" y="27" width="3" height="1" fill="#00c000"/>'),
   trash:SV('0 0 32 32','<path d="M8.5 9.5h15l-2 19h-11z" fill="#e8e8e8" stroke="#000"/><rect x="6.5" y="6.5" width="19" height="3" fill="#c0c0c0" stroke="#000"/><path d="M12.5 12v14M16 12v14M19.5 12v14" stroke="#808080"/>'),
   readme:SV('0 0 32 32','<rect x="6.5" y="4.5" width="19" height="25" fill="#fff" stroke="#000"/><path d="M9 10h14M9 13h14M9 16h14M9 19h10M9 22h12" stroke="#000080"/><path d="M9 2v5M13 2v5M17 2v5M21 2v5" stroke="#606060" stroke-width="2"/>'),
-  amp:SV('0 0 32 32','<rect x="2.5" y="6.5" width="27" height="20" fill="#2a2a34" stroke="#000"/><rect x="5" y="9" width="22" height="9" fill="#000"/><path d="M7 17v-3M10 17v-6M13 17v-4M16 17v-7M19 17v-5M22 17v-3M25 17v-2" stroke="#00e000" stroke-width="2"/><rect x="6" y="20" width="4" height="4" fill="#ff6a00"/><rect x="13" y="21" width="13" height="2" fill="#6a6a7c"/>'),
-  browser:SV('0 0 32 32','<circle cx="16" cy="16" r="12" fill="#1a5fd0" stroke="#000" shape-rendering="auto"/><path d="M8 10c3-1 5 2 8 1s2 5-1 6-3 5-6 3-4-7-1-10zM19 18c3-1 6 1 6 4s-4 3-6 1-2-4 0-5z" fill="#1fa43a" shape-rendering="auto"/><path d="M3 27C10 21 20 12 29 5" stroke="#ff8c1a" stroke-width="2" fill="none" shape-rendering="auto"/><circle cx="28.5" cy="5.5" r="2.5" fill="#ffd000" stroke="#000" stroke-width=".5" shape-rendering="auto"/>'),
-  chat:SV('0 0 32 32','<path d="M3.5 5.5h25v16h-14l-6 6v-6h-5z" fill="#fff" stroke="#000"/><circle cx="10.5" cy="13.5" r="2.2" fill="#1fa43a" shape-rendering="auto"/><circle cx="16" cy="13.5" r="2.2" fill="#1fa43a" shape-rendering="auto"/><circle cx="21.5" cy="13.5" r="2.2" fill="#e02020" shape-rendering="auto"/>'),
+  amp:SV('0 0 32 32','<rect x="2.5" y="5.5" width="27" height="21" rx="2" fill="#1a1a1a" stroke="#000"/><path d="M8 7.5c3-1 6 2 8.5.5 2 3-1 6-4 7-3 1-6-1-6-4s1.2-3.2 1.5-3.5z" fill="#b6ff00" stroke="#000" stroke-width=".6" shape-rendering="auto"/><path d="M11 10l2 5-3-1 4 6-1-4 3 1z" fill="#3c3c3c" shape-rendering="auto"/><path d="M18 21v-4M20.5 21v-7M23 21v-5M25.5 21v-8" stroke="#7CFF00" stroke-width="1.6"/>'),
+  browser:SV('0 0 32 32','<circle cx="16" cy="16" r="13" fill="#163a8a" stroke="#000" shape-rendering="auto"/><circle cx="16" cy="16" r="10.5" fill="#2b6cc4" stroke="#0a2048" stroke-width=".6" shape-rendering="auto"/><path d="M16 5 L18 14 L27 16 L18 18 L16 27 L14 18 L5 16 L14 14 Z" fill="#f2d56b" stroke="#000" stroke-width=".7" shape-rendering="auto"/><circle cx="16" cy="16" r="3.2" fill="#12306a" stroke="#000" stroke-width=".6" shape-rendering="auto"/><path d="M13.6 18.2 L16 12.2 L18.4 18.2 M14.4 16.2h3.2" stroke="#f7e7a0" stroke-width="1.2" fill="none" shape-rendering="auto"/>'),
+  chat:SV('0 0 32 32','<circle cx="16" cy="9" r="6" fill="#f0d000" stroke="#000" stroke-width=".8" shape-rendering="auto"/><circle cx="23" cy="16" r="6" fill="#2eb02e" stroke="#000" stroke-width=".8" shape-rendering="auto"/><circle cx="16" cy="23" r="6" fill="#e02020" stroke="#000" stroke-width=".8" shape-rendering="auto"/><circle cx="9" cy="16" r="6" fill="#1fa43a" stroke="#000" stroke-width=".8" shape-rendering="auto"/><circle cx="16" cy="16" r="4" fill="#fff" stroke="#000" stroke-width=".8" shape-rendering="auto"/><circle cx="16" cy="16" r="1.6" fill="#202020" shape-rendering="auto"/>'),
   inbox:SV('0 0 32 32','<rect x="9.5" y="3.5" width="14" height="10" fill="#fff" stroke="#000"/><path d="M9.5 3.5l7 5.5 7-5.5" fill="none" stroke="#000"/><path d="M3.5 17.5l4-8h17l4 8v9h-25z" fill="#c0c0c0" stroke="#000"/><path d="M3.5 17.5h7l2 3h7l2-3h7" fill="none" stroke="#000"/><rect x="5" y="22" width="22" height="3" fill="#808080"/>'),
   mailtray:SV('0 0 16 16','<rect x="1.5" y="3.5" width="13" height="9" fill="#ffe14a" stroke="#000"/><path d="M1.5 3.5l6.5 5 6.5-5" fill="none" stroke="#000"/>'),
   txt:SV('0 0 32 32','<path d="M7.5 3.5h13l5 5v20h-18z" fill="#fff" stroke="#000"/><path d="M20.5 3.5v5h5" fill="#c0c0c0" stroke="#000"/><path d="M10 12h12M10 15h12M10 18h12M10 21h9M10 24h11" stroke="#808080"/>'),
   trashFull:SV('0 0 32 32','<path d="M6.5 10L8 3.5l3.5 2.5 2.5-4.5 3 3.5 3.5-3 2 4.5 3-1.5.5 5z" fill="#fff" stroke="#000" stroke-width=".9" shape-rendering="auto"/><path d="M10 9l1.5-3 3 1.5M16 8.5l2-3 2.5 2.5M21 9l1-2" fill="none" stroke="#808080" stroke-width=".8" shape-rendering="auto"/><path d="M13 5.5l3-3 2 2" fill="#ffffa0" stroke="#000" stroke-width=".7" shape-rendering="auto"/><path d="M8.5 9.5h15l-2 19h-11z" fill="#e8e8e8" stroke="#000"/><path d="M12.5 12v14M16 12v14M19.5 12v14" stroke="#808080"/>'),
   media:SV('0 0 32 32','<rect x="2.5" y="6.5" width="27" height="19" fill="#202028" stroke="#000"/><path d="M5 8h3v2H5zM11 8h3v2h-3zM17 8h3v2h-3zM23 8h3v2h-3zM5 22h3v2H5zM11 22h3v2h-3zM17 22h3v2h-3zM23 22h3v2h-3z" fill="#c0c0c0"/><path d="M13 11.5l7 4.5-7 4.5z" fill="#ff6a00" stroke="#000" stroke-width=".6"/>'),
   ssaver:SV('0 0 32 32','<rect x="4.5" y="3.5" width="23" height="18" fill="#c0c0c0" stroke="#000"/><rect x="7" y="6" width="18" height="13" fill="#000"/><rect x="9" y="8" width="1" height="1" fill="#fff"/><rect x="22" y="8" width="1" height="1" fill="#fff"/><rect x="10" y="16" width="1" height="1" fill="#fff"/><rect x="23" y="16" width="1" height="1" fill="#fff"/><path d="M13 9.5c2-1.2 4 1 6.5 0v5c-2.5 1-4.5-1.2-6.5 0z" fill="#ff8a00" stroke="#000" stroke-width=".6" shape-rendering="auto"/><rect x="12" y="22" width="8" height="3" fill="#808080"/><rect x="5.5" y="25.5" width="21" height="4" fill="#c0c0c0" stroke="#000"/>'),
-  p2p:SV('0 0 32 32','<path d="M6 21v-6a10 10 0 0 1 20 0v6" fill="none" stroke="#202020" stroke-width="3" shape-rendering="auto"/><rect x="2.5" y="18.5" width="8" height="10" fill="#ff6a00" stroke="#000"/><rect x="21.5" y="18.5" width="8" height="10" fill="#ff6a00" stroke="#000"/>'),
+  p2p:SV('0 0 32 32','<path d="M8 14 A8 8 0 0 1 24 14" fill="none" stroke="#202020" stroke-width="3" shape-rendering="auto"/><rect x="3.5" y="13.5" width="6" height="10" rx="1" fill="#ff6a00" stroke="#000"/><rect x="22.5" y="13.5" width="6" height="10" rx="1" fill="#ff6a00" stroke="#000"/><path d="M9 20c0-7 14-7 14 0v5c0 3-3 5-7 5s-7-2-7-5z" fill="#c27a38" stroke="#000" stroke-width=".8" shape-rendering="auto"/><path d="M10 13l-2-7 6 4zM22 13l2-7-6 4z" fill="#c27a38" stroke="#000" stroke-width=".8" shape-rendering="auto"/><circle cx="13.2" cy="21" r="1.3" fill="#fff" stroke="#000" stroke-width=".5" shape-rendering="auto"/><circle cx="18.8" cy="21" r="1.3" fill="#fff" stroke="#000" stroke-width=".5" shape-rendering="auto"/><path d="M15.2 24h1.6l-.8 1.2z" fill="#e09090" stroke="#000" stroke-width=".4" shape-rendering="auto"/>'),
   logo:SV('0 0 16 16','<rect x="1" y="1" width="14" height="14" rx="3" fill="#ff6a00" shape-rendering="auto"/><path d="M4 12.5L8 3.5l4 9M5.6 9.5h4.8" stroke="#fff" stroke-width="2" fill="none" shape-rendering="auto"/>'),
   folder:SV('0 0 24 24','<path d="M1.5 5.5h7l2 2h11v13h-20z" fill="#ffd84a" stroke="#000"/><path d="M2 9h19" stroke="#c09a1a"/>'),
   docs:SV('0 0 24 24','<path d="M1.5 6.5h7l2 2h11v12h-20z" fill="#ffd84a" stroke="#000"/><rect x="8.5" y="2.5" width="11" height="13" fill="#fff" stroke="#000"/><path d="M10 6h7M10 8h7M10 10h5" stroke="#000080"/>'),
@@ -1107,7 +1107,7 @@ function updateTasks(active){ for(var k in TASKS) TASKS[k].btn.classList.toggle(
 var lastPointerType='mouse';
 function selectIcon(el){ qsa('.icon').forEach(function(i){ i.classList.toggle('sel',i===el); }); }
 function buildDesktop(){
-  var list=[['mypc','Mi PC'],['trash','Papelera de reciclaje'],['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['chat',CONFIG.names.chat],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla',82,6],['media','Reproductor multimedia',82,68],['inbox','Bandeja de entrada',82,130]];
+  var list=[['mypc','Mi PC'],['trash','Papelera de reciclaje'],['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla',82,6],['media','Reproductor multimedia',82,68],['inbox','Bandeja de entrada',82,130]];
   list.forEach(function(d,i){
     var def={id:d[0],label:d[1],ico:d[0],kind:'app',app:d[0],left:d[2]!==undefined?d[2]:4,top:d[3]!==undefined?d[3]:6+i*62};
     ICON_DEFS.push(def); addIcon(def);
@@ -1433,7 +1433,7 @@ function napTick(){
 function napPlay(){ var x=NAP.xfers[NAP.xsel]; if(!x||x.state!=='done') return; openAmp(false); play(x.r.t); }
 function openNap(){
   var w=qs('#nap'); w.style.display='block'; NAP.open=true;
-  addTask('nap','Admister v2.0 BETA 7','p2p',[w]); focusWin(w);
+  addTask('nap','Napster v2.0 BETA 7','p2p',[w]); focusWin(w);
   if(!NAP.conn){
     qs('#napSt').textContent='Conectando con el servidor…'; qs('#napS3').textContent='Conectando…';
     clearTimeout(NAP.connTimer); NAP.connTimer=setTimeout(function(){ NAP.conn=true; napStats(); qs('#napS3').textContent='En línea'; },1600);
@@ -1583,10 +1583,22 @@ function renderContacts(){
   qs('#clist').innerHTML='<div class="cgrp">'+(live?'Consejo AdmiraNeXT':'En línea')+' ('+on.length+')</div>'+on.map(row).join('')+'<div class="cgrp">Fuera de línea ('+off.length+')</div>'+off.map(row).join('');
   qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
 }
+function dockIcq(){
+  var w=qs('#icq'), dw=desk.clientWidth||640, dh=desk.clientHeight||452;
+  var ww=w.offsetWidth||170, hh=w.offsetHeight||330;
+  w.style.left=Math.max(4, dw-ww-8)+'px';
+  w.style.top=Math.max(4, dh-hh-4)+'px';
+}
 function openIcq(){
-  var w=qs('#icq'); w.style.display='block'; ICQ.open=true;
-  addTask('icq','ICQGram','chat',[w]); focusWin(w); renderContacts();
+  var w=qs('#icq'); dockIcq(); w.style.display='block'; ICQ.open=true;
+  if(TASKS.icq&&TASKS.icq.min) toggleTask('icq');
+  addTask('icq',CONFIG.names.chat,'chat',[w]); focusWin(w); renderContacts();
   if(MODE==='interactive'&&!ICQ.greeted&&!icqgLive()){ ICQ.greeted=true; clearTimeout(ICQ.timer); ICQ.timer=setTimeout(function(){ if(ICQ.open) icqIncoming('jensen'); },1500); }
+}
+function toggleIcqTray(){
+  if(!ICQ.open||qs('#icq').style.display==='none'){ openIcq(); return; }
+  if(TASKS.icq&&TASKS.icq.min){ toggleTask('icq'); return; }
+  closeIcq();
 }
 function icqIncoming(id){
   ICQ.greeted=true;
@@ -1666,7 +1678,7 @@ function wireIcq(){
   qs('[data-min="icq"]').addEventListener('click',function(){ minimize('icq'); });
   qs('[data-close="icqc"]').addEventListener('click',closeChat);
   qs('[data-min="icqc"]').addEventListener('click',function(){ minimize('icqc'); });
-  qs('#trayIcq').addEventListener('click',function(){ if(TASKS.icq&&TASKS.icq.min) toggleTask('icq'); else openIcq(); });
+  qs('#trayIcq').addEventListener('click',function(){ toggleIcqTray(); });
   renderContacts();
 }
 
@@ -1694,7 +1706,7 @@ var PAGES={
     '<div class="p97-cols"><div class="p97-menu">» <a data-go="quienes">Quiénes somos</a><br>» <a data-go="libro">Libro de visitas</a><br>» <a data-go="cool">Enlaces cool</a><br><span class="blink">»</span> <a data-go="futuro" class="new">¡NUEVO! Ver el futuro &gt;&gt;</a></div>'+
     '<div class="p97-body"><div class="p97-img pi">'+SHOP+'</div><p>Admira lleva vídeos a las <b>pantallas de las tiendas</b>.</p><p>¿Pantallas... en una tienda? Sí. Créenos: esto va a ser <b class="blink">GRANDE</b>.</p></div></div>'+
     '<hr class="p97-hr"><div class="p97-counter">Eres el visitante nº <span class="odo">'+odo(BR.visits)+'</span></div>'+
-    '<div class="p97-foot">Mejor visto con AdmiraScape Navigator 3.0 a 800×600 y 256 colores<br>© 1997 Admira · <a data-go="e404">Escribe al webmaster</a></div></div>'; }},
+    '<div class="p97-foot">Mejor visto con Netscape Navigator 3.0 a 800×600 y 256 colores<br>© 1997 Admira · <a data-go="e404">Escribe al webmaster</a></div></div>'; }},
   quienes:{url:'http://www.admira.tv/quienes.html',title:'Quiénes somos',kb:12,era:97,html:function(){ return '<div class="p97"><h2>Quiénes somos</h2>'+
     '<p>Somos <b>Admira</b>. Ponemos vídeos en las pantallas de las tiendas.</p>'+
     '<p>Nuestro plan para el año 2000: que las pantallas pongan <b>música</b>, cuenten los <b>turnos</b> de la cola y hasta... <i>respondan</i>.</p>'+
@@ -1740,7 +1752,7 @@ async function brLoad(key){
     await sleep(fast?60:150); if(id!==BR.loadId) return;
   }
   brStatus(fast?'Documento: Terminado (en 0,02 s)':'Documento: Terminado',0);
-  qs('#brThrob').classList.remove('on'); qs('#brT').textContent='AdmiraScape - ['+p.title+']'; BR.loaded=true;
+  qs('#brThrob').classList.remove('on'); qs('#brT').textContent=CONFIG.names.browser+' - ['+p.title+']'; BR.loaded=true;
 }
 function brStop(){ if(BR.loaded||!BR.page) return; BR.loadId++; qs('#brThrob').classList.remove('on'); brStatus('Transferencia interrumpida',0); BR.loaded=true; }
 async function dialUp(){
@@ -1757,13 +1769,13 @@ async function dialUp(){
 function cancelDial(){ BR.dialId++; BR.dialing=false; qs('#dun').style.display='none'; brStatus('No se ha podido conectar. Pulsa Inicio para volver a intentarlo.',0); }
 function openBrowser(){
   var w=qs('#brw'); w.style.display='block'; BR.open=true;
-  addTask('brw','AdmiraScape','browser',[w]); focusWin(w);
+  addTask('brw',CONFIG.names.browser,'browser',[w]); focusWin(w);
   if(BR.online){ if(!BR.page) brGo('home'); } else if(!BR.dialing) dialUp();
 }
 function closeBrowser(){
   BR.loadId++; BR.dialId++; BR.dialing=false; BR.online=false; BR.open=false; BR.loaded=false; BR.page=null; BR.hist=[]; BR.pos=-1;
   qs('#brw').style.display='none'; qs('#dun').style.display='none'; removeTask('brw');
-  qs('#brPage').innerHTML=''; qs('#brUrl').textContent=''; qs('#brT').textContent='AdmiraScape'; qs('#brThrob').classList.remove('on'); brStatus('Sin conexión',0); brButtons();
+  qs('#brPage').innerHTML=''; qs('#brUrl').textContent=''; qs('#brT').textContent=CONFIG.names.browser; qs('#brThrob').classList.remove('on'); brStatus('Sin conexión',0); brButtons();
 }
 function wireBrowser(){
   qsa('#brw [data-tico]').forEach(function(b){ b.insertAdjacentHTML('afterbegin',TICO[b.getAttribute('data-tico')]); });
@@ -1782,7 +1794,7 @@ function wireBrowser(){
   qs('#brPrint').addEventListener('click',function(){ msgBox('Imprimir','Enviando a la impresora matricial…\n(El ruido va incluido.)','info'); });
   function find(){ msgBox('Buscar en la red','Todavía no hay ningún buscador bueno.\nVuelve dentro de un año.','info'); }
   qs('#brFind').addEventListener('click',find);
-  qsa('#brw [data-dgo]').forEach(function(b){ b.addEventListener('click',function(){ var g=b.getAttribute('data-dgo'); if(g==='@find') find(); else if(g==='@soft') msgBox('Software','AdmiraScape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); else brGo(g); }); });
+  qsa('#brw [data-dgo]').forEach(function(b){ b.addEventListener('click',function(){ var g=b.getAttribute('data-dgo'); if(g==='@find') find(); else if(g==='@soft') msgBox('Software','Netscape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); else brGo(g); }); });
   qs('[data-close="brw"]').addEventListener('click',closeBrowser);
   qs('[data-min="brw"]').addEventListener('click',function(){ minimize('brw'); });
   qs('#dunCancel').addEventListener('click',cancelDial); qs('#dunX').addEventListener('click',cancelDial);
@@ -2024,7 +2036,7 @@ function closeStart(){ qs('#smenu').classList.remove('open'); qs('#sub').style.d
 function buildStart(){
   qs('#start').addEventListener('click',function(){ var m=qs('#smenu'); if(m.classList.contains('open')) closeStart(); else { m.classList.add('open'); qs('#start').classList.add('on'); } });
   var sub=qs('#sub');
-  [['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['chat',CONFIG.names.chat],['p2p',CONFIG.names.p2p],['media','Reproductor multimedia'],['inbox','Bandeja de entrada']].forEach(function(p){
+  [['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['media','Reproductor multimedia'],['inbox','Bandeja de entrada']].forEach(function(p){
     var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app',p[0]); it.innerHTML='<span data-ico="'+p[0]+'">'+ICONS[p[0]]+'</span><span></span>'; it.lastChild.textContent=p[1];
     it.addEventListener('click',function(){ closeStart(); openApp(p[0]); }); sub.appendChild(it);
   });
@@ -2170,7 +2182,7 @@ function resetDesktop(){
   qs('#mail').style.left='70px'; qs('#mail').style.top='46px';
   qs('#mpw').style.left='140px'; qs('#mpw').style.top='28px';
   qs('#brw').style.left='40px'; qs('#brw').style.top='10px'; qs('#dun').style.left='180px'; qs('#dun').style.top='150px';
-  qs('#icq').style.left='462px'; qs('#icq').style.top='18px'; qs('#icqc').style.left='140px'; qs('#icqc').style.top='96px';
+  dockIcq(); qs('#icqc').style.left='140px'; qs('#icqc').style.top='96px';
   qs('#nap').style.left='88px'; qs('#nap').style.top='24px';
   EQV=[0,0,0,0,0,0,0,0,0,0]; PRE=0; PRESET_I=0; EQS.forEach(function(s){ s.set(0.5,true); }); PRES.set(0.5,true);
   PL.eqOn=true; qs('#eqOn').classList.add('on'); applyEq(); drawEqGraph();
@@ -2197,6 +2209,7 @@ function takeOver(){
   document.body.classList.remove('attract');
   ssStop(); closeDeskMenu(); cancelIconDrag(); ghostEl.style.display='none'; ghostEl.style.visibility=''; ctaEl.style.display='none';
   if(ICQ.open&&ICQG.on){ closeChat(); renderContacts(); }   // ICQGram pasa de la demo a los consejeros reales
+  openIcq();
   qs('#boot').style.display='none';
   if(qs('#shut').style.display==='block'||qs('#shade').style.display==='block'){ qs('#shut').style.display='none'; qs('#shut').classList.remove('more'); qs('#shade').style.display='none'; }
   closeStart();

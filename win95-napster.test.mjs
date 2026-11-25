@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   MAX_RESULTS, STOCK_INDEX, buscar, catalogo, coincideArtista, coincideHashtag,
-  coincideTitulo, esCancion, esAudioPieza, esVideoPieza, leerCatalogo, nombreArchivo, partirTitulo, pieza, responder, tagDescarga, urlPublica,
+  coincideTitulo, contarTipos, esCancion, esAudioPieza, esVideoPieza, leerCatalogo, nombreArchivo, partirTitulo, pieza, responder, tagDescarga, urlPublica,
   vaciarCache,
 } from "./win95-napster-lib.mjs";
 import * as api from "./functions/api/win95/napster.js";
@@ -196,4 +196,34 @@ test("al descargar, audio recibe #winamp y vídeo #AdmiraMediaPlayer", () => {
   assert.equal(esVideoPieza(pieza(FIX[3])), true);
   assert.equal(nombreArchivo(pieza(FIX[1])), "Vanessa Carlton - A Thousand Miles.mp3");
   assert.equal(nombreArchivo(pieza(FIX[3])).endsWith(".mp4"), true);
+});
+
+
+test("t1397u: responder separa canciones y vídeos con datos reales del catálogo", () => {
+  const tipos = contarTipos(canciones);
+  assert.equal(tipos.canciones, 3);
+  assert.equal(tipos.videos, 2);
+  assert.equal(tipos.canciones + tipos.videos, canciones.length);
+  const r = responder({ canciones, at: Date.parse("2026-11-25T20:30:00Z") }, { q: "80" });
+  assert.equal(r.canciones, 3);
+  assert.equal(r.videos, 2);
+  assert.equal(r.total, 5);
+});
+
+test("t1397u: título Napster v2.0 Transfer, biblioteca persistente y reproductor de audio interno", () => {
+  assert.match(html, /Napster v2\.0 Transfer/);
+  assert.equal(html.includes("BETA 7"), false);
+  assert.match(html, /function napBiblioteca\(\)/);
+  assert.match(html, /descargasDe\(''\)/);
+  assert.match(html, /admira-win95-descargas/);
+  assert.match(html, /function napPlayLib\(i\)/);
+  assert.match(html, /function napPlayAudio\(rec\)/);
+  assert.match(html, /id="napAudio"/);
+  assert.match(html, /id="napPlayer"/);
+  assert.match(html, /openMediaFile\(/);
+  assert.doesNotMatch(html, /qs\('#napLib'\)\.addEventListener\('dblclick',function\(e\)\{ var r=e\.target\.closest\('\.lvr'\); if\(!r\) return; openAmp\(false\); play\(/);
+  assert.match(html, /napPlayLib\(\+r\.getAttribute\('data-i'\)\)/);
+  assert.match(html, /n\(c,'canción','canciones'\)/);
+  assert.match(html, /n\(v,'vídeo','vídeos'\)/);
+  assert.match(html, /x\.d,'canciones'\)&&Object\.prototype\.hasOwnProperty\.call\(x\.d,'videos'\)/);
 });

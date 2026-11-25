@@ -3111,18 +3111,20 @@ function contact(id){ var g=consejero(id); if(g) return g; for(var i=0;i<CONFIG.
 /* ---------- ICQGram en línea: hilo real con los consejeros de admira.live ---------- */
 var ICQG={on:false,sent:0,known:{},waitingSince:0,yo:''};
 var CONSEJO=[
-  {id:'c-jobs',persona:'jobs',name:'Steve Jobs'},{id:'c-wozniak',persona:'wozniak',name:'Steve Wozniak'},
-  {id:'c-disney',persona:'disney',name:'Walt Disney'},{id:'c-lucas',persona:'lucas',name:'George Lucas'},
-  {id:'c-musk',persona:'musk',name:'Elon Musk'},{id:'c-huang',persona:'huang',name:'Jensen Huang'}
+  // Dos cuentas de Grok Bot (Carlos 25-11-2026 21:05): Leyendas y Actuales. La presencia es de la cuenta, nunca mezclada.
+  {id:'c-jobs',persona:'jobs',name:'Steve Jobs',cuenta:'leyendas'},{id:'c-wozniak',persona:'wozniak',name:'Steve Wozniak',cuenta:'leyendas'},
+  {id:'c-disney',persona:'disney',name:'Walt Disney',cuenta:'leyendas'},{id:'c-lucas',persona:'lucas',name:'George Lucas',cuenta:'leyendas'},
+  {id:'c-musk',persona:'musk',name:'Elon Musk',cuenta:'actuales'},{id:'c-huang',persona:'huang',name:'Jensen Huang',cuenta:'actuales'},
+  {id:'c-murati',persona:'murati',name:'Mira Murati',cuenta:'actuales',sinChat:true},{id:'c-lasseter',persona:'lasseter',name:'John Lasseter',cuenta:'actuales',sinChat:true}
 ];
 function chc(){ return window.ChatHiloClient||null; }
-function consejero(id){ for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].id===id){ var c=CONSEJO[i], pr=presenciaDe(c.persona); return {id:c.id,persona:c.persona,name:c.name,chat:'/chat/'+c.persona+'/',status:presenciaTxt(pr),on:pr.online===true,desconocido:pr.online!==true&&pr.online!==false,real:true}; } return null; }
-/* Presencia real de los consejeros: /api/win95/presencia (canal de despertar con evidencia: respuesta/encargo en 24 h o latido; webhook roto o pregunta sin contestar = fuera). */
+function consejero(id){ for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].id===id){ var c=CONSEJO[i], pr=presenciaDe(c.persona); return {id:c.id,persona:c.persona,name:c.name,cuenta:c.cuenta,sinChat:!!c.sinChat,chat:c.sinChat?null:'/chat/'+c.persona+'/',status:presenciaTxt(pr,c.sinChat),on:pr.online===true,desconocido:pr.online!==true&&pr.online!==false,real:true}; } return null; }
+/* Presencia real: /api/win95/presencia, uniforme por cuenta de Grok Bot (Leyendas / Actuales): en línea si la cuenta responde. */
 var PRES={datos:null,at:0,timer:null,enVuelo:false};
 function presenciaDe(persona){ var d=PRES.datos, l=d&&d.consejeros||[]; for(var i=0;i<l.length;i++) if(l[i].persona===persona) return l[i]; return {persona:persona,online:null}; }
 function haceTxt(s){ if(!s) return ''; var m=Math.max(0,Math.round((now()/1000-s)/60)); return m<1?'ahora':m<60?'hace '+m+' min':m<2880?'hace '+Math.round(m/60)+' h':'hace '+Math.round(m/1440)+' d'; }
-function presenciaTxt(pr){
-  var dir='admira.live/chat/'+pr.persona;
+function presenciaTxt(pr,sinChat){
+  var dir=sinChat?'sin línea directa todavía':'admira.live/chat/'+pr.persona;
   if(pr.online===true) return dir+' · en línea'+(pr.ultima_respuesta?' · respondió '+haceTxt(pr.ultima_respuesta):'');
   if(pr.online===false) return dir+' · fuera de línea'+(pr.motivo?' · '+pr.motivo:'')+(pr.ultima_respuesta?' · última respuesta '+haceTxt(pr.ultima_respuesta):'');
   return dir+' · estado desconocido';
@@ -3273,9 +3275,12 @@ function renderContacts(){
   function row(c){ var tt=c.real?' title="'+esc(c.status)+'"':''; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'"'+tt+'>'+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+'</span><i class="env">'+ENV+'</i></div>'; }
   var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
   // En línea de verdad: solo consejeros con señal reciente. Fuera de línea: los que no + los 3 de la demo.
-  if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }); on=todos.filter(function(c){ return c.on; }); off=todos.filter(function(c){ return !c.on; }).concat(off); }
-  else on=CONFIG.contacts.filter(function(c){ return c.on; });
-  qs('#clist').innerHTML='<div class="cgrp">'+(live?'Consejo AdmiraNeXT':'En línea')+' ('+on.length+')</div>'+on.map(row).join('')+'<div class="cgrp">Fuera de línea ('+off.length+')</div>'+off.map(row).join('');
+  // Por cuenta: «Leyendas» y «Actuales» con los de la cuenta en línea; «Fuera de línea» = cuentas caídas + los 3 de la demo.
+  var grp=function(t,l){ return '<div class="cgrp">'+t+' ('+l.length+')</div>'+l.map(row).join(''); }, html;
+  if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }), de=function(k){ return todos.filter(function(c){ return c.on&&c.cuenta===k; }); };
+    off=todos.filter(function(c){ return !c.on; }).concat(off); html=grp('Leyendas',de('leyendas'))+grp('Actuales',de('actuales')); }
+  else html=grp('En línea',CONFIG.contacts.filter(function(c){ return c.on; }));
+  qs('#clist').innerHTML=html+grp('Fuera de línea',off);
   qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
 }
 function dockIcq(){
@@ -3311,6 +3316,7 @@ function addMsg(name,text,cls,auto){
 }
 function openChat(id){
   var c=contact(id); if(!c) return;
+  if(c.real&&c.sinChat){ sfxDing(); msgBox('ICQGram',c.name+' ('+(c.cuenta==='actuales'?'Actuales':'Leyendas')+') no tiene línea directa todavía.\nAún no existe su hilo en admira.live/chat/'+c.persona+'.','info'); return; }
   if(c.real){ if(icqgLive()) openRealChat(c); return; }
   realInput(false);
   if(!c.on){ sfxDing(); msgBox('ICQGram',c.name+' no está conectado.\nTu mensaje se entregará cuando se conecte… allá por 1998.','info'); return; }
@@ -3441,7 +3447,7 @@ function ultimaPersonaLocal(){
     if(s&&s.persona) return s.persona;
   }catch(e){}
   if(ICQ.who){ var c=consejero(ICQ.who); if(c&&c.persona) return c.persona; }
-  return (CONSEJO[0]&&CONSEJO[CONSEJO.length-1]&&CONSEJO[CONSEJO.length-1].persona)||'huang';
+  return 'huang';
 }
 function cabecerasHilo(){
   var C=chc(), h={};

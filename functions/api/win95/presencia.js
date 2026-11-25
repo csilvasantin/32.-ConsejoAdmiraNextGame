@@ -28,7 +28,7 @@ export async function construir({ env, fetchImpl, ahoraMs } = {}) {
     leer(f, LATIDO),
     ...CONSEJEROS.map((c) => leer(f, BANDEJA + "?persona=" + encodeURIComponent(c.latido))
       .then((d) => { bandejas[c.persona] = d && Array.isArray(d.items) ? d.items.map(sinTexto) : null; })),
-    ...(kv(env) ? CONSEJEROS.map((c) => cargarHilo(env, c.persona)
+    ...(kv(env) ? CONSEJEROS.filter((c) => c.chat).map((c) => cargarHilo(env, c.persona)
       .then((d) => { hilos[c.persona] = d.turnos; }).catch(() => { hilos[c.persona] = null; })) : []),
   ]);
   return presencia({ latido: latido && latido.ok ? latido : null, hilos, bandejas, ahoraMs: ahoraMs || Date.now() });

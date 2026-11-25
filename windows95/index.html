@@ -48,8 +48,23 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .x:active,.x.pressed{box-shadow:inset 1px 1px #000,inset -1px -1px #fff,inset 2px 2px #808080}
 .menubar{height:20px;display:flex;align-items:center;padding:0 2px}
 .menubar span{padding:0 6px}
-.notebody{position:absolute;left:3px;right:3px;top:43px;bottom:3px;background:#fff;padding:4px 6px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:12px/15px "Lucida Console","Courier New",monospace;white-space:pre-wrap;overflow:hidden}
-.caret{display:inline-block;width:1px;height:13px;background:#000;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+.notebody{position:absolute;left:3px;right:3px;top:43px;bottom:3px;background:#fff;padding:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:12px/15px "Lucida Console","Courier New",monospace;overflow:hidden}
+#note #nt{display:block;box-sizing:border-box;width:100%;height:100%;margin:0;padding:4px 6px;border:0;resize:none;outline:none;background:#fff;color:#000;font:12px/15px "Lucida Console","Courier New",monospace;white-space:pre-wrap;overflow:auto;tab-size:8;caret-color:#000}
+#note .menubar span{cursor:default}
+#note .menubar span.open,#note .menubar span.hl{background:#000080;color:#fff}
+.note-menu{position:absolute;z-index:6800;min-width:196px;padding:3px 2px;display:none}
+.note-menu[hidden]{display:none}
+.note-menu:not([hidden]){display:block}
+.note-menu .mi2{padding-left:22px}
+.note-menu .mi2 .acc{margin-left:auto;padding-left:16px;color:inherit;opacity:.85;font-size:11px}
+.dlg.note-dlg .body{display:block;padding:12px 14px 8px}
+.dlg.note-dlg label{display:block;margin:0 0 6px}
+.dlg.note-dlg input[type="text"]{width:100%;box-sizing:border-box;height:21px;padding:1px 4px;border:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:12px "MS Sans Serif",sans-serif;outline:none}
+.dlg.note-dlg .acts{padding:4px 12px 10px;text-align:right}
+.dlg.note-dlg .acts .btn{min-width:72px;margin-left:6px}
+.dlg.note-dlg .list{height:120px;overflow:auto;margin:6px 0 0;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.dlg.note-dlg .list div{padding:2px 6px;cursor:default}
+.dlg.note-dlg .list div.sel{background:#000080;color:#fff}
 @keyframes blink{50%{opacity:0}}
 .dlg .body{display:flex;padding:14px 14px 4px}
 .dlg .body svg{flex:none;width:32px;height:32px;margin-right:14px}
@@ -425,8 +440,9 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     <!-- Bloc de notas -->
     <div id="note" class="win" style="left:150px;top:50px;width:340px;height:220px;display:none">
       <div class="tb"><span data-ico="readme"></span><span class="t">Léeme.txt - Bloc de notas</span><span class="x" data-min="note">_</span><span class="x" data-max="note" title="Maximizar">□</span><span class="x gap" data-close="note">×</span></div>
-      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>B</u>uscar</span><span>Ay<u>u</u>da</span></div>
-      <div class="notebody"><span id="nt"></span><span class="caret"></span></div>
+      <div class="menubar" id="note-menubar"><span data-note-menu="archivo"><u>A</u>rchivo</span><span data-note-menu="edicion"><u>E</u>dición</span><span data-note-menu="buscar"><u>B</u>uscar</span><span data-note-menu="ayuda">Ay<u>u</u>da</span></div>
+      <div class="notebody"><textarea id="nt" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="soft"></textarea></div>
+      <div id="note-menu" class="win cmenu note-menu" hidden></div>
     </div>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
@@ -1380,6 +1396,7 @@ function buildDesktop(){
     ICON_DEFS.push(def); addIcon(def);
   });
   applyIconLayout();
+  restoreNoteDocs();
   // clic derecho (o pulsación larga en pantalla táctil) sobre el escritorio → menú contextual
   var lp=null;
   desk.addEventListener('pointerdown',function(e){
@@ -1464,6 +1481,7 @@ function newTextDoc(x,y,rename){
   var el=addIcon({id:id,label:name,ico:'txt',kind:'doc',docId:id,left:Math.round(clamp(x-36,0,568)),top:Math.round(clamp(y-16,0,404))});
   selectIcon(el); LASTDOC=el;
   if(rename) startRename(el);
+  saveNoteDocs();
   return el;
 }
 function startRename(el){
@@ -1476,6 +1494,8 @@ function startRename(el){
     if(v!==old&&docNameUsed(v)) v=old;
     sp.removeAttribute('contenteditable'); sp.classList.remove('ren'); sp.textContent=v;
     el._def.label=v; var d=DOCS[el._def.docId]; if(d) d.name=v;
+    if(NOTE.doc&&NOTE.doc.id===el._def.docId){ NOTE.doc.name=v; refreshNoteTitle(); }
+    saveNoteDocs();
   }
   function key(e){ if(e.key==='Enter'){ e.preventDefault(); sp.blur(); } else if(e.key==='Escape'){ e.preventDefault(); done(true); } }
   function blur(){ done(false); }
@@ -1514,10 +1534,11 @@ function toTrash(el){
   askBox('Confirmar eliminación de archivo','¿Está seguro de que desea enviar «'+d.label+'» a la Papelera de reciclaje?',function(){ doTrash(el); });
 }
 function doTrash(el){
-  var d=el._def; if(NOTE.doc&&NOTE.doc.id===d.docId) closeNote();
+  var d=el._def; if(NOTE.doc&&NOTE.doc.id===d.docId){ saveNote(); NOTE.dirty=false; hideNote(); }
   d.left=el.offsetLeft; d.top=el.offsetTop; TRASH.push({def:d,when:new Date()});
   if(el.parentNode) el.parentNode.removeChild(el);
   setTrashIcon(); renderTrash(); sfxCrumple();
+  saveNoteDocs();
 }
 function renderTrash(){
   var cols=[['Nombre',150],['Ubicación original',116],['Fecha de eliminación',112]], h=lvHeader(cols);
@@ -1529,7 +1550,7 @@ function openTrash(){ var w=qs('#trw'); w.style.display='block'; TRSEL=-1; addTa
 function closeTrash(){ qs('#trw').style.display='none'; removeTask('trw'); }
 function wireTrash(){
   qs('#trList').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; TRSEL=+r.getAttribute('data-i'); lvSelect(qs('#trList'),TRSEL); qs('#trRestore').disabled=false; });
-  qs('#trRestore').addEventListener('click',function(){ var it=TRASH[TRSEL]; if(!it) return; TRASH.splice(TRSEL,1); TRSEL=-1; addIcon(it.def); setTrashIcon(); renderTrash(); });
+  qs('#trRestore').addEventListener('click',function(){ var it=TRASH[TRSEL]; if(!it) return; TRASH.splice(TRSEL,1); TRSEL=-1; addIcon(it.def); setTrashIcon(); renderTrash(); saveNoteDocs(); });
   qs('#trEmpty').addEventListener('click',function(){
     if(!TRASH.length) return;
     askBox('Confirmar eliminación de varios archivos',TRASH.length===1?'¿Está seguro de que desea eliminar «'+TRASH[0].def.label+'»?':'¿Está seguro de que desea eliminar estos '+TRASH.length+' elementos?',function(){
@@ -1545,6 +1566,7 @@ function resetIcons(){
   DOCS={}; TRASH=[]; TRSEL=-1; LASTDOC=null; cancelIconDrag(); setTrashIcon(); closeTrash(); closeDeskMenu();
   ICON_DEFS.forEach(function(d){ var el=qs('#ic-'+d.id); if(el){ el.style.left=d.left+'px'; el.style.top=d.top+'px'; } });
   applyIconLayout();
+  restoreNoteDocs();
 }
 async function ghostDragIcon(el,tx,ty,tk){
   await ghostMove(el,tk); await wait(200,tk);
@@ -1602,22 +1624,363 @@ function welcomeText(){
   var d=new Date(), who=CONFIG.visitor?', '+CONFIG.visitor:'';
   return 'Bienvenido/a a Admira'+who+'.\n\nHoy es '+d.getDate()+' de '+MESES[d.getMonth()]+' de 1997.\nO eso cree este PC.\n\nBusca «admira» en '+CONFIG.names.p2p+' y escúchalo\nen '+CONFIG.names.player+'. Toca la pantalla cuando\nquieras: ¡el ratón es tuyo!\n\n-- Morfeo & Jensen · AdmiraNeXT';
 }
-var NOTE={doc:null};   // null = Léeme.txt (solo lectura); si no, un documento creado por la visita
-function saveNote(){ if(NOTE.doc) NOTE.doc.text=qs('#nt').innerText.replace(/\n$/,''); }
-function noteMode(editable){ var nt=qs('#nt'); if(editable) nt.setAttribute('contenteditable','true'); else nt.removeAttribute('contenteditable'); qs('#note .caret').style.display=editable?'none':''; }
+var NOTE={doc:null,saved:'',dirty:false,leeme:null,find:'',findCs:false,pending:null};
+var NOTE_STORE='admira-win95-notepad';
+function noteVal(){ var nt=qs('#nt'); return nt?nt.value:''; }
+function noteSetVal(v,caretEnd){
+  var nt=qs('#nt'); if(!nt) return;
+  nt.value=v||'';
+  if(caretEnd){ try{ var n=nt.value.length; nt.selectionStart=nt.selectionEnd=n; nt.scrollTop=nt.scrollHeight; }catch(e){} }
+}
+function noteFileName(){ return (NOTE.doc&&NOTE.doc.name)?NOTE.doc.name:'Léeme.txt'; }
+function noteTitle(){ return (NOTE.dirty?'*':'')+noteFileName()+' - Bloc de notas'; }
+function refreshNoteTitle(){
+  var label=noteTitle(), ico=(NOTE.doc&&!NOTE.doc.untitled)?'txt':'readme';
+  var t=qs('#note .t'); if(t) t.textContent=label;
+  if(TASKS.note){ TASKS.note.btn.lastChild.textContent=label; }
+  return label;
+}
+function markNoteDirty(){
+  var cur=noteVal(), dirty=cur!==NOTE.saved;
+  if(dirty!==NOTE.dirty){ NOTE.dirty=dirty; refreshNoteTitle(); }
+  else NOTE.dirty=dirty;
+}
+function noteFocus(){ var nt=qs('#nt'); setTimeout(function(){ try{ nt.focus(); }catch(e){} },0); }
+function loadNoteStore(){
+  try{ return JSON.parse(localStorage.getItem(NOTE_STORE)||'null')||{v:1,docs:[],leeme:null,seq:0}; }
+  catch(e){ return {v:1,docs:[],leeme:null,seq:0}; }
+}
+function saveNoteDocs(){
+  var st=loadNoteStore(), docs=[];
+  st.v=1; st.leeme=(NOTE.leeme!=null)?NOTE.leeme:st.leeme; st.seq=docSeq;
+  for(var k in DOCS){
+    var d=DOCS[k], el=qs('#ic-'+d.id);
+    if(!el) continue;
+    docs.push({id:d.id,name:d.name,text:d.text||'',left:el.offsetLeft,top:el.offsetTop});
+  }
+  st.docs=docs;
+  try{ localStorage.setItem(NOTE_STORE, JSON.stringify(st)); }catch(e){}
+}
+function restoreNoteDocs(){
+  var st=loadNoteStore();
+  if(st.leeme!=null) NOTE.leeme=st.leeme;
+  if(st.seq&&st.seq>docSeq) docSeq=st.seq;
+  (st.docs||[]).forEach(function(d){
+    if(!d||!d.id||DOCS[d.id]||qs('#ic-'+d.id)) return;
+    var num=parseInt(String(d.id).replace(/^doc/,''),10);
+    if(isFinite(num)&&num>docSeq) docSeq=num;
+    DOCS[d.id]={id:d.id,name:d.name||'Sin título.txt',text:d.text||''};
+    addIcon({id:d.id,label:DOCS[d.id].name,ico:'txt',kind:'doc',docId:d.id,left:Math.round(clamp(+d.left||8,0,568)),top:Math.round(clamp(+d.top||8,0,404))});
+  });
+}
+function leemeText(){ return (NOTE.leeme!=null)?NOTE.leeme:welcomeText(); }
+function saveNote(){ if(NOTE.doc&&!NOTE.doc.untitled) NOTE.doc.text=noteVal(); }
+function noteMode(editable){ var nt=qs('#nt'); if(nt) nt.readOnly=!editable; }
+function showNoteWin(ico){
+  var w=qs('#note'); w.style.display='block';
+  addTask('note',noteTitle(),ico||((NOTE.doc&&!NOTE.doc.untitled)?'txt':'readme'),[w]);
+  refreshNoteTitle(); focusWin(w); noteFocus();
+}
+function loadNoteBuffer(doc,text,saved){
+  NOTE.doc=doc||null; noteSetVal(text,true); NOTE.saved=(saved!=null)?saved:text; NOTE.dirty=false; noteMode(true); refreshNoteTitle();
+}
 function openNote(full){
-  saveNote(); NOTE.doc=null; noteMode(false);
-  var w=qs('#note'); w.style.display='block'; qs('#note .t').textContent='Léeme.txt - Bloc de notas';
-  addTask('note','Léeme.txt - Bloc de notas','readme',[w]); focusWin(w);
-  qs('#nt').textContent=full?welcomeText():'';
+  confirmIfDirty(function(){
+    loadNoteBuffer(null, full?leemeText():'', full?leemeText():'');
+    showNoteWin('readme');
+  });
 }
 function openDoc(id){
-  var d=DOCS[id]; if(!d) return; saveNote(); NOTE.doc=d;
-  var w=qs('#note'), nt=qs('#nt'); w.style.display='block'; qs('#note .t').textContent=d.name+' - Bloc de notas';
-  addTask('note',d.name+' - Bloc de notas','txt',[w]); focusWin(w);
-  nt.textContent=d.text||''; noteMode(true); setTimeout(function(){ try{ nt.focus(); }catch(e){} },0);
+  var d=DOCS[id]; if(!d) return;
+  confirmIfDirty(function(){
+    loadNoteBuffer(d, d.text||'', d.text||'');
+    showNoteWin('txt');
+  });
 }
-function closeNote(){ saveNote(); NOTE.doc=null; noteMode(false); qs('#note').style.display='none'; removeTask('note'); }
+function hideNote(){
+  closeNoteMenu(); closeNoteDlgs();
+  NOTE.doc=null; NOTE.dirty=false; NOTE.saved='';
+  noteSetVal(''); qs('#note').style.display='none'; removeTask('note');
+}
+function closeNote(){
+  if(MODE!=='interactive'||!NOTE.dirty){ saveNote(); hideNote(); return; }
+  noteAskSave(function(choice){
+    if(choice==='cancel') return;
+    if(choice==='no'){ hideNote(); return; }
+    noteGuardar(function(ok){ if(ok) hideNote(); });
+  });
+}
+function confirmIfDirty(next){
+  if(MODE!=='interactive'||!NOTE.dirty){ saveNote(); next(); return; }
+  noteAskSave(function(choice){
+    if(choice==='cancel') return;
+    if(choice==='no'){ NOTE.dirty=false; next(); return; }
+    noteGuardar(function(ok){ if(ok) next(); });
+  });
+}
+function closeNoteDlgs(){
+  qsa('.dlg.note-dlg').forEach(function(w){ removeTask(w.id); if(w.parentNode) w.parentNode.removeChild(w); });
+}
+function noteAskSave(cb){
+  closeNoteDlgs();
+  var w=document.createElement('div'); w.className='win dlg note-dlg'; w.style.width='360px';
+  var key='notesave'+now(); w.id=key;
+  w.innerHTML='<div class="tb"><span class="t">Bloc de notas</span><span class="x gap">×</span></div><div class="body"><div class="msg"></div></div><div class="acts"><button class="btn" data-yes>Sí</button><button class="btn" data-no>No</button><button class="btn" data-cancel>Cancelar</button></div>';
+  qs('.msg',w).textContent='El texto del archivo '+noteFileName()+' ha cambiado.\n¿Desea guardar los cambios?';
+  desk.appendChild(w);
+  w.style.left='140px'; w.style.top=Math.round((452-w.offsetHeight)/2)+'px';
+  function close(choice){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); cb(choice); }
+  qs('[data-yes]',w).addEventListener('click',function(){ close('yes'); });
+  qs('[data-no]',w).addEventListener('click',function(){ close('no'); });
+  qs('[data-cancel]',w).addEventListener('click',function(){ close('cancel'); });
+  qs('.x.gap',w).addEventListener('click',function(){ close('cancel'); });
+  addTask(key,'Bloc de notas','info',[w]);
+  makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); }); focusWin(w);
+  sfxDing();
+}
+function notePromptName(title,value,cb){
+  closeNoteDlgs();
+  var w=document.createElement('div'); w.className='win dlg note-dlg'; w.style.width='320px';
+  var key='notename'+now(); w.id=key;
+  w.innerHTML='<div class="tb"><span class="t"></span><span class="x gap">×</span></div><div class="body"><label>Nombre de archivo:</label><input type="text" id="note-name-in" spellcheck="false"></div><div class="acts"><button class="btn" data-ok>Guardar</button><button class="btn" data-cancel>Cancelar</button></div>';
+  qs('.t',w).textContent=title; desk.appendChild(w);
+  var inp=qs('#note-name-in',w); inp.value=value||'Sin título.txt';
+  w.style.left='160px'; w.style.top=Math.round((452-w.offsetHeight)/2)+'px';
+  function close(v){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); if(v!=null) cb(v); else noteFocus(); }
+  function ok(){ var n=(inp.value||'').replace(/[\r\n\\\/:*?"<>|]/g,'').trim(); if(!n) return; if(!/\.[A-Za-z0-9]{1,4}$/.test(n)) n+='.txt'; close(n); }
+  qs('[data-ok]',w).addEventListener('click',ok);
+  qs('[data-cancel]',w).addEventListener('click',function(){ close(null); });
+  qs('.x.gap',w).addEventListener('click',function(){ close(null); });
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ok(); } if(e.key==='Escape'){ e.preventDefault(); close(null); } });
+  addTask(key,title,'txt',[w]);
+  makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); }); focusWin(w);
+  setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },0);
+}
+function commitSave(name, cb){
+  var text=noteVal();
+  if(!NOTE.doc||NOTE.doc.untitled||NOTE.doc.id==null){
+    if(name==='Léeme.txt'){
+      NOTE.doc=null; NOTE.leeme=text; NOTE.saved=text; NOTE.dirty=false;
+      saveNoteDocs(); refreshNoteTitle(); if(cb) cb(true); return;
+    }
+    if(name&&docNameUsed(name)&&!(NOTE.doc&&NOTE.doc.name===name)){
+      sfxDing(); msgBox('Guardar como','Ya existe un archivo llamado «'+name+'».','warn'); if(cb) cb(false); return;
+    }
+    var el=newTextDoc(420,80,false);
+    var d=DOCS[el._def.docId];
+    d.name=name; d.text=text; el.lastChild.textContent=name; el._def.label=name;
+    NOTE.doc=d; NOTE.saved=text; NOTE.dirty=false;
+    saveNoteDocs(); refreshNoteTitle(); if(cb) cb(true); return;
+  }
+  if(NOTE.doc===null||(NOTE.doc&&NOTE.doc.name==='Léeme.txt'&&!NOTE.doc.id)){
+    NOTE.leeme=text; NOTE.saved=text; NOTE.dirty=false; saveNoteDocs(); refreshNoteTitle(); if(cb) cb(true); return;
+  }
+  NOTE.doc.text=text; NOTE.saved=text; NOTE.dirty=false;
+  if(name&&name!==NOTE.doc.name){
+    if(docNameUsed(name)){ sfxDing(); msgBox('Guardar como','Ya existe un archivo llamado «'+name+'».','warn'); if(cb) cb(false); return; }
+    NOTE.doc.name=name;
+    var icon=qs('#ic-'+NOTE.doc.id);
+    if(icon){ icon.lastChild.textContent=name; icon._def.label=name; }
+  }
+  saveNoteDocs(); refreshNoteTitle(); if(cb) cb(true);
+}
+function noteGuardar(cb){
+  if(!NOTE.doc){
+    NOTE.leeme=noteVal(); NOTE.saved=NOTE.leeme; NOTE.dirty=false; saveNoteDocs(); refreshNoteTitle(); if(cb) cb(true); return;
+  }
+  if(NOTE.doc.untitled||NOTE.doc.id==null){
+    notePromptName('Guardar como', NOTE.doc.name&&NOTE.doc.name!=='Sin título' ? NOTE.doc.name : 'Sin título.txt', function(name){ commitSave(name,cb); });
+    return;
+  }
+  commitSave(NOTE.doc.name, cb);
+}
+function noteNuevo(){
+  confirmIfDirty(function(){
+    loadNoteBuffer({id:null,name:'Sin título',text:'',untitled:true},'','');
+    showNoteWin('txt');
+  });
+}
+function noteAbrir(){
+  confirmIfDirty(function(){
+    closeNoteDlgs();
+    var w=document.createElement('div'); w.className='win dlg note-dlg'; w.style.width='340px';
+    var key='noteopen'+now(); w.id=key;
+    w.innerHTML='<div class="tb"><span class="t">Abrir</span><span class="x gap">×</span></div><div class="body"><label>Archivos de texto en el escritorio:</label><div class="list" id="note-open-list"></div></div><div class="acts"><button class="btn" data-ok>Abrir</button><button class="btn" data-cancel>Cancelar</button></div>';
+    desk.appendChild(w);
+    var list=qs('#note-open-list',w), sel='leeme';
+    function add(id,name){
+      var row=document.createElement('div'); row.textContent=name; row.setAttribute('data-id',id);
+      row.addEventListener('click',function(){ sel=id; qsa('div',list).forEach(function(r){ r.classList.toggle('sel',r===row); }); });
+      row.addEventListener('dblclick',function(){ sel=id; ok(); });
+      if(id===sel) row.classList.add('sel');
+      list.appendChild(row);
+    }
+    add('leeme','Léeme.txt');
+    Object.keys(DOCS).forEach(function(k){ if(qs('#ic-'+k)) add(k, DOCS[k].name); });
+    w.style.left='150px'; w.style.top=Math.round((452-w.offsetHeight)/2)+'px';
+    function close(){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); }
+    function ok(){ close(); if(sel==='leeme') openNote(true); else openDoc(sel); }
+    qs('[data-ok]',w).addEventListener('click',ok);
+    qs('[data-cancel]',w).addEventListener('click',close);
+    qs('.x.gap',w).addEventListener('click',close);
+    addTask(key,'Abrir','txt',[w]);
+    makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); }); focusWin(w);
+  });
+}
+function noteInsert(text){
+  var nt=qs('#nt'); if(!nt||nt.readOnly) return;
+  nt.focus();
+  var ok=false;
+  try{ ok=document.execCommand('insertText',false,text); }catch(e){ ok=false; }
+  if(!ok){
+    var a=nt.selectionStart, b=nt.selectionEnd, v=nt.value;
+    nt.value=v.slice(0,a)+text+v.slice(b);
+    nt.selectionStart=nt.selectionEnd=a+text.length;
+  }
+  markNoteDirty();
+}
+function noteDeleteSel(){
+  var nt=qs('#nt'); if(!nt) return;
+  var a=nt.selectionStart, b=nt.selectionEnd, v=nt.value;
+  if(a===b) return;
+  nt.value=v.slice(0,a)+v.slice(b);
+  nt.selectionStart=nt.selectionEnd=a;
+  markNoteDirty();
+}
+function noteHoraFecha(){
+  var d=new Date(), hh=('0'+d.getHours()).slice(-2), mm=('0'+d.getMinutes()).slice(-2);
+  var dd=('0'+d.getDate()).slice(-2), mo=('0'+(d.getMonth()+1)).slice(-2);
+  noteInsert(hh+':'+mm+' '+dd+'/'+mo+'/'+d.getFullYear());
+}
+function noteUndo(){ var nt=qs('#nt'); nt.focus(); try{ document.execCommand('undo'); }catch(e){} markNoteDirty(); }
+function noteSelectAll(){ var nt=qs('#nt'); nt.focus(); nt.select(); }
+function noteClipboard(op){
+  var nt=qs('#nt'); nt.focus();
+  var sel=nt.value.slice(nt.selectionStart,nt.selectionEnd);
+  if(op==='copy'||op==='cut'){
+    if(!sel) return;
+    var done=false;
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(sel); done=true; } }catch(e){}
+    if(!done){ try{ document.execCommand(op==='cut'?'cut':'copy'); done=true; }catch(e){} }
+    if(op==='cut') noteDeleteSel();
+    return;
+  }
+  if(op==='paste'){
+    if(navigator.clipboard&&navigator.clipboard.readText){
+      navigator.clipboard.readText().then(function(tx){ noteInsert(tx||''); }).catch(function(){ try{ document.execCommand('paste'); markNoteDirty(); }catch(e){} });
+    } else { try{ document.execCommand('paste'); markNoteDirty(); }catch(e){} }
+  }
+}
+function noteFindNext(){
+  var nt=qs('#nt'), q=NOTE.find; if(!nt||!q) return false;
+  var cs=NOTE.findCs, v=nt.value, from=nt.selectionEnd||0;
+  var hay=cs?v:v.toLowerCase(), ndl=cs?q:q.toLowerCase();
+  var i=hay.indexOf(ndl,from);
+  if(i<0&&from>0) i=hay.indexOf(ndl,0);
+  if(i<0){ sfxDing(); return false; }
+  nt.focus(); nt.setSelectionRange(i,i+q.length);
+  try{ var line=nt.value.slice(0,i).split('\n').length; nt.scrollTop=Math.max(0,(line-3)*15); }catch(e){}
+  return true;
+}
+function noteBuscar(){
+  closeNoteDlgs();
+  var w=document.createElement('div'); w.className='win dlg note-dlg'; w.style.width='300px';
+  var key='notefind'+now(); w.id=key;
+  w.innerHTML='<div class="tb"><span class="t">Buscar</span><span class="x gap">×</span></div><div class="body"><label>Buscar:</label><input type="text" id="note-find-in" spellcheck="false"><label style="margin-top:8px"><input type="checkbox" id="note-find-cs"> Mayúsculas y minúsculas</label></div><div class="acts"><button class="btn" data-ok>Buscar siguiente</button><button class="btn" data-cancel>Cancelar</button></div>';
+  desk.appendChild(w);
+  var inp=qs('#note-find-in',w), cs=qs('#note-find-cs',w);
+  inp.value=NOTE.find||''; cs.checked=!!NOTE.findCs;
+  w.style.left='170px'; w.style.top='90px';
+  function close(){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); noteFocus(); }
+  function go(){ NOTE.find=inp.value||''; NOTE.findCs=cs.checked; if(!NOTE.find) return; noteFindNext(); }
+  qs('[data-ok]',w).addEventListener('click',go);
+  qs('[data-cancel]',w).addEventListener('click',close);
+  qs('.x.gap',w).addEventListener('click',close);
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); go(); } if(e.key==='Escape'){ e.preventDefault(); close(); } });
+  addTask(key,'Buscar','find',[w]);
+  makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); }); focusWin(w);
+  setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },0);
+}
+function noteAcerca(){ msgBox('Acerca de Bloc de notas','Bloc de notas\nAdmira 95 · 1997\n\nPara escribir, guardar y buscar\ntextos en el escritorio.','info'); }
+function closeNoteMenu(){
+  var m=qs('#note-menu'); if(m){ m.hidden=true; m.innerHTML=''; }
+  qsa('#note-menubar span').forEach(function(s){ s.classList.remove('open','hl'); });
+}
+function openNoteMenu(kind,btn){
+  var m=qs('#note-menu'), win=qs('#note'); if(!m||!win) return;
+  var menus={
+    archivo:[
+      {l:'Nuevo',acc:'Ctrl+N',fn:noteNuevo},
+      {l:'Abrir...',acc:'Ctrl+O',fn:noteAbrir},
+      {l:'Guardar',acc:'Ctrl+S',fn:function(){ noteGuardar(); }},
+      {sep:1},
+      {l:'Salir',fn:closeNote}
+    ],
+    edicion:[
+      {l:'Deshacer',acc:'Ctrl+Z',fn:noteUndo},
+      {sep:1},
+      {l:'Cortar',acc:'Ctrl+X',fn:function(){ noteClipboard('cut'); }},
+      {l:'Copiar',acc:'Ctrl+C',fn:function(){ noteClipboard('copy'); }},
+      {l:'Pegar',acc:'Ctrl+V',fn:function(){ noteClipboard('paste'); }},
+      {sep:1},
+      {l:'Seleccionar todo',acc:'Ctrl+A',fn:noteSelectAll},
+      {sep:1},
+      {l:'Hora/Fecha',acc:'F5',fn:noteHoraFecha}
+    ],
+    buscar:[
+      {l:'Buscar...',acc:'Ctrl+F',fn:noteBuscar},
+      {l:'Buscar siguiente',acc:'F3',fn:function(){ if(NOTE.find) noteFindNext(); else noteBuscar(); }}
+    ],
+    ayuda:[
+      {l:'Acerca de Bloc de notas...',fn:noteAcerca}
+    ]
+  };
+  var items=menus[kind]; if(!items) return;
+  m.innerHTML='';
+  items.forEach(function(it){
+    if(it.sep){ var s=document.createElement('div'); s.className='msep'; m.appendChild(s); return; }
+    var row=document.createElement('div'); row.className='mi2';
+    row.appendChild(document.createTextNode(it.l));
+    if(it.acc){ var a=document.createElement('i'); a.className='acc'; a.textContent=it.acc; row.appendChild(a); }
+    row.addEventListener('mouseenter',function(){ qsa('.mi2',m).forEach(function(r){ r.classList.toggle('hl',r===row); }); });
+    row.addEventListener('click',function(){ closeNoteMenu(); it.fn(); });
+    m.appendChild(row);
+  });
+  qsa('#note-menubar span').forEach(function(s){ s.classList.toggle('open',s===btn); s.classList.toggle('hl',s===btn); });
+  m.style.left=btn.offsetLeft+'px';
+  m.style.top=(btn.offsetTop+btn.offsetHeight)+'px';
+  m.hidden=false;
+}
+function wireNoteMenus(){
+  var bar=qs('#note-menubar'); if(!bar||bar._wired) return; bar._wired=true;
+  bar.addEventListener('click',function(e){
+    var btn=e.target.closest('[data-note-menu]'); if(!btn) return;
+    e.stopPropagation();
+    if(btn.classList.contains('open')) closeNoteMenu();
+    else openNoteMenu(btn.getAttribute('data-note-menu'),btn);
+  });
+  bar.addEventListener('pointerover',function(e){
+    var open=qs('#note-menubar span.open'); if(!open) return;
+    var btn=e.target.closest('[data-note-menu]'); if(!btn||btn===open) return;
+    openNoteMenu(btn.getAttribute('data-note-menu'),btn);
+  });
+  document.addEventListener('mousedown',function(e){
+    var m=qs('#note-menu'); if(!m||m.hidden) return;
+    if(m.contains(e.target)||bar.contains(e.target)) return;
+    closeNoteMenu();
+  });
+  var nt=qs('#nt');
+  nt.addEventListener('input',markNoteDirty);
+  nt.addEventListener('keydown',function(e){
+    var k=e.key, ctrl=e.ctrlKey||e.metaKey;
+    if(ctrl&&(k==='n'||k==='N')){ e.preventDefault(); noteNuevo(); }
+    else if(ctrl&&(k==='o'||k==='O')){ e.preventDefault(); noteAbrir(); }
+    else if(ctrl&&(k==='s'||k==='S')){ e.preventDefault(); noteGuardar(); }
+    else if(ctrl&&(k==='f'||k==='F')){ e.preventDefault(); noteBuscar(); }
+    else if(k==='F5'){ e.preventDefault(); noteHoraFecha(); }
+    else if(k==='F3'){ e.preventDefault(); if(NOTE.find) noteFindNext(); else noteBuscar(); }
+  });
+}
 
 /* ---------- Admister (homenaje P2P) ---------- */
 // t = índice de pista en CONFIG.tracks · m = factor de duración de la versión · k = palabras clave
@@ -2636,7 +2999,7 @@ function scrollView(el,tk){
 }
 async function ghostType(el,text,tk){ for(var i=0;i<text.length;i++){ el.textContent+=text.charAt(i); await wait(90+Math.random()*90,tk); } }
 async function waitUntil(fn,tk,max){ var t0=now(); while(!fn()&&now()-t0<max) await wait(200,tk); }
-async function typeNote(text,tk){ var nt=qs('#nt'); nt.textContent=''; for(var i=0;i<text.length;i++){ var ch=text.charAt(i); nt.textContent+=ch; await wait(ch==='\n'?200:(ch===' '?45:22+Math.random()*40),tk); } }
+async function typeNote(text,tk){ var nt=qs('#nt'); nt.value=''; for(var i=0;i<text.length;i++){ var ch=text.charAt(i); nt.value+=ch; nt.scrollTop=nt.scrollHeight; await wait(ch==='\n'?200:(ch===' '?45:22+Math.random()*40),tk); } NOTE.saved=nt.value; NOTE.dirty=false; refreshNoteTitle(); }
 async function bootSeq(tk){ var b=qs('#boot'); b.style.display='block'; sfxStartup(); await wait(3800,tk); b.style.display='none'; }
 async function shutdownSeq(tk){
   closeStart(); var shade=qs('#shade'), shut=qs('#shut');
@@ -2755,7 +3118,7 @@ function takeOver(){
   qs('#boot').style.display='none';
   if(qs('#shut').style.display==='block'||qs('#shade').style.display==='block'){ qs('#shut').style.display='none'; qs('#shut').classList.remove('more'); qs('#shade').style.display='none'; }
   closeStart();
-  if(qs('#note').style.display==='block') qs('#nt').textContent=welcomeText();
+  if(qs('#note').style.display==='block'){ noteSetVal(leemeText(),true); NOTE.saved=noteVal(); NOTE.dirty=false; refreshNoteTitle(); }
   hintEl.textContent='¡Ahora mandas tú! Doble clic (o un toque) en los iconos del escritorio. Si nadie toca nada en '+CONFIG.idleSeconds+' s, vuelve la demo.';
   hintEl.style.display='block'; clearTimeout(takeOver.t); takeOver.t=setTimeout(function(){ hintEl.style.display='none'; },7000);
 }
@@ -2804,6 +3167,7 @@ function init(){
   window.addEventListener('beforeunload',function(){ if(MODE==='interactive') saveIconLayout(); });
   qs('[data-close="note"]').addEventListener('click',closeNote);
   qs('[data-min="note"]').addEventListener('click',function(){ minimize('note'); });
+  wireNoteMenus();
   qs('#ampClose').addEventListener('click',closeAmp);
   qs('#ampMin').addEventListener('click',function(){ minimize('amp'); });
   qs('[data-close="eqw"]').addEventListener('click',function(){ toggleSub('#eqw','#tEQ'); });

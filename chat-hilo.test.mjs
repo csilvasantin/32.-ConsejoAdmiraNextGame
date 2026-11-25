@@ -98,7 +98,11 @@ import { textoEncargo, porSincronizar, turnoDeEncargo, limpiarTextoVisita, ident
 test("enviar: guarda turno live, crea UN encargo [chat-coetaneos] y es idempotente", async () => {
   const e = { ...env(), ADMIRA_TELEGRAM_PANEL_KEY: "panel-key" };
   const llamadas = [];
-  const fetchImpl = async (url, init) => { llamadas.push({ url, init }); return new Response(JSON.stringify({ ok: true, id: 9001 }), { status: 200 }); };
+  const fetchImpl = async (url, init) => {
+    llamadas.push({ url, init });
+    if (String(url).includes("/consejero/despertar")) return new Response(JSON.stringify({ ok: true, despertado: true, codigo: 200 }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, id: 9001 }), { status: 200 });
+  };
   const req = (body, token = TOKEN) => new Request("https://www.admira.live/api/chat/enviar", { method: "POST", headers: { "X-Council-Token": token }, body: JSON.stringify(body) });
   assert.equal((await enviarApi.onRequestPost({ request: req({ texto: "hola" }, "malo"), env: e, fetchImpl: async () => new Response("{}", { status: 400 }) })).status, 401);
   assert.equal((await enviarApi.onRequestPost({ request: req({ texto: "hola" }), env: e, fetchImpl })).status, 400);
@@ -106,7 +110,7 @@ test("enviar: guarda turno live, crea UN encargo [chat-coetaneos] y es idempoten
   assert.equal(r.status, 201);
   const d = await r.json();
   assert.equal(d.turno.encargo, 9001);
-  assert.equal(llamadas.length, 1);
+  assert.equal(llamadas.length, 2);
   const cuerpo = JSON.parse(llamadas[0].init.body);
   assert.ok(cuerpo.text.startsWith("[chat-coetaneos]"));
   assert.match(cuerpo.text, /api\/chat\/hilo\?persona=jobs/);
@@ -120,7 +124,13 @@ test("enviar: guarda turno live, crea UN encargo [chat-coetaneos] y es idempoten
   assert.equal(llamadas[0].init.headers.authorization, "Bearer panel-key");
   const r2 = await enviarApi.onRequestPost({ request: req({ texto: "Prueba", msg_id: "live-abc123" }), env: e, fetchImpl });
   assert.equal((await r2.json()).duplicado, true);
-  assert.equal(llamadas.length, 1);
+  assert.equal(llamadas.length, 2);
+  assert.match(String(llamadas[1].url), /\/consejero\/despertar$/);
+  const desp = JSON.parse(llamadas[1].init.body);
+  assert.equal(desp.persona, "Jobs");
+  assert.equal(desp.encargo, 9001);
+  assert.equal(desp.tipo, "chat");
+  assert.equal(llamadas[1].init.headers.authorization, "Bearer panel-key");
   assert.equal((await enviarApi.onRequestPost({ request: req({ texto: "Otra", msg_id: "live-abc123" }), env: e, fetchImpl })).status, 409);
   const g = await (await hilo.onRequestGet({ request: get("?persona=jobs", { "X-Council-Token": TOKEN }), env: e, fetchImpl: async () => new Response(JSON.stringify({ ok: true, item: { id: 9001, status: "done", note: "Respuesta de Jobs", done_at: 1791500000 } }), { status: 200 }) })).json();
   const t = g.turnos.find((x) => x.id === "live-abc123");
@@ -171,7 +181,11 @@ test("identidad: el nombre sale del email y se recorta el prefijo de visita", ()
 test("enviar win95: recorta el prefijo, firma como Carlos, tope 300 y 20 s por usuario", async () => {
   const e = { ...env(), ADMIRA_TELEGRAM_PANEL_KEY: "panel-key" };
   const llamadas = [];
-  const fetchImpl = async (url, init) => { llamadas.push({ url, init }); return new Response(JSON.stringify({ ok: true, id: 7708 }), { status: 200 }); };
+  const fetchImpl = async (url, init) => {
+    llamadas.push({ url, init });
+    if (String(url).includes("/consejero/despertar")) return new Response(JSON.stringify({ ok: true, despertado: true, codigo: 200 }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, id: 7708 }), { status: 200 });
+  };
   const req = (body) => new Request("https://www.admira.live/api/chat/enviar", { method: "POST", headers: { "X-Council-Token": TOKEN }, body: JSON.stringify(body) });
   const largo = await enviarApi.onRequestPost({ request: req({ persona: "huang", texto: "x".repeat(MAX_TEXTO_WIN95 + 1), msg_id: "live-w1", canal: "win95" }), env: e, fetchImpl });
   assert.equal(largo.status, 400);
@@ -197,7 +211,12 @@ test("enviar win95: recorta el prefijo, firma como Carlos, tope 300 y 20 s por u
   const dup = await enviarApi.onRequestPost({ request: req({ persona: "huang", texto: "Prueba de identidad ICQGram", msg_id: "live-w2", canal: "win95" }), env: e, fetchImpl });
   assert.equal(dup.status, 200);
   assert.equal((await dup.json()).duplicado, true);
-  assert.equal(llamadas.length, 1);
+  assert.equal(llamadas.length, 2);
+  assert.match(String(llamadas[1].url), /\/consejero\/despertar$/);
+  const desp = JSON.parse(llamadas[1].init.body);
+  assert.equal(desp.persona, "Huang");
+  assert.equal(desp.encargo, 7708);
+  assert.equal(desp.canal, "win95");
 });
 
 test("texto del encargo cabe en 4000 y sincronizar ignora lo ya respondido", () => {

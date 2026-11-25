@@ -32,6 +32,7 @@ import { censoBots, flotaCombinada, RUNTIMES, ESTADOS_ABIERTOS } from './coordin
 import { crearEstado, CACHE_SEG } from './estado.js';
 import { crearBandeja, agenteDestino } from './mensajes.js';
 import { sillaCanonica } from './sillas.js';
+import { crearAvisos } from './avisos.js';
 import { crearEquipos } from './equipos.js';
 import { personaCanonica as personaFlota } from './flota.js';
 import { leerVelocidad } from './velocidad.js';
@@ -237,7 +238,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const avisosConsejo = bandejaConsejo.avisos;
   server.registerTool('consejero_webhook_registrar', {
     title: 'Registrar mi webhook de avisos',
-    description: 'Registra (o sustituye) TU webhook https (consejero con la clave de su silla, o agente de la flota con su clave de agente) para que admira.live te avise AL MOMENTO cuando te llega un mensaje privado (consejero_mensaje/consejero_responder), sin esperar a tu revisión de 15 min. Solo con la clave propia de tu silla (no la compartida). Te llega un POST JSON {tipo:"consejero_mensaje", id, de, para, resumen, responde_a, hora, url}: sin el cuerpo completo; léelo con consejero_bandeja. Si das secreto, va en la cabecera que elijas (por defecto x-admira-secreto) y nunca se vuelve a mostrar. Solo https con dominio (no IPs, no localhost). La ruta Telegram/encargo sigue igual.',
+    description: 'Registra (o sustituye) TU webhook https (consejero con la clave de su silla, o agente de la flota con su clave de agente) para que admira.live te avise AL MOMENTO cuando te llega un mensaje privado (consejero_mensaje/consejero_responder), un encargo o un mensaje del chat/ICQGram, sin esperar a tu revisión de 15 min. Solo con la clave propia de tu silla (no la compartida). Te llega un POST JSON {tipo:"consejero_mensaje"|"chat"|"encargo", id, de, para, resumen, encargo, canal, hora, url}: sin el cuerpo completo; léelo con consejero_bandeja o telegram_bandeja. Si das secreto, va en la cabecera que elijas (por defecto x-admira-secreto) y nunca se vuelve a mostrar. Solo https con dominio (no IPs, no localhost). El alta en el bot-inbox se mantiene; este registro es el que despierta tu rutina.',
     inputSchema: {
       url: z.string().min(10).max(500).describe('URL https de tu receptor.'),
       secreto: z.string().max(200).optional().describe('Secreto opcional que se enviará en la cabecera. No se muestra al leer.'),
@@ -601,6 +602,7 @@ export async function manejar(request, env, deps = {}) {
       documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_conversacion_autonoma', 'consejero_mensaje', 'consejero_bandeja', 'consejero_responder', 'consejero_webhook_registrar', 'consejero_webhook_ver', 'consejero_webhook_borrar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar', 'consejero_latido', 'equipo_handon', 'equipo_handoff', 'equipo_ahorro'],
       latido_consejeros: `${url.origin}/consejeros/latido`,
       bandeja_consejeros: `${url.origin}/consejero/mensajes`,
+      despertar_consejero: `${url.origin}/consejero/despertar`,
       flota: `Con una clave por consejero (MCP_KEYS), ${CONSEJEROS_GROKBOT.join('/')} trabajan en yokup como ${CONSEJEROS_GROKBOT.map((c) => c + 'GrokBot').join('/')} (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…). Una clave de agente no firma como consejero aunque pase «como».`,
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }
@@ -726,7 +728,14 @@ export async function manejar(request, env, deps = {}) {
     }
   }
 
-  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado', '/consejero/mensajes'] }, 404);
+  if (ruta === '/consejero/despertar' && request.method === 'POST') {
+    return despertarPorWebhook(request, env, deps);
+  }
+  if (ruta === '/consejero/despertar' && request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'Content-Type, Authorization', 'access-control-max-age': '86400' } });
+  }
+
+  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado', '/consejero/mensajes', '/consejero/despertar'] }, 404);
 }
 
 export function lecturaMensajesPermitida(request, env = {}) {
@@ -737,6 +746,51 @@ export function lecturaMensajesPermitida(request, env = {}) {
   let d = 0; for (let i = 0; i < c.length; i++) d |= c.charCodeAt(i) ^ t.charCodeAt(i);
   return d === 0;
 }
+
+/** Bearer de ADMIRA_TELEGRAM_PANEL_KEY (la misma que usa /api/chat/enviar para el bot-inbox). */
+export function panelKeyValida(request, env = {}) {
+  const auth = String(request.headers.get('authorization') || '');
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  const cand = (m ? m[1] : '').trim();
+  const key = String(env.ADMIRA_TELEGRAM_PANEL_KEY || '').trim();
+  if (!cand || !key || cand.length !== key.length) return false;
+  let d = 0; for (let i = 0; i < cand.length; i++) d |= cand.charCodeAt(i) ^ key.charCodeAt(i);
+  return d === 0;
+}
+
+/**
+ * POST /consejero/despertar — dispara el webhook registrado (consejero_webhook_registrar)
+ * para un encargo o un mensaje de chat/ICQGram. No sustituye el alta en el bot-inbox:
+ * solo el aviso al momento. Auth: Bearer ADMIRA_TELEGRAM_PANEL_KEY.
+ */
+export async function despertarPorWebhook(request, env, deps = {}) {
+  if (!panelKeyValida(request, env)) {
+    return json({ ok: false, error: 'no autorizado' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-despertar"' });
+  }
+  let b;
+  try { b = await request.json(); } catch { return json({ ok: false, error: 'json inválido' }, 400); }
+  const para = sillaCanonica(b && (b.persona || b.para));
+  if (!para) return json({ ok: false, error: 'persona inválida' }, 400);
+  const tipo = (b && b.tipo) === 'consejero_mensaje' ? 'consejero_mensaje'
+    : (b && (b.canal === 'win95' || b.canal === 'chat' || b.tipo === 'chat')) ? 'chat' : 'encargo';
+  const avisos = crearAvisos(env, deps);
+  const res = await avisos.avisar({
+    tipo,
+    id: (b && b.id) || (b && b.encargo ? 'enc-' + b.encargo : undefined),
+    de: (b && b.de) || 'admira.live',
+    para,
+    texto: (b && (b.resumen || b.texto)) || '',
+    hora: (b && b.hora) || new Date().toISOString(),
+    encargo: (b && b.encargo) || null,
+    canal: (b && b.canal) || null,
+    url: (b && b.url) || undefined,
+  });
+  const despertado = !!(res && res.ok);
+  const resultado = (res && res.omitido) || (despertado ? ('webhook ' + res.codigo) : ((res && (res.error || ('webhook ' + res.codigo))) || 'fallo'));
+  try { console.log(JSON.stringify({ despertar: para, ok: despertado, codigo: res && res.codigo || null, resultado, encargo: (b && b.encargo) || null, canal: (b && b.canal) || null })); } catch (_) {}
+  return json({ ok: true, despertado, via: despertado ? 'webhook-propio' : null, resultado, codigo: (res && res.codigo) || null, para });
+}
+
 
 export const PREFIJO_SANDBOX = 'avisos-sandbox:';
 function kvConPrefijo(kv, pre) {

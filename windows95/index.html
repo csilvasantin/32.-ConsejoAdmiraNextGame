@@ -448,6 +448,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .foldbody.drop,.foldwin.drop .foldbody{outline:1px dotted #ffff00;background:#808080}
 .foldwin .foldbody{position:absolute;left:3px;right:3px;top:43px;bottom:22px;background:#c0c0c0;overflow:auto;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .foldwin .foldbody .icon{color:#000}
+.foldwin .foldbody .icon span{color:#000}
 .foldwin .foldbody .icon.sel span{background:#000080;color:#fff;border-color:#ffff00}
 .foldwin .foldst{position:absolute;left:3px;right:3px;bottom:3px;height:18px;padding:2px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
 .lnk-wiz .body{display:block;padding:12px 14px 8px}
@@ -465,6 +466,36 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #trw .trtools{height:28px;padding:3px 4px 0}
 #trw .trtools .btn{min-width:0;height:22px;margin-right:4px;padding:0 8px}
 #trw .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+/* Explorador 95 (Carlos, 25-11-2026): Ver · Organizar iconos · Detalles · menús anidados */
+.dynmenu{display:block;z-index:6800;width:auto;min-width:150px}
+.dynmenu .mi2 .chk{position:absolute;left:7px;top:8px;width:5px;height:5px;border-radius:50%;background:currentColor}
+.foldwin .menubar span{cursor:default}
+.foldwin .menubar span.open,#trw .menubar span.open{background:#000080;color:#fff}
+#trw .menubar span{cursor:default}
+.icon .dc{display:none}
+.foldbody.v-small,.foldbody.v-list,.foldbody.v-details{padding:2px}
+.foldbody.v-small .icon,.foldbody.v-list .icon,.foldbody.v-details .icon{position:relative!important;left:auto!important;top:auto!important;display:flex;align-items:center;text-align:left;height:18px}
+.foldbody.v-small .icon svg,.foldbody.v-small .icon img,.foldbody.v-list .icon svg,.foldbody.v-list .icon img,.foldbody.v-details .icon svg,.foldbody.v-details .icon img{width:16px;height:16px;margin:0 3px 0 0;flex:none}
+.foldbody.v-small .icon .lnk-arr,.foldbody.v-list .icon .lnk-arr,.foldbody.v-details .icon .lnk-arr{left:0;top:6px;width:10px;height:10px}
+.foldbody.v-small .icon span,.foldbody.v-list .icon span,.foldbody.v-details .icon span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foldbody.v-small{display:flex;flex-wrap:wrap;align-content:flex-start}
+.foldbody.v-small .icon{width:150px;margin:0 4px 1px 0}
+.foldbody.v-list{display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;overflow-x:auto;overflow-y:hidden}
+.foldbody.v-list .icon{width:160px;margin:0 6px 1px 0}
+.foldbody.v-details{padding:2px 2px 2px 2px;background:#fff}
+.foldbody.v-details .icon{width:auto;min-width:440px;margin:0}
+.foldbody.v-details .icon span{order:1;width:168px;flex:none}
+.foldbody.v-details .icon .dc{display:block;flex:none;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal;color:#000}
+.foldbody.v-details .icon .dc-size{order:2;width:58px;text-align:right}
+.foldbody.v-details .icon .dc-type{order:3;width:118px}
+.foldbody.v-details .icon .dc-date{order:4;width:104px}
+.foldbody.v-details .dethead{position:sticky;top:-2px;z-index:2;display:flex;height:17px;min-width:448px;margin:-2px -2px 2px}
+.foldbody.v-details .dethead div{flex:none;padding:2px 4px 0;white-space:nowrap;overflow:hidden;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080;cursor:default}
+.foldbody.v-details .dethead div:active{box-shadow:inset 1px 1px #808080}
+.foldbody.v-details .dethead .h-name{width:195px}.foldbody.v-details .dethead .h-size{width:66px;text-align:right}.foldbody.v-details .dethead .h-type{width:126px}.foldbody.v-details .dethead .h-date{width:112px}
+.foldbody .foldmsg{position:absolute;left:8px;bottom:4px;right:8px;color:#404040;font-size:10px;pointer-events:none}
+.foldbody:not(.v-large) .foldmsg{position:static;margin-top:6px}
+#note.ro-remote #note-ro-edit{display:none}
 #nt[contenteditable]{outline:none;-webkit-user-select:text;user-select:text;cursor:text;display:block;min-height:100%}
 
 /* ---------- Bandeja de entrada (correo de los 90) ---------- */
@@ -885,7 +916,9 @@ coetáneos esta semana.
   </div>
   <div id="sub" class="win"></div>
   <div id="dmenu" class="win cmenu">
-    <div class="mi2 dis">Organizar iconos<i class="arr">▶</i></div>
+    <div class="mi2" id="dm-view">Ver<i class="arr">▶</i></div>
+    <div class="msep"></div>
+    <div class="mi2" id="dm-arrange">Organizar iconos<i class="arr">▶</i></div>
     <div class="mi2" id="dm-align">Alinear iconos</div>
     <div class="msep"></div>
     <div class="mi2 dis" id="dm-paste">Pegar</div>
@@ -1808,6 +1841,7 @@ function buildDesktop(){
   });
   applyIconLayout();
   restoreNoteDocs();
+  loadComms(false);
   // clic derecho (o pulsación larga en pantalla táctil) sobre el escritorio → menú contextual
   var lp=null;
   desk.addEventListener('pointerdown',function(e){
@@ -1862,7 +1896,7 @@ function wireIcon(el){
     var already=el.classList.contains('sel');
     selectIcon(el);
     if(e.isTrusted&&lastPointerType==='touch'&&!el.lastChild.classList.contains('ren')) openIcon(el);
-    else if(already&&MODE==='interactive'&&el._def&&!isSystemDef(el._def)&&!el.lastChild.classList.contains('ren')){
+    else if(already&&MODE==='interactive'&&el._def&&!isSystemDef(el._def)&&!el._def.remote&&!el.lastChild.classList.contains('ren')){
       clearTimeout(el._renT);
       el._renT=setTimeout(function(){ if(el.classList.contains('sel')&&!el._justDragged) startRename(el); }, 800);
     }
@@ -1901,24 +1935,27 @@ function endIconDrag(el){
   var tgt=d.over; var x=d.x, y=d.y;
   cancelIconDrag();
   if(tgt&&tgt.kind==='trash'){ toTrash(el); if(MODE==='interactive') saveIconLayout(); return; }
+  var cur=(el._def&&el._def.parent)||null;
   if(tgt&&tgt.kind==='folder'){
     var lx=tgt.lx!=null?tgt.lx-36:8, ly=tgt.ly!=null?tgt.ly-16:8;
+    if(tgt.id===cur&&tgt.body){
+      // reposicionar dentro de la misma carpeta (vista Iconos grandes)
+      el.style.left=Math.round(clamp(lx,0,Math.max(0,tgt.body.clientWidth-36)))+'px';
+      el.style.top=Math.round(clamp(ly,0,Math.max(0,tgt.body.scrollHeight-20)))+'px';
+      if(el._def){ el._def.left=el.offsetLeft; el._def.top=el.offsetTop; }
+      if(MODE==='interactive'){ saveIconLayout(); saveNoteDocs(); }
+      return;
+    }
+    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
     moveItemTo(el, tgt.id, clamp(lx,0,280), clamp(ly,0,180));
     return;
   }
-  // soltar en el escritorio (o reposicionar dentro de la carpeta actual)
-  var inFold=el.parentNode&&el.parentNode.classList&&el.parentNode.classList.contains('foldbody');
-  if(!inFold){
-    if(el._def&&el._def.parent) moveItemTo(el, null, x, y);
-    else { el.style.left=Math.round(x)+'px'; el.style.top=Math.round(y)+'px'; if(el._def){ el._def.left=Math.round(x); el._def.top=Math.round(y); } }
+  // soltar en el escritorio: sale de la carpeta si venía de una
+  if(cur){
+    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
+    moveItemTo(el, null, x, y);
   } else {
-    el.style.left=Math.round(el.offsetLeft)+'px'; el.style.top=Math.round(el.offsetTop)+'px';
-    // convertir a coords del foldbody: el ya está en el fold; usamos posición del clon relativa al body
-    var body=el.parentNode, br=body.getBoundingClientRect(), dr=desk.getBoundingClientRect();
-    var lx=x-((br.left-dr.left)/SCALE), ly=y-((br.top-dr.top)/SCALE);
-    el.style.left=Math.round(clamp(lx,0,body.clientWidth-36))+'px';
-    el.style.top=Math.round(clamp(ly,0,body.clientHeight-20))+'px';
-    if(el._def){ el._def.left=el.offsetLeft; el._def.top=el.offsetTop; }
+    el.style.left=Math.round(x)+'px'; el.style.top=Math.round(y)+'px'; if(el._def){ el._def.left=Math.round(x); el._def.top=Math.round(y); }
   }
   if(MODE==='interactive'){ saveIconLayout(); saveNoteDocs(); }
 }
@@ -1934,7 +1971,7 @@ function openDeskMenu(x,y){
   DM.x=x; DM.y=y;
   if(DM.parent==null&&!(arguments[2])) DM.parent=null;
 }
-function closeDeskMenu(){ qs('#dmenu').style.display='none'; qs('#dmenu2').style.display='none'; var im=qs('#imenu'); if(im) im.style.display='none'; IMENU=null; qsa('.mi2').forEach(function(m){ m.classList.remove('hl'); }); }
+function closeDeskMenu(){ closeDynMenus(0); qsa('.menubar span.open').forEach(function(n){ n.classList.remove('open'); }); qs('#dmenu').style.display='none'; qs('#dmenu2').style.display='none'; var im=qs('#imenu'); if(im) im.style.display='none'; IMENU=null; qsa('.mi2').forEach(function(m){ m.classList.remove('hl'); }); }
 function openNewMenu(){
   var m=qs('#dmenu'), it=qs('#dm-new'), s=qs('#dmenu2'); it.classList.add('hl'); s.style.display='block';
   var left=m.offsetLeft+m.offsetWidth-4; if(left+s.offsetWidth>640) left=m.offsetLeft-s.offsetWidth+4;
@@ -1942,16 +1979,25 @@ function openNewMenu(){
 }
 function wireDeskMenu(){
   qs('#dm-new').addEventListener('click',openNewMenu);
+  qs('#dm-new').addEventListener('mouseenter',function(){ closeDynMenus(0); });
+  function deskSub(id, items){
+    var row=qs('#'+id);
+    function open(){ var m=qs('#dmenu'); qs('#dmenu2').style.display='none'; qs('#dm-new').classList.remove('hl'); row.classList.add('hl'); popMenu(items(), m.offsetLeft+m.offsetWidth-4, m.offsetTop+row.offsetTop-3, 0, m); }
+    row.addEventListener('mouseenter',open); row.addEventListener('click',function(e){ e.stopPropagation(); open(); });
+  }
+  deskSub('dm-view', function(){ return viewMenuItems(DM.parent||null); });
+  deskSub('dm-arrange', function(){ return arrangeMenuItems(DM.parent||null); });
+  qsa('#dmenu .mi2').forEach(function(m){ if(m.id!=='dm-view'&&m.id!=='dm-arrange'&&m.id!=='dm-new') m.addEventListener('mouseenter',function(){ closeDynMenus(0); qs('#dmenu2').style.display='none'; qs('#dm-new').classList.remove('hl'); }); });
   qs('#dm-new').addEventListener('mouseenter',openNewMenu);
-  qs('#dm-align').addEventListener('click',function(){ closeDeskMenu(); alignIcons(); });
-  qs('#dm-props').addEventListener('click',function(){ closeDeskMenu(); msgBox('Propiedades de Pantalla','Fondo: Admira 95 (verde azulado)\nProtector de pantalla: «Admira volando»\nResolución: 640 × 480 · 256 colores','info'); });
+  qs('#dm-align').addEventListener('click',function(){ var fp=DM.parent||null; closeDeskMenu(); if(fp) arrangeBy(fp, folderView(fp).sort); else alignIcons(); });
+  qs('#dm-props').addEventListener('click',function(){ var fp=DM.parent||null; closeDeskMenu(); if(fp&&FS[fp]){ itemProps(FS[fp]); return; } msgBox('Propiedades de Pantalla','Fondo: Admira 95 (verde azulado)\nProtector de pantalla: «Admira volando»\nResolución: 640 × 480 · 256 colores','info'); });
   qs('#dm-txt').addEventListener('click',function(){ var p=DM.parent||null; closeDeskMenu(); newTextDoc(DM.x,DM.y,MODE==='interactive',p); });
   qs('#dm-folder').addEventListener('click',function(){ var p=DM.parent||null,x=DM.x,y=DM.y; closeDeskMenu(); newFolder(x,y,MODE==='interactive',p); });
   qs('#dm-lnk').addEventListener('click',function(){ var p=DM.parent||null,x=DM.x,y=DM.y; closeDeskMenu(); openShortcutWizard(x,y,p); });
   qs('#dm-paste').addEventListener('click',function(){ if(CLIP) pasteItems(false); });
   qs('#dm-paste-lnk').addEventListener('click',function(){ if(CLIP) pasteItems(true); });
   qsa('#dmenu .mi2, #dmenu2 .mi2').forEach(function(m){ m.addEventListener('mouseenter',function(){ if(m.classList.contains('dis')) return; qsa('.mi2',m.parentNode).forEach(function(x){ if(x!==m&&x.id!=='dm-new') x.classList.remove('hl'); }); m.classList.add('hl'); }); });
-  stage.addEventListener('pointerdown',function(e){ if(!e.target.closest('#dmenu,#dmenu2,#imenu')) closeDeskMenu(); },true);
+  stage.addEventListener('pointerdown',function(e){ if(!e.target.closest('#dmenu,#dmenu2,#imenu,.dynmenu,.menubar span[data-fmenu]')) closeDeskMenu(); },true);
   wireIconMenus(); wireFsKeys();
 }
 
@@ -1962,7 +2008,7 @@ function newTextDoc(x,y,rename,parent){
   parent=parent||null;
   var base='Nuevo documento de texto', name=uniqueName(base, parent);
   var id='doc'+(++docSeq); if(id.replace('doc','')*1>itemSeq) itemSeq=docSeq;
-  var def={id:id,label:name,name:name,text:'',ico:'txt',kind:'doc',docId:id,parent:parent,left:Math.round(clamp((x||80)-36,0,568)),top:Math.round(clamp((y||80)-16,0,404))};
+  var def={mtime:Date.now(),id:id,label:name,name:name,text:'',ico:'txt',kind:'doc',docId:id,parent:parent,left:Math.round(clamp((x||80)-36,0,568)),top:Math.round(clamp((y||80)-16,0,404))};
   registerItem(def); DOCS[id]=def;
   var el=placeNewItem(def, rename);
   LASTDOC=el;
@@ -2060,7 +2106,7 @@ function newFolder(x,y,rename,parent){
   parent=parent||null;
   var name=uniqueName('Nueva carpeta', parent);
   var id=nextItemId('fld');
-  var def={id:id,label:name,name:name,ico:'folder',kind:'folder',parent:parent,left:Math.round(clamp((x||80)-36,0,568)),top:Math.round(clamp((y||80)-16,0,404))};
+  var def={mtime:Date.now(),id:id,label:name,name:name,ico:'folder',kind:'folder',parent:parent,left:Math.round(clamp((x||80)-36,0,568)),top:Math.round(clamp((y||80)-16,0,404))};
   registerItem(def);
   var el=placeNewItem(def, rename);
   LASTDOC=el;
@@ -2073,7 +2119,7 @@ function makeShortcut(target, x, y, parent, name, rename){
   parent=parent||null;
   var label=name||shortcutName(target.name||'elemento', parent);
   var id=nextItemId('lnk');
-  var def={id:id,label:label,name:label,ico:target.ico||'docs',kind:'shortcut',parent:parent,left:Math.round(clamp((x||80)-36,0,568)),top:Math.round(clamp((y||80)-16,0,404)),target:target.target||target};
+  var def={mtime:Date.now(),id:id,label:label,name:label,ico:target.ico||'docs',kind:'shortcut',parent:parent,left:Math.round(clamp((x||80)-36,0,568)),top:Math.round(clamp((y||80)-16,0,404)),target:target.target||target};
   registerItem(def);
   return placeNewItem(def, !!rename);
 }
@@ -2116,6 +2162,7 @@ function openShortcut(d){
   var t=d.target||{};
   if(t.type==='url'&&t.url){ openUrl(t.url); return; }
   if(t.type==='app'&&t.app){ openApp(t.app); return; }
+  if(t.type==='item'&&t.itemId&&REMOTE[t.itemId]&&!HIDDEN[t.itemId]){ openDoc(t.itemId); return; }
   if(t.type==='item'&&t.itemId&&FS[t.itemId]){
     var it=FS[t.itemId], el=qs('#ic-'+it.id);
     if(it.kind==='folder') openFolder(it.id);
@@ -2128,10 +2175,11 @@ function openShortcut(d){
 }
 function openFolder(id){
   var it=FS[id]; if(!it||it.kind!=='folder') return;
+  if(id===MISC_ID) loadComms(true);
   if(FWIN[id]&&FWIN[id].parentNode){ FWIN[id].style.display='block'; addTask('fw-'+id,it.name,'folder',[FWIN[id]]); focusWin(FWIN[id]); renderFolder(id); return; }
   var w=document.createElement('div'); w.className='win foldwin'; w.id='fw-'+id;
   w.style.cssText='left:90px;top:36px;width:380px;height:260px';
-  w.innerHTML='<div class="tb"><span class="fico"></span><span class="t"></span><span class="x" data-min="fw-'+id+'">_</span><span class="x" data-max="fw-'+id+'" title="Maximizar">□</span><span class="x gap" data-close="fw-'+id+'">×</span></div><div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>Ay<u>u</u>da</span></div><div class="foldbody"></div><div class="sbar1 foldst">0 objeto(s)</div>';
+  w.innerHTML='<div class="tb"><span class="fico"></span><span class="t"></span><span class="x" data-min="fw-'+id+'">_</span><span class="x" data-max="fw-'+id+'" title="Maximizar">□</span><span class="x gap" data-close="fw-'+id+'">×</span></div><div class="menubar"><span data-fmenu="archivo"><u>A</u>rchivo</span><span data-fmenu="edicion"><u>E</u>dición</span><span data-fmenu="ver"><u>V</u>er</span><span data-fmenu="ayuda">Ay<u>u</u>da</span></div><div class="foldbody"></div><div class="sbar1 foldst">0 objeto(s)</div>';
   qs('.fico',w).innerHTML=ICONS.folderOpen||ICONS.folder;
   qs('.t',w).textContent=it.name;
   desk.appendChild(w);
@@ -2145,44 +2193,80 @@ function openFolder(id){
   var body=qs('.foldbody',w);
   body.addEventListener('pointerdown',function(e){ if(e.target===body) selectIcon(null); });
   body.addEventListener('contextmenu',function(e){
-    if(e.target!==body) return;
+    if(e.target!==body&&!e.target.closest('.dethead')) return;
+    e.preventDefault(); e.stopPropagation();
+    selectIcon(null);
     var p=toStage(e);
     DM.parent=id; openDeskMenu(p.x,p.y);
   });
+  wireFolderMenubar(w, id);
   addTask('fw-'+id,it.name,'folder',[w]); focusWin(w);
   renderFolder(id);
 }
 function folderChildren(id){
   var out=[];
   for(var k in FS){ if(FS[k]&&fsParent(FS[k])===id) out.push(FS[k]); }
-  out.sort(function(a,b){ return (a.kind===b.kind)?a.name.localeCompare(b.name):(a.kind==='folder'?-1:b.kind==='folder'?1:0); });
-  return out;
+  ICON_DEFS.forEach(function(d){ var st=APPST[d.id]; if(st&&st.parent===id&&!st.trashed&&!HIDDEN[d.id]&&!isFixedDef(d)){ d.parent=id; out.push(d); } });
+  for(var r in REMOTE){ var rd=REMOTE[r]; if(rd&&rd.parent===id&&!HIDDEN[rd.id]&&!inTrash(rd.id)) out.push(rd); }
+  return sortItems(out, folderView(id));
 }
 function renderFolder(id){
   var w=FWIN[id]; if(!w) return;
   var it=FS[id], body=qs('.foldbody',w); if(!it||!body) return;
   qs('.t',w).textContent=it.name;
   if(TASKS['fw-'+id]) TASKS['fw-'+id].btn.lastChild.textContent=it.name;
+  var v=folderView(id), sel=selectedIcon(), selId=sel&&sel._def?sel._def.id:null, sTop=body.scrollTop;
+  body.className='foldbody v-'+v.mode;
   body.innerHTML='';
   var kids=folderChildren(id);
-  kids.forEach(function(ch){
+  if(v.mode==='details'){
+    var hd=document.createElement('div'); hd.className='dethead';
+    [['name','Nombre'],['size','Tamaño'],['type','Tipo'],['date','Modificado']].forEach(function(c){
+      var h=document.createElement('div'); h.className='h-'+c[0]; h.setAttribute('data-sort',c[0]);
+      h.textContent=c[1]+(v.sort===c[0]?(v.dir<0?' ▼':' ▲'):'');
+      h.addEventListener('click',function(e){ e.stopPropagation(); var cv=folderView(id); setFolderView(id,{sort:c[0],dir:cv.sort===c[0]?-cv.dir:1}); });
+      hd.appendChild(h);
+    });
+    body.appendChild(hd);
+  }
+  // en la vista de iconos grandes se respetan las posiciones; en el resto, el orden manda
+  for(var i=kids.length-1;i>=0;i--){
+    var ch=kids[i];
     if(!ch.left&&ch.left!==0) ch.left=8;
     if(!ch.top&&ch.top!==0) ch.top=8;
-    addIcon(ch, body);
-  });
-  autoPlaceFolderIcons(body);
-  qs('.foldst',w).textContent=kids.length+' objeto(s)';
-}
-function autoPlaceFolderIcons(body){
-  var used={}, col=4, row=6, n=0;
-  qsa(':scope > .icon', body).forEach(function(el){
-    var d=el._def, x=d.left, y=d.top;
-    if(!isFinite(x)||!isFinite(y)||(x===8&&y===8&&used[x+','+y])){
-      x=col+(n%4)*78; y=row+Math.floor(n/4)*62; n++;
-      d.left=x; d.top=y;
+    var el=addIcon(ch, body);
+    if(v.mode==='details'){
+      var m=itemMeta(ch), lab=el.lastChild;
+      [['size',m.size==null?'':fmtSize(m.size)],['type',m.type],['date',m.mtime?fecha95(m.mtime):'']].forEach(function(c){ var n=document.createElement('i'); n.className='dc dc-'+c[0]; n.textContent=c[1]; el.insertBefore(n, lab); });
     }
-    used[x+','+y]=1;
+    if(ch.id===selId) el.classList.add('sel');
+  }
+  if(v.mode==='details'){ var hd2=qs('.dethead',body); if(hd2) body.insertBefore(hd2, body.firstChild); }
+  if(v.mode==='large') autoPlaceFolderIcons(body);
+  var extra='';
+  if(id===MISC_ID){
+    var nr=0; for(var r in REMOTE){ if(REMOTE[r].parent===id&&!HIDDEN[r]&&!inTrash(r)) nr++; }
+    extra=COMMS.loading?' · actualizando comunicaciones…':COMMS.error?' · comunicaciones: '+COMMS.error:(COMMS.at?' · '+nr+' comunicación(es) del Consejo, '+horaHM(COMMS.at):'');
+  }
+  var total=kids.length, bytes=0; kids.forEach(function(k){ var m=itemMeta(k); if(m.size) bytes+=m.size; });
+  qs('.foldst',w).textContent=total+' objeto(s)'+(bytes?' · '+fmtSize(bytes):'')+extra;
+  body.scrollTop=sTop;
+}
+function autoPlaceFolderIcons(body, force){
+  var cols=Math.max(1,Math.floor(((body.clientWidth||372)-4)/78)), used={}, list=qsa(':scope > .icon', body), pend=[];
+  list.forEach(function(el){
+    var d=el._def, x=d.left, y=d.top;
+    if(force||!isFinite(x)||!isFinite(y)||(x===8&&y===8)) { pend.push(el); return; }
+    used[Math.round((x-4)/78)+','+Math.round((y-6)/62)]=1;
     el.style.left=Math.round(x)+'px'; el.style.top=Math.round(y)+'px';
+  });
+  var n=0;
+  pend.forEach(function(el){
+    var c,r;
+    do{ c=n%cols; r=Math.floor(n/cols); n++; }while(used[c+','+r]);
+    used[c+','+r]=1;
+    var d=el._def; d.left=4+c*78; d.top=6+r*62;
+    el.style.left=d.left+'px'; el.style.top=d.top+'px';
   });
 }
 function closeAllFolders(){
@@ -2193,11 +2277,13 @@ function closeAllFolders(){
   FWIN={};
 }
 function moveItemTo(el, parent, x, y){
-  var d=el._def; if(!d||isSystemDef(d)) return false;
+  var d=el._def; if(!d||!canMoveDef(d)){ if(d&&(isFixedDef(d)||d.remote)) sfxDing(); return false; }
   parent=parent||null;
+  if(parent&&!FS[parent]) parent=null;
   if(d.kind==='folder'&&(d.id===parent||isDescendant(parent,d.id))){ sfxDing(); return false; }
   var prev=fsParent(d);
   d.parent=parent; if(FS[d.id]) FS[d.id].parent=parent;
+  if(d.kind==='app') APPST[d.id]={parent:parent};
   d.left=Math.round(clamp(x,0,568)); d.top=Math.round(clamp(y,0,404));
   if(el.parentNode) el.parentNode.removeChild(el);
   var root=itemContainer(parent);
@@ -2211,8 +2297,31 @@ function moveItemTo(el, parent, x, y){
   return true;
 }
 function dropTargetAt(cx, cy, el){
+  // Lo que hay de verdad bajo el puntero (respeta qué ventana está delante); si no, geometría.
+  try{
+    var dr0=desk.getBoundingClientRect(), hit=document.elementFromPoint(dr0.left+cx*SCALE, dr0.top+cy*SCALE);
+    if(hit&&desk.contains(hit)){
+      var ico=hit.closest('.icon');
+      if(ico&&ico!==el&&ico._def){
+        if(ico.id==='ic-trash') return {kind:'trash',el:ico};
+        if(ico._def.kind==='folder'&&!(el&&el._def&&ico._def.id===el._def.id)) return {kind:'folder',id:ico._def.id,el:ico};
+      }
+      if(hit.closest('#trw')) return {kind:'trash',el:qs('#trw')};
+      var fw=hit.closest('.foldwin');
+      if(fw){
+        var fid=fw.id.replace(/^fw-/,''), body=qs('.foldbody',fw);
+        if(el&&el._def&&el._def.id===fid) return null;
+        var br=body.getBoundingClientRect();
+        return {kind:'folder',id:fid,el:fw,body:body,lx:(dr0.left+cx*SCALE-br.left)/SCALE+body.scrollLeft,ly:(dr0.top+cy*SCALE-br.top)/SCALE+body.scrollTop};
+      }
+      if(hit===desk||hit.id==='wall'||hit.closest('#wall')||hit.closest('.icon')) return null;
+      if(hit.closest('.win')) return null;
+    }
+  }catch(e){}
   var t=qs('#ic-trash');
-  if(t&&t!==el&&cx>=t.offsetLeft&&cx<=t.offsetLeft+72&&cy>=t.offsetTop&&cy<=t.offsetTop+50) return {kind:'trash',el:t};
+  if(t&&t!==el&&t.parentNode===desk&&cx>=t.offsetLeft&&cx<=t.offsetLeft+72&&cy>=t.offsetTop&&cy<=t.offsetTop+50) return {kind:'trash',el:t};
+  var tw=qs('#trw');
+  if(tw&&tw.style.display==='block'&&!(TASKS.trw&&TASKS.trw.min)&&cx>=tw.offsetLeft&&cx<=tw.offsetLeft+tw.offsetWidth&&cy>=tw.offsetTop&&cy<=tw.offsetTop+tw.offsetHeight) return {kind:'trash',el:tw};
   var list=qsa('.icon'), i, ic, d, pr;
   for(i=0;i<list.length;i++){
     ic=list[i]; d=ic._def; if(!d||ic===el||d.kind!=='folder') continue;
@@ -2232,7 +2341,7 @@ function dropTargetAt(cx, cy, el){
   return null;
 }
 function copyIcon(op){
-  var el=selectedIcon(); if(!el||!el._def||isSystemDef(el._def)){ if(op) sfxDing(); return; }
+  var el=selectedIcon(); if(!el||!el._def||isFixedDef(el._def)||(op==='cut'&&!canMoveDef(el._def))){ if(op) sfxDing(); return; }
   CLIP={op:op||'copy', id:el._def.id};
   updatePasteMenus();
 }
@@ -2244,7 +2353,7 @@ function updatePasteMenus(){
 function duplicateItem(src, parent, x, y, name){
   var base=name||('Copia de '+src.name);
   var it={id:nextItemId(src.kind==='folder'?'fld':src.kind==='shortcut'?'lnk':'doc'), kind:src.kind, name:uniqueName(base, parent), parent:parent||null, ico:src.ico, text:src.text||'', target:src.target?JSON.parse(JSON.stringify(src.target)):null, left:x, top:y};
-  it.label=it.name;
+  it.label=it.name; it.mtime=Date.now(); if(it.kind==='doc') it.docId=it.id;
   registerItem(it);
   if(src.kind==='folder'){
     folderChildren(src.id).forEach(function(ch,i){ duplicateItem(ch, it.id, 4+(i%4)*78, 6+Math.floor(i/4)*62, ch.name); });
@@ -2252,8 +2361,21 @@ function duplicateItem(src, parent, x, y, name){
   return it;
 }
 function pasteItems(asLnk){
-  if(!CLIP||!FS[CLIP.id]) return;
-  var src=FS[CLIP.id], parent=DM.parent||null, x=DM.x, y=DM.y;
+  if(!CLIP) return;
+  var src=FS[CLIP.id]||REMOTE[CLIP.id]||appDef(CLIP.id), parent=DM.parent||null, x=DM.x, y=DM.y;
+  if(!src) return;
+  if(src.kind==='app'){
+    // las aplicaciones (Léeme.txt, Winamp…) se mueven al Cortar y dan un acceso directo al Copiar
+    if(CLIP.op==='cut'){ var ael=qs('#ic-'+src.id); if(ael) moveItemTo(ael, parent, clamp(x-36,0,568), clamp(y-16,0,404)); else { src.parent=parent; APPST[src.id]={parent:parent}; applyAppState(); if(parent&&FWIN[parent]) renderFolder(parent); saveNoteDocs(); } CLIP=null; updatePasteMenus(); }
+    else makeShortcut({type:'app',app:src.app||src.id,ico:src.ico||src.id,name:src.label}, x, y, parent, null, false);
+    closeDeskMenu(); return;
+  }
+  if(src.remote){
+    var cp={id:nextItemId('doc'), kind:'doc', name:uniqueName(src.name, parent), parent:parent, ico:'txt', text:src.text||'', left:Math.round(clamp(x-36,0,568)), top:Math.round(clamp(y-16,0,404)), mtime:Date.now()};
+    cp.label=cp.name; cp.docId=cp.id; registerItem(cp);
+    if(parent&&FWIN[parent]) renderFolder(parent); else { var rr=itemContainer(parent); if(rr) addIcon(cp, rr); }
+    saveNoteDocs(); closeDeskMenu(); return;
+  }
   if(asLnk){
     makeShortcut({type:'item',itemId:src.id,ico:src.ico||(src.kind==='folder'?'folder':'txt'),name:src.name}, x, y, parent, null, false);
     closeDeskMenu(); return;
@@ -2285,28 +2407,29 @@ function createShortcutTo(d, fromEl){
 }
 function deleteItem(el){
   if(!el||!el._def) return;
-  if(isSystemDef(el._def)){ sfxDing(); msgBox('Papelera de reciclaje','No se puede eliminar «'+el._def.label+'»:\nes un elemento del sistema Admira 95.','warn'); return; }
+  if(!canTrashDef(el._def)){ sfxDing(); msgBox('Papelera de reciclaje','No se puede eliminar «'+el._def.label+'»:\nes un elemento del sistema Admira 95.','warn'); return; }
   toTrash(el);
 }
 function itemProps(d){
-  var loc='C:\\WINDOWS\\Escritorio';
-  if(d.parent&&FS[d.parent]) loc='C:\\WINDOWS\\Escritorio\\'+FS[d.parent].name;
-  var typ=d.kind==='folder'?'Carpeta de archivos':d.kind==='shortcut'?'Acceso directo':d.kind==='doc'?'Documento de texto':'Elemento del sistema';
+  var m=itemMeta(d);
+  var loc='C:\\WINDOWS\\Escritorio'+(d.parent&&FS[d.parent]?'\\'+FS[d.parent].name:'');
   var extra='';
   if(d.kind==='folder') extra='\nContiene: '+folderChildren(d.id).length+' objeto(s)';
-  if(d.kind==='shortcut'&&d.target){
-    var t=d.target;
-    extra='\nDestino: '+(t.url||t.name||t.app||t.itemId||'');
-  }
-  msgBox('Propiedades de '+d.label, typ+'\nUbicación: '+loc+'\nNombre: '+d.label+extra, 'info');
+  if(d.kind==='shortcut'&&d.target){ var t=d.target; extra='\nDestino: '+(t.url||t.name||t.app||t.itemId||''); }
+  if(m.size!=null) extra+='\nTamaño: '+fmtSize(m.size)+' ('+m.size+' bytes)';
+  if(m.mtime) extra+='\nModificado: '+fecha95(m.mtime);
+  if(d.remote) extra+='\nAtributos: Solo lectura (comunicación del Consejo, servidor admira.live)';
+  else if(isProtectedDef(d)) extra+='\nAtributos: Sistema (al eliminarlo solo se oculta en este navegador)';
+  msgBox('Propiedades de '+d.label, m.type+'\nUbicación: '+loc+'\nNombre: '+d.label+extra, 'info');
 }
 function closeFolderMenu(){ var m=qs('#imenu'); if(m) m.style.display='none'; }
 function openIconMenu(el, x, y){
   closeDeskMenu(); closeStart();
   IMENU=el;
   var d=el._def, sys=isSystemDef(d), m=qs('#imenu');
+  if(d&&d.id==='trash'&&d.kind==='app'){ IMENU=null; openTrashIconMenu(x,y); return; }
   function en(id, on){ var n=qs('#'+id,m); if(n) n.classList.toggle('dis', !on); }
-  en('im-cut', !sys); en('im-del', !sys); en('im-ren', !sys);
+  en('im-cut', canMoveDef(d)); en('im-copy', !isFixedDef(d)); en('im-del', canTrashDef(d)); en('im-ren', !sys&&!d.remote);
   m.style.display='block';
   m.style.left=Math.round(Math.min(x,640-m.offsetWidth-2))+'px';
   m.style.top=Math.round(Math.min(y,452-m.offsetHeight-2))+'px';
@@ -2374,13 +2497,222 @@ function wireFsKeys(){
   document.addEventListener('keydown',function(e){
     if(e.target&&(e.target.closest&&(e.target.closest('input,textarea,[contenteditable],#nt,.ren')))) return;
     var el=selectedIcon();
-    if(e.key==='F2'&&el&&!isSystemDef(el._def)){ e.preventDefault(); startRename(el); return; }
-    if(e.key==='Delete'&&el&&!isSystemDef(el._def)){ e.preventDefault(); deleteItem(el); return; }
+    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote){ e.preventDefault(); startRename(el); return; }
+    if(e.key==='Delete'&&el&&canTrashDef(el._def)){ e.preventDefault(); deleteItem(el); return; }
+    if(e.key==='Delete'&&!el&&qs('#trw').style.display==='block'&&TRSEL>=0){ e.preventDefault(); trashPurgeAsk(TRSEL); return; }
     var ctrl=e.ctrlKey||e.metaKey;
     if(!ctrl) return;
     if(e.key==='c'||e.key==='C'){ e.preventDefault(); copyIcon('copy'); }
     else if(e.key==='x'||e.key==='X'){ e.preventDefault(); copyIcon('cut'); }
     else if(e.key==='v'||e.key==='V'){ e.preventDefault(); DM.parent=null; if(el){ DM.parent=fsParent(el._def); DM.x=el.offsetLeft+20; DM.y=el.offsetTop+20; } else { DM.x=80; DM.y=80; } pasteItems(false); }
+  });
+}
+
+/* ---------- Explorador 95 (Carlos, 25-11-2026 21:00): Miscelánea con las comunicaciones del Consejo,
+   Ver (Iconos grandes / pequeños / Lista / Detalles), Organizar iconos, arrastrar cualquier icono y
+   botón derecho clásico. Persistencia en localStorage (admira-win95-notepad y admira-win95-vistas). */
+var HIDDEN={}, APPST={}, REMOTE={}, MISC_ID=null, COMMS={at:0,loading:false,error:'',aviso:''}, FVIEW=null, BOOT_MS=Date.now();
+var FVIEW_KEY='admira-win95-vistas', COMMS_URL='/api/win95/comunicaciones';
+function isFixedDef(d){ return !!d&&d.kind==='app'&&(d.id==='mypc'||d.id==='trash'); }
+function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||d.id==='fld-misc'); }
+function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote; }
+function canTrashDef(d){ return !!d&&!isFixedDef(d); }
+function appDef(id){ for(var i=0;i<ICON_DEFS.length;i++) if(ICON_DEFS[i].id===id) return ICON_DEFS[i]; return null; }
+function inTrash(id){ return TRASH.some(function(t){ return t.def&&(t.def.id===id||t.def.docId===id); }); }
+function plainName(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+/** Coloca las aplicaciones (Léeme.txt, Winamp…) donde el usuario las dejó: escritorio, carpeta o papelera. */
+function applyAppState(){
+  ICON_DEFS.forEach(function(d){
+    if(isFixedDef(d)) return;
+    var st=APPST[d.id]||{}, el=qs('#ic-'+d.id), parent=st.parent&&FS[st.parent]?st.parent:null;
+    if(st.parent&&!parent&&!st.trashed) APPST[d.id]={parent:null};
+    d.parent=parent;
+    var gone=!!(st.trashed||HIDDEN[d.id]);
+    if(gone||parent){ if(el&&el.parentNode&&el.parentNode===desk) el.parentNode.removeChild(el); }
+    else if(!el||el.parentNode!==desk){ if(el&&el.parentNode) el.parentNode.removeChild(el); addIcon(d, desk); }
+  });
+}
+/** La carpeta Miscelánea: la del usuario si ya existe (con o sin tilde); si no, se crea en el escritorio. */
+function ensureMiscFolder(){
+  var found=null;
+  for(var k in FS){ var it=FS[k]; if(it&&it.kind==='folder'&&plainName(it.name)==='miscelanea'&&(!found||(!it.parent&&found.parent))) found=it; }
+  if(!found){
+    var trashed=TRASH.some(function(t){ return t.def&&t.def.kind==='folder'&&plainName(t.def.label||t.def.name)==='miscelanea'; });
+    if(trashed||HIDDEN['fld-misc']){ MISC_ID=null; return null; }
+    found=registerItem({id:'fld-misc',kind:'folder',name:'Miscelánea',label:'Miscelánea',ico:'folder',parent:null,left:160,top:68,mtime:Date.now()});
+    if(!qs('#ic-fld-misc')) addIcon(found, desk);
+    saveNoteDocs();
+  }
+  MISC_ID=found.id;
+  for(var r in REMOTE) REMOTE[r].parent=MISC_ID;
+  return found;
+}
+/** Comunicaciones entre consejeros (solo lectura, mismo origen, detrás de la verja). */
+function loadComms(force){
+  if(COMMS.loading) return;
+  if(!force&&COMMS.at&&Date.now()-COMMS.at<60000) return;
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISC_ID||typeof fetch!=='function') return;
+  COMMS.loading=true; if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+  fetch(COMMS_URL,{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}}).then(function(r){
+    if(!r.ok) throw r.status;
+    return r.json();
+  }).then(function(d){
+    COMMS.loading=false; COMMS.at=Date.now(); COMMS.error=''; COMMS.aviso=(d&&d.aviso)||'';
+    var keep={};
+    ((d&&d.ficheros)||[]).forEach(function(f){
+      if(!f||!f.nombre) return;
+      var id='com-'+String(f.id||f.nombre).replace(/[^\w-]/g,'').slice(0,60);
+      keep[id]=1;
+      var x=REMOTE[id]||{id:id};
+      x.kind='doc'; x.remote=true; x.docId=id; x.ico='txt';
+      x.name=x.label=String(f.nombre).replace(/[\r\n\\\/:*?"<>|]/g,'').slice(0,80);
+      x.text=String(f.texto||''); x.size=+f.tamano||0; x.mtime=+f.modificado||0; x.parent=MISC_ID;
+      REMOTE[id]=x; DOCS[id]=x;
+      if(NOTE.doc===x&&qs('#note').style.display==='block'&&!NOTE.dirty){ noteSetVal(x.text,false); NOTE.saved=x.text; }
+    });
+    Object.keys(REMOTE).forEach(function(id){ if(!keep[id]){ delete REMOTE[id]; delete DOCS[id]; } });
+    if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
+  }).catch(function(e){
+    COMMS.loading=false; COMMS.error=(e===401||e===403)?'entre con su sesión de admira.live':'sin conexión con admira.live';
+    if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
+  });
+}
+var APP_TYPES={readme:'Documento de texto',inbox:'Bandeja de entrada',ssaver:'Protector de pantalla'};
+var APP_SIZES={amp:1478656,browser:2932736,p2p:745472,media:1179648,inbox:417792,ssaver:28672,chat:524288};
+function textBytes(t){ try{ return new TextEncoder().encode(String(t||'')).length; }catch(e){ return String(t||'').length; } }
+/** Tipo, tamaño (bytes) y fecha de modificación para la vista Detalles y para ordenar. */
+function itemMeta(d){
+  if(!d) return {type:'',size:null,mtime:0};
+  if(d.kind==='folder') return {type:'Carpeta de archivos',size:null,mtime:d.mtime||0};
+  if(d.kind==='shortcut') return {type:'Acceso directo',size:360,mtime:d.mtime||0};
+  if(d.kind==='doc') return {type:'Documento de texto',size:d.remote?(d.size||textBytes(d.text)):textBytes(d.text),mtime:d.mtime||(isLeyendasDoc(d)?LEYENDAS_SEED_MS:0)};
+  if(d.kind==='app'){
+    if(d.id==='readme') return {type:'Documento de texto',size:textBytes(leemeText()),mtime:BOOT_MS};
+    return {type:APP_TYPES[d.id]||'Aplicación',size:APP_SIZES[d.id]||null,mtime:BOOT_MS};
+  }
+  return {type:'Elemento del sistema',size:null,mtime:0};
+}
+function fmtSize(b){ if(b==null) return ''; var k=Math.max(1,Math.ceil(b/1024)); return (k>=10000?(Math.round(k/102.4)/10).toLocaleString('es-ES')+' MB':k.toLocaleString('es-ES')+' KB'); }
+function fecha95(ms){ var w=new Date(ms); return pad2(w.getDate())+'/'+pad2(w.getMonth()+1)+'/97 '+pad2(w.getHours())+':'+pad2(w.getMinutes()); }
+function horaHM(ms){ var w=new Date(ms); return pad2(w.getHours())+':'+pad2(w.getMinutes()); }
+function loadViews(){ if(FVIEW) return FVIEW; try{ FVIEW=JSON.parse(localStorage.getItem(FVIEW_KEY)||'null')||{}; }catch(e){ FVIEW={}; } if(typeof FVIEW!=='object'||!FVIEW) FVIEW={}; return FVIEW; }
+var VIEW_MODES=['large','small','list','details'], SORT_KEYS=['name','type','size','date'];
+function folderView(id){
+  var v=loadViews()[id||'desk']||{};
+  return {mode:VIEW_MODES.indexOf(v.mode)>=0?v.mode:'large',sort:SORT_KEYS.indexOf(v.sort)>=0?v.sort:'name',dir:v.dir===-1?-1:1};
+}
+function setFolderView(id, patch){
+  var all=loadViews(), cur=folderView(id), k=id||'desk';
+  for(var p in patch) cur[p]=patch[p];
+  all[k]=cur;
+  try{ localStorage.setItem(FVIEW_KEY, JSON.stringify(all)); }catch(e){}
+  if(id&&FWIN[id]) renderFolder(id);
+}
+/** Orden de Windows 95: primero las carpetas; luego por la columna elegida, asc o desc. */
+function sortItems(list, v){
+  var key=(v&&v.sort)||'name', dir=(v&&v.dir)||1;
+  return list.slice().sort(function(a,b){
+    var fa=a.kind==='folder'?0:1, fb=b.kind==='folder'?0:1;
+    if(fa!==fb) return fa-fb;
+    var ma=itemMeta(a), mb=itemMeta(b), r=0;
+    if(key==='type') r=ma.type.localeCompare(mb.type,'es');
+    else if(key==='size') r=(ma.size||0)-(mb.size||0);
+    else if(key==='date') r=(ma.mtime||0)-(mb.mtime||0);
+    if(!r) r=String(a.label||a.name||'').localeCompare(String(b.label||b.name||''),'es',{sensitivity:'base',numeric:true});
+    return r*dir;
+  });
+}
+/** Organizar iconos: en una carpeta fija el orden (y recoloca en Iconos grandes); en el escritorio, recoloca en columnas. */
+function arrangeBy(parent, key){
+  closeDeskMenu();
+  var cur=folderView(parent), dir=cur.sort===key?cur.dir:1;
+  if(parent){
+    var kids=sortItems(folderChildren(parent),{sort:key,dir:dir});
+    kids.forEach(function(k){ k.left=8; k.top=8; });
+    setFolderView(parent,{sort:key,dir:dir});
+    var w=FWIN[parent]; if(w){ var body=qs('.foldbody',w); if(folderView(parent).mode==='large') autoPlaceFolderIcons(body, true); qsa(':scope > .icon',body).forEach(function(el){ el._def.left=el.offsetLeft; el._def.top=el.offsetTop; }); }
+    saveNoteDocs(); return;
+  }
+  setFolderView(null,{sort:key,dir:dir});
+  var els=qsa('#desk > .icon'), defs=els.map(function(el){ return el._def; }).filter(Boolean);
+  var fixed=defs.filter(isFixedDef), rest=sortItems(defs.filter(function(d){ return !isFixedDef(d); }),{sort:key,dir:dir});
+  fixed.sort(function(a,b){ return a.id==='mypc'?-1:b.id==='mypc'?1:0; });
+  fixed.concat(rest).forEach(function(d,i){
+    var el=qs('#ic-'+d.id); if(!el) return;
+    var c=Math.floor(i/7), r=i%7;
+    el.style.left=(4+c*78)+'px'; el.style.top=(6+r*62)+'px'; d.left=4+c*78; d.top=6+r*62;
+  });
+  if(MODE==='interactive') saveIconLayout();
+  saveNoteDocs();
+}
+function viewMenuItems(parent){
+  var v=folderView(parent), onDesk=!parent;
+  function it(mode,label){ return {l:label,chk:v.mode===mode,dis:onDesk&&mode!=='large',fn:function(){ setFolderView(parent,{mode:mode}); }}; }
+  return [it('large','Iconos grandes'),it('small','Iconos pequeños'),it('list','Lista'),it('details','Detalles'),{sep:1},
+    {l:'Organizar iconos',sub:function(){ return arrangeMenuItems(parent); }},
+    {l:'Alinear iconos',fn:function(){ closeDeskMenu(); if(parent) arrangeBy(parent, folderView(parent).sort); else alignIcons(); }},
+    {sep:1},
+    {l:'Actualizar',fn:function(){ closeDeskMenu(); if(parent){ if(parent===MISC_ID) loadComms(true); renderFolder(parent); } }}];
+}
+function arrangeMenuItems(parent){
+  var v=folderView(parent);
+  function it(key,label){ return {l:label,chk:v.sort===key,fn:function(){ arrangeBy(parent,key); }}; }
+  return [it('name','por nombre'),it('type','por tipo'),it('size','por tamaño'),it('date','por fecha')];
+}
+function closeDynMenus(lv){ qsa('.dynmenu').forEach(function(m){ if(lv==null||+m.getAttribute('data-lv')>=lv){ if(m.parentNode) m.parentNode.removeChild(m); } }); }
+/** Menú contextual al estilo 95 con submenús (▶) y marcas ●. items: {l, fn, dis, chk, b, sub(), sep}. */
+function popMenu(items, x, y, lv, anchor){
+  lv=lv||0; closeDynMenus(lv);
+  if(lv===0){ qs('#imenu').style.display='none'; }
+  var host=qs('#dmenu').parentNode;
+  var m=document.createElement('div'); m.className='win cmenu dynmenu'; m.setAttribute('data-lv',lv); m.style.zIndex=String(6800+lv);
+  items.forEach(function(it){
+    if(it.sep){ var sp=document.createElement('div'); sp.className='msep'; m.appendChild(sp); return; }
+    var r=document.createElement('div'); r.className='mi2'+(it.dis?' dis':'');
+    if(it.chk){ var c=document.createElement('b'); c.className='chk'; r.appendChild(c); }
+    r.appendChild(document.createTextNode(it.l));
+    if(it.b) r.style.fontWeight='bold';
+    if(it.sub){ var a=document.createElement('i'); a.className='arr'; a.textContent='▶'; r.appendChild(a); }
+    function openSub(){ popMenu(it.sub(), m.offsetLeft+m.offsetWidth-4, m.offsetTop+r.offsetTop-3, lv+1, m); }
+    r.addEventListener('mouseenter',function(){ qsa(':scope > .mi2',m).forEach(function(o){ o.classList.remove('hl'); }); if(it.dis) return; r.classList.add('hl'); closeDynMenus(lv+1); if(it.sub) openSub(); });
+    r.addEventListener('click',function(e){ e.stopPropagation(); if(it.dis) return; if(it.sub){ openSub(); return; } closeDeskMenu(); if(it.fn) it.fn(); });
+    m.appendChild(r);
+  });
+  host.appendChild(m);
+  var W=640, H=452, mw=m.offsetWidth, mh=m.offsetHeight;
+  if(x+mw>W-2) x=anchor?Math.max(0,anchor.offsetLeft-mw+4):W-mw-2;
+  if(y+mh>H-2) y=H-mh-2;
+  m.style.left=Math.round(Math.max(0,x))+'px'; m.style.top=Math.round(Math.max(0,y))+'px';
+  return m;
+}
+function menuAnchor(span){ var r=span.getBoundingClientRect(), sr=stage.getBoundingClientRect(); return {x:(r.left-sr.left)/SCALE, y:(r.bottom-sr.top)/SCALE}; }
+function wireFolderMenubar(w, id){
+  qsa('.menubar span[data-fmenu]',w).forEach(function(sp){
+    sp.addEventListener('click',function(e){
+      e.stopPropagation(); closeDeskMenu(); focusWin(w);
+      var p=menuAnchor(sp), k=sp.getAttribute('data-fmenu'), sel=selectedIcon(), mine=sel&&sel.parentNode===qs('.foldbody',w)?sel:null, d=mine&&mine._def, items;
+      DM.parent=id; DM.x=40; DM.y=40;
+      if(k==='archivo') items=[
+        {l:'Nuevo',sub:function(){ return [{l:'Carpeta',fn:function(){ newFolder(40,40,MODE==='interactive',id); }},{l:'Documento de texto',fn:function(){ newTextDoc(40,40,MODE==='interactive',id); }}]; }},
+        {sep:1},
+        {l:'Abrir',dis:!d,fn:function(){ openIcon(mine); }},
+        {l:'Eliminar',dis:!d||!canTrashDef(d),fn:function(){ deleteItem(mine); }},
+        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote,fn:function(){ startRename(mine); }},
+        {l:'Propiedades',fn:function(){ itemProps(d||FS[id]); }},
+        {sep:1},
+        {l:'Cerrar',fn:function(){ var x=qs('[data-close="fw-'+id+'"]',w); if(x) x.click(); }}];
+      else if(k==='edicion') items=[
+        {l:'Cortar',dis:!d||!canMoveDef(d),fn:function(){ selectIcon(mine); copyIcon('cut'); }},
+        {l:'Copiar',dis:!d||isFixedDef(d),fn:function(){ selectIcon(mine); copyIcon('copy'); }},
+        {l:'Pegar',dis:!CLIP,fn:function(){ DM.parent=id; DM.x=60; DM.y=60; pasteItems(false); }},
+        {l:'Pegar acceso directo',dis:!CLIP,fn:function(){ DM.parent=id; DM.x=60; DM.y=60; pasteItems(true); }}];
+      else if(k==='ver') items=viewMenuItems(id);
+      else items=[{l:'Temas de Ayuda',fn:function(){ msgBox('Ayuda de Admira 95','Botón derecho sobre un archivo: Abrir, Cortar, Copiar, Eliminar, Cambiar nombre y Propiedades.\nBotón derecho en el fondo: Ver, Organizar iconos, Pegar y Nuevo.\nArrastre los iconos entre el escritorio, las carpetas y la Papelera.\nEn Detalles, pulse una columna para ordenar.','info'); }},{sep:1},{l:'Acerca de Admira 95',fn:function(){ msgBox('Acerca de Admira 95','Admira 95 · Vuelta al 95\nAdmiraNeXT · admira.live/windows95','info'); }}];
+      qsa('.menubar span.open').forEach(function(n){ n.classList.remove('open'); });
+      sp.classList.add('open');
+      popMenu(items, p.x, p.y, 0);
+    });
   });
 }
 
@@ -2412,46 +2744,165 @@ function askBox(title,text,onYes){
 }
 function toTrash(el){
   var d=el._def;
-  if(isSystemDef(d)){ sfxDing(); msgBox('Papelera de reciclaje','No se puede eliminar «'+d.label+'»:\nes un elemento del sistema Admira 95.','warn'); return; }
+  if(!canTrashDef(d)){ sfxDing(); msgBox('Papelera de reciclaje','No se puede eliminar «'+d.label+'»:\nes un elemento del sistema Admira 95.','warn'); return; }
   askBox('Confirmar eliminación de archivo','¿Está seguro de que desea enviar «'+d.label+'» a la Papelera de reciclaje?',function(){ doTrash(el); });
 }
 function doTrash(el){
   var d=el._def; if(NOTE.doc&&NOTE.doc.id===(d.docId||d.id)){ saveNote(); NOTE.dirty=false; hideNote(); }
   if(d.kind==='folder'){ if(FWIN[d.id]){ var w=FWIN[d.id]; if(w&&w.parentNode) w.parentNode.removeChild(w); delete FWIN[d.id]; removeTask('fw-'+d.id); } }
-  d.left=el.offsetLeft; d.top=el.offsetTop; TRASH.push({def:d,when:new Date()});
+  d.left=el.offsetLeft; d.top=el.offsetTop; TRASH.push({def:d,when:new Date(),from:d.parent||null});
+  if(d.kind==='app') APPST[d.id]={parent:d.parent||null,trashed:true};
+  else if(!d.remote){ delete FS[d.id]; delete DOCS[d.docId||d.id]; }
+  if(CLIP&&CLIP.id===d.id) CLIP=null;
   if(el.parentNode) el.parentNode.removeChild(el);
+  if(d.parent&&FWIN[d.parent]) renderFolder(d.parent);
+  if(d.kind==='folder'&&d.id===MISC_ID){ /* la carpeta de comunicaciones vuelve al restaurarla */ }
   setTrashIcon(); renderTrash(); sfxCrumple();
   saveNoteDocs();
 }
-function renderTrash(){
-  var cols=[['Nombre',150],['Ubicación original',116],['Fecha de eliminación',112]], h=lvHeader(cols);
-  TRASH.forEach(function(it,i){ var w=it.when; h+=lvRow(i,cols,[esc(it.def.label),'C:\\WINDOWS\\Escritorio',pad2(w.getDate())+'/'+pad2(w.getMonth()+1)+'/1997 '+pad2(w.getHours())+':'+pad2(w.getMinutes())],i===TRSEL); });
-  qs('#trList').innerHTML=h; qs('#trSt').textContent=TRASH.length+' objeto(s)';
-  qs('#trRestore').disabled=TRSEL<0; qs('#trEmpty').disabled=!TRASH.length;
+function trashWhere(t){
+  var p=t.from!==undefined?t.from:(t.def&&t.def.parent);
+  return 'C:\\WINDOWS\\Escritorio'+(p&&FS[p]?'\\'+FS[p].name:'');
 }
-function openTrash(){ var w=qs('#trw'); w.style.display='block'; TRSEL=-1; addTask('trw','Papelera de reciclaje','trash',[w]); focusWin(w); renderTrash(); }
+function renderTrash(){
+  var cols=[['Nombre',150],['Ubicación original',126],['Fecha de eliminación',112],['Tipo',110]], h=lvHeader(cols);
+  TRASH.forEach(function(it,i){ var w=it.when; h+=lvRow(i,cols,[esc(it.def.label||it.def.name||''),esc(trashWhere(it)),pad2(w.getDate())+'/'+pad2(w.getMonth()+1)+'/1997 '+pad2(w.getHours())+':'+pad2(w.getMinutes()),esc(itemMeta(it.def).type)],i===TRSEL); });
+  if(!TRASH.length) h+='<div style="padding:8px 6px;color:#808080">La Papelera de reciclaje está vacía.</div>';
+  qs('#trList').innerHTML=h; qs('#trSt').textContent=TRASH.length+' objeto(s)'+(hiddenCount()?' · '+hiddenCount()+' elemento(s) del sistema ocultos':'');
+  qs('#trRestore').disabled=TRSEL<0; qs('#trEmpty').disabled=!TRASH.length;
+  var del=qs('#trDelete'); if(del) del.disabled=TRSEL<0;
+}
+function openTrash(){ closeDeskMenu(); var w=qs('#trw'); w.style.display='block'; TRSEL=-1; addTask('trw','Papelera de reciclaje','trash',[w]); focusWin(w); renderTrash(); }
 function closeTrash(){ qs('#trw').style.display='none'; removeTask('trw'); }
-function wireTrash(){
-  qs('#trList').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; TRSEL=+r.getAttribute('data-i'); lvSelect(qs('#trList'),TRSEL); qs('#trRestore').disabled=false; });
-  qs('#trRestore').addEventListener('click',function(){ var it=TRASH[TRSEL]; if(!it) return; TRASH.splice(TRSEL,1); TRSEL=-1; registerItem(it.def); var root=itemContainer(it.def.parent||null); if(root) addIcon(it.def, root); else if(it.def.parent&&FWIN[it.def.parent]) renderFolder(it.def.parent); else addIcon(it.def, desk); setTrashIcon(); renderTrash(); saveNoteDocs(); });
-  qs('#trEmpty').addEventListener('click',function(){
-    if(!TRASH.length) return;
-    askBox('Confirmar eliminación de varios archivos',TRASH.length===1?'¿Está seguro de que desea eliminar «'+TRASH[0].def.label+'»?':'¿Está seguro de que desea eliminar estos '+TRASH.length+' elementos?',function(){
-      function delTree(id){ folderChildren(id).forEach(function(ch){ delTree(ch.id); }); delete DOCS[id]; delete FS[id]; }
-      TRASH.forEach(function(it){ var id=it.def&&(it.def.docId||it.def.id); if(id) delTree(id); }); TRASH=[]; TRSEL=-1; setTrashIcon(); renderTrash(); sfxCrumple(); saveNoteDocs();
+/** Restaura el elemento i de la papelera a su sitio (su carpeta si sigue existiendo). */
+function trashRestore(i){
+  var it=TRASH[i]; if(!it) return;
+  TRASH.splice(i,1); TRSEL=-1;
+  var d=it.def, parent=it.from!==undefined?it.from:(d.parent||null);
+  if(parent&&!FS[parent]) parent=null;
+  d.parent=parent;
+  if(d.kind==='app'){
+    APPST[d.id]={parent:parent}; applyAppState();
+    if(parent&&FWIN[parent]) renderFolder(parent);
+  } else if(d.remote){
+    delete HIDDEN[d.id];
+    if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
+  } else {
+    registerItem(d); if(d.kind==='doc') DOCS[d.docId||d.id]=d;
+    if(parent){ if(FWIN[parent]) renderFolder(parent); }
+    else if(!qs('#ic-'+d.id)) addIcon(d, desk);
+    if(d.kind==='folder'){ ensureMiscFolder(); if(d.id===MISC_ID) loadComms(true); }
+  }
+  setTrashIcon(); renderTrash(); saveNoteDocs();
+}
+/** Borrado definitivo. Lo del sistema y del servidor solo se oculta en este navegador (restaurable). */
+function purgeDef(def){
+  if(!def) return;
+  if(def.kind==='app'){ HIDDEN[def.id]=1; APPST[def.id]={parent:null}; return; }
+  if(def.remote){ HIDDEN[def.id]=1; return; }
+  (function delTree(id){
+    folderChildren(id).forEach(function(ch){
+      if(ch.kind==='app'||ch.remote){ HIDDEN[ch.id]=1; if(ch.kind==='app') APPST[ch.id]={parent:null}; return; }
+      delTree(ch.id);
     });
+    if(id===LEYENDAS_SEED_ID||id==='fld-misc') HIDDEN[id]=1;
+    delete DOCS[id]; delete FS[id];
+  })(def.docId||def.id);
+  if(def.id===MISC_ID){ MISC_ID=null; }
+}
+function trashPurgeAsk(i){
+  var it=TRASH[i]; if(!it) return;
+  var nm=it.def.label||it.def.name;
+  askBox('Confirmar eliminación de archivo','¿Está seguro de que desea eliminar «'+nm+'»?'+(isProtectedDef(it.def)?'\n\n(Elemento del sistema: solo se ocultará en este navegador.)':''),function(){
+    var k=TRASH.indexOf(it); if(k<0) return;
+    TRASH.splice(k,1); TRSEL=-1; purgeDef(it.def);
+    setTrashIcon(); renderTrash(); sfxCrumple(); saveNoteDocs();
   });
+}
+function emptyTrashAsk(){
+  closeDeskMenu();
+  if(!TRASH.length){ sfxDing(); return; }
+  askBox('Confirmar eliminación de varios archivos',TRASH.length===1?'¿Está seguro de que desea eliminar «'+(TRASH[0].def.label||TRASH[0].def.name)+'»?':'¿Está seguro de que desea eliminar estos '+TRASH.length+' elementos?',function(){
+    var all=TRASH.slice(); TRASH=[]; TRSEL=-1;
+    all.forEach(function(it){ purgeDef(it.def); });
+    setTrashIcon(); renderTrash(); sfxCrumple(); saveNoteDocs();
+  });
+}
+function hiddenCount(){ return Object.keys(HIDDEN).filter(function(k){ return HIDDEN[k]; }).length; }
+function restoreHidden(){
+  closeDeskMenu();
+  var ids=Object.keys(HIDDEN); if(!ids.length) return;
+  HIDDEN={};
+  ids.forEach(function(id){ if(APPST[id]) APPST[id]={parent:null}; });
+  applyAppState(); ensureLeyendasDoc(); ensureMiscFolder(); loadComms(true);
+  if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
+  renderTrash(); saveNoteDocs();
+  msgBox('Papelera de reciclaje','Se han restaurado '+ids.length+' elemento(s) del sistema.','info');
+}
+function openTrashIconMenu(x,y){
+  popMenu([
+    {l:'Abrir',b:1,fn:openTrash},
+    {l:'Explorar',fn:openTrash},
+    {sep:1},
+    {l:'Vaciar Papelera de reciclaje',dis:!TRASH.length,fn:emptyTrashAsk},
+    {sep:1},
+    {l:'Crear acceso directo',fn:function(){ var d=appDef('trash'); if(d) createShortcutTo(d, qs('#ic-trash')); }},
+    {l:'Propiedades',fn:function(){ msgBox('Propiedades de Papelera de reciclaje','Papelera de reciclaje\nContiene: '+TRASH.length+' objeto(s)'+(hiddenCount()?'\nElementos del sistema ocultos: '+hiddenCount():'')+'\nAl vaciarla, los archivos se eliminan de este navegador.\nLos del sistema y las comunicaciones del Consejo solo se ocultan.','info'); }}
+  ], x, y, 0);
+}
+function trashItemMenu(i,x,y){
+  popMenu([
+    {l:'Restaurar',b:1,fn:function(){ trashRestore(i); }},
+    {sep:1},
+    {l:'Eliminar',fn:function(){ trashPurgeAsk(i); }},
+    {sep:1},
+    {l:'Propiedades',fn:function(){ var it=TRASH[i]; if(!it) return; var m=itemMeta(it.def); msgBox('Propiedades de '+(it.def.label||it.def.name),m.type+'\nUbicación original: '+trashWhere(it)+'\nEliminado: '+pad2(it.when.getDate())+'/'+pad2(it.when.getMonth()+1)+'/1997 '+pad2(it.when.getHours())+':'+pad2(it.when.getMinutes())+(m.size!=null?'\nTamaño: '+fmtSize(m.size):''),'info'); }}
+  ], x, y, 0);
+}
+function trashBgMenu(x,y){
+  popMenu([
+    {l:'Vaciar Papelera de reciclaje',dis:!TRASH.length,fn:emptyTrashAsk},
+    {l:'Restaurar todo',dis:!TRASH.length,fn:function(){ while(TRASH.length) trashRestore(0); }},
+    {sep:1},
+    {l:'Restaurar elementos del sistema ocultos',dis:!hiddenCount(),fn:restoreHidden}
+  ], x, y, 0);
+}
+function wireTrash(){
+  var list=qs('#trList');
+  list.addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r){ TRSEL=-1; renderTrash(); return; } TRSEL=+r.getAttribute('data-i'); lvSelect(list,TRSEL); qs('#trRestore').disabled=false; var del=qs('#trDelete'); if(del) del.disabled=false; });
+  list.addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; var i=+r.getAttribute('data-i'), it=TRASH[i]; if(it) msgBox('Papelera de reciclaje','Para abrir «'+(it.def.label||it.def.name)+'», restáurelo primero.','info'); });
+  list.addEventListener('contextmenu',function(e){
+    e.preventDefault(); e.stopPropagation();
+    var p=toStage(e), r=e.target.closest('.lvr');
+    if(r&&!r.closest('.lvh')){ TRSEL=+r.getAttribute('data-i'); lvSelect(list,TRSEL); qs('#trRestore').disabled=false; var del=qs('#trDelete'); if(del) del.disabled=false; trashItemMenu(TRSEL,p.x,p.y); }
+    else trashBgMenu(p.x,p.y);
+  });
+  qs('#trRestore').addEventListener('click',function(){ if(TRSEL>=0) trashRestore(TRSEL); });
+  var tools=qs('#trw .trtools');
+  if(tools&&!qs('#trDelete')){ var b=document.createElement('button'); b.className='btn'; b.id='trDelete'; b.disabled=true; b.textContent='Eliminar'; tools.insertBefore(b, qs('#trEmpty')); b.addEventListener('click',function(){ if(TRSEL>=0) trashPurgeAsk(TRSEL); }); }
+  qs('#trEmpty').addEventListener('click',emptyTrashAsk);
   qs('[data-close="trw"]').addEventListener('click',closeTrash);
   qs('[data-min="trw"]').addEventListener('click',function(){ minimize('trw'); });
+  var mb=qsa('#trw .menubar span');
+  if(mb[0]) mb[0].addEventListener('click',function(e){ e.stopPropagation(); var p=menuAnchor(mb[0]); mb[0].classList.add('open'); popMenu([
+    {l:'Restaurar',dis:TRSEL<0,fn:function(){ trashRestore(TRSEL); }},
+    {l:'Eliminar',dis:TRSEL<0,fn:function(){ trashPurgeAsk(TRSEL); }},
+    {sep:1},
+    {l:'Vaciar Papelera de reciclaje',dis:!TRASH.length,fn:emptyTrashAsk},
+    {l:'Restaurar elementos del sistema ocultos',dis:!hiddenCount(),fn:restoreHidden},
+    {sep:1},
+    {l:'Cerrar',fn:closeTrash}], p.x, p.y, 0); });
   renderTrash();
 }
 function resetIcons(){
   closeAllFolders();
   qsa('#desk > .icon, .foldbody > .icon').forEach(function(el){ if(el._def&&el._def.kind!=='app') el.parentNode.removeChild(el); });
-  DOCS={}; FS={}; TRASH=[]; TRSEL=-1; LASTDOC=null; CLIP=null; cancelIconDrag(); setTrashIcon(); closeTrash(); closeDeskMenu();
+  DOCS={}; FS={}; TRASH=[]; TRSEL=-1; LASTDOC=null; CLIP=null; REMOTE={}; COMMS.at=0; cancelIconDrag(); setTrashIcon(); closeTrash(); closeDeskMenu();
+  ICON_DEFS.forEach(function(d){ d.parent=null; if(!qs('#ic-'+d.id)) addIcon(d, desk); });
   ICON_DEFS.forEach(function(d){ var el=qs('#ic-'+d.id); if(el){ el.style.left=d.left+'px'; el.style.top=d.top+'px'; } });
   applyIconLayout();
   restoreNoteDocs();
+  loadComms(true);
 }
 async function ghostDragIcon(el,tx,ty,tk){
   await ghostMove(el,tk); await wait(200,tk);
@@ -2537,20 +2988,25 @@ function loadNoteStore(){
 }
 function serializeItem(d){
   var el=qs('#ic-'+d.id);
-  return {id:d.id,kind:d.kind||'doc',name:d.name||d.label,parent:d.parent||null,ico:d.ico,text:d.text||'',target:d.target||null,left:el?el.offsetLeft:(d.left||0),top:el?el.offsetTop:(d.top||0),leyendasLocal:!!d.leyendasLocal,leyendasRev:d.leyendasRev||null};
+  if(d.remote) return {id:d.id,kind:'doc',remote:true,name:d.name||d.label,parent:d.parent||null,ico:'txt'};
+  if(d.kind==='app') return {id:d.id,kind:'app',app:d.app||d.id,name:d.label||d.name,parent:d.parent||null,ico:d.ico||d.id};
+  return {mtime:d.mtime||0,id:d.id,kind:d.kind||'doc',name:d.name||d.label,parent:d.parent||null,ico:d.ico,text:d.text||'',target:d.target||null,left:el?el.offsetLeft:(d.left||0),top:el?el.offsetTop:(d.top||0),leyendasLocal:!!d.leyendasLocal,leyendasRev:d.leyendasRev||null};
 }
 function saveNoteDocs(){
   var st=loadNoteStore(), items=[];
   st.v=2; st.leeme=(NOTE.leeme!=null)?NOTE.leeme:st.leeme; st.seq=Math.max(docSeq,itemSeq);
   for(var k in FS){ if(FS[k]) items.push(serializeItem(FS[k])); }
   // compat docs sueltos
-  for(var k2 in DOCS){ if(DOCS[k2]&&!FS[k2]) items.push(serializeItem(DOCS[k2])); }
+  for(var k2 in DOCS){ if(DOCS[k2]&&!FS[k2]&&!DOCS[k2].remote&&!inTrash(k2)) items.push(serializeItem(DOCS[k2])); }
+  st.hidden=HIDDEN; st.apps=APPST;
   st.items=items; st.docs=items.filter(function(it){ return it.kind==='doc'&&!it.parent; }).map(function(it){ return {id:it.id,name:it.name,text:it.text||'',left:it.left,top:it.top}; });
-  st.trash=TRASH.map(function(t){ return {def:serializeItem(t.def),when:(t.when&&t.when.toISOString)?t.when.toISOString():t.when}; });
+  st.trash=TRASH.map(function(t){ return {def:serializeItem(t.def),from:t.from||null,when:(t.when&&t.when.toISOString)?t.when.toISOString():t.when}; });
   try{ localStorage.setItem(NOTE_STORE, JSON.stringify(st)); }catch(e){}
 }
 function restoreNoteDocs(){
   var st=loadNoteStore();
+  HIDDEN=(st.hidden&&typeof st.hidden==='object')?st.hidden:{};
+  APPST=(st.apps&&typeof st.apps==='object')?st.apps:{};
   if(st.leeme!=null) NOTE.leeme=st.leeme;
   if(st.seq){ if(st.seq>docSeq) docSeq=st.seq; if(st.seq>itemSeq) itemSeq=st.seq; }
   var items=st.items&&st.items.length?st.items:(st.docs||[]).map(function(d){ return {id:d.id,kind:'doc',name:d.name,text:d.text||'',parent:null,ico:'txt',left:d.left,top:d.top}; });
@@ -2558,22 +3014,34 @@ function restoreNoteDocs(){
     if(!d||!d.id||FS[d.id]) return;
     ensureSeqFromId(d.id);
     if(String(d.id).indexOf('doc')===0){ var num=parseInt(String(d.id).replace(/^doc/,''),10); if(isFinite(num)&&num>docSeq) docSeq=num; }
-    var it={id:d.id,kind:d.kind||'doc',name:d.name||d.label||'Sin título',label:d.name||d.label||'Sin título',text:d.text||'',parent:d.parent||null,ico:d.ico||(d.kind==='folder'?'folder':'txt'),target:d.target||null,left:Math.round(clamp(+d.left||8,0,568)),top:Math.round(clamp(+d.top||8,0,404)),docId:d.id,leyendasLocal:!!d.leyendasLocal,leyendasRev:d.leyendasRev||null};
+    if(d.remote||d.kind==='app') return;
+    var it={id:d.id,kind:d.kind||'doc',name:d.name||d.label||'Sin título',label:d.name||d.label||'Sin título',text:d.text||'',parent:d.parent||null,ico:d.ico||(d.kind==='folder'?'folder':'txt'),target:d.target||null,left:Math.round(clamp(+d.left||8,0,568)),top:Math.round(clamp(+d.top||8,0,404)),docId:d.id,leyendasLocal:!!d.leyendasLocal,leyendasRev:d.leyendasRev||null,mtime:+d.mtime||0};
     registerItem(it);
     if(!it.parent&&!qs('#ic-'+it.id)) addIcon(it, desk);
   });
   (st.trash||[]).forEach(function(t){
-    if(!t||!t.def) return;
-    var when=t.when?new Date(t.when):new Date();
-    TRASH.push({def:t.def,when:isNaN(when)?new Date():when});
+    if(!t||!t.def||!t.def.id) return;
+    if(TRASH.some(function(x){ return x.def&&x.def.id===t.def.id; })) return;
+    var when=t.when?new Date(t.when):new Date(), def=t.def;
+    if(def.kind==='app'){ def=appDef(def.id); if(!def||isFixedDef(def)) return; APPST[def.id]={parent:(APPST[def.id]&&APPST[def.id].parent)||t.from||null,trashed:true}; }
+    else if(!def.remote){
+      // reparación: antes lo tirado seguía en FS y volvía a salir en el escritorio o en su carpeta
+      if(FS[def.id]){ def=FS[def.id]; delete FS[def.id]; delete DOCS[def.id]; var ic=qs('#ic-'+def.id); if(ic&&ic.parentNode) ic.parentNode.removeChild(ic); }
+      if(def.kind==='doc'&&!def.docId) def.docId=def.id;
+      def.label=def.label||def.name;
+    }
+    TRASH.push({def:def,when:isNaN(when)?new Date():when,from:t.from!==undefined?t.from:(def.parent||null)});
   });
-  if(TRASH.length) setTrashIcon();
+  setTrashIcon();
+  applyAppState();
   ensureLeyendasDoc();
+  ensureMiscFolder();
 }
 
 var LEYENDAS_SEED_ID='doc-leyendas';
 var LEYENDAS_SEED_NAME='Para las Leyendas.txt';
 var LEYENDAS_SEED_REV='20261125-2015';
+var LEYENDAS_SEED_MS=new Date(2026,10,25,20,15).getTime();
 var NOTE_DEFAULT_BOX={left:'150px',top:'50px',width:'340px',height:'220px'};
 function leyendasSeedText(){
   var el=qs('#leyendas-seed');
@@ -2588,6 +3056,7 @@ function leyendasInTrash(){
 function ensureLeyendasDoc(){
   var seed=leyendasSeedText();
   if(!seed) return;
+  if(HIDDEN[LEYENDAS_SEED_ID]) return;
   var it=FS[LEYENDAS_SEED_ID]||DOCS[LEYENDAS_SEED_ID];
   if(!it&&leyendasInTrash()) return;
   if(!it){
@@ -2606,24 +3075,31 @@ function ensureLeyendasDoc(){
 }
 function sizeNoteFor(d){
   var w=qs('#note'); if(!w) return;
-  if(isLeyendasDoc(d)){
+  if(isLeyendasDoc(d)||(d&&d.remote)){
     w.style.left='36px'; w.style.top='16px'; w.style.width='560px'; w.style.height='400px';
   } else {
     w.style.left=NOTE_DEFAULT_BOX.left; w.style.top=NOTE_DEFAULT_BOX.top;
     w.style.width=NOTE_DEFAULT_BOX.width; w.style.height=NOTE_DEFAULT_BOX.height;
   }
 }
-function showLeyendasRo(on){
+var NOTE_RO_TXT=null;
+function showLeyendasRo(on, remote){
   var w=qs('#note'); if(!w) return;
+  var bar=qs('#note-ro'), btn=qs('#note-ro-edit');
+  if(bar&&NOTE_RO_TXT==null) NOTE_RO_TXT=bar.firstChild?bar.firstChild.nodeValue:'';
+  if(bar&&bar.firstChild&&bar.firstChild.nodeType===3) bar.firstChild.nodeValue=remote?'Solo lectura: comunicación del Consejo (servidor admira.live). Para editar, cópiela y péguela. ':NOTE_RO_TXT;
   w.classList.toggle('ro', !!on);
+  w.classList.toggle('ro-remote', !!(on&&remote));
 }
 function applyLeyendasNoteMode(d){
   sizeNoteFor(d);
-  var ro=isLeyendasDoc(d)&&!d.leyendasLocal;
+  var remote=!!(d&&d.remote);
+  var ro=remote||(isLeyendasDoc(d)&&!d.leyendasLocal);
   noteMode(!ro);
-  showLeyendasRo(ro);
+  showLeyendasRo(ro, remote);
 }
 function enableLeyendasEdit(){
+  if(NOTE.doc&&NOTE.doc.remote){ sfxDing(); return; }
   var nt=qs('#nt'); if(nt) nt.readOnly=false;
   showLeyendasRo(false);
   noteFocus();
@@ -2649,7 +3125,7 @@ function markLeyendasLocalIfNeeded(){
 }
 
 function leemeText(){ return (NOTE.leeme!=null)?NOTE.leeme:welcomeText(); }
-function saveNote(){ if(NOTE.doc&&!NOTE.doc.untitled){ NOTE.doc.text=noteVal(); if(NOTE.dirty) markLeyendasLocalIfNeeded(); } }
+function saveNote(){ if(NOTE.doc&&!NOTE.doc.untitled&&!NOTE.doc.remote){ if(NOTE.doc.text!==noteVal()) NOTE.doc.mtime=Date.now(); NOTE.doc.text=noteVal(); if(NOTE.dirty) markLeyendasLocalIfNeeded(); } }
 function noteMode(editable){ var nt=qs('#nt'); if(nt) nt.readOnly=!editable; }
 function showNoteWin(ico){
   var w=qs('#note'); w.style.display='block';

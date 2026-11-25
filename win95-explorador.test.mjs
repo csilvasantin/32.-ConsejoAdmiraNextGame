@@ -1,0 +1,101 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { redactar, construirFicheros, desdeMensaje, desdeEncargo, ordenPar } from "./win95-comunicaciones-lib.mjs";
+import { onRequestGet, construir } from "./functions/api/win95/comunicaciones.js";
+
+const raiz = dirname(fileURLToPath(import.meta.url));
+const html = readFileSync(join(raiz, "windows95/index.html"), "utf8");
+const AHORA = Date.parse("2026-11-25T20:00:00Z"); // 21:00 en Madrid
+
+test("redactar: fuera tokens, contraseñas, IPs, MACs y claves; la prosa se queda", () => {
+  const t = redactar("ip 192.168.1.20 · mac aa:bb:cc:dd:ee:ff · token=abcd1234xyz · password: hunter22 · ghp_abcdefghijk1234 · https://x.test/a?token=zz · Authorization: Bearer abc.def.ghijkl · 0123456789abcdef0123456789abcdef");
+  for (const fuga of ["192.168.1.20", "aa:bb:cc:dd:ee:ff", "abcd1234xyz", "hunter22", "ghp_abcdefghijk1234", "token=zz", "abc.def.ghijkl", "0123456789abcdef0123456789abcdef"]) assert.ok(!t.includes(fuga), fuga);
+  assert.equal(redactar("el token del servidor, clave para Musk a las 20:15 (#7722.11.25)"), "el token del servidor, clave para Musk a las 20:15 (#7722.11.25)");
+});
+
+test("solo consejero ↔ consejero: agentes, Carlos y uno mismo quedan fuera", () => {
+  assert.equal(desdeMensaje({ id: 1, de: "Jobs", para: "Neo", de_tipo: "consejero", para_tipo: "agente", texto: "x", hora: AHORA }), null);
+  assert.equal(desdeEncargo({ id: 2, from_name: "status-web · NeoMacStudio", target_persona: "JobsGrokBot", text: "x", ts: AHORA / 1000 }), null);
+  assert.equal(desdeEncargo({ id: 3, from_name: "Huang", target_persona: "Huang", text: "x", ts: AHORA / 1000 }), null);
+  const e = desdeEncargo({ id: 7699, from_name: "Jobs GrokBot", target_persona: "Huang", text: "[MCP x → y]\nhola", ts: AHORA / 1000, status: "done" });
+  assert.equal(e.de, "Steve Jobs"); assert.equal(e.para, "Jensen Huang"); assert.equal(e.ref, "#7699"); assert.equal(e.texto, "hola");
+  assert.deepEqual(ordenPar("Jensen Huang", "Steve Jobs"), ["Steve Jobs", "Jensen Huang"]);
+});
+
+test("ficheros: un .txt por conversación + resumen del día, hora de Madrid, sin secretos", () => {
+  const f = construirFicheros({
+    mensajes: [
+      { id: "m1", de: "Musk", para: "Jobs", texto: "Prueba viva, clave: s3cr3tito", hora: AHORA - 3600e3, leido: true },
+      { id: "m2", de: "Jobs", para: "Musk", texto: "Recibido desde 10.0.0.7", hora: AHORA - 1800e3 },
+      { id: "m3", de: "Jobs", para: "Musk", texto: "viejo", hora: AHORA - 40 * 86400e3 },
+    ],
+    encargos: [{ id: 7699, from_name: "Jobs", target_persona: "Huang", text: "PR de Morfeo", ts: (AHORA - 600e3) / 1000, status: "pending" }],
+  }, AHORA);
+  assert.deepEqual(f.map((x) => x.nombre), ["Consejo 25-11-2026.txt", "Jobs-Huang.txt", "Jobs-Musk.txt"]);
+  const jm = f.find((x) => x.nombre === "Jobs-Musk.txt");
+  assert.equal(jm.mensajes, 2, "lo de hace 40 días no entra");
+  assert.match(jm.texto, /25-11-2026 20:00 · Musk → Jobs · mensaje · leído/);
+  assert.match(jm.texto, /25-11-2026 20:30 · Jobs → Musk/);
+  assert.ok(!jm.texto.includes("s3cr3tito") && !jm.texto.includes("10.0.0.7"));
+  assert.equal(f[0].mensajes, 3);
+  assert.match(f[1].texto, /encargo #7699 · pendiente/);
+  for (const x of f) { assert.ok(x.tamano > 0); assert.ok(x.modificado > 0); }
+});
+
+test("/api/win95/comunicaciones: sin sesión 401; nunca reenvía el token al cliente", async () => {
+  const r = await onRequestGet({ request: new Request("https://www.admira.live/api/win95/comunicaciones"), env: {}, fetchImpl: async () => new Response("{}") });
+  assert.equal(r.status, 401);
+  const vistos = [];
+  const fetchImpl = async (url, init) => {
+    vistos.push([String(url), init && init.headers && init.headers["x-mensajes-token"]]);
+    if (String(url).includes("/consejero/mensajes")) return Response.json({ mensajes: [{ id: "a", de: "Huang", para: "Jobs", texto: "ok", hora: new Date(AHORA - 60e3).toISOString() }] });
+    return Response.json({ items: [] });
+  };
+  const d = await construir({ env: { CONSEJERO_MENSAJES_TOKEN: "tok-secreto-123" }, fetchImpl, ahora: AHORA });
+  assert.equal(d.ok, true);
+  assert.ok(vistos.some(([u, t]) => u.includes("/consejero/mensajes") && t === "tok-secreto-123"), "el token va al Worker");
+  assert.ok(!JSON.stringify(d).includes("tok-secreto-123"), "y nunca vuelve en el JSON");
+  assert.ok(d.ficheros.some((x) => x.nombre === "Jobs-Huang.txt"));
+});
+
+test("Explorador 95: Ver con Iconos grandes, pequeños, Lista y Detalles; cabeceras que ordenan", () => {
+  assert.match(html, /id="dm-view">Ver/);
+  assert.match(html, /id="dm-arrange">Organizar iconos/);
+  for (const v of ["Iconos grandes", "Iconos pequeños", "Lista", "Detalles"]) assert.ok(html.includes("'" + v + "'"), v);
+  assert.match(html, /\[\['name','Nombre'\],\['size','Tamaño'\],\['type','Tipo'\],\['date','Modificado'\]\]/);
+  assert.match(html, /setFolderView\(id,\{sort:c\[0\],dir:cv\.sort===c\[0\]\?-cv\.dir:1\}\)/, "clic en cabecera: asc/desc");
+  for (const k of ["por nombre", "por tipo", "por tamaño", "por fecha"]) assert.ok(html.includes("'" + k + "'"), k);
+  assert.match(html, /FVIEW_KEY='admira-win95-vistas'/);
+});
+
+test("Explorador 95: Léeme.txt y las aplicaciones se arrastran a carpetas; solo Mi PC y la Papelera son fijos", () => {
+  assert.match(html, /function isFixedDef\(d\)\{ return !!d&&d\.kind==='app'&&\(d\.id==='mypc'\|\|d\.id==='trash'\); \}/);
+  assert.match(html, /function moveItemTo\(el, parent, x, y\)\{\n  var d=el\._def; if\(!d\|\|!canMoveDef\(d\)\)/);
+  assert.match(html, /if\(d\.kind==='app'\) APPST\[d\.id\]=\{parent:parent\};/);
+  assert.match(html, /document\.elementFromPoint/, "el destino respeta la ventana que está delante");
+  assert.match(html, /soltar en el escritorio: sale de la carpeta si venía de una/);
+});
+
+test("Papelera 95: botón derecho, Restaurar, Eliminar con confirmación y Vaciar; lo del sistema solo se oculta", () => {
+  assert.match(html, /function openTrashIconMenu\(/);
+  assert.match(html, /\{l:'Vaciar Papelera de reciclaje',dis:!TRASH\.length,fn:emptyTrashAsk\}/);
+  assert.match(html, /\{l:'Restaurar',b:1,fn:function\(\)\{ trashRestore\(i\); \}\}/);
+  assert.match(html, /¿Está seguro de que desea eliminar «'\+nm\+'»\?/);
+  assert.match(html, /¿Está seguro de que desea eliminar estos '\+TRASH\.length\+' elementos\?/);
+  assert.match(html, /if\(def\.remote\)\{ HIDDEN\[def\.id\]=1; return; \}/);
+  assert.match(html, /if\(HIDDEN\[LEYENDAS_SEED_ID\]\) return;/);
+  assert.match(html, /else if\(!d\.remote\)\{ delete FS\[d\.id\]; delete DOCS\[d\.docId\|\|d\.id\]; \}/, "lo tirado sale de su carpeta");
+  assert.match(html, /ICONS\[full\?'trashFull':'trash'\]/);
+});
+
+test("Miscelánea: comunicaciones del Consejo de solo lectura, se refrescan al abrir la carpeta", () => {
+  assert.match(html, /COMMS_URL='\/api\/win95\/comunicaciones'/);
+  assert.match(html, /credentials:'same-origin'/);
+  assert.match(html, /if\(id===MISC_ID\) loadComms\(true\);/);
+  assert.match(html, /var ro=remote\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /plainName\(it\.name\)==='miscelanea'/);
+  assert.match(html, /<script src="\/auth-gate\.js"><\/script>/);
+});

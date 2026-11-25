@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   MAX_RESULTS, STOCK_INDEX, buscar, catalogo, coincideArtista, coincideHashtag,
-  coincideTitulo, esCancion, leerCatalogo, partirTitulo, pieza, responder, urlPublica,
+  coincideTitulo, esCancion, esAudioPieza, esVideoPieza, leerCatalogo, nombreArchivo, partirTitulo, pieza, responder, tagDescarga, urlPublica,
   vaciarCache,
 } from "./win95-napster-lib.mjs";
 import * as api from "./functions/api/win95/napster.js";
@@ -124,7 +124,8 @@ test("responder expone el contrato público y recorta a MAX_RESULTS", () => {
   assert.equal(r.total, 5);
   assert.equal(r.fuente, "stock.admira.store");
   assert.equal(r.results[0].titulo.length > 0, true);
-  assert.deepEqual(Object.keys(r.results[0]).sort(), ["artista", "duracion", "hashtags", "id", "size", "thumb", "titulo", "url"]);
+  assert.deepEqual(Object.keys(r.results[0]).sort(), ["artista", "duracion", "hashtags", "id", "size", "thumb", "tipo", "titulo", "url"]);
+  assert.equal(r.results[0].tipo, "video");
   assert.ok(r.results[0].url.startsWith("https://stock.admira.store/"));
   const muchos = Array.from({ length: MAX_RESULTS + 10 }, (_, i) => ({
     id: "n" + i, titulo: "Tema " + i, artista: "", hashtags: ["80"], duracion: 1, url: "https://stock.admira.store/x.mp3", thumb: "", size: 1,
@@ -186,4 +187,13 @@ test("la Win95 Xperience llama a /api/win95/napster y no usa el catálogo de dem
   assert.doesNotMatch(html, /morfeo_95/);
   assert.match(html, /admira\.studio/);
   assert.match(html, /waitUntil\(function\(\)\{ return NAP\.conn; \},tk,20000\)/);
+});
+
+test("al descargar, audio recibe #winamp y vídeo #AdmiraMediaPlayer", () => {
+  assert.equal(tagDescarga(pieza(FIX[0])), "winamp");
+  assert.equal(esAudioPieza(pieza(FIX[0])), true);
+  assert.equal(tagDescarga(pieza(FIX[3])), "AdmiraMediaPlayer");
+  assert.equal(esVideoPieza(pieza(FIX[3])), true);
+  assert.equal(nombreArchivo(pieza(FIX[1])), "Vanessa Carlton - A Thousand Miles.mp3");
+  assert.equal(nombreArchivo(pieza(FIX[3])).endsWith(".mp4"), true);
 });

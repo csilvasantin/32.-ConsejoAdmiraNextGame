@@ -34,10 +34,10 @@
     "#win95-xperiencia:focus-visible{outline:2px solid #ffff00;outline-offset:2px}" +
     "#win95-fs-wrap{position:fixed;inset:0;z-index:2147483000;background:#0a0b0d}" +
     "#win95-fs-wrap[hidden]{display:none!important}" +
-    "#win95-fs-salir{position:absolute;right:12px;top:10px;z-index:2;" +
-    "font:8px/1.4 'Press Start 2P',monospace;color:#1a1004;background:#e6c788;" +
+    "#win95-fs-tools{position:absolute;top:10px;right:12px;z-index:3;display:flex;gap:8px;align-items:center}" +
+    "#win95-fs-tools button{font:8px/1.4 'Press Start 2P',monospace;color:#1a1004;background:#e6c788;" +
     "border:1px solid #ffe08a;padding:6px 10px;cursor:pointer;box-shadow:2px 2px #090603}" +
-    "#win95-fs-salir:hover{background:#fff0b0}" +
+    "#win95-fs-tools button:hover{background:#fff0b0}" +
     "#win95-fs-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0a0b0d}";
   document.head.appendChild(css);
 
@@ -61,13 +61,33 @@
   wrap.setAttribute("aria-modal", "true");
   wrap.setAttribute("aria-label", T("Win95 · Xperiencia a pantalla completa", "Win95 · Xperience fullscreen"));
   wrap.innerHTML =
-    '<button type="button" id="win95-fs-salir">' + T("Salir (Esc)", "Exit (Esc)") + "</button>" +
+    '<div id="win95-fs-tools">' +
+    '<button type="button" id="win95-fs-monitor">Monitor: ON</button>' +
+    '<button type="button" id="win95-fs-salir">' + T("Salir (Esc)", "Exit (Esc)") + "</button></div>" +
     '<iframe id="win95-fs-frame" src="about:blank" title="Win95 · Xperiencia" allow="fullscreen; autoplay"></iframe>';
   document.body.appendChild(wrap);
 
   var frame = document.getElementById("win95-fs-frame");
   var salir = document.getElementById("win95-fs-salir");
+  var monitorBtn = document.getElementById("win95-fs-monitor");
   var SRC = "/windows95/";
+  function crtOn() {
+    try { return localStorage.getItem("admira-win95-crt") !== "0"; } catch (e) { return true; }
+  }
+  function pintaMonitor(on) {
+    if (!monitorBtn) return;
+    monitorBtn.textContent = on ? "Monitor: ON" : "Monitor: OFF";
+    monitorBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+  function srcCrt() { return SRC + (crtOn() ? "?crt=1" : "?crt=0"); }
+  function setCrt(on) {
+    try { localStorage.setItem("admira-win95-crt", on ? "1" : "0"); } catch (e) {}
+    pintaMonitor(on);
+    try {
+      if (frame.contentWindow) frame.contentWindow.postMessage({ source: "win95-crt", action: "set-crt", on: on }, location.origin);
+    } catch (e) {}
+  }
+  pintaMonitor(crtOn());
 
   function fsEl() {
     return document.fullscreenElement || document.webkitFullscreenElement || null;
@@ -93,7 +113,8 @@
   }
   function abrir() {
     wrap.hidden = false;
-    if (frame.getAttribute("src") !== SRC) frame.src = SRC;
+    var dest = srcCrt();
+    if (frame.getAttribute("src") !== dest) frame.src = dest;
     pideFS();
     try { salir.focus(); } catch (e) {}
   }
@@ -114,12 +135,24 @@
   });
   window.addEventListener("message", function (e) {
     if (e.origin !== location.origin) return;
-    if (e.data && e.data.source === "win95-crt" && e.data.action === "exit" && !wrap.hidden) cerrar();
+    if (!e.data || e.data.source !== "win95-crt") return;
+    if (e.data.action === "exit" && !wrap.hidden) cerrar();
+    if (e.data.action === "crt-state") pintaMonitor(!!e.data.on);
+  });
+  if (monitorBtn) monitorBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    setCrt(!crtOn());
   });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !wrap.hidden) {
+    if (wrap.hidden) return;
+    if (e.key === "Escape") {
       e.preventDefault();
       cerrar();
+      return;
+    }
+    if (e.key === "m" || e.key === "M") {
+      e.preventDefault();
+      setCrt(!crtOn());
     }
   });
   function onFs() {

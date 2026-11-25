@@ -192,6 +192,9 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .crow{display:flex;align-items:center;height:18px;padding:0 4px 0 10px;white-space:nowrap}
 .crow svg{flex:none;width:14px;height:14px;margin-right:5px}
 .crow.off{color:#808080}
+.crow.unk span{font-style:italic}
+#icqc .chdr a{color:#606060;text-decoration:underline}
+#icqc .chdr span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .crow.sel{background:#000080;color:#fff}
 .crow .env{display:none;margin-left:auto}
 .crow .env svg{width:14px;height:10px;margin:0}
@@ -1010,7 +1013,10 @@ var CONFIG = {
   // El nombre lo pone el servidor a partir de la sesión de Google. Límite 300 caracteres y 1 mensaje cada 20 s (también en el servidor).
   icqgram: { enabled:true, maxLen:300, minGapSeconds:20,
     prefixLegacy:/^\s*\[Visita[^\]]*\]\s*/i,
-    quick:['¡Hola desde 1995!','¿Qué es AdmiraNeXT?','¿Qué haríais con mi tienda?'] },
+    quick:['¡Hola desde 1995!','¿Qué es AdmiraNeXT?','¿Qué haríais con mi tienda?'],
+    // Presencia real (Carlos 25-11-2026): en verde solo quien dio señal en 15 min (latido o respuesta en su hilo);
+    // el resto, en «Fuera de línea» con los 3 contactos de la demo. Si la fuente falla: desconocido (gris), nunca verde.
+    presencia:{ url:'/api/win95/presencia', cadaSeg:30 } },
   // ICQGram · contactos de la demo (auto = respuesta automática; on:false = fuera de línea)
   contacts: [
     { id:'jensen', name:'Jensen', status:'Consejero AdmiraNeXT', on:true },
@@ -3103,7 +3109,31 @@ var CONSEJO=[
   {id:'c-musk',persona:'musk',name:'Elon Musk'},{id:'c-huang',persona:'huang',name:'Jensen Huang'}
 ];
 function chc(){ return window.ChatHiloClient||null; }
-function consejero(id){ for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].id===id){ var c=CONSEJO[i]; return {id:c.id,persona:c.persona,name:c.name,status:'Consejo AdmiraNeXT · hilo real',on:true,real:true}; } return null; }
+function consejero(id){ for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].id===id){ var c=CONSEJO[i], pr=presenciaDe(c.persona); return {id:c.id,persona:c.persona,name:c.name,chat:'/chat/'+c.persona+'/',status:presenciaTxt(pr),on:pr.online===true,desconocido:pr.online!==true&&pr.online!==false,real:true}; } return null; }
+/* Presencia real de los consejeros: /api/win95/presencia (latido público + última respuesta en su hilo). */
+var PRES={datos:null,at:0,timer:null,enVuelo:false};
+function presenciaDe(persona){ var d=PRES.datos, l=d&&d.consejeros||[]; for(var i=0;i<l.length;i++) if(l[i].persona===persona) return l[i]; return {persona:persona,online:null}; }
+function haceTxt(s){ if(!s) return ''; var m=Math.max(0,Math.round((now()/1000-s)/60)); return m<1?'ahora':m<60?'hace '+m+' min':m<2880?'hace '+Math.round(m/60)+' h':'hace '+Math.round(m/1440)+' d'; }
+function presenciaTxt(pr){
+  var dir='admira.live/chat/'+pr.persona;
+  if(pr.online===true) return dir+' · en línea';
+  if(pr.online===false) return dir+' · fuera de línea'+(pr.ultima_senal?' · última señal '+haceTxt(pr.ultima_senal):'');
+  return dir+' · estado desconocido';
+}
+function presenciaCargar(){
+  var cfg=CONFIG.icqgram.presencia; if(!cfg||PRES.enVuelo) return;
+  PRES.enVuelo=true;
+  fetch(cfg.url,{cache:'no-store',credentials:'same-origin',headers:{accept:'application/json'}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){ PRES.datos=(d&&d.ok&&Array.isArray(d.consejeros))?d:null; })
+    .catch(function(){ PRES.datos=null; })
+    .then(function(){ PRES.enVuelo=false; PRES.at=now(); renderContacts(); });
+}
+function presenciaVigilar(){
+  var cfg=CONFIG.icqgram.presencia; if(!cfg) return;
+  clearInterval(PRES.timer); presenciaCargar();
+  PRES.timer=setInterval(function(){ if(!document.hidden&&icqgLive()) presenciaCargar(); },(cfg.cadaSeg||30)*1000);
+}
 function icqgLive(){ return ICQG.on&&MODE==='interactive'; }
 // Solo en admira.live: carga el cliente oficial del chat (sesión de Google, /api/chat/hilo y /api/chat/enviar).
 function icqgInit(){
@@ -3112,7 +3142,7 @@ function icqgInit(){
   s.onload=function(){
     var C=chc();
     if(!C){ ICQG.on=false; renderContacts(); return; }
-    var listo=function(){ ICQG.yo=(C.nombreSesion&&C.nombreSesion())||''; ICQG.on=true; renderContacts(); };
+    var listo=function(){ ICQG.yo=(C.nombreSesion&&C.nombreSesion())||''; ICQG.on=true; renderContacts(); presenciaVigilar(); };
     if(C.restaurarSesion) C.restaurarSesion().then(listo).catch(listo);
     else listo();
   };
@@ -3167,7 +3197,7 @@ function openRealChat(cg){
   var w=qs('#icqc'), C=chc(); ICQ.chatId++; var id=ICQ.chatId;
   ICQ.who=cg.id; ICQ.busy=false; ICQ.ended=true; delete ICQ.pending[cg.id]; recordarConsejero(cg); renderContacts();
   qs('#icqcT').textContent=cg.name+' - ICQGram';
-  qs('#icqcH').innerHTML=bub('#3cc83c')+'<b></b><span></span>'; qs('#icqcH b').textContent=cg.name; qs('#icqcH span').textContent=cg.status;
+  qs('#icqcH').innerHTML=bub(cg.on?'#3cc83c':cg.desconocido?'#a0a0a0':'#e03030')+'<b></b><span><a target="_blank" rel="noopener"></a></span>'; qs('#icqcH b').textContent=cg.name; var lk=qs('#icqcH a'); lk.href=cg.chat; lk.textContent=cg.status; lk.title='Abrir su chat real en admira.live';
   qs('#icqHist').innerHTML=''; qs('#icqOpts').innerHTML=''; realInput(true);
   w.style.display='block'; addTask('icqc',cg.name+' - ICQGram','chat',[w]); focusWin(w);
   if(!C.credencial()){ loginPrompt(cg); return; }
@@ -3176,7 +3206,7 @@ function openRealChat(cg){
     if(id!==ICQ.chatId) return;
     if(r.status===401){ loginPrompt(cg); return; }
     (r.turnos||[]).forEach(function(t){ ICQG.known[t.id]=1; addTurn(cg,t); });
-    setStatus('Hilo real con '+cg.name+' · escribe y pulsa Enviar'); quickOpts(); pollReal(cg,id);
+    setStatus(cg.on?'Hilo real con '+cg.name+' · escribe y pulsa Enviar':cg.name+' está fuera de línea · tu mensaje le llegará cuando se conecte'); quickOpts(); pollReal(cg,id);
     try{ qs('#icqReal').focus(); }catch(e){}
   }).catch(function(){ if(id===ICQ.chatId) setStatus('Sin conexión con admira.live'); });
 }
@@ -3229,13 +3259,15 @@ function sendReal(text){
   }).catch(function(){ if(id===ICQ.chatId) setStatus('Sin conexión con admira.live'); });
 }
 // Gancho de prueba (sin efecto en producción): permite probar la interfaz con un cliente simulado.
-window.Vuelta95 = { icqgTest:function(stub){ window.ChatHiloClient=stub; ICQG.on=true; renderContacts(); } };
+window.Vuelta95 = { icqgTest:function(stub,pres){ window.ChatHiloClient=stub; ICQG.on=true; if(pres!==undefined) PRES.datos=pres; renderContacts(); } };
 function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
 function hhmm(){ var d=new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
 function renderContacts(){
-  function row(c){ return '<div class="crow'+(c.on?'':' off')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'">'+bub(c.on?'#3cc83c':'#e03030')+'<span>'+esc(c.name)+'</span><i class="env">'+ENV+'</i></div>'; }
-  var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; });
-  var on=live?CONSEJO.map(function(c){ return consejero(c.id); }):CONFIG.contacts.filter(function(c){ return c.on; });
+  function row(c){ var tt=c.real?' title="'+esc(c.status)+'"':''; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'"'+tt+'>'+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+'</span><i class="env">'+ENV+'</i></div>'; }
+  var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
+  // En línea de verdad: solo consejeros con señal reciente. Fuera de línea: los que no + los 3 de la demo.
+  if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }); on=todos.filter(function(c){ return c.on; }); off=todos.filter(function(c){ return !c.on; }).concat(off); }
+  else on=CONFIG.contacts.filter(function(c){ return c.on; });
   qs('#clist').innerHTML='<div class="cgrp">'+(live?'Consejo AdmiraNeXT':'En línea')+' ('+on.length+')</div>'+on.map(row).join('')+'<div class="cgrp">Fuera de línea ('+off.length+')</div>'+off.map(row).join('');
   qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
 }

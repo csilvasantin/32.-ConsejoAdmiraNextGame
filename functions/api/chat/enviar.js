@@ -5,9 +5,27 @@
  * [chat-coetaneos] al bot-inbox (bot.yokup.com); 3) despierta la rutina del consejero por el
  * webhook que registró con consejero_webhook_registrar (POST /consejero/despertar en mcp.admira.live).
  * Idempotente por msg_id: un msg_id ya entregado no se reenvía nunca.
+ * Imagen (Carlos t1389u, 25-11-2026): { imagen: "<origen>/api/chat/adjunto?id=…" } opcional, subida antes
+ * con POST /api/chat/adjunto. Se guarda en el turno (turno.imagen) y su URL viaja en el encargo, en el
+ * mensaje limpio (imagenes[]) y en el despertar del consejero. El texto sigue limitado (300 en win95).
  */
 import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, textoEncargo, BOT_INBOX, PERSONA_INBOX, mensajeLimpio, limpiarTextoVisita, identidadDeEmail, MAX_TEXTO_WIN95, MIN_GAP_WIN95_MS } from "../../../chat-hilo-lib.mjs";
 import { cabeceras, json, kv, cargarHilo } from "../../../chat-hilo-http.mjs";
+import { ID_ADJUNTO, claveAdjunto } from "./adjunto.js";
+
+const ORIGENES_IMAGEN = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
+/** URL canónica de un adjunto ya subido (mismo origen que la petición), o null si no es válida. */
+export function urlImagen(valor, requestUrl) {
+  if (valor === undefined || valor === null || valor === "") return null;
+  let u;
+  try { u = new URL(String(valor), requestUrl); } catch (e) { return null; }
+  const propio = new URL(requestUrl).origin;
+  if (u.origin !== propio && !ORIGENES_IMAGEN.has(u.origin)) return null;
+  if (u.pathname !== "/api/chat/adjunto") return null;
+  const id = String(u.searchParams.get("id") || "").toLowerCase();
+  if (!ID_ADJUNTO.test(id)) return null;
+  return { id, url: propio + "/api/chat/adjunto?id=" + id };
+}
 
 export function onRequestOptions({ request }) {
   return new Response(null, { status: 204, headers: cabeceras(request.headers.get("Origin") || "", "POST, OPTIONS") });
@@ -39,7 +57,14 @@ export async function onRequestPost({ request, env, fetchImpl }) {
   if (!persona) return json({ ok: false, error: "persona inválida" }, 400, origin, M);
   if (!body.msg_id) return json({ ok: false, error: "falta msg_id" }, 400, origin, M);
   const canal = String(body.canal || "").toLowerCase() === "win95" ? "win95" : "";
-  const texto = limpiarTextoVisita(body.texto);
+  let imagen = null;
+  if (body.imagen !== undefined && body.imagen !== null && body.imagen !== "") {
+    imagen = urlImagen(body.imagen, request.url);
+    if (!imagen) return json({ ok: false, error: "imagen inválida (sube antes la imagen a /api/chat/adjunto)" }, 400, origin, M);
+    if (!(await kv(env).get(claveAdjunto(imagen.id)))) return json({ ok: false, error: "imagen no encontrada o caducada" }, 400, origin, M);
+  }
+  let texto = limpiarTextoVisita(body.texto);
+  if (!texto && imagen) texto = "🖼 Imagen adjunta";
   if (canal === "win95" && texto.length > MAX_TEXTO_WIN95) return json({ ok: false, error: "texto demasiado largo (máx. 300)" }, 400, origin, M);
   const { turno, error } = await normalizarTurno({ persona, rol: "carlos", origen: "live", texto, msg_id: body.msg_id });
   if (error) return json({ ok: false, error }, 400, origin, M);
@@ -49,6 +74,7 @@ export async function onRequestPost({ request, env, fetchImpl }) {
   turno.autor = quien === "caja" ? "caja" : quien;
   turno.autor_nombre = identidad.corto;
   if (canal) turno.canal = canal;
+  if (imagen) turno.imagen = imagen.url;
 
   const docPrev = await cargarHilo(env, persona);
   const ya = (docPrev.turnos || []).find((x) => x.id === turno.id);
@@ -101,7 +127,8 @@ export async function onRequestPost({ request, env, fetchImpl }) {
         method: "POST", redirect: "manual", signal: AbortSignal.timeout(8000),
         headers: { "content-type": "application/json", accept: "application/json", authorization: "Bearer " + llave },
         body: JSON.stringify({
-          persona: PERSONA_INBOX[persona], encargo, de: identidad.corto, resumen: turno.texto,
+          persona: PERSONA_INBOX[persona], encargo, de: identidad.corto, resumen: turno.imagen ? turno.texto + " · imagen: " + turno.imagen : turno.texto,
+          ...(turno.imagen ? { imagen: turno.imagen, imagenes: [turno.imagen] } : {}),
           canal: canal || "chat", id: turno.id, tipo: "chat",
           url: "https://www.admira.live/api/chat/hilo?persona=" + encodeURIComponent(persona),
         }),

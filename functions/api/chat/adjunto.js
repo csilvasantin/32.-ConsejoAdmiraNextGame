@@ -10,6 +10,8 @@ const MAX = 1_500_000; // ~1,5 MB tras el downscale del cliente
 const TTL = 60 * 60 * 24 * 7; // 7 días
 const ID_RE = /^[a-f0-9]{16,40}$/;
 const clave = (id) => `chat:adj:v1:${id}`;
+export const ID_ADJUNTO = ID_RE;
+export const claveAdjunto = clave;
 
 export function onRequestOptions({ request }) {
   return new Response(null, { status: 204, headers: cabeceras(request.headers.get("Origin") || "", "GET, POST, OPTIONS") });

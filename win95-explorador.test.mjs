@@ -65,7 +65,12 @@ test("Explorador 95: Ver con Iconos grandes, pequeños, Lista y Detalles; cabece
   assert.match(html, /id="dm-view">Ver/);
   assert.match(html, /id="dm-arrange">Organizar iconos/);
   for (const v of ["Iconos grandes", "Iconos pequeños", "Lista", "Detalles"]) assert.ok(html.includes("'" + v + "'"), v);
-  assert.match(html, /\[\['name','Nombre'\],\['size','Tamaño'\],\['type','Tipo'\],\['date','Modificado'\]\]/);
+  // t1389u: orden Nombre | Tamaño | Modificado | Tipo, anchos compartidos y separadores arrastrables
+  assert.match(html, /DET_COLS=\[\['name','Nombre',\d+\],\['size','Tamaño',\d+\],\['date','Modificado',\d+\],\['type','Tipo',\d+\]\]/);
+  assert.match(html, /\.dethead \.colgrip\{[^}]*cursor:col-resize[^}]*touch-action:none/);
+  assert.match(html, /\.icon \.dc-date\{order:3;width:var\(--c-date\)\}/);
+  assert.match(html, /\.dethead \.h-date\{width:var\(--c-date\)\}/);
+  assert.match(html, /setPointerCapture/);
   assert.match(html, /setFolderView\(id,\{sort:c\[0\],dir:cv\.sort===c\[0\]\?-cv\.dir:1\}\)/, "clic en cabecera: asc/desc");
   for (const k of ["por nombre", "por tipo", "por tamaño", "por fecha"]) assert.ok(html.includes("'" + k + "'"), k);
   assert.match(html, /FVIEW_KEY='admira-win95-vistas'/);

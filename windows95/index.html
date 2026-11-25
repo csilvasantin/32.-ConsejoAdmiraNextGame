@@ -648,8 +648,9 @@ var CONFIG = {
     { artist:'Jensen & Morfeo', title:'AdmiraNeXT',   style:'trance', bpm:136, root:54, scale:'minor',  prog:[0,5,2,6], bars:48 }
   ],
   // ICQGram en línea: en admira.live/windows95 habla de verdad con los consejeros (mismo hilo que GrokBot/Telegram).
-  // Cada mensaje sale con la etiqueta de visita; límite de longitud y de ritmo para no saturar a los consejeros.
-  icqgram: { enabled:true, prefix:'[Visita ITCrowd · Win95 — charla de un visitante, no es un encargo] ', maxLen:300, minGapSeconds:20,
+  // El nombre lo pone el servidor a partir de la sesión de Google. Límite 300 caracteres y 1 mensaje cada 20 s (también en el servidor).
+  icqgram: { enabled:true, maxLen:300, minGapSeconds:20,
+    prefixLegacy:/^\s*\[Visita[^\]]*\]\s*/i,
     quick:['¡Hola desde 1995!','¿Qué es AdmiraNeXT?','¿Qué haríais con mi tienda?'] },
   // ICQGram · contactos de la demo (auto = respuesta automática; on:false = fuera de línea)
   contacts: [
@@ -1632,7 +1633,7 @@ function bub(col){ return '<svg viewBox="0 0 14 14"><path d="M1.5 2.5h11v7h-6l-3
 function contact(id){ var g=consejero(id); if(g) return g; for(var i=0;i<CONFIG.contacts.length;i++) if(CONFIG.contacts[i].id===id) return CONFIG.contacts[i]; return null; }
 
 /* ---------- ICQGram en línea: hilo real con los consejeros de admira.live ---------- */
-var ICQG={on:false,sent:0,known:{},waitingSince:0};
+var ICQG={on:false,sent:0,known:{},waitingSince:0,yo:''};
 var CONSEJO=[
   {id:'c-jobs',persona:'jobs',name:'Steve Jobs'},{id:'c-wozniak',persona:'wozniak',name:'Steve Wozniak'},
   {id:'c-disney',persona:'disney',name:'Walt Disney'},{id:'c-lucas',persona:'lucas',name:'George Lucas'},
@@ -1645,13 +1646,23 @@ function icqgLive(){ return ICQG.on&&MODE==='interactive'; }
 function icqgInit(){
   if(!(CONFIG.icqgram&&CONFIG.icqgram.enabled&&/admira\.live$/.test(location.hostname))) return;
   var s=document.createElement('script'); s.src='/assets/chat-hilo-client.js';
-  s.onload=function(){ ICQG.on=!!chc(); renderContacts(); };
+  s.onload=function(){
+    var C=chc();
+    if(!C){ ICQG.on=false; renderContacts(); return; }
+    var listo=function(){ ICQG.yo=(C.nombreSesion&&C.nombreSesion())||''; ICQG.on=true; renderContacts(); };
+    if(C.restaurarSesion) C.restaurarSesion().then(listo).catch(listo);
+    else listo();
+  };
   document.head.appendChild(s);
 }
 function realInput(on){ qs('#icqReal').style.display=on?'block':'none'; qs('#icqInp').style.display=on?'none':''; qs('#icqReal').value=''; }
+function stripVisita(txt){
+  var re=CONFIG.icqgram.prefixLegacy||/^\s*\[Visita[^\]]*\]\s*/i;
+  return String(txt||'').replace(re,'');
+}
 function addTurn(cg,t){
-  var pre=CONFIG.icqgram.prefix, txt=String(t.texto||''), mine=t.rol==='carlos', name, cls; net(mine?'tx':'rx');
-  if(mine){ if(txt.indexOf(pre)===0){ txt=txt.slice(pre.length); name='Visita'; } else name='Carlos'; cls='me'; }
+  var txt=stripVisita(t.texto||''), mine=t.rol==='carlos', name, cls; net(mine?'tx':'rx');
+  if(mine){ name=t.autor_nombre||ICQG.yo||'Carlos'; cls='me'; }
   else { name=cg.name.split(' ').pop(); cls='them'; }
   if(txt.length>700) txt=txt.slice(0,700)+'…';
   var d=document.createElement('div'); d.className='im';
@@ -1698,9 +1709,9 @@ function pollReal(cg,id){
       tick();
     }).catch(function(){ tick(); });
   }
-  // cada 2 s durante 3 min tras enviar; después, cada 15 s mientras la conversación siga abierta
-  function tick(){ if(id!==ICQ.chatId) return; var fast=ICQG.waitingSince&&now()-ICQG.waitingSince<180000; clearTimeout(ICQG.pt); ICQG.pt=setTimeout(run,fast?2000:15000); }
-  ICQG.kick=function(){ if(id===ICQ.chatId){ clearTimeout(ICQG.pt); ICQG.pt=setTimeout(run,2000); } };
+  // cada 1 s durante 3 min tras enviar (igual que el chat de admira.live); después, cada 10 s
+  function tick(){ if(id!==ICQ.chatId) return; var fast=ICQG.waitingSince&&now()-ICQG.waitingSince<180000; clearTimeout(ICQG.pt); ICQG.pt=setTimeout(run,fast?1000:10000); }
+  ICQG.kick=function(){ if(id===ICQ.chatId){ clearTimeout(ICQG.pt); ICQG.pt=setTimeout(run,1000); } };
   tick();
 }
 function sendReal(text){
@@ -1710,13 +1721,20 @@ function sendReal(text){
   var wait=cfg.minGapSeconds*1000-(now()-ICQG.sent);
   if(wait>0){ setStatus('Espera '+Math.ceil(wait/1000)+' s antes de enviar otro mensaje'); return; }
   ICQG.sent=now(); var id=ICQ.chatId, msgId=C.nuevoId(); ICQG.known[msgId]=1;
-  addTurn(cg,{rol:'carlos',texto:cfg.prefix+text,hora:hhmm(),id:msgId}); qs('#icqReal').value=''; setStatus('Enviando…');
+  addTurn(cg,{rol:'carlos',texto:text,hora:hhmm(),id:msgId,autor_nombre:ICQG.yo||'Carlos'}); qs('#icqReal').value=''; setStatus('Enviando…');
   var sb=qs('#icqSend'); sb.classList.add('pressed'); setTimeout(function(){ sb.classList.remove('pressed'); },150);
-  C.enviarTurno(cg.persona,cfg.prefix+text,msgId).then(function(r){
+  C.enviarTurno(cg.persona,text,msgId,{canal:'win95'}).then(function(r){
     if(id!==ICQ.chatId) return;
     if(r.status===401){ loginPrompt(cg); return; }
+    if(r.turno&&r.turno.autor_nombre) ICQG.yo=r.turno.autor_nombre;
     if(r.turno&&r.turno.id) ICQG.known[r.turno.id]=1;
-    if(r.status>=200&&r.status<300){ ICQG.waitingSince=now(); sfxBlip(); if(ICQG.kick) ICQG.kick(); setStatus('Entregado'+(r.turno&&r.turno.encargo?' · encargo #'+r.turno.encargo:'')+' · '+cg.name.split(' ').pop()+' está escribiendo… (puede tardar unos minutos)'); }
+    if(r.status===429){
+      var espera=Number(r.espera_s)||cfg.minGapSeconds;
+      ICQG.sent=now()-(cfg.minGapSeconds*1000)+espera*1000;
+      setStatus(r.error||('Espera '+espera+' s antes de enviar otro mensaje'));
+      return;
+    }
+    if(r.status>=200&&r.status<300){ ICQG.waitingSince=now(); sfxBlip(); if(ICQG.kick) ICQG.kick(); setStatus('Entregado'+(r.turno&&r.turno.encargo?' · encargo #'+r.turno.encargo:'')+' · '+cg.name.split(' ').pop()+' está escribiendo… (puede tardar unos segundos)'); }
     else setStatus('No se pudo enviar ('+r.status+')');
   }).catch(function(){ if(id===ICQ.chatId) setStatus('Sin conexión con admira.live'); });
 }

@@ -5,7 +5,7 @@
  * [chat-coetaneos] al bot-inbox (bot.yokup.com), que despierta la rutina del consejero por su webhook.
  * Idempotente por msg_id: un msg_id ya entregado no se reenvía nunca.
  */
-import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, textoEncargo, BOT_INBOX, PERSONA_INBOX, mensajeLimpio } from "../../../chat-hilo-lib.mjs";
+import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, textoEncargo, BOT_INBOX, PERSONA_INBOX, mensajeLimpio, limpiarTextoVisita, identidadDeEmail, MAX_TEXTO_WIN95, MIN_GAP_WIN95_MS } from "../../../chat-hilo-lib.mjs";
 import { cabeceras, json, kv, cargarHilo } from "../../../chat-hilo-http.mjs";
 
 export function onRequestOptions({ request }) {
@@ -37,10 +37,32 @@ export async function onRequestPost({ request, env, fetchImpl }) {
   const persona = normalizarPersona(body.persona || "jobs");
   if (!persona) return json({ ok: false, error: "persona inválida" }, 400, origin, M);
   if (!body.msg_id) return json({ ok: false, error: "falta msg_id" }, 400, origin, M);
-  const { turno, error } = await normalizarTurno({ persona, rol: "carlos", origen: "live", texto: body.texto, msg_id: body.msg_id });
+  const canal = String(body.canal || "").toLowerCase() === "win95" ? "win95" : "";
+  const texto = limpiarTextoVisita(body.texto);
+  if (canal === "win95" && texto.length > MAX_TEXTO_WIN95) return json({ ok: false, error: "texto demasiado largo (máx. 300)" }, 400, origin, M);
+  const { turno, error } = await normalizarTurno({ persona, rol: "carlos", origen: "live", texto, msg_id: body.msg_id });
   if (error) return json({ ok: false, error }, 400, origin, M);
   if (turno.texto.length > 3000) return json({ ok: false, error: "texto demasiado largo para el encargo (máx. 3000)" }, 400, origin, M);
-  turno.entrega = "enviando"; turno.autor = quien === "caja" ? "caja" : quien;
+  const identidad = identidadDeEmail(quien);
+  turno.entrega = "enviando";
+  turno.autor = quien === "caja" ? "caja" : quien;
+  turno.autor_nombre = identidad.corto;
+  if (canal) turno.canal = canal;
+
+  const docPrev = await cargarHilo(env, persona);
+  const ya = (docPrev.turnos || []).find((x) => x.id === turno.id);
+  if (ya) {
+    if (ya.texto !== turno.texto) return json({ ok: false, error: "msg_id ya usado con otro texto" }, 409, origin, M);
+    return json({ ok: true, duplicado: true, turno: { id: ya.id, ts: ya.ts, entrega: ya.entrega, encargo: ya.encargo || null, autor_nombre: ya.autor_nombre || identidad.corto } }, 200, origin, M);
+  }
+  if (canal === "win95" && kv(env)) {
+    const prev = Number(await kv(env).get("chat:rate:v1:" + quien) || 0);
+    const ahora = Date.now();
+    if (prev && ahora - prev < MIN_GAP_WIN95_MS) {
+      const espera = Math.max(1, Math.ceil((MIN_GAP_WIN95_MS - (ahora - prev)) / 1000));
+      return json({ ok: false, error: "espera " + espera + " s antes de enviar otro mensaje", espera_s: espera }, 429, origin, M);
+    }
+  }
 
   // Reserva idempotente antes de la única llamada al bot-inbox.
   const reserva = await guardar(env, persona, (doc) => {
@@ -51,7 +73,10 @@ export async function onRequestPost({ request, env, fetchImpl }) {
   const previo = reserva.turno;
   if (reserva.duplicado) {
     if (previo.texto !== turno.texto) return json({ ok: false, error: "msg_id ya usado con otro texto" }, 409, origin, M);
-    return json({ ok: true, duplicado: true, turno: { id: previo.id, ts: previo.ts, entrega: previo.entrega, encargo: previo.encargo || null } }, 200, origin, M);
+    return json({ ok: true, duplicado: true, turno: { id: previo.id, ts: previo.ts, entrega: previo.entrega, encargo: previo.encargo || null, autor_nombre: previo.autor_nombre || identidad.corto } }, 200, origin, M);
+  }
+  if (canal === "win95" && kv(env)) {
+    await kv(env).put("chat:rate:v1:" + quien, String(Date.now()), { expirationTtl: 60 });
   }
   const doc = await cargarHilo(env, persona);
   let encargo = null, entrega = "error", detalle = "";
@@ -59,7 +84,7 @@ export async function onRequestPost({ request, env, fetchImpl }) {
     const r = await doFetch(BOT_INBOX, {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(15000),
       headers: { "content-type": "application/json", accept: "application/json", authorization: "Bearer " + llave },
-      body: JSON.stringify({ text: textoEncargo(persona, doc.turnos, turno), target_persona: PERSONA_INBOX[persona], target_machine: "grokbot", from: "Admira.live · chat/" + persona, materialize_mission: false, mensaje: mensajeLimpio(persona, turno, quien) }),
+      body: JSON.stringify({ text: textoEncargo(persona, doc.turnos, turno, "https://www.admira.live", identidad), target_persona: PERSONA_INBOX[persona], target_machine: "grokbot", from: canal === "win95" ? "Admira.live · ICQGram/" + persona : "Admira.live · chat/" + persona, materialize_mission: false, mensaje: mensajeLimpio(persona, turno, quien) }),
     });
     const d = await r.json().catch(() => null);
     if (r.ok && d && d.ok && Number(d.id) > 0) { encargo = Number(d.id); entrega = "entregado"; }
@@ -73,5 +98,5 @@ export async function onRequestPost({ request, env, fetchImpl }) {
     if (t) { t.entrega = entrega; if (encargo) t.encargo = encargo; if (detalle) t.detalle = detalle; }
   });
   const ok = entrega === "entregado";
-  return json({ ok, turno: { id: turno.id, ts: turno.ts, entrega, encargo }, error: ok ? undefined : detalle }, ok ? 201 : 502, origin, M);
+  return json({ ok, turno: { id: turno.id, ts: turno.ts, entrega, encargo, autor_nombre: identidad.corto }, error: ok ? undefined : detalle }, ok ? 201 : 502, origin, M);
 }

@@ -5,7 +5,7 @@
  *  GET   → { ok, email, exp } si la cookie es válida (para restaurar la sesión en otra pestaña/página).
  *  DELETE → borra la cookie (botón «salir»).
  */
-import { emailIdToken, emailSesion, emailCookieChat, emitirSesion, cookieSesion } from "../../../chat-hilo-lib.mjs";
+import { emailIdToken, emailSesion, emailCookieChat, emitirSesion, cookieSesion, nombreDeEmail } from "../../../chat-hilo-lib.mjs";
 
 const H = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 const r = (cuerpo, status, extra) => { const h = new Headers(H); if (extra) h.append("Set-Cookie", extra); return new Response(JSON.stringify(cuerpo), { status, headers: h }); };
@@ -16,10 +16,10 @@ export async function onRequestGet({ request, env }) {
   if (!email) return r({ ok: false }, 401);
   // Si ya entró con Google en la puerta de www pero aún no tiene la cookie del chat,
   // se emite ahora para no pedir un segundo inicio de sesión.
-  if (await emailCookieChat(request, env)) return r({ ok: true, email }, 200);
+  if (await emailCookieChat(request, env)) return r({ ok: true, email, nombre: nombreDeEmail(email) }, 200);
   const s = await emitirSesion(env, email);
-  if (!s) return r({ ok: true, email }, 200);
-  return r({ ok: true, email, exp: s.exp }, 200, cookieSesion(s.valor, Math.floor((s.exp - Date.now()) / 1000)));
+  if (!s) return r({ ok: true, email, nombre: nombreDeEmail(email) }, 200);
+  return r({ ok: true, email, nombre: nombreDeEmail(email), exp: s.exp }, 200, cookieSesion(s.valor, Math.floor((s.exp - Date.now()) / 1000)));
 }
 
 export async function onRequestPost({ request, env }) {
@@ -29,7 +29,7 @@ export async function onRequestPost({ request, env }) {
   if (!email) return r({ ok: false, error: "no autorizado" }, 401);
   const s = await emitirSesion(env, email);
   if (!s) return r({ ok: false, error: "sesión larga no configurada" }, 503);
-  return r({ ok: true, email, exp: s.exp }, 200, cookieSesion(s.valor, Math.floor((s.exp - Date.now()) / 1000)));
+  return r({ ok: true, email, nombre: nombreDeEmail(email), exp: s.exp }, 200, cookieSesion(s.valor, Math.floor((s.exp - Date.now()) / 1000)));
 }
 
 export async function onRequestDelete({ request }) {

@@ -21,7 +21,7 @@ test("horaMadrid: HH:MM en hora de Madrid (CEST/CET)", () => {
 });
 test("mensajeLimpio: sin cabeceras pegadas al texto", () => {
   const m = mensajeLimpio("jobs", { id: "live-1", ts: "2026-10-24T07:13:00Z", texto: "Hola Steve" }, "csilva@admira.com");
-  assert.deepEqual(m, { autor: "Carlos Silva", autor_email: "csilva@admira.com", rol: "carlos", origen: "admira.live", canal: "chat/jobs", para: "Steve Jobs", ts: "2026-10-24T07:13:00Z", hora: "09:13", zona: "Europe/Madrid", texto: "Hola Steve", msg_id: "live-1" });
+  assert.deepEqual(m, { autor: "Carlos Silva", autor_corto: "Carlos", autor_email: "csilva@admira.com", rol: "carlos", origen: "admira.live", canal: "chat/jobs", para: "Steve Jobs", ts: "2026-10-24T07:13:00Z", hora: "09:13", zona: "Europe/Madrid", texto: "Hola Steve", msg_id: "live-1" });
   assert.equal(mensajeLimpio("jobs", { id: "x", ts: "", texto: "a" }, "caja").autor_email, null);
 });
 test("cliente: origenTurno y metaTurno con el mismo formato", () => {

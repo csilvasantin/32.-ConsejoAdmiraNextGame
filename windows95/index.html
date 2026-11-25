@@ -412,7 +412,8 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #shut.more .l2,#shut.more .l3{opacity:1}
 #ghost{position:absolute;left:0;top:0;width:13px;height:20px;z-index:9500;pointer-events:none;display:none}
 </style>
-<link rel="stylesheet" href="/assets/win95-crt.css?v=20261125-crt">
+<link rel="stylesheet" href="/assets/win95-crt.css?v=20261125-crt2">
+<script>(function(){try{var q=new URL(location.href).searchParams.get("crt");var on=q==="0"?false:q==="1"?true:localStorage.getItem("admira-win95-crt")!=="0";document.documentElement.classList.toggle("crt-frame-off",!on);}catch(e){}})();</script>
 </head>
 <body class="attract">
 <div id="crt-shell">
@@ -1113,7 +1114,7 @@ function renderPlaylist(){
    ESCRITORIO Y VENTANAS
    ========================================================= */
 var stage,desk,ghostEl,ctaEl,hintEl,SCALE=1,Z=100;
-function fit(){ var shell=document.getElementById('crt-shell')||stage, sw=784, sh=716, vw=window.innerWidth, vh=window.innerHeight; SCALE=Math.min(vw/sw,vh/sh); var l=Math.round((vw-sw*SCALE)/2), t=Math.round((vh-sh*SCALE)/2); shell.style.transform='translate('+l+'px,'+t+'px) scale('+SCALE+')'; if(stage&&stage!==shell) stage.style.transform=''; }
+function fit(){ var shell=document.getElementById('crt-shell')||stage, off=document.documentElement.classList.contains('crt-frame-off'), sw=off?640:784, sh=off?480:716, vw=window.innerWidth, vh=window.innerHeight; SCALE=Math.min(vw/sw,vh/sh); var l=Math.round((vw-sw*SCALE)/2), t=Math.round((vh-sh*SCALE)/2); shell.style.transform='translate('+l+'px,'+t+'px) scale('+SCALE+')'; if(stage&&stage!==shell) stage.style.transform=''; }
 function centerOf(el){ var r=el.getBoundingClientRect(), s=stage.getBoundingClientRect(); return {x:(r.left+r.width/2-s.left)/SCALE, y:(r.top+r.height/2-s.top)/SCALE}; }
 function bumpZ(){
   Z++;
@@ -2887,7 +2888,7 @@ function boot(){
 }
 })();
 </script>
-<script src="/assets/win95-crt.js?v=20261125-crt"></script>
+<script src="/assets/win95-crt.js?v=20261125-crt2"></script>
 <script src="/assets/win95-fs.js?v=20261125-fs"></script>
 </body>
 </html>

@@ -51,7 +51,7 @@ test("el CRT frontal envuelve la Xperiencia: placa ADMIRA, apagado y cristal", (
   assert.match(html, /id="crt-power"/);
   assert.match(html, /assets\/win95-crt\.css/);
   assert.match(html, /assets\/win95-crt\.js/);
-  assert.match(html, /sw=784, sh=716/);
+  assert.match(html, /sw=off\?640:784, sh=off\?480:716/);
   const css = src("assets/win95-crt.css");
   assert.match(css, /#crt-fx/);
   assert.match(css, /repeating-linear-gradient/);
@@ -60,4 +60,21 @@ test("el CRT frontal envuelve la Xperiencia: placa ADMIRA, apagado y cristal", (
   assert.match(js, /win95-crt/);
   assert.match(js, /exit/);
   assert.match(js, /crt-power/);
+});
+
+test("el marco del CRT se puede ocultar: Monitor ON/OFF, tecla M y ?crt=", () => {
+  const js = src("assets/win95-crt.js");
+  assert.match(js, /Monitor: ON/);
+  assert.match(js, /Monitor: OFF/);
+  assert.match(js, /admira-win95-crt/);
+  assert.match(js, /searchParams\.get\("crt"\)/);
+  assert.match(js, /e\.key === "m"/);
+  const css = src("assets/win95-crt.css");
+  assert.match(css, /html\.crt-frame-off/);
+  assert.match(css, /win95-crt-plastic\.png/);
+  const hist = src("assets/historico-win95.js");
+  assert.match(hist, /win95-fs-monitor/);
+  assert.match(hist, /Monitor: ON/);
+  const html = src("windows95/index.html");
+  assert.match(html, /admira-win95-crt/);
 });

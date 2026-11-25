@@ -1,10 +1,52 @@
-/* Envuelve la Xperiencia Win95 en el CRT, mueve la verja al cristal
- * y hace que el botón de encendido salga (igual que Esc). */
+/* CRT realista + interruptor del marco (ON/OFF, tecla M, ?crt=0/1, localStorage).
+ * El efecto de cristal (viñeta, scanlines, reflejo) se mantiene en los dos modos. */
 (function () {
   "use strict";
-  var CRT_W = 784, CRT_H = 716;
+  var KEY = "admira-win95-crt";
+  var CRT_W = 784, CRT_H = 716, BARE_W = 640, BARE_H = 480;
 
   function $(id) { return document.getElementById(id); }
+  function inIframe() {
+    try { return window.parent && window.parent !== window; } catch (e) { return true; }
+  }
+
+  function leerCrt() {
+    try {
+      var q = new URL(location.href).searchParams.get("crt");
+      if (q === "0") return false;
+      if (q === "1") return true;
+      return localStorage.getItem(KEY) !== "0";
+    } catch (e) { return true; }
+  }
+
+  function escribirUrl(on) {
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set("crt", on ? "1" : "0");
+      history.replaceState(null, "", u.pathname + u.search + u.hash);
+    } catch (e) {}
+  }
+
+  function aplicar(on, opts) {
+    opts = opts || {};
+    document.documentElement.classList.toggle("crt-frame-off", !on);
+    try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (e) {}
+    if (opts.url) escribirUrl(on);
+    var btn = $("crt-monitor-toggle");
+    if (btn) {
+      btn.textContent = on ? "Monitor: ON" : "Monitor: OFF";
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.setAttribute("aria-label", on
+        ? "Ocultar el marco del monitor. Tecla M."
+        : "Mostrar el marco del monitor. Tecla M.");
+    }
+    try { window.dispatchEvent(new Event("resize")); } catch (e) {}
+    if (inIframe()) {
+      try {
+        window.parent.postMessage({ source: "win95-crt", action: "crt-state", on: on }, location.origin);
+      } catch (e) {}
+    }
+  }
 
   function placeGate() {
     var screen = $("crt-screen"), gate = $("admira-gate");
@@ -13,7 +55,7 @@
 
   function exitComoEsc() {
     try {
-      if (window.parent && window.parent !== window) {
+      if (inIframe()) {
         window.parent.postMessage({ source: "win95-crt", action: "exit" }, location.origin);
       }
     } catch (e) {}
@@ -40,30 +82,134 @@
     });
   }
 
-  /* Si un navegador viejo no llegó a parchear fit(), escalamos el CRT aquí. */
-  window.win95CrtFit = function (stageScaleHolder) {
+  function esEscribiendo(e) {
+    var t = e.target;
+    if (!t || !t.tagName) return false;
+    var tag = t.tagName.toLowerCase();
+    if (tag === "input" || tag === "textarea" || t.isContentEditable) return true;
+    if (t.closest && t.closest("[contenteditable], .notebody, #icqReal, .fin, textarea, input")) return true;
+    return false;
+  }
+
+  function capas() {
+    var mon = $("crt-monitor"), shell = $("crt-shell"), stand = $("crt-stand");
+    if (shell && !shell.querySelector(".crt-ambient")) {
+      var amb = document.createElement("div");
+      amb.className = "crt-ambient";
+      amb.setAttribute("aria-hidden", "true");
+      shell.insertBefore(amb, shell.firstChild);
+    }
+    if (mon && !mon.querySelector(".crt-grain")) {
+      var g = document.createElement("div");
+      g.className = "crt-grain";
+      g.setAttribute("aria-hidden", "true");
+      mon.insertBefore(g, mon.firstChild);
+    }
+    if (mon && !mon.querySelector(".crt-lip")) {
+      var lip = document.createElement("div");
+      lip.className = "crt-lip";
+      lip.setAttribute("aria-hidden", "true");
+      mon.insertBefore(lip, mon.firstChild.nextSibling);
+    }
+    if (mon && !mon.querySelector(".crt-well")) {
+      var well = document.createElement("div");
+      well.className = "crt-well";
+      well.setAttribute("aria-hidden", "true");
+      var screen = $("crt-screen");
+      if (screen) mon.insertBefore(well, screen);
+      else mon.appendChild(well);
+    }
+    if (stand && !stand.querySelector(".floor-shadow")) {
+      var sh = document.createElement("div");
+      sh.className = "floor-shadow";
+      sh.setAttribute("aria-hidden", "true");
+      stand.appendChild(sh);
+    }
+    if (!document.getElementById("crt-svg-defs")) {
+      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.id = "crt-svg-defs";
+      svg.setAttribute("width", "0");
+      svg.setAttribute("height", "0");
+      svg.setAttribute("aria-hidden", "true");
+      svg.style.position = "absolute";
+      svg.innerHTML = '<defs><filter id="crt-grain" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.85 0.9" numOctaves="4" seed="95" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0.92  0 0 0 0 0.86  0 0 0 0 0.74  0 0 0 0.22 0"/></filter></defs>';
+      document.body.appendChild(svg);
+    }
+  }
+
+  function botonera() {
+    if (inIframe()) {
+      document.documentElement.classList.add("crt-in-iframe");
+      return;
+    }
+    if ($("crt-ui")) return;
+    var ui = document.createElement("div");
+    ui.id = "crt-ui";
+    var mon = document.createElement("button");
+    mon.type = "button";
+    mon.id = "crt-monitor-toggle";
+    ui.appendChild(mon);
+    var salir = $("win95-page-fs-salir");
+    if (salir) ui.appendChild(salir);
+    document.body.appendChild(ui);
+    mon.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true });
+    });
+  }
+
+  window.win95CrtFit = function () {
     var shell = $("crt-shell");
     if (!shell) return 1;
+    var off = document.documentElement.classList.contains("crt-frame-off");
+    var sw = off ? BARE_W : CRT_W, sh = off ? BARE_H : CRT_H;
     var vw = window.innerWidth, vh = window.innerHeight;
-    var scale = Math.min(vw / CRT_W, vh / CRT_H);
-    var l = Math.round((vw - CRT_W * scale) / 2);
-    var t = Math.round((vh - CRT_H * scale) / 2);
+    var scale = Math.min(vw / sw, vh / sh);
+    var l = Math.round((vw - sw * scale) / 2);
+    var t = Math.round((vh - sh * scale) / 2);
     shell.style.transform = "translate(" + l + "px," + t + "px) scale(" + scale + ")";
-    if (stageScaleHolder) stageScaleHolder.SCALE = scale;
     return scale;
   };
+
+  window.win95CrtSet = function (on) { aplicar(!!on, { url: true }); };
+  window.win95CrtOn = function () { return !document.documentElement.classList.contains("crt-frame-off"); };
 
   function ready(fn) {
     if (document.body) fn();
     else document.addEventListener("DOMContentLoaded", fn);
   }
 
+  aplicar(leerCrt(), { url: false });
+
   ready(function () {
+    capas();
+    botonera();
+    aplicar(leerCrt(), { url: false });
     placeGate();
     bindPower();
     if (window.MutationObserver) {
       var mo = new MutationObserver(function () { placeGate(); bindPower(); });
       mo.observe(document.documentElement, { childList: true, subtree: true });
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (esEscribiendo(e)) return;
+    if (e.key === "m" || e.key === "M") {
+      e.preventDefault();
+      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true });
+    }
+  });
+
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    if (!e.data || e.data.source !== "win95-crt") return;
+    if (e.data.action === "set-crt") aplicar(!!e.data.on, { url: true });
+    if (e.data.action === "query-crt") {
+      try {
+        e.source && e.source.postMessage({ source: "win95-crt", action: "crt-state", on: window.win95CrtOn() }, location.origin);
+      } catch (err) {}
     }
   });
 })();

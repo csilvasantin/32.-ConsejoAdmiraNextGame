@@ -24,14 +24,16 @@ test('t1393u: en modo ventana el contador i/x va al lado de En Directo y no se i
   assert.match(html, /#mpw\.fs #mpPos,#mpw:fullscreen #mpPos/);
 });
 
-test('t1393u: clic en la barra maximiza la ventana; el botón del medio pide pantalla completa', () => {
+test('t1395u: doble clic en la barra maximiza (con marco); un clic simple no; el □ es pantalla completa sin marco', () => {
   assert.match(html, /id="mpMax" title="Pantalla completa">□</);
   assert.doesNotMatch(html, /id="mpMax"[^>]*data-max="mpw"/);
   assert.match(html, /qs\('#mpMax'\)\.addEventListener\('click',function\(e\)\{ e\.stopPropagation\(\); mpToggleFS\(\); \}\);/);
-  assert.match(html, /Clic en la barra \(sin arrastrar\) maximiza o restaura la ventana/);
-  assert.match(html, /if\(w\.classList\.contains\('max'\)\) winRestore\(w\); else winMaximize\(w\);/);
-  // ya no se usa el □ / doble clic de la barra para pantallazo completo mezclado con maximizar
+  assert.match(html, /doble clic en la barra maximiza o restaura \(lo hace wireWinChrome/);
+  assert.doesNotMatch(html, /Clic en la barra \(sin arrastrar\) maximiza/);
   assert.doesNotMatch(html, /if\(el\.id==='mpw'&&typeof mpToggleFS==='function'\)\{ mpToggleFS\(\); return; \}/);
+  assert.match(html, /#mpw\.fs \.tb,#mpw:fullscreen \.tb/);
+  assert.match(html, /#mpw\.fs \.menubar,#mpw:fullscreen \.menubar/);
+  assert.match(html, /#mpw\.fs \.sbar1,#mpw:fullscreen \.sbar1/);
 });
 
 test('t1393u: pantalla completa usa Fullscreen API con fallback CSS y sale con Escape', () => {
@@ -41,4 +43,17 @@ test('t1393u: pantalla completa usa Fullscreen API con fallback CSS y sale con E
   assert.match(html, /if\(!mpApiFS\(\)&&!mpVidWebkitFS\(\)\) mpCssFS\(true\)/);
   assert.match(html, /p\.then\(check\)\.catch\(function\(\)\{ fallback\(\); \}\)/);
   assert.match(html, /window\.addEventListener\('keydown',function\(e\)\{\s*if\(e\.key!=='Escape'\) return;\s*if\(mpIsFs\(\)\)\{ mpExitFS\(\); e\.preventDefault\(\); e\.stopPropagation\(\); \}/);
+});
+
+test('t1394u: botones Anterior y Siguiente en la fila y lista de playlist en el ⏏', () => {
+  assert.match(html, /id="mpPrev" type="button" title="Anterior"/);
+  assert.match(html, /id="mpNext" type="button" title="Siguiente"/);
+  assert.match(html, /id="mpEject" type="button" title="Lista de reproducción"/);
+  assert.match(html, /id="mpList" role="listbox"/);
+  assert.match(html, /function mpPrevPiece\(\)\{ mpSkip\(-1\); \}/);
+  assert.match(html, /function mpNextPiece\(auto\)/);
+  assert.match(html, /function mpGoTo\(i\)/);
+  assert.match(html, /function mpToggleList\(\)/);
+  assert.match(html, /qs\('#mpEject'\)\.addEventListener\('click',function\(e\)\{ e\.stopPropagation\(\); mpToggleList\(\); \}\);/);
+  assert.doesNotMatch(html, /title="Expulsar"/);
 });

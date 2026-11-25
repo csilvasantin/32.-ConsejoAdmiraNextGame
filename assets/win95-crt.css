@@ -397,6 +397,8 @@ html.crt-frame-off #crt-screen #admira-gate .frame { border-radius: 0 !important
   align-items: center;
 }
 html.crt-in-iframe #crt-ui { display: none; }
+/* t1395u/t1394u: con el marco OFF la pastilla no debe tapar el □ de una ventana maximizada. */
+html.crt-frame-off #crt-ui { top: auto; bottom: 40px; right: 12px; }
 
 #crt-ui #win95-page-fs-salir{position:static;right:auto;top:auto;box-shadow:2px 2px #090603}
 #win95-page-fs-hint{z-index:2147483645}

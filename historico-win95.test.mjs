@@ -105,3 +105,40 @@ test("el Bloc de notas es un textarea editable con menús de los 90", () => {
   assert.match(js, /isContentEditable/);
   assert.match(js, /e\.key === "m"/);
 });
+
+test("el protector de pantalla solo arranca al pulsar el reloj de la bandeja", () => {
+  const html = src("windows95/index.html");
+  const startCalls = [...html.matchAll(/ssStart\s*\(/g)];
+  assert.ok(startCalls.length >= 2, "ssStart debe existir");
+  const afterClock = html.slice(html.indexOf("qs('#clock').addEventListener('click'"));
+  assert.match(afterClock.slice(0, 400), /ssStart\s*\(/);
+  assert.doesNotMatch(html, /ghostEl\.style\.visibility='hidden'; ssStart\(\)/);
+  assert.doesNotMatch(html, /case 'ssaver': ssStart\(\)/);
+  assert.match(html, /case 'ssaver': msgBox\('Protector de pantalla'/);
+  assert.match(html, /pulse la hora en la bandeja/);
+  const attract = html.slice(html.indexOf("async function attractLoop"), html.indexOf("function takeOver"));
+  assert.doesNotMatch(attract, /ssStart/);
+  const idle = html.slice(html.indexOf("if(idle>CONFIG.idleSeconds*1000)"));
+  assert.match(idle.slice(0, 80), /backToDemo\(\)/);
+  assert.doesNotMatch(idle.slice(0, 80), /ssStart/);
+});
+
+test("los iconos del escritorio son pixel-art Win95 propio, no bitmaps de terceros", () => {
+  const html = src("windows95/index.html");
+  assert.match(html, /iconFiles:\s*\{\s*\}/);
+  assert.doesNotMatch(html, /icono_netscape\.png/);
+  assert.doesNotMatch(html, /icono_napster\.png/);
+  assert.match(html, /image-rendering:pixelated/);
+  assert.match(html, /filter:url\(#win95-sel\)/);
+  assert.match(html, /id="win95-sel"/);
+  assert.match(html, /border:1px dotted transparent/);
+  assert.match(html, /border-color:#ffff00/);
+  // paleta VGA en Mi PC
+  assert.match(html, /mypc:SV\('0 0 32 32'/);
+  const mypc = html.slice(html.indexOf("mypc:SV("), html.indexOf("trash:SV("));
+  assert.match(mypc, /#C0C0C0/);
+  assert.match(mypc, /#008080/);
+  assert.match(mypc, /#000000/);
+  assert.match(html, /p2p:SV\('0 0 32 32'/);
+  assert.match(html, /browser:SV\('0 0 32 32'/);
+});

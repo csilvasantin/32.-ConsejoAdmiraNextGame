@@ -440,8 +440,8 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .icon span.ren{background:#fff;color:#000;border:1px solid #000;outline:none;-webkit-user-select:text;user-select:text;cursor:text}
 .cmenu{display:none;z-index:6600;width:180px;padding:3px}
 #imenu{z-index:6700}
-.icon .lnk-arr{position:absolute;left:20px;top:21px;width:11px;height:11px;pointer-events:none;display:block}
-.icon .lnk-arr svg{width:11px;height:11px;margin:0;display:block;image-rendering:pixelated;shape-rendering:crispEdges}
+.icon .lnk-arr{position:absolute;left:0;top:16px;width:16px;height:16px;pointer-events:none;display:block}
+.icon .lnk-arr svg,.icon .lnk-arr img{width:16px;height:16px;margin:0;display:block;image-rendering:pixelated;shape-rendering:crispEdges;-ms-interpolation-mode:nearest-neighbor}
 .foldbody.drop,.foldwin.drop .foldbody{outline:1px dotted #ffff00;background:#808080}
 .foldwin .foldbody{position:absolute;left:3px;right:3px;top:43px;bottom:22px;background:#c0c0c0;overflow:auto;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .foldwin .foldbody .icon{color:#000}
@@ -956,8 +956,30 @@ var CONFIG = {
   wallpaperImage: '',         // opcional: imagen propia de fondo de escritorio (archivo en esta carpeta)
   // Iconos originales (opcional): copia los PNG (idealmente 32×32) en esta carpeta con estos nombres y se usarán
   // en el escritorio, la barra de tareas, los títulos, el menú Inicio y la bandeja. Si no están, se usan los homenajes.
-  // Iconos del escritorio: pixel-art original al estilo Win95 (paleta VGA de 16 colores), no bitmaps de Microsoft ni de otros fabricantes.
-  iconFiles: {},
+  // Iconos del escritorio 32×32 con image-rendering:pixelated.
+  // Netscape y Napster: se restaura exactamente icono_netscape.png e icono_napster.png
+  // (los que había antes del PR #490; ver LICENCIA-ICONOS.md).
+  // Mi PC, Papelera, Bandeja, Bloc de notas, Media Player, Pantalla y carpetas:
+  // recreación 32×32 a partir de capturas públicas de Windows 95 (GUIdebook),
+  // para esta Xperiencia interna con login. Las marcas siguen siendo de sus dueños.
+  iconFiles: {
+    mypc:'icons/mypc.png',
+    trash:'icons/trash.png',
+    trashFull:'icons/trash-full.png',
+    readme:'icons/readme.png',
+    txt:'icons/txt.png',
+    docs:'icons/txt.png',
+    folder:'icons/folder.png',
+    folderOpen:'icons/folder-open.png',
+    inbox:'icons/inbox.png',
+    mailtray:'icons/inbox.png',
+    media:'icons/media.png',
+    ssaver:'icons/ssaver.png',
+    amp:'icons/amp.png',
+    browser:'icono_netscape.png',
+    p2p:'icono_napster.png',
+    lnkarr:'icons/lnkarr.png'
+  },
   // Salamandra USB de finales de los 90: al abrir la Bandeja de entrada (o «Enviar y recibir») mueve los ojos.
   // El lanzador Admira95 arranca el puente local vuelta95-salamandra.ps1, que reinicia su USB (como enchufarla).
   // PAUSADO (25/11): sin driver se mueve todo el rato mientras tiene corriente, y Windows no puede cortar la del puerto USB.
@@ -4445,7 +4467,11 @@ function preloadIcons(done){
   if(!left){ end(); return; }
   keys.forEach(function(k){
     var im=new Image();
-    im.onload=function(){ ICONS[k]='<svg viewBox="0 0 32 32"><image href="'+esc(f[k])+'" x="0" y="0" width="32" height="32" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated"/></svg>'; if(--left===0) end(); };
+    im.onload=function(){
+      var w=im.naturalWidth||32, h=im.naturalHeight||32;
+      ICONS[k]='<svg viewBox="0 0 '+w+' '+h+'"><image href="'+esc(f[k])+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated"/></svg>';
+      if(--left===0) end();
+    };
     im.onerror=function(){ if(--left===0) end(); };
     im.src=f[k];
   });

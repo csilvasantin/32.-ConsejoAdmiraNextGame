@@ -31,3 +31,17 @@ Estos ficheros se sirven en local, detrás del login de admira.live/windows95
   Napster. No está en dominio público.
 - Uso aquí: mención de marca en la misma demo privada, con sesión, sin
   uso comercial del signo.
+
+
+## Iconos del escritorio de Windows 95 (Mi PC, Papelera, carpetas, etc.)
+
+Recreaciones propias a 32×32 píxeles, paleta clásica, a partir de capturas
+públicas de la interfaz de Windows 95 (en particular las de
+[GUIdebook](https://guidebookgallery.org/screenshots/win95/)), para esta
+Xperiencia interna de admira.live/windows95, detrás de login y sin uso
+comercial del signo. No se ha comprado ni descargado el kit de pago de
+Creative Market, ni se han extraído iconos de un Windows ni de un pack
+de `.ico` de terceros.
+
+Los iconos, logotipos y marcas de Microsoft, Netscape, Napster, Winamp
+y demás siguen siendo propiedad de sus dueños.

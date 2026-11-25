@@ -99,3 +99,9 @@ test('t1396u: menú Archivo abre local (blob, no altera i\/x) e Importar abre Na
   assert.match(html, /\/api\/win95\/napster/);
   assert.match(html, /t==='win95'\|\|t==='genero95'\|\|t==='windowsmediaplayer'\|\|t==='admiramediaplayer'/);
 });
+
+test('t1396u: si Firefox cierra el Fullscreen API con Esc (sin keydown), se retira el overlay CSS', () => {
+  assert.match(html, /MP\.apiFsOnce=true/);
+  assert.match(html, /Si la API sí llegó a entrar, al salir hay que quitar también el overlay CSS/);
+  assert.match(html, /if\(MP\.apiFsOnce \|\| !MP\.wantFs\)/);
+});

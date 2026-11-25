@@ -4908,7 +4908,7 @@ function wireBrowser(){
 }
 
 /* ---------- Admira Media Player: piezas de admira.studio vía admira.tv ---------- */
-var MP={open:false,playing:false,paused:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:'',piece:0,list:[],tagsCache:null,tagsAt:0,playlist:null,known:false,fetching:false,pend:null,rect:null,max:false,seek:false,mode:'none',local:null,localUrl:'',localPlaying:false,wantFs:false,swap:null,stageHome:null,stageNext:null};
+var MP={open:false,playing:false,paused:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:'',piece:0,list:[],tagsCache:null,tagsAt:0,playlist:null,known:false,fetching:false,pend:null,rect:null,max:false,seek:false,mode:'none',local:null,localUrl:'',localPlaying:false,wantFs:false,apiFsOnce:false,swap:null,stageHome:null,stageNext:null};
 function mpName(){ return (CONFIG.names&&CONFIG.names.media)||'Admira Media Player'; }
 function mpNormTag(t){ return String(t||'').replace(/^#/,'').toLowerCase(); }
 function mpPiezaClave(p){ return p?String(p.id||p.stockId||p.url||''):''; }
@@ -5436,7 +5436,7 @@ function mpRequestFS(){
 }
 function mpExitFS(){
   var ours=MP.wantFs;
-  MP.wantFs=false;
+  MP.wantFs=false; MP.apiFsOnce=false;
   try{
     var v=mpVid();
     if(v&&v.webkitDisplayingFullscreen&&typeof v.webkitExitFullscreen==='function') v.webkitExitFullscreen();
@@ -5668,9 +5668,12 @@ function wireMedia(){
     if(MP.playing&&!MP.live&&MP.mode==='iframe'){ mpLive(true); mpStatus('En directo desde admira.tv · '+mpTag()+' (admira.studio)'); }
   });
   function mpOnFsChange(){
-    if(!mpFsEl()&&!mpVidWebkitFS()){
-      if(MP.wantFs&&mpInCssFS()){ /* el fallback CSS se mantiene hasta Esc */ }
-      else if(!MP.wantFs){ if(mpInCssFS()||document.documentElement.classList.contains('mp-fs-on')) mpCssFS(false); }
+    if(mpApiFS()||mpVidWebkitFS()){ MP.apiFsOnce=true; mpUpdatePos(); return; }
+    /* En Firefox Esc cierra el Fullscreen API y a menudo no llega el keydown.
+       Si la API sí llegó a entrar, al salir hay que quitar también el overlay CSS. */
+    if(MP.apiFsOnce || !MP.wantFs){
+      MP.apiFsOnce=false; MP.wantFs=false;
+      if(mpInCssFS()||document.documentElement.classList.contains('mp-fs-on')) mpCssFS(false);
     }
     mpUpdatePos();
   }

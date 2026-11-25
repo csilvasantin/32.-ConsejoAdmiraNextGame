@@ -227,3 +227,27 @@ test("t1397u: título Napster v2.0 Transfer, biblioteca persistente y reproducto
   assert.match(html, /n\(v,'vídeo','vídeos'\)/);
   assert.match(html, /x\.d,'canciones'\)&&Object\.prototype\.hasOwnProperty\.call\(x\.d,'videos'\)/);
 });
+
+
+test("t1398u: Duración real (metadata), Eliminar local con confirmación y Archivo Abrir...", () => {
+  assert.match(html, /function napFillDuration\(rec\)/);
+  assert.match(html, /preload='metadata'/);
+  assert.match(html, /el\.addEventListener\('loadedmetadata', onMeta\)/);
+  assert.match(html, /function napPatchDescarga\(id, patch\)/);
+  assert.match(html, /\['Eliminar',72\]/);
+  assert.match(html, /class="btn nap-del"/);
+  assert.match(html, /function napBorrarLocal\(rec\)/);
+  assert.match(html, /function napPedirEliminar\(i\)/);
+  assert.match(html, /askBox\('Eliminar archivo','¿Eliminar del disco\?\\nQuedará la copia en el servidor\.'/);
+  assert.match(html, /saveDescargas\(loadDescargas\(\)\.filter/);
+  assert.match(html, /function napQuitarFsLocal\(id\)/);
+  assert.doesNotMatch(html, /fetch\([^)]*DELETE/);
+  assert.match(html, /id="nap-menubar"/);
+  assert.match(html, /id="napFile"/);
+  assert.match(html, /\{l:'Abrir\.\.\.',acc:'Ctrl\+O',fn:napAbrirLocal\}/);
+  assert.match(html, /\{l:'Eliminar seleccionado',fn:napEliminarSeleccionado\}/);
+  assert.match(html, /function napOpenLocalFile\(f\)/);
+  assert.match(html, /URL\.createObjectURL\(f\)/);
+  assert.match(html, /mpOpenLocalFile\(f\)/);
+  assert.match(html, /function fmt\(sec\)\{ sec=Math\.max\(0,Math\.floor\(sec\|\|0\)\); return Math\.floor\(sec\/60\)\+':'\+pad2\(sec%60\); \}/);
+});

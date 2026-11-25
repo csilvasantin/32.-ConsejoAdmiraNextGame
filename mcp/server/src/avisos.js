@@ -37,12 +37,12 @@ export function generarSecretoFirma() {
   return randomBytes(32).toString('hex');
 }
 
-/** Firma Stripe-like: HMAC-SHA256 de "<t>.<cuerpo>" con los 32 bytes del secreto (hex). */
+/** Firma Stripe-like: HMAC-SHA256 de "<t>.<cuerpo>" con el secreto en UTF-8 (64 hex). */
 export function firmarCuerpo(secretoHex, cuerpo, t = Math.floor(Date.now() / 1000)) {
   const ts = String(t);
-  const key = Buffer.from(String(secretoHex || ''), 'hex');
-  if (key.length !== 32) throw new Error('secreto de firma inválido');
-  const v1 = createHmac('sha256', key).update(`${ts}.${cuerpo}`, 'utf8').digest('hex');
+  const secreto = String(secretoHex || '');
+  if (!/^[0-9a-f]{64}$/.test(secreto)) throw new Error('secreto de firma inválido');
+  const v1 = createHmac('sha256', secreto).update(`${ts}.${cuerpo}`, 'utf8').digest('hex');
   return { t: ts, v1, header: `t=${ts},v1=${v1}` };
 }
 

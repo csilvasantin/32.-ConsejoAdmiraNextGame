@@ -3686,35 +3686,47 @@ function wireNoteMenus(){
 }
 
 /* ---------- Admister (homenaje P2P) ---------- */
-// t = índice de pista en CONFIG.tracks · m = factor de duración de la versión · k = palabras clave
-var NAP_DB=[
-  {f:'Jensen & Morfeo - AdmiraNeXT.mp3',t:3,m:1,br:192,user:'morfeo_95',con:'RDSI'},
-  {f:'admira.tv - Ambient Store Mix.mp3',t:0,m:1,br:128,user:'pantallas_bcn',con:'T1'},
-  {f:'Modem Love - 56k al corazon.mp3',t:2,m:1,br:128,user:'dj_rdsi',con:'RDSI'},
-  {f:'Bit Retail - Pantallas de neon.mp3',t:1,m:1,br:128,user:'retail_kid',con:'56K'},
-  {f:'Jensen & Morfeo - AdmiraNeXT (radio edit).mp3',t:3,m:0.8,br:112,user:'consejero_j',con:'28.8K'},
-  {f:'Bit Retail - Pantallas de neon (remix 1999).mp3',t:1,m:1.3,br:128,user:'escaparate99',con:'Cable'},
-  {f:'admira.tv - Ambient Store Mix (directo).mp3',t:0,m:1.7,br:160,user:'tienda_futuro',con:'14.4K'}
-];
-NAP_DB.forEach(function(r){ r.k='admira'; });
+// Catálogo real: GET /api/win95/napster (admira.studio vía Stock). Sin canciones inventadas.
 var CON={'T1':{kb:48,dur:5,col:'#00c000'},'Cable':{kb:26,dur:7,col:'#00c000'},'RDSI':{kb:7.5,dur:10,col:'#d0c000'},'56K':{kb:4.6,dur:13,col:'#d0c000'},'28.8K':{kb:2.6,dur:18,col:'#e05000'},'14.4K':{kb:1.3,dur:26,col:'#d00000'}};
+var NAP_CONS=Object.keys(CON);
 var COLS_RES=[['Nombre de archivo',190],['Tamaño',54],['Bitrate',46],['Duración',50],['Usuario',92],['Conexión',62]];
 var COLS_X=[['Nombre de archivo',170],['Estado',86],['Progreso',110],['Velocidad',70],['Usuario',74]];
 var COLS_LIB=[['Nombre de archivo',260],['Tamaño',70],['Bitrate',70],['Duración',70]];
-var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:1204877,songs:3611002};
+var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:0,songs:0};
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function fmtMB(v){ return v.toFixed(1).replace('.',',')+' MB'; }
 function fmtNum(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 function fmtEta(s){ s=Math.max(0,Math.round(s)); var h=Math.floor(s/3600), m=Math.floor(s%3600/60); return h? h+' h '+pad2(m)+' min' : (m? m+' min '+pad2(s%60)+' s' : s+' s'); }
-function napDur(r){ return trackDur(r.t)*r.m; }
-function napSize(r){ return napDur(r)*r.br/8/1024; }
+function napDur(r){ if(r.duracion>0) return r.duracion; if(r.t!=null&&CONFIG.tracks[r.t]) return trackDur(r.t)*(r.m||1); return 0; }
+function napSize(r){ if(r.size>0) return r.size/1024/1024; return napDur(r)*(r.br||128)/8/1024; }
+function napCon(id){ var s=String(id||''); var n=0; for(var i=0;i<s.length;i++) n=(n*31+s.charCodeAt(i))>>>0; return NAP_CONS[n%NAP_CONS.length]; }
+function napRow(c){
+  var artista=c.artista||'Admira Studio', titulo=c.titulo||c.id||'canción';
+  var con=napCon(c.id||c.url), br=128;
+  return {id:c.id||'', f:artista+' - '+titulo+'.mp3', titulo:titulo, artista:artista, hashtags:c.hashtags||[], duracion:Number(c.duracion)||0, size:Number(c.size)||0, url:c.url||'', thumb:c.thumb||'', br:br, user:'admira.studio', con:con, m:1};
+}
+function napEnsureTrack(r){
+  if(r.url){
+    var i=CONFIG.tracks.findIndex(function(t){ return (r.id&&t.stockId===r.id)||t.src===r.url; });
+    if(i>=0) return i;
+    CONFIG.tracks.push({stockId:r.id, artist:r.artista||'Admira Studio', title:r.titulo, duration:r.duracion||0, bpm:120, src:r.url});
+    return CONFIG.tracks.length-1;
+  }
+  if(r.t!=null&&CONFIG.tracks[r.t]) return r.t;
+  return -1;
+}
+function napError(msg){
+  qs('#napSt').textContent='Sin conexión';
+  qs('#napS3').textContent='Error';
+  NAP.msg=msg; napRenderRes();
+}
 function lvHeader(cols){ return '<div class="lvh">'+cols.map(function(c){ return '<div style="width:'+c[1]+'px">'+c[0]+'</div>'; }).join('')+'</div>'; }
 function lvRow(i,cols,cells,sel){ return '<div class="lvr'+(sel?' sel':'')+'" data-i="'+i+'">'+cells.map(function(c,k){ return '<div style="width:'+cols[k][1]+'px">'+c+'</div>'; }).join('')+'</div>'; }
 function lvSelect(box,i){ qsa('.lvr',box).forEach(function(r){ r.classList.toggle('sel',+r.getAttribute('data-i')===i); }); }
 
 function napRenderRes(){
   var h=lvHeader(COLS_RES);
-  NAP.results.forEach(function(r,i){ h+=lvRow(i,COLS_RES,[esc(r.f),fmtMB(napSize(r)),r.br,fmt(napDur(r)),esc(r.user),'<span class="dot" style="background:'+CON[r.con].col+'"></span>'+r.con],i===NAP.sel); });
+  NAP.results.forEach(function(r,i){ h+=lvRow(i,COLS_RES,[esc(r.f),r.size>0||napDur(r)>0?fmtMB(napSize(r)):'—',r.br,napDur(r)>0?fmt(napDur(r)):'—',esc(r.user),'<span class="dot" style="background:'+CON[r.con].col+'"></span>'+r.con],i===NAP.sel); });
   if(NAP.msg) h+='<div class="lvmsg">'+esc(NAP.msg)+'</div>';
   qs('#napRes').innerHTML=h;
   qs('#napDl').disabled=NAP.sel<0;
@@ -3744,21 +3756,57 @@ function napTab(name){
   if(name==='xfer') napRenderX();
 }
 function napFocus(f){ qsa('#nap .fin').forEach(function(x){ x.classList.toggle('focus',x===f); }); NAP.field=f; }
-function napStats(){ if(!NAP.conn) return; NAP.users+=Math.floor(Math.random()*1300-500); NAP.songs+=Math.floor(Math.random()*4000-1000); qs('#napSt').innerHTML='Conectado<br>'+fmtNum(NAP.users)+' usuarios · '+fmtNum(NAP.songs)+' canciones'; }
+function napStats(){
+  if(!NAP.conn){ qs('#napSt').textContent='Desconectado'; return; }
+  qs('#napSt').innerHTML='Conectado<br>admira.studio · '+fmtNum(NAP.songs)+' canciones';
+  qs('#napS1').textContent='admira.studio · '+fmtNum(NAP.songs);
+}
+function napConnect(){
+  qs('#napSt').textContent='Conectando con admira.studio…';
+  qs('#napS3').textContent='Conectando…';
+  NAP.msg='';
+  fetch('/api/win95/napster',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)})
+    .then(function(r){ return r.json().then(function(d){ return {status:r.status,d:d}; },function(){ return {status:r.status,d:null}; }); })
+    .then(function(x){
+      if(!NAP.open) return;
+      if(x.status===401){ NAP.conn=false; NAP.songs=0; napError('No hay sesión. Recarga la página e inicia sesión para buscar en admira.studio.'); return; }
+      if(!x.d||x.d.ok!==true){ NAP.conn=false; NAP.songs=0; napError((x.d&&x.d.error)||'admira.studio no contesta. Inténtalo de nuevo.'); return; }
+      NAP.conn=true; NAP.songs=Number(x.d.total)||0; napStats(); qs('#napS3').textContent='En línea';
+    })
+    .catch(function(){
+      if(!NAP.open) return;
+      NAP.conn=false; NAP.songs=0;
+      napError('admira.studio no contesta. Inténtalo de nuevo.');
+    });
+}
 function napSearch(){
   var id=++NAP.searchId; NAP.results=[]; NAP.sel=-1; NAP.msg='';
   if(!NAP.conn){ NAP.searching=false; NAP.msg='Todavía no estás conectado. Espera un momento…'; napRenderRes(); return; }
-  var raw=(qs('#napArtist').textContent+' '+qs('#napTitle').textContent).replace(/\s+/g,' ').trim(), q=norm(raw);
-  if(!q){ NAP.searching=false; NAP.msg='Escribe un artista o un título. Prueba con «admira».'; napRenderRes(); return; }
-  var toks=q.split(' '), hits=NAP_DB.filter(function(r){ var s=norm(r.f+' '+r.user+' '+r.k); return toks.every(function(t){ return s.indexOf(t)>=0; }); });
+  var artista=qs('#napArtist').textContent.replace(/\s+/g,' ').trim();
+  var titulo=qs('#napTitle').textContent.replace(/\s+/g,' ').trim();
+  var raw=(artista+' '+titulo).replace(/\s+/g,' ').trim();
+  if(!raw){ NAP.searching=false; NAP.msg='Escribe un artista o un título. Prueba con «80» o «admira».'; napRenderRes(); return; }
   NAP.searching=true; napRenderRes();
-  var i=0;
-  function nextHit(){
-    if(id!==NAP.searchId) return;
-    if(i>=hits.length){ NAP.searching=false; if(!hits.length) NAP.msg='No se ha encontrado nada para «'+raw+'». Prueba con «admira».'; napRenderRes(); return; }
-    NAP.results.push(hits[i++]); napRenderRes(); setTimeout(nextHit,180+Math.random()*300);
-  }
-  setTimeout(nextHit,600);
+  var url='/api/win95/napster?artista='+encodeURIComponent(artista)+'&titulo='+encodeURIComponent(titulo);
+  if(!artista||!titulo) url='/api/win95/napster?q='+encodeURIComponent(raw);
+  fetch(url,{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)})
+    .then(function(r){ return r.json().then(function(d){ return {status:r.status,d:d}; },function(){ return {status:r.status,d:null}; }); })
+    .then(function(x){
+      if(id!==NAP.searchId) return;
+      NAP.searching=false;
+      if(x.status===401){ NAP.msg='No hay sesión. Recarga la página e inicia sesión para buscar en admira.studio.'; napRenderRes(); return; }
+      if(!x.d||x.d.ok!==true){ NAP.msg=(x.d&&x.d.error)||'admira.studio no contesta. Inténtalo de nuevo.'; napRenderRes(); return; }
+      NAP.songs=Number(x.d.total)||NAP.songs; napStats();
+      NAP.results=(x.d.results||[]).map(napRow);
+      if(!NAP.results.length) NAP.msg='No se ha encontrado nada para «'+raw+'». Prueba con «80» o «admira».';
+      napRenderRes();
+    })
+    .catch(function(){
+      if(id!==NAP.searchId) return;
+      NAP.searching=false;
+      NAP.msg='admira.studio no contesta. Inténtalo de nuevo.';
+      napRenderRes();
+    });
 }
 function napDownload(){
   var r=NAP.results[NAP.sel]; if(!r) return;
@@ -3774,20 +3822,18 @@ function napTick(){
   });
   if(changed){ if(NAP.tab==='xfer') napRenderX(); else napStatus(); }
 }
-function napPlay(){ var x=NAP.xfers[NAP.xsel]; if(!x||x.state!=='done') return; openAmp(false); play(x.r.t); }
+function napPlay(){ var x=NAP.xfers[NAP.xsel]; if(!x||x.state!=='done') return; var i=napEnsureTrack(x.r); if(i<0) return; openAmp(false); play(i); }
 function openNap(){
   var w=qs('#nap'); w.style.display='block'; NAP.open=true;
   addTask('nap','Napster v2.0 BETA 7','p2p',[w]); focusWin(w);
-  if(!NAP.conn){
-    qs('#napSt').textContent='Conectando con el servidor…'; qs('#napS3').textContent='Conectando…';
-    clearTimeout(NAP.connTimer); NAP.connTimer=setTimeout(function(){ NAP.conn=true; napStats(); qs('#napS3').textContent='En línea'; },1600);
-  }
+  if(!NAP.conn){ napConnect(); }
+  else napStats();
   if(MODE==='interactive'&&!qs('#napArtist').textContent) qs('#napArtist').textContent='admira';
   napTab(NAP.tab); napRenderRes();
 }
 function closeNap(){
   qs('#nap').style.display='none'; removeTask('nap'); clearTimeout(NAP.connTimer);
-  NAP.open=false; NAP.conn=false; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
+  NAP.open=false; NAP.conn=false; NAP.songs=0; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
   qs('#napArtist').textContent=''; qs('#napTitle').textContent=''; qsa('#nap .fin').forEach(function(f){ f.classList.remove('focus'); });
   qs('#napSt').textContent='Desconectado'; qs('#napS3').textContent='Desconectado';
   napTab('search'); napRenderRes(); napRenderX(); napRenderLib();
@@ -5219,13 +5265,13 @@ async function attractLoop(tk,withBoot){
     await ghostDbl(qs('#ic-readme'),tk); await wait(500,tk);
     await typeNote(welcomeText(),tk); await wait(2600,tk);
     await ghostClick(qs('#note .x[data-close]'),tk); await wait(400,tk);
-    // 2 · Admister: conectar, buscar «admira», descargar del usuario con T1
+    // 2 · Admister: conectar a admira.studio, buscar «admira», descargar el primer resultado
     await ghostDbl(qs('#ic-p2p'),tk);
-    await waitUntil(function(){ return NAP.conn; },tk,4000); await wait(500,tk);
+    await waitUntil(function(){ return NAP.conn; },tk,20000); await wait(500,tk);
     await ghostClick(qs('#napArtist'),tk); await ghostType(qs('#napArtist'),'admira',tk); await wait(300,tk);
     await ghostClick(qs('#napSearch'),tk);
-    await waitUntil(function(){ return !NAP.searching; },tk,6000); await wait(1200,tk);
-    var best=qsa('#napRes .lvr').filter(function(r){ return NAP.results[+r.getAttribute('data-i')].user==='morfeo_95'; })[0];
+    await waitUntil(function(){ return !NAP.searching; },tk,20000); await wait(1200,tk);
+    var best=qsa('#napRes .lvr')[0];
     await ghostClick(best,tk); await wait(500,tk);
     await ghostClick(qs('#napDl'),tk);
     await waitUntil(function(){ return NAP.lastDone; },tk,15000); await wait(1200,tk);

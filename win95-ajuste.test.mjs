@@ -128,3 +128,9 @@ test("la página carga el ajuste antes de arrancar y sólo escucha al Director d
   for (const tipo of ["hola", "estado?", "aplicar", "descartar", "guardar", "restaurar"]) assert.ok(html.includes("tipo==='" + tipo + "'"), tipo);
   assert.doesNotMatch(html, /postMessage\([^)]*,'\*'\)/);
 });
+
+test("sanear: acepta #WindowsMediaPlayer y #AdmiraMediaPlayer y quita el #", () => {
+  const { ajuste, errores } = sanear({ mediaPlayer: { tags: "#WindowsMediaPlayer, AdmiraMediaPlayer, win95, WIN95" } });
+  assert.deepEqual(ajuste.mediaPlayer.tags, ["WindowsMediaPlayer", "AdmiraMediaPlayer", "win95", "WIN95"]);
+  assert.equal(errores.length, 0);
+});

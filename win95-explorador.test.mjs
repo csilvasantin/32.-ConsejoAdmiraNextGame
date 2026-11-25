@@ -100,7 +100,19 @@ test("Miscelánea: comunicaciones del Consejo de solo lectura, se refrescan al a
   assert.match(html, /COMMS_URL='\/api\/win95\/comunicaciones'/);
   assert.match(html, /credentials:'same-origin'/);
   assert.match(html, /if\(id===MISC_ID\) loadComms\(true\);/);
-  assert.match(html, /var ro=remote\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /var ro=remote\|\|isEstiloDoc\(d\)\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
   assert.match(html, /plainName\(it\.name\)==='miscelanea'/);
   assert.match(html, /<script src="\/auth-gate\.js"><\/script>/);
+});
+
+test("Miscelánea: Estilo comunicaciones ICQGram.txt es un fichero de sistema de solo lectura", () => {
+  assert.match(html, /ESTILO_SEED_ID='doc-estilo-icqgram'/);
+  assert.match(html, /ESTILO_SEED_NAME='Estilo comunicaciones ICQGram\.txt'/);
+  assert.match(html, /function ensureEstiloDoc\(/);
+  assert.match(html, /function isEstiloDoc\(d\)/);
+  assert.match(html, /parent:MISC_ID/);
+  assert.match(html, /function canMoveDef\(d\)\{ return !!d&&!isFixedDef\(d\)&&!d\.remote&&!isEstiloDoc\(d\); \}/);
+  assert.match(html, /var ro=remote\|\|isEstiloDoc\(d\)\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /id===ESTILO_SEED_ID\|\|id==='fld-misc'/);
+  assert.match(html, /norma de Carlos \(estilo ICQGram\)/);
 });

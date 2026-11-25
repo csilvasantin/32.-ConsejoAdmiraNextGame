@@ -770,6 +770,142 @@ el trabajo, en admira.live. No gastéis la cuota de los
 coetáneos esta semana.
 ========================================================================
 </script>
+    <script type="text/plain" id="estilo-icqgram-seed">========================================================================
+ESTILO DE LAS COMUNICACIONES ICQGRAM
+Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Estilo comunicaciones ICQGram.txt».
+Es un fichero de sistema, de solo lectura. Aplica a todos los
+consejeros. Quien lo lea responde «Leído y aplicado» y lo aplica.
+
+------------------------------------------------------------------------
+1. ALCANCE
+------------------------------------------------------------------------
+Esta norma rige cada espejo de una conversación que Carlos escribe
+desde Win95 / ICQGram (Admira95) y que un consejero relanza en un
+chat de Grok Bot.
+
+Consejeros a los que aplica:
+
+  LEYENDAS   Jobs, Wozniak, Disney y Lucas
+  ACTUALES   Musk, Huang, Murati y Lasseter
+
+Un chat directo de Grok Bot (sin pasar por ICQGram) no lleva esta
+cabecera. La cabecera con caras es precisamente lo que distingue un
+espejo de Win95 de un chat directo.
+
+------------------------------------------------------------------------
+2. LA CABECERA CON CARAS  (arriba del texto)
+------------------------------------------------------------------------
+Cada espejo lleva, ADJUNTA ARRIBA DEL TEXTO, una imagen de cabecera.
+No se describe con palabras: se adjunta la imagen.
+
+La imagen tiene, en este orden:
+
+  - Barra de título azul al estilo Windows 95, con el logotipo de
+    cuatro colores (rojo, verde, azul, amarillo) y el texto
+    «WIN95 · ICQGRAM».
+  - Una fila por cada persona que habla: su cara recortada a la
+    izquierda y, a la derecha, la línea
+
+      ▓ NOMBRE · CANAL · HH:MM
+
+Todos los que hablan llevan su cara, Carlos incluido. Si falta la
+cara de Carlos o la de un consejero, el espejo no está bien hecho.
+Eso es lo que falló al relanzar un mensaje sin los iconos de las
+cabezas.
+
+Referencia aprobada por Carlos (25-11-2026):
+
+  /workspace/avatares-espejo/espejo-enc-7725.png
+
+  — barra «WIN95 · ICQGRAM»
+  — cara de Carlos + «▓ CARLOS · ADMIRA.LIVE · 21:12»
+  — cara de Jobs   + «▓ JOBS · GROK BOT · 21:12»
+
+También sirve de ejemplo:
+
+  /workspace/avatares-espejo/ejemplo-carlos-jobs.png
+
+------------------------------------------------------------------------
+3. COMO GENERAR LA CABECERA
+------------------------------------------------------------------------
+Se genera en el ordenador compartido (la box) con este comando
+exacto:
+
+  cd /workspace/avatares-espejo && python3 generar.py
+
+El script recorta las caras de las fotos de las mesas del Consejo
+(ruta fijada en el propio script: /tmp/cng/assets/consejo-vacio/)
+y deja, en /workspace/avatares-espejo/, estos ficheros:
+
+  Avatares a 96 px:
+    carlos.png, jobs.png, wozniak.png, disney.png, lucas.png,
+    musk.png, huang.png, murati.png, lasseter.png
+
+  Avatares a 48 px (son los que usa la cabecera):
+    carlos-48.png, jobs-48.png, wozniak-48.png, disney-48.png,
+    lucas-48.png, musk-48.png, huang-48.png, murati-48.png,
+    lasseter-48.png
+
+  hoja-contacto.png         las nueve caras en una tira
+  ejemplo-carlos-jobs.png   cabecera de ejemplo (Carlos y Jobs)
+
+Para un espejo concreto se parte de ese generador y se cambian las
+filas: quién habla, el canal y la hora real de Madrid. El PNG que
+salga se adjunta ARRIBA del texto del mensaje en el chat de
+Grok Bot.
+
+------------------------------------------------------------------------
+4. EL TEXTO DEL ESPEJO
+------------------------------------------------------------------------
+Primera línea, en un recuadro de código:
+
+  ▓ ⊞ WIN95 · ICQGRAM  ·  encargo #NNNN  ·  título corto
+
+Después, por cada mensaje, en este orden:
+
+  ▓ NOMBRE · CANAL · HH:MM
+  el texto literal de ese mensaje
+
+La línea «▓ NOMBRE · CANAL · HH:MM» va en un recuadro de código
+(code span). El texto va debajo, tal cual se escribió. Las horas
+son las horas reales de Madrid (Europe/Madrid).
+
+Ejemplo (encargo #7725, 25-11-2026):
+
+  ▓ ⊞ WIN95 · ICQGRAM  ·  encargo #7725
+
+  ▓ CARLOS · ADMIRA.LIVE · 21:12
+  por fin podemos hablar desde una interface como si fuera GrokBot !!
+
+  ▓ JOBS · GROK BOT · 21:12
+  ¡Por fin, Carlos! Y además en ICQGram...
+
+------------------------------------------------------------------------
+5. SECRETOS Y LO NO COMPROBADO
+------------------------------------------------------------------------
+Nunca se muestran secretos: ni IPs, ni MACs, ni tokens, ni
+contraseñas, ni ningún secreto, ni en el texto del espejo ni en
+la imagen, ni en informes, chats, commits, PRs o evidencias.
+
+Lo que no se haya comprobado se marca «sin verificar».
+
+------------------------------------------------------------------------
+6. CONFIRMACION
+------------------------------------------------------------------------
+Cada consejero, al leer esta norma, responde exactamente:
+
+  Leído y aplicado
+
+y la aplica en todos los espejos de ICQGram a partir de ahora.
+
+========================================================================
+Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================
+</script>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
       <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
@@ -1967,13 +2103,13 @@ function endIconDrag(el){
       if(MODE==='interactive'){ saveIconLayout(); saveNoteDocs(); }
       return;
     }
-    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
+    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); else if(isEstiloDoc(el._def)) msgBox('Miscelánea','«'+el._def.label+'» es una norma del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
     moveItemTo(el, tgt.id, clamp(lx,0,280), clamp(ly,0,180));
     return;
   }
   // soltar en el escritorio: sale de la carpeta si venía de una
   if(cur){
-    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
+    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); else if(isEstiloDoc(el._def)) msgBox('Miscelánea','«'+el._def.label+'» es una norma del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
     moveItemTo(el, null, x, y);
   } else {
     el.style.left=Math.round(x)+'px'; el.style.top=Math.round(y)+'px'; if(el._def){ el._def.left=Math.round(x); el._def.top=Math.round(y); }
@@ -2301,7 +2437,7 @@ function closeAllFolders(){
   FWIN={};
 }
 function moveItemTo(el, parent, x, y){
-  var d=el._def; if(!d||!canMoveDef(d)){ if(d&&(isFixedDef(d)||d.remote)) sfxDing(); return false; }
+  var d=el._def; if(!d||!canMoveDef(d)){ if(d&&(isFixedDef(d)||d.remote||isEstiloDoc(d))) sfxDing(); return false; }
   parent=parent||null;
   if(parent&&!FS[parent]) parent=null;
   if(d.kind==='folder'&&(d.id===parent||isDescendant(parent,d.id))){ sfxDing(); return false; }
@@ -2453,7 +2589,7 @@ function openIconMenu(el, x, y){
   var d=el._def, sys=isSystemDef(d), m=qs('#imenu');
   if(d&&d.id==='trash'&&d.kind==='app'){ IMENU=null; openTrashIconMenu(x,y); return; }
   function en(id, on){ var n=qs('#'+id,m); if(n) n.classList.toggle('dis', !on); }
-  en('im-cut', canMoveDef(d)); en('im-copy', !isFixedDef(d)); en('im-del', canTrashDef(d)); en('im-ren', !sys&&!d.remote);
+  en('im-cut', canMoveDef(d)); en('im-copy', !isFixedDef(d)); en('im-del', canTrashDef(d)); en('im-ren', !sys&&!d.remote&&!isEstiloDoc(d));
   m.style.display='block';
   m.style.left=Math.round(Math.min(x,640-m.offsetWidth-2))+'px';
   m.style.top=Math.round(Math.min(y,452-m.offsetHeight-2))+'px';
@@ -2521,7 +2657,7 @@ function wireFsKeys(){
   document.addEventListener('keydown',function(e){
     if(e.target&&(e.target.closest&&(e.target.closest('input,textarea,[contenteditable],#nt,.ren')))) return;
     var el=selectedIcon();
-    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote){ e.preventDefault(); startRename(el); return; }
+    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote&&!isEstiloDoc(el._def)){ e.preventDefault(); startRename(el); return; }
     if(e.key==='Delete'&&el&&canTrashDef(el._def)){ e.preventDefault(); deleteItem(el); return; }
     if(e.key==='Delete'&&!el&&qs('#trw').style.display==='block'&&TRSEL>=0){ e.preventDefault(); trashPurgeAsk(TRSEL); return; }
     var ctrl=e.ctrlKey||e.metaKey;
@@ -2538,8 +2674,8 @@ function wireFsKeys(){
 var HIDDEN={}, APPST={}, REMOTE={}, MISC_ID=null, COMMS={at:0,loading:false,error:'',aviso:''}, FVIEW=null, BOOT_MS=Date.now();
 var FVIEW_KEY='admira-win95-vistas', COMMS_URL='/api/win95/comunicaciones';
 function isFixedDef(d){ return !!d&&d.kind==='app'&&(d.id==='mypc'||d.id==='trash'); }
-function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||d.id==='fld-misc'); }
-function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote; }
+function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||isEstiloDoc(d)||d.id==='fld-misc'); }
+function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote&&!isEstiloDoc(d); }
 function canTrashDef(d){ return !!d&&!isFixedDef(d); }
 function appDef(id){ for(var i=0;i<ICON_DEFS.length;i++) if(ICON_DEFS[i].id===id) return ICON_DEFS[i]; return null; }
 function inTrash(id){ return TRASH.some(function(t){ return t.def&&(t.def.id===id||t.def.docId===id); }); }
@@ -2610,7 +2746,7 @@ function itemMeta(d){
   if(!d) return {type:'',size:null,mtime:0};
   if(d.kind==='folder') return {type:'Carpeta de archivos',size:null,mtime:d.mtime||0};
   if(d.kind==='shortcut') return {type:'Acceso directo',size:360,mtime:d.mtime||0};
-  if(d.kind==='doc') return {type:'Documento de texto',size:d.remote?(d.size||textBytes(d.text)):textBytes(d.text),mtime:d.mtime||(isLeyendasDoc(d)?LEYENDAS_SEED_MS:0)};
+  if(d.kind==='doc') return {type:'Documento de texto',size:d.remote?(d.size||textBytes(d.text)):textBytes(d.text),mtime:d.mtime||(isLeyendasDoc(d)?LEYENDAS_SEED_MS:isEstiloDoc(d)?ESTILO_SEED_MS:0)};
   if(d.kind==='app'){
     if(d.id==='readme') return {type:'Documento de texto',size:textBytes(leemeText()),mtime:BOOT_MS};
     return {type:APP_TYPES[d.id]||'Aplicación',size:APP_SIZES[d.id]||null,mtime:BOOT_MS};
@@ -2758,7 +2894,7 @@ function wireFolderMenubar(w, id){
         {sep:1},
         {l:'Abrir',dis:!d,fn:function(){ openIcon(mine); }},
         {l:'Eliminar',dis:!d||!canTrashDef(d),fn:function(){ deleteItem(mine); }},
-        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote,fn:function(){ startRename(mine); }},
+        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote||isEstiloDoc(d),fn:function(){ startRename(mine); }},
         {l:'Propiedades',fn:function(){ itemProps(d||FS[id]); }},
         {sep:1},
         {l:'Cerrar',fn:function(){ var x=qs('[data-close="fw-'+id+'"]',w); if(x) x.click(); }}];
@@ -2865,7 +3001,7 @@ function purgeDef(def){
       if(ch.kind==='app'||ch.remote){ HIDDEN[ch.id]=1; if(ch.kind==='app') APPST[ch.id]={parent:null}; return; }
       delTree(ch.id);
     });
-    if(id===LEYENDAS_SEED_ID||id==='fld-misc') HIDDEN[id]=1;
+    if(id===LEYENDAS_SEED_ID||id===ESTILO_SEED_ID||id==='fld-misc') HIDDEN[id]=1;
     delete DOCS[id]; delete FS[id];
   })(def.docId||def.id);
   if(def.id===MISC_ID){ MISC_ID=null; }
@@ -2894,7 +3030,7 @@ function restoreHidden(){
   var ids=Object.keys(HIDDEN); if(!ids.length) return;
   HIDDEN={};
   ids.forEach(function(id){ if(APPST[id]) APPST[id]={parent:null}; });
-  applyAppState(); ensureLeyendasDoc(); ensureMiscFolder(); loadComms(true);
+  applyAppState(); ensureLeyendasDoc(); ensureMiscFolder(); ensureEstiloDoc(); loadComms(true);
   if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
   renderTrash(); saveNoteDocs();
   msgBox('Papelera de reciclaje','Se han restaurado '+ids.length+' elemento(s) del sistema.','info');
@@ -3096,12 +3232,17 @@ function restoreNoteDocs(){
   applyAppState();
   ensureLeyendasDoc();
   ensureMiscFolder();
+  ensureEstiloDoc();
 }
 
 var LEYENDAS_SEED_ID='doc-leyendas';
 var LEYENDAS_SEED_NAME='Para las Leyendas.txt';
 var LEYENDAS_SEED_REV='20261125-2015';
 var LEYENDAS_SEED_MS=new Date(2026,10,25,20,15).getTime();
+var ESTILO_SEED_ID='doc-estilo-icqgram';
+var ESTILO_SEED_NAME='Estilo comunicaciones ICQGram.txt';
+var ESTILO_SEED_REV='20261125-2130';
+var ESTILO_SEED_MS=new Date(2026,10,25,21,30).getTime();
 var NOTE_DEFAULT_BOX={left:'150px',top:'50px',width:'340px',height:'220px'};
 function leyendasSeedText(){
   var el=qs('#leyendas-seed');
@@ -3133,9 +3274,44 @@ function ensureLeyendasDoc(){
   }
   if(!it.parent&&!qs('#ic-'+LEYENDAS_SEED_ID)&&!leyendasInTrash()) addIcon(it, desk);
 }
+function estiloSeedText(){
+  var el=qs('#estilo-icqgram-seed');
+  var s=el?String(el.textContent||''):'';
+  if(s.charAt(0)==='\n') s=s.slice(1);
+  return s;
+}
+function isEstiloDoc(d){ return !!(d&&(d.id===ESTILO_SEED_ID||d.docId===ESTILO_SEED_ID)); }
+function estiloInTrash(){
+  return TRASH.some(function(t){ return t.def&&(t.def.id===ESTILO_SEED_ID||t.def.docId===ESTILO_SEED_ID); });
+}
+function ensureEstiloDoc(){
+  var seed=estiloSeedText();
+  if(!seed) return;
+  if(HIDDEN[ESTILO_SEED_ID]) return;
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISC_ID) return;
+  var it=FS[ESTILO_SEED_ID]||DOCS[ESTILO_SEED_ID];
+  if(!it&&estiloInTrash()) return;
+  if(!it){
+    it=registerItem({id:ESTILO_SEED_ID,kind:'doc',name:ESTILO_SEED_NAME,label:ESTILO_SEED_NAME,text:seed,parent:MISC_ID,ico:'txt',left:8,top:8,docId:ESTILO_SEED_ID,estiloRev:ESTILO_SEED_REV,mtime:ESTILO_SEED_MS});
+    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+    saveNoteDocs();
+    return;
+  }
+  it.text=seed;
+  it.estiloRev=ESTILO_SEED_REV;
+  if(!it.name) it.name=ESTILO_SEED_NAME;
+  if(!it.label) it.label=ESTILO_SEED_NAME;
+  if(!it.mtime) it.mtime=ESTILO_SEED_MS;
+  if(it.parent!==MISC_ID&&!estiloInTrash()){
+    var el=qs('#ic-'+ESTILO_SEED_ID); if(el&&el.parentNode) el.parentNode.removeChild(el);
+    it.parent=MISC_ID;
+    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+  }
+}
 function sizeNoteFor(d){
   var w=qs('#note'); if(!w) return;
-  if(isLeyendasDoc(d)||(d&&d.remote)){
+  if(isLeyendasDoc(d)||isEstiloDoc(d)||(d&&d.remote)){
     w.style.left='36px'; w.style.top='16px'; w.style.width='560px'; w.style.height='400px';
   } else {
     w.style.left=NOTE_DEFAULT_BOX.left; w.style.top=NOTE_DEFAULT_BOX.top;
@@ -3143,23 +3319,23 @@ function sizeNoteFor(d){
   }
 }
 var NOTE_RO_TXT=null;
-function showLeyendasRo(on, remote){
+function showLeyendasRo(on, remote, estilo){
   var w=qs('#note'); if(!w) return;
   var bar=qs('#note-ro'), btn=qs('#note-ro-edit');
   if(bar&&NOTE_RO_TXT==null) NOTE_RO_TXT=bar.firstChild?bar.firstChild.nodeValue:'';
-  if(bar&&bar.firstChild&&bar.firstChild.nodeType===3) bar.firstChild.nodeValue=remote?'Solo lectura: comunicación del Consejo (servidor admira.live). Para editar, cópiela y péguela. ':NOTE_RO_TXT;
+  if(bar&&bar.firstChild&&bar.firstChild.nodeType===3) bar.firstChild.nodeValue=remote?'Solo lectura: comunicación del Consejo (servidor admira.live). Para editar, cópiela y péguela. ':estilo?'Solo lectura: norma de Carlos (estilo ICQGram). Para editar, cópiela y péguela. ':NOTE_RO_TXT;
   w.classList.toggle('ro', !!on);
-  w.classList.toggle('ro-remote', !!(on&&remote));
+  w.classList.toggle('ro-remote', !!(on&&(remote||estilo)));
 }
 function applyLeyendasNoteMode(d){
   sizeNoteFor(d);
   var remote=!!(d&&d.remote);
-  var ro=remote||(isLeyendasDoc(d)&&!d.leyendasLocal);
+  var ro=remote||isEstiloDoc(d)||(isLeyendasDoc(d)&&!d.leyendasLocal);
   noteMode(!ro);
-  showLeyendasRo(ro, remote);
+  showLeyendasRo(ro, remote, isEstiloDoc(d));
 }
 function enableLeyendasEdit(){
-  if(NOTE.doc&&NOTE.doc.remote){ sfxDing(); return; }
+  if(NOTE.doc&&(NOTE.doc.remote||isEstiloDoc(NOTE.doc))){ sfxDing(); return; }
   var nt=qs('#nt'); if(nt) nt.readOnly=false;
   showLeyendasRo(false);
   noteFocus();

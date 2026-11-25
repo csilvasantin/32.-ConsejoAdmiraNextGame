@@ -136,7 +136,11 @@ export function crearAvisos(env = {}, deps = {}) {
     const temporizador = ctl ? setTimeout(() => ctl.abort(), timeout) : null;
     try {
       const headers = { 'content-type': 'application/json', 'user-agent': 'admira-live-avisos/1.0', 'x-admira-aviso': String(carga && carga.tipo || 'consejero_mensaje') };
-      if (reg.secreto) headers[reg.cabecera || CABECERA_DEF] = reg.secreto;
+      if (reg.secreto) {
+        const nombre = reg.cabecera || CABECERA_DEF;
+        const val = String(reg.secreto);
+        headers[nombre] = nombre.toLowerCase() === 'authorization' && !/^bearer /i.test(val) ? 'Bearer ' + val : val;
+      }
       const r = await fetcher(reg.url, { method: 'POST', headers, body: JSON.stringify(carga), redirect: 'manual', signal: ctl ? ctl.signal : undefined });
       return { ok: r.status >= 200 && r.status < 300, codigo: r.status, ms: Date.now() - t0 };
     } catch (e) {

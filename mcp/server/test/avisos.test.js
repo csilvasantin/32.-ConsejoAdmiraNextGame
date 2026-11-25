@@ -181,3 +181,16 @@ test('POST /consejero/despertar usa el webhook registrado y exige la PANEL_KEY',
   assert.equal(sd.despertado, false);
   assert.match(String(sd.resultado), /sin webhook/);
 });
+
+test('Authorization: se antepone Bearer si el secreto no lo trae', async () => {
+  const kv = kvMemoria();
+  const llamadas = [];
+  const av = crearAvisos({ ADMIRA_LIVE_DESDE: kv }, { fetchWebhook: async (u, i) => { llamadas.push(i); return { status: 200 }; } });
+  await av.registrar({ url: 'https://hooks.example.com/huang', secreto: 'clave-cruda', cabecera: 'Authorization' }, yo('Huang'));
+  const r = await av.avisar({ tipo: 'chat', id: 't1', de: 'Carlos', para: 'Huang', texto: 'x', encargo: 1 });
+  assert.equal(r.ok, true);
+  assert.equal(llamadas[0].headers.authorization, 'Bearer clave-cruda');
+  await av.registrar({ url: 'https://hooks.example.com/huang', secreto: 'Bearer ya-completo', cabecera: 'Authorization' }, yo('Huang'));
+  await av.avisar({ tipo: 'chat', id: 't2', de: 'Carlos', para: 'Huang', texto: 'y', encargo: 2 });
+  assert.equal(llamadas[1].headers.authorization, 'Bearer ya-completo');
+});

@@ -291,9 +291,19 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #volpop .vm{position:absolute;left:0;right:0;bottom:9px;white-space:nowrap}
 .chk{position:relative;display:inline-block;width:13px;height:13px;margin-right:4px;vertical-align:-2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .chk.on::after{content:'';position:absolute;left:4px;top:1px;width:3px;height:7px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(40deg)}
-/* ---------- Reproductor multimedia (admira.tv disfrazado) ---------- */
+/* ---------- Windows Media Player (admira.tv / #win95 de admira.studio) ---------- */
 #mpw .mpv{position:absolute;left:6px;right:6px;top:44px;height:250px;overflow:hidden;background:#000;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
-#mpFrame{position:absolute;left:2px;top:2px;width:calc(100% - 4px);height:calc(100% - 4px);border:0;display:none;pointer-events:none;background:#000}
+#mpVideo,#mpFrame{position:absolute;left:2px;top:2px;width:calc(100% - 4px);height:calc(100% - 4px);border:0;display:none;background:#000}
+#mpVideo{object-fit:contain;pointer-events:auto}
+#mpFrame{pointer-events:none}
+.win.max,.skin.max{left:0!important;top:0!important;width:640px!important;height:452px!important}
+#mpw.max .mpv,#mpw:fullscreen .mpv,#mpw:-webkit-full-screen .mpv{height:auto;top:44px;bottom:52px}
+#mpw:fullscreen,#mpw:-webkit-full-screen{left:0!important;top:0!important;width:100%!important;height:100%!important;z-index:10000}
+#clock{cursor:pointer}
+#shutdlg .sdbody{padding:14px 16px 6px;display:flex;align-items:flex-start}
+#shutdlg .sdbody svg{width:32px;height:32px;margin-right:12px;flex:none}
+#shutdlg .sdbody p{margin:0;line-height:16px}
+#shutdlg .acts{text-align:right;padding:8px 12px 10px}
 #mpCard{position:absolute;left:2px;top:2px;right:2px;bottom:2px;display:flex;flex-direction:column}
 #mpCard .bars{flex:1;display:flex}
 #mpCard .bars i{flex:1}
@@ -393,13 +403,13 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     <div id="wall"><div class="art"></div></div>
     <!-- Bloc de notas -->
     <div id="note" class="win" style="left:150px;top:50px;width:340px;height:220px;display:none">
-      <div class="tb"><span data-ico="readme"></span><span class="t">Léeme.txt - Bloc de notas</span><span class="x" data-min="note">_</span><span class="x">□</span><span class="x gap" data-close="note">×</span></div>
+      <div class="tb"><span data-ico="readme"></span><span class="t">Léeme.txt - Bloc de notas</span><span class="x" data-min="note">_</span><span class="x" data-max="note" title="Maximizar">□</span><span class="x gap" data-close="note">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>B</u>uscar</span><span>Ay<u>u</u>da</span></div>
       <div class="notebody"><span id="nt"></span><span class="caret"></span></div>
     </div>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
-      <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x">□</span><span class="x gap" data-close="nap">×</span></div>
+      <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span>A<u>c</u>ciones</span><span>A<u>y</u>uda</span></div>
       <div class="hdr"><span data-ico="p2p"></span><div class="brand">Nap<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
       <div class="tabs"><div class="tab" data-tab="home">Inicio</div><div class="tab on" data-tab="search">Buscar</div><div class="tab" data-tab="lib">Biblioteca</div><div class="tab" data-tab="xfer">Transferencias</div></div>
@@ -427,7 +437,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- AdmiraScape (homenaje navegador) -->
     <div id="brw" class="win" style="left:40px;top:10px;width:560px;height:430px;display:none">
-      <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">Netscape Navigator</span><span class="x" data-min="brw">_</span><span class="x">□</span><span class="x gap" data-close="brw">×</span></div>
+      <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">Netscape Navigator</span><span class="x" data-min="brw">_</span><span class="x" data-max="brw" title="Maximizar">□</span><span class="x gap" data-close="brw">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>I<u>r</u></span><span><u>M</u>arcadores</span><span><u>O</u>pciones</span><span>Ay<u>u</u>da</span></div>
       <div class="brtools">
         <div class="tbtn" id="brBack" data-tico="back"><span>Atrás</span></div>
@@ -447,13 +457,13 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- Acceso telefónico a redes -->
     <div id="dun" class="win dlg" style="left:180px;top:150px;width:280px;height:132px;display:none">
-      <div class="tb"><span class="t">Conectar a</span><span class="x" id="dunX">×</span></div>
+      <div class="tb"><span class="t">Conectar a</span><span class="x" data-min="dun">_</span><span class="x" data-max="dun" title="Maximizar">□</span><span class="x gap" id="dunX">×</span></div>
       <div class="dunb"><svg viewBox="0 0 40 32"><rect x="1.5" y="3.5" width="15" height="12" fill="#c0c0c0" stroke="#000"/><rect x="3.5" y="5.5" width="11" height="8" fill="#008080"/><rect x="23.5" y="13.5" width="15" height="12" fill="#c0c0c0" stroke="#000"/><rect x="25.5" y="15.5" width="11" height="8" fill="#008080"/><path d="M9 16v6h22v-2" fill="none" stroke="#000" stroke-dasharray="2 1"/></svg><div><b>AdmiraNeXT Online</b><br>Estado: <span id="dunSt">Marcando…</span></div></div>
       <div class="acts"><button class="btn" id="dunCancel">Cancelar</button></div>
     </div>
     <!-- Bandeja de entrada -->
     <div id="mail" class="win" style="left:70px;top:46px;width:500px;height:320px;display:none">
-      <div class="tb"><span data-ico="inbox"></span><span class="t">Bandeja de entrada - Correo Admira</span><span class="x" data-min="mail">_</span><span class="x">□</span><span class="x gap" data-close="mail">×</span></div>
+      <div class="tb"><span data-ico="inbox"></span><span class="t">Bandeja de entrada - Correo Admira</span><span class="x" data-min="mail">_</span><span class="x" data-max="mail" title="Maximizar">□</span><span class="x gap" data-close="mail">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span><u>H</u>erramientas</span><span><u>R</u>edactar</span><span>Ay<u>u</u>da</span></div>
       <div class="mtools"><button class="btn" id="mlSend">Enviar y recibir</button><button class="btn" id="mlNew">Nuevo mensaje</button><button class="btn" id="mlReply">Responder</button></div>
       <div class="mfold"><div class="mf on" id="mfIn"><span data-ico="inbox"></span>Bandeja de entrada</div><div class="mf"><span data-ico="folder"></span>Bandeja de salida</div><div class="mf"><span data-ico="folder"></span>Elementos enviados</div><div class="mf"><span data-ico="trash"></span>Elementos eliminados</div></div>
@@ -463,33 +473,33 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- Papelera de reciclaje -->
     <div id="trw" class="win" style="left:120px;top:60px;width:400px;height:250px;display:none">
-      <div class="tb"><span id="trwIco" data-ico="trash"></span><span class="t">Papelera de reciclaje</span><span class="x" data-min="trw">_</span><span class="x">□</span><span class="x gap" data-close="trw">×</span></div>
+      <div class="tb"><span id="trwIco" data-ico="trash"></span><span class="t">Papelera de reciclaje</span><span class="x" data-min="trw">_</span><span class="x" data-max="trw" title="Maximizar">□</span><span class="x gap" data-close="trw">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>Ay<u>u</u>da</span></div>
       <div class="trtools"><button class="btn" id="trRestore" disabled>Restaurar</button><button class="btn" id="trEmpty" disabled>Vaciar Papelera de reciclaje</button></div>
       <div class="lv" id="trList" style="position:absolute;left:6px;right:6px;top:72px;bottom:28px"></div>
       <div class="sbar1" id="trSt">0 objeto(s)</div>
     </div>
-    <!-- Reproductor multimedia: el canal de admira.tv disfrazado de 1995 -->
+    <!-- Windows Media Player: piezas públicas de admira.studio (#win95) vía admira.tv, sin secretos -->
     <div id="mpw" class="win" style="left:140px;top:28px;width:356px;height:372px;display:none">
-      <div class="tb"><span data-ico="media"></span><span class="t" id="mpT">Reproductor multimedia</span><span class="x" data-min="mpw">_</span><span class="x">□</span><span class="x gap" data-close="mpw">×</span></div>
+      <div class="tb"><span data-ico="media"></span><span class="t" id="mpT">Windows Media Player</span><span class="x" data-min="mpw">_</span><span class="x" id="mpMax" data-max="mpw" title="Pantalla completa">□</span><span class="x gap" data-close="mpw">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>D</u>ispositivo</span><span>E<u>s</u>cala</span><span>Ay<u>u</u>da</span></div>
-      <div class="mpv"><iframe id="mpFrame" allow="autoplay; fullscreen" title="admira.tv"></iframe>
+      <div class="mpv"><video id="mpVideo" playsinline webkit-playsinline></video><iframe id="mpFrame" allow="autoplay; fullscreen" title="admira.tv"></iframe>
         <div id="mpCard"><div class="bars"><i style="background:#c0c0c0"></i><i style="background:#c0c000"></i><i style="background:#00c0c0"></i><i style="background:#00c000"></i><i style="background:#c000c0"></i><i style="background:#c00000"></i><i style="background:#0000c0"></i></div><div class="low"></div><div class="box">admira.tv · <span id="mpTag">#win95</span><small id="mpMsg">Esperando contenidos de admira.studio…</small></div></div>
       </div>
       <div class="mptrk"><div class="groove"></div><div class="ticks"></div><div class="thumb" id="mpThumb"></div></div>
-      <div class="mpbtns"><button class="btn" id="mpPlay"></button><button class="btn" id="mpPause"></button><button class="btn" id="mpStop"></button><span class="sep"></span><button class="btn" id="mpEject"></button><span id="mpLive"><i></i>SIN SEÑAL</span></div>
+      <div class="mpbtns"><button class="btn" id="mpPlay" type="button" title="Reproducir"></button><button class="btn" id="mpStop" type="button" title="Detener"></button><span class="sep"></span><button class="btn" id="mpEject" type="button" title="Expulsar"></button><span id="mpLive"><i></i>SIN SEÑAL</span></div>
       <div class="sbar1" id="mpSt">Listo</div>
     </div>
     <!-- ICQGram: lista de contactos -->
     <div id="icq" class="win" style="left:462px;top:118px;width:170px;height:330px;display:none">
-      <div class="tb"><span data-ico="chat"></span><span class="t">ICQGram</span><span class="x" data-min="icq">_</span><span class="x gap" data-close="icq">×</span></div>
+      <div class="tb"><span data-ico="chat"></span><span class="t">ICQGram</span><span class="x" data-min="icq">_</span><span class="x" data-max="icq" title="Maximizar">□</span><span class="x gap" data-close="icq">×</span></div>
       <div class="qhdr"><span data-ico="chat"></span><b>ICQ<span>Gram</span></b><i>Nº 25111997</i></div>
       <div class="clist" id="clist"></div>
       <div class="cbot"><button class="btn" id="icqMain">ICQGram ▴</button><div class="cstat"><span class="sdot"></span>En línea</div></div>
     </div>
     <!-- ICQGram: conversación -->
     <div id="icqc" class="win" style="left:140px;top:96px;width:330px;height:284px;display:none">
-      <div class="tb"><span data-ico="chat"></span><span class="t" id="icqcT">Conversación de ICQGram</span><span class="x" data-min="icqc">_</span><span class="x gap" data-close="icqc">×</span></div>
+      <div class="tb"><span data-ico="chat"></span><span class="t" id="icqcT">Conversación de ICQGram</span><span class="x" data-min="icqc">_</span><span class="x" data-max="icqc" title="Maximizar">□</span><span class="x gap" data-close="icqc">×</span></div>
       <div class="chdr" id="icqcH"></div>
       <div class="hist" id="icqHist"></div>
       <div class="fin focus inp" id="icqInp"></div>
@@ -501,7 +511,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- AdmirAmp: ventana principal -->
     <div id="amp" class="skin" data-group="amp" style="left:182px;top:16px;width:275px;height:116px">
-      <div class="atb"><i class="ln"></i><b id="ampName">WINAMP</b><i class="ln"></i><span class="sbx" id="ampMin">_</span><span class="sbx" id="ampClose">×</span></div>
+      <div class="atb"><i class="ln"></i><b id="ampName">WINAMP</b><i class="ln"></i><span class="sbx" id="ampMin" title="Minimizar">_</span><span class="sbx" id="ampMax" data-max="amp" title="Maximizar">□</span><span class="sbx" id="ampClose" title="Cerrar">×</span></div>
       <canvas id="lcd" width="93" height="42" style="left:9px;top:20px"></canvas>
       <canvas id="marq" width="155" height="11" style="left:110px;top:21px"></canvas>
       <canvas id="info" width="155" height="9" style="left:110px;top:36px"></canvas>
@@ -522,7 +532,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- AdmirAmp: ecualizador -->
     <div id="eqw" class="skin" data-group="amp" style="left:182px;top:132px;width:275px;height:116px">
-      <div class="atb"><i class="ln"></i><b>ECUALIZADOR</b><i class="ln"></i><span class="sbx" data-close="eqw">×</span></div>
+      <div class="atb"><i class="ln"></i><b>ECUALIZADOR</b><i class="ln"></i><span class="sbx" data-min="eqw" title="Minimizar">_</span><span class="sbx" data-max="eqw" title="Maximizar">□</span><span class="sbx" data-close="eqw">×</span></div>
       <div class="sk tog on" id="eqOn" style="left:12px;top:19px;width:28px;height:12px">ON</div>
       <div class="sk tog" id="eqAuto" style="left:42px;top:19px;width:34px;height:12px">AUTO</div>
       <canvas id="eqg" width="113" height="19" style="left:84px;top:16px"></canvas>
@@ -530,7 +540,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
     </div>
     <!-- AdmirAmp: lista -->
     <div id="plw" class="skin" data-group="amp" style="left:182px;top:248px;width:275px;height:150px">
-      <div class="atb"><i class="ln"></i><b>LISTA DE REPRODUCCIÓN</b><i class="ln"></i><span class="sbx" data-close="plw">×</span></div>
+      <div class="atb"><i class="ln"></i><b>LISTA DE REPRODUCCIÓN</b><i class="ln"></i><span class="sbx" data-min="plw" title="Minimizar">_</span><span class="sbx" data-max="plw" title="Maximizar">□</span><span class="sbx" data-close="plw">×</span></div>
       <div id="plist" style="left:10px;top:18px;width:246px;height:102px"></div>
       <div class="plsb" style="left:259px;top:18px;width:7px;height:102px"><div></div></div>
       <div class="sk" style="left:10px;top:127px;width:44px;height:13px">+ AÑADIR</div>
@@ -538,6 +548,11 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
       <div class="sk" style="left:102px;top:127px;width:30px;height:13px">SEL</div>
       <div class="sk" style="left:134px;top:127px;width:36px;height:13px">VARIOS</div>
       <canvas id="plinfo" width="84" height="9" style="left:176px;top:129px"></canvas>
+    </div>
+    <div id="shutdlg" class="win dlg" style="left:170px;top:110px;width:300px;display:none">
+      <div class="tb"><span class="t">Apagar Windows</span><span class="x" data-min="shutdlg">_</span><span class="x" data-max="shutdlg" title="Maximizar">□</span><span class="x gap" data-close="shutdlg">×</span></div>
+      <div class="sdbody"><span data-ico="power"></span><p>¿Está seguro de que desea apagar el sistema?<br><br>Los iconos del escritorio se recordarán en el sitio donde los dejó.</p></div>
+      <div class="acts"><button class="btn" id="shutYes">Sí</button> <button class="btn" id="shutNo">No</button></div>
     </div>
   </div>
 
@@ -597,7 +612,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
    ========================================================= */
 var CONFIG = {
   idleSeconds: 60,            // sin tocar → vuelve la demo
-  screensaverSeconds: 30,     // sin tocar → protector de pantalla (modo interactivo)
+  screensaverSeconds: 0,      // el protector solo se lanza al pulsar la hora de la bandeja
   visitor: '',                // también por URL: ?visita=Nombre
   bootImage: '',              // opcional: imagen propia para la pantalla de carga (archivo en esta carpeta)
   wallpaperImage: '',         // opcional: imagen propia de fondo de escritorio (archivo en esta carpeta)
@@ -610,7 +625,7 @@ var CONFIG = {
   // Para reactivarlo: url:'http://127.0.0.1:9595/salamandra' cuando haya un interruptor de corriente (relé USB o enchufe inteligente).
   salamandra: { url:'', cooldownSeconds:15 },
   futureVideo: '',            // opcional: vídeo (p. ej. Admira_Next.mp4 en esta carpeta) para la página de 2026 de AdmiraScape
-  // Reproductor multimedia = canal de admira.tv «disfrazado» de 1995.
+  // Windows Media Player = piezas públicas de admira.studio (#win95, y #genero95 si hay) vía admira.tv.
   // Muestra lo que se publique en admira.studio con el hashtag (sin #). Falta la pantalla (virtual) de admira.tv.
   // Nota de admira.tv: el parámetro tag= bloquea el gobierno remoto del canal (pensado para integraciones cerradas).
   // Player virtual dado de alta en admira.tv/virtual-players/ (25/11/2026): virtual-win95 · circuito itcrowd-win95.
@@ -621,7 +636,7 @@ var CONFIG = {
   // Comprobar piezas: https://admira.tv/api/emision?screen=virtual-win95&tag=win95&resumen=1
   mediaPlayer: { screen:'virtual-win95', tags:['win95','genero95'], rotateSeconds:60, inDemo:true,
     channelUrl:'https://admira.tv/canal.html?screen=virtual-win95&circuit=itcrowd-win95&playerType=virtual&clean=1&mode=local&cam=0&shot=0&muted=1' },
-  names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster' },
+  names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster', media:'Windows Media Player' },
   // Pistas sintetizadas de demostración (sin derechos de terceros).
   // Para el catálogo de admira.tv: añade src:'pista.mp3' (mismo directorio) y se usará el archivo.
   tracks: [
@@ -1079,10 +1094,130 @@ function focusWin(el){
 }
 function makeDraggable(handle,win){
   var sx,sy,ox,oy,id=null;
-  handle.addEventListener('pointerdown',function(e){ if(e.target.closest('.x,.sbx')) return; id=e.pointerId; try{ handle.setPointerCapture(id); }catch(_){} sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win); });
+  handle.addEventListener('pointerdown',function(e){ if(e.target.closest('.x,.sbx')) return; if(win.classList.contains('max')){ focusWin(win); return; } id=e.pointerId; try{ handle.setPointerCapture(id); }catch(_){} sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win); });
   handle.addEventListener('pointermove',function(e){ if(id!==e.pointerId) return; win.style.left=Math.round(clamp(ox+(e.clientX-sx)/SCALE,40-win.offsetWidth,600))+'px'; win.style.top=Math.round(clamp(oy+(e.clientY-sy)/SCALE,0,430))+'px'; });
   function end(e){ if(id===e.pointerId) id=null; }
   handle.addEventListener('pointerup',end); handle.addEventListener('pointercancel',end);
+}
+
+/* ---------- ventanas: maximizar, minimizar, cerrar, foco y arrastre ---------- */
+function winMaxBtn(el){ return qs('.x[data-max], .sbx[data-max], #ampMax', el) || qs('#mpMax', el); }
+function winSaveRect(el){
+  if(el.classList.contains('max')) return;
+  el._winRect={left:el.style.left,top:el.style.top,width:el.style.width||(el.offsetWidth+'px'),height:el.style.height||(el.offsetHeight+'px')};
+}
+function winRestore(el){
+  if(!el) return;
+  el.classList.remove('max');
+  var r=el._winRect;
+  if(r){ el.style.left=r.left; el.style.top=r.top; el.style.width=r.width; el.style.height=r.height; }
+  var b=winMaxBtn(el); if(b) b.textContent='□';
+}
+function winMaximize(el){
+  if(!el) return;
+  if(el.classList.contains('max')){ winRestore(el); return; }
+  winSaveRect(el);
+  el.classList.add('max');
+  el.style.left='0px'; el.style.top='0px'; el.style.width='640px'; el.style.height='452px';
+  var b=winMaxBtn(el); if(b) b.textContent='❐';
+  focusWin(el);
+}
+function winToggleMax(el){
+  if(!el) return;
+  if(el.id==='mpw'&&typeof mpToggleFS==='function'){ mpToggleFS(); return; }
+  if(el.classList.contains('max')) winRestore(el); else winMaximize(el);
+}
+function winRestoreAll(){ qsa('.win.max, .skin.max').forEach(winRestore); }
+function wireWinChrome(){
+  qsa('#desk .win .tb, #desk .skin .atb').forEach(function(tb){
+    if(tb._winChrome) return; tb._winChrome=true;
+    tb.addEventListener('dblclick',function(e){
+      if(e.target.closest('.x,.sbx')) return;
+      var w=tb.closest('.win, .skin'); if(!w) return;
+      e.preventDefault(); e.stopPropagation();
+      winToggleMax(w);
+    });
+  });
+  qsa('[data-max]').forEach(function(b){
+    if(b._winMax) return; b._winMax=true;
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      var id=b.getAttribute('data-max');
+      var w=id?qs('#'+id):b.closest('.win, .skin');
+      if(w) winToggleMax(w);
+    });
+  });
+  var ampMax=qs('#ampMax');
+  if(ampMax&&!ampMax._winMax){ ampMax._winMax=true; ampMax.addEventListener('click',function(e){ e.stopPropagation(); winToggleMax(qs('#amp')); }); }
+  var ampMin=qs('#ampMin');
+  if(ampMin&&!ampMin._wiredMin){ ampMin._wiredMin=true; ampMin.addEventListener('click',function(e){ e.stopPropagation(); minimize('amp'); }); }
+  var ampClose=qs('#ampClose');
+  if(ampClose&&!ampClose._wiredClose){ ampClose._wiredClose=true; ampClose.addEventListener('click',function(e){ e.stopPropagation(); closeAmp(); }); }
+}
+
+/* ---------- iconos del escritorio: recordar sitio al apagar ---------- */
+function deskUserId(){
+  try{
+    var g=JSON.parse(localStorage.getItem('admira_gate')||'null');
+    if(g&&typeof g.email==='string'&&g.email) return String(g.email).toLowerCase().slice(0,80);
+  }catch(e){}
+  if(CONFIG.visitor) return ('visita:'+CONFIG.visitor).toLowerCase().slice(0,80);
+  return 'visita';
+}
+function deskStoreKey(){ return 'vuelta95.icons.'+deskUserId(); }
+function saveIconLayout(){
+  var map={};
+  qsa('#desk > .icon').forEach(function(el){
+    var id=el.id?el.id.replace(/^ic-/,''):(el._def&&el._def.id);
+    if(!id) return;
+    map[id]={left:el.offsetLeft,top:el.offsetTop};
+    if(el._def){ el._def.left=el.offsetLeft; el._def.top=el.offsetTop; }
+  });
+  try{ localStorage.setItem(deskStoreKey(), JSON.stringify({v:1,at:Date.now(),icons:map})); }catch(e){}
+}
+function applyIconLayout(){
+  var data=null;
+  try{ data=JSON.parse(localStorage.getItem(deskStoreKey())||'null'); }catch(e){ data=null; }
+  if(!data||!data.icons) return false;
+  var any=false;
+  Object.keys(data.icons).forEach(function(id){
+    var p=data.icons[id], el=qs('#ic-'+id);
+    if(!el||!p) return;
+    var left=Math.round(clamp(+p.left,0,640-72));
+    var top=Math.round(clamp(+p.top,0,452-48));
+    el.style.left=left+'px'; el.style.top=top+'px';
+    if(el._def){ el._def.left=left; el._def.top=top; }
+    any=true;
+  });
+  return any;
+}
+function openShutdownDlg(){
+  closeStart();
+  var w=qs('#shutdlg'); if(!w) return confirmShutdown();
+  w.style.display='block';
+  if(TASKS.shutdlg&&TASKS.shutdlg.min) toggleTask('shutdlg');
+  addTask('shutdlg','Apagar Windows','power',[w]);
+  focusWin(w);
+}
+function closeShutdownDlg(){ var w=qs('#shutdlg'); if(w) w.style.display='none'; removeTask('shutdlg'); }
+function confirmShutdown(){
+  closeShutdownDlg();
+  saveIconLayout();
+  var tk=RUN.token;
+  shutdownSeq(tk).then(function(){
+    if(RUN.token!==tk) return;
+    resetDesktop();
+    applyIconLayout();
+  }).catch(function(){});
+}
+function wireShutdownDlg(){
+  var w=qs('#shutdlg'); if(!w) return;
+  qs('[data-close="shutdlg"]',w).addEventListener('click',closeShutdownDlg);
+  qs('#shutNo').addEventListener('click',closeShutdownDlg);
+  qs('#shutYes').addEventListener('click',confirmShutdown);
+  qs('[data-min="shutdlg"]',w).addEventListener('click',function(){ minimize('shutdlg'); });
+  makeDraggable(qs('.tb',w),w);
+  w.addEventListener('pointerdown',function(){ focusWin(w); });
 }
 
 /* ---------- barra de tareas ---------- */
@@ -1107,11 +1242,12 @@ function updateTasks(active){ for(var k in TASKS) TASKS[k].btn.classList.toggle(
 var lastPointerType='mouse';
 function selectIcon(el){ qsa('.icon').forEach(function(i){ i.classList.toggle('sel',i===el); }); }
 function buildDesktop(){
-  var list=[['mypc','Mi PC'],['trash','Papelera de reciclaje'],['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla',82,6],['media','Reproductor multimedia',82,68],['inbox','Bandeja de entrada',82,130]];
+  var list=[['mypc','Mi PC'],['trash','Papelera de reciclaje'],['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla',82,6],['media',CONFIG.names.media,82,68],['inbox','Bandeja de entrada',82,130]];
   list.forEach(function(d,i){
     var def={id:d[0],label:d[1],ico:d[0],kind:'app',app:d[0],left:d[2]!==undefined?d[2]:4,top:d[3]!==undefined?d[3]:6+i*62};
     ICON_DEFS.push(def); addIcon(def);
   });
+  applyIconLayout();
   // clic derecho (o pulsación larga en pantalla táctil) sobre el escritorio → menú contextual
   var lp=null;
   desk.addEventListener('pointerdown',function(e){
@@ -1156,10 +1292,11 @@ function moveIconDrag(el,x,y){
 function cancelIconDrag(){ if(!DRAG) return; if(DRAG.clone.parentNode) DRAG.clone.parentNode.removeChild(DRAG.clone); var t=qs('#ic-trash'); if(t) t.classList.remove('drop'); DRAG=null; }
 function endIconDrag(el){
   var d=DRAG; if(!d) return; cancelIconDrag();
-  if(d.over){ toTrash(el); return; }
+  if(d.over){ toTrash(el); if(MODE==='interactive') saveIconLayout(); return; }
   el.style.left=Math.round(d.x)+'px'; el.style.top=Math.round(d.y)+'px';
+  if(MODE==='interactive') saveIconLayout();
 }
-function alignIcons(){ qsa('#desk > .icon').forEach(function(el){ el.style.left=(Math.round((el.offsetLeft-4)/78)*78+4)+'px'; el.style.top=(Math.round((el.offsetTop-6)/62)*62+6)+'px'; }); }
+function alignIcons(){ qsa('#desk > .icon').forEach(function(el){ el.style.left=(Math.round((el.offsetLeft-4)/78)*78+4)+'px'; el.style.top=(Math.round((el.offsetTop-6)/62)*62+6)+'px'; }); if(MODE==='interactive') saveIconLayout(); }
 
 /* ---------- menú contextual del escritorio ---------- */
 var DM={x:0,y:0};
@@ -1226,12 +1363,16 @@ function sfxCrumple(){
 }
 function askBox(title,text,onYes){
   var w=document.createElement('div'); w.className='win dlg'; w.style.width='340px';
-  w.innerHTML='<div class="tb"><span class="t"></span><span class="x">×</span></div><div class="body">'+ICONS.trashFull+'<div class="msg"></div></div><div class="acts"><button class="btn" data-yes>Sí</button> <button class="btn" data-no>No</button></div>';
+  var key='ask'+now(); w.id=key;
+  w.innerHTML='<div class="tb"><span class="t"></span><span class="x" data-min="'+key+'">_</span><span class="x" data-max="'+key+'" title="Maximizar">□</span><span class="x gap">×</span></div><div class="body">'+ICONS.trashFull+'<div class="msg"></div></div><div class="acts"><button class="btn" data-yes>Sí</button> <button class="btn" data-no>No</button></div>';
   qs('.t',w).textContent=title; qs('.msg',w).textContent=text; desk.appendChild(w);
   w.style.left='150px'; w.style.top=Math.round((452-w.offsetHeight)/2)+'px';
-  function close(){ if(w.parentNode) w.parentNode.removeChild(w); }
+  function close(){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); }
   qs('[data-yes]',w).addEventListener('click',function(){ close(); onYes(); });
-  qs('[data-no]',w).addEventListener('click',close); qs('.x',w).addEventListener('click',close);
+  qs('[data-no]',w).addEventListener('click',close); qs('.x.gap',w).addEventListener('click',close);
+  qs('[data-min="'+key+'"]',w).addEventListener('click',function(){ minimize(key); });
+  qs('[data-max="'+key+'"]',w).addEventListener('click',function(){ winToggleMax(w); });
+  addTask(key,title,'info',[w]);
   makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); }); focusWin(w);
   sfxDing();
 }
@@ -1271,6 +1412,7 @@ function resetIcons(){
   qsa('#desk > .icon').forEach(function(el){ if(el._def&&el._def.kind==='doc') el.parentNode.removeChild(el); });
   DOCS={}; TRASH=[]; TRSEL=-1; LASTDOC=null; cancelIconDrag(); setTrashIcon(); closeTrash(); closeDeskMenu();
   ICON_DEFS.forEach(function(d){ var el=qs('#ic-'+d.id); if(el){ el.style.left=d.left+'px'; el.style.top=d.top+'px'; } });
+  applyIconLayout();
 }
 async function ghostDragIcon(el,tx,ty,tk){
   await ghostMove(el,tk); await wait(200,tk);
@@ -1307,17 +1449,21 @@ var DLGS={};
 function msgBox(title,text,ico){
   if(DLGS[title]){ focusWin(DLGS[title]); return; }
   var w=document.createElement('div'); w.className='win dlg'; w.style.width='310px';
-  w.innerHTML='<div class="tb"><span class="t"></span><span class="x">×</span></div><div class="body">'+ICONS[ico==='warn'?'warn':'info']+'<div class="msg"></div></div><div class="acts"><button class="btn">Aceptar</button></div>';
+  var key='dlg'+now(); w.id=key;
+  w.innerHTML='<div class="tb"><span class="t"></span><span class="x" data-min="'+key+'">_</span><span class="x" data-max="'+key+'" title="Maximizar">□</span><span class="x gap">×</span></div><div class="body">'+ICONS[ico==='warn'?'warn':'info']+'<div class="msg"></div></div><div class="acts"><button class="btn">Aceptar</button></div>';
   qs('.t',w).textContent=title; qs('.msg',w).textContent=text;
   desk.appendChild(w);
   var n=Object.keys(DLGS).length;
   w.style.left=(165+n*16)+'px'; w.style.top=Math.round((452-w.offsetHeight)/2+n*16)+'px';
-  function close(){ if(w.parentNode) w.parentNode.removeChild(w); delete DLGS[title]; }
-  qs('.btn',w).addEventListener('click',close); qs('.x',w).addEventListener('click',close);
+  function close(){ removeTask(key); if(w.parentNode) w.parentNode.removeChild(w); delete DLGS[title]; }
+  qs('.btn',w).addEventListener('click',close); qs('.x.gap',w).addEventListener('click',close);
+  qs('[data-min="'+key+'"]',w).addEventListener('click',function(){ minimize(key); });
+  qs('[data-max="'+key+'"]',w).addEventListener('click',function(){ winToggleMax(w); });
+  addTask(key,title,ico==='warn'?'warn':'info',[w]);
   makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); });
   DLGS[title]=w; focusWin(w);
 }
-function closeDialogs(){ Object.keys(DLGS).forEach(function(k){ var w=DLGS[k]; if(w.parentNode) w.parentNode.removeChild(w); delete DLGS[k]; }); }
+function closeDialogs(){ Object.keys(DLGS).forEach(function(k){ var w=DLGS[k]; if(w&&w.id) removeTask(w.id); if(w&&w.parentNode) w.parentNode.removeChild(w); delete DLGS[k]; }); closeShutdownDlg(); }
 
 /* ---------- Bloc de notas ---------- */
 function welcomeText(){
@@ -1801,86 +1947,305 @@ function wireBrowser(){
   brButtons();
 }
 
-/* ---------- Reproductor multimedia: admira.tv disfrazado (#win95 desde admira.studio) ---------- */
-var MP={open:false,playing:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:''};
-// mp_tags.js (lo escribe el lanzador Admira95 cada 5 min) dice qué hashtags tienen piezas: window.MP_TAGS=[...]
+/* ---------- Windows Media Player: piezas de admira.studio (#win95) vía admira.tv ---------- */
+var MP={open:false,playing:false,paused:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:'',piece:0,list:[],tagsCache:null,tagsAt:0,fetching:false,pend:null,rect:null,max:false,seek:false,mode:'none'};
+function mpName(){ return (CONFIG.names&&CONFIG.names.media)||'Windows Media Player'; }
+function mpVid(){ return qs('#mpVideo'); }
 function mpFresh(){ return !!(window.MP_TAGS&&window.MP_TAGS_AT&&now()-window.MP_TAGS_AT<20*60*1000); }
+function mpCacheFresh(){ return !!(MP.tagsCache&&MP.tagsAt&&now()-MP.tagsAt<20*60*1000); }
+function mpTagsWithMedia(){
+  if(!mpCacheFresh()) return null;
+  var out=[];
+  MP.tagsCache.forEach(function(t){ if(t&&t.tag&&t.piezas&&t.piezas.length) out.push(t.tag); });
+  return out;
+}
 function mpTagList(){
   var all=CONFIG.mediaPlayer.tags||['win95'];
+  var withMedia=mpTagsWithMedia();
+  if(withMedia&&withMedia.length) return withMedia;
   if(mpFresh()){ var f=all.filter(function(t){ return window.MP_TAGS.indexOf(t)>=0; }); if(f.length) return f; }
-  return all;
+  // Sin inventario aún: no rotar a un hashtag vacío (#genero95 no tenía piezas).
+  return all.length? [all[0]] : ['win95'];
 }
-function mpHasContent(){ return mpFresh()?window.MP_TAGS.length>0:!!CONFIG.mediaPlayer.inDemo; }
+function mpHasContent(){ var m=mpTagsWithMedia(); if(m) return m.length>0; return mpFresh()?window.MP_TAGS.length>0:!!CONFIG.mediaPlayer.inDemo; }
 function mpTag(){ return '#'+(MP.cur||mpTagList()[0]); }
+function mpPiezas(tag){
+  if(!mpCacheFresh()) return [];
+  var i,t;
+  for(i=0;i<MP.tagsCache.length;i++){ t=MP.tagsCache[i]; if(t&&t.tag===(tag||MP.cur)) return t.piezas||[]; }
+  return [];
+}
+function mpSafeUrl(u){
+  if(typeof u!=='string'||!u) return '';
+  try{
+    var x=new URL(u, location.href);
+    if(x.protocol!=='https:') return '';
+    var h=x.hostname;
+    if(h==='api.admira.store'||h==='admira.store'||h==='admira.tv'||h==='www.admira.tv'||h==='admira.studio'||h==='www.admira.studio'||/\.admira\.(store|tv|studio)$/.test(h)) return x.toString();
+  }catch(e){}
+  return '';
+}
 function mpUrl(tag){
   var m=CONFIG.mediaPlayer; if(!m.channelUrl) return '';
   try{ var u=new URL(m.channelUrl); u.searchParams.set('tag',tag||mpTagList()[0]); u.searchParams.set('muted',SYSVOL.muted?'1':'0'); return u.toString(); }
   catch(e){ return m.channelUrl; }
 }
-function mpLoadTags(){ if(location.protocol!=='file:') return; var s=document.createElement('script'); s.src='mp_tags.js?t='+now(); s.onload=s.onerror=function(){ if(s.parentNode) s.parentNode.removeChild(s); }; document.head.appendChild(s); }
+function mpLoadTags(cb){
+  if(mpCacheFresh()){ if(cb) cb(); return; }
+  if(MP.fetching){ if(cb) (MP.pend=MP.pend||[]).push(cb); return; }
+  MP.fetching=true;
+  function done(){ MP.fetching=false; var q=MP.pend||[]; MP.pend=[]; if(cb) q.push(cb); q.forEach(function(f){ try{ f(); }catch(e){} }); }
+  if(location.protocol==='file:'){
+    var s=document.createElement('script'); s.src='mp_tags.js?t='+now();
+    s.onload=s.onerror=function(){ if(s.parentNode) s.parentNode.removeChild(s); done(); };
+    document.head.appendChild(s); return;
+  }
+  if(typeof fetch!=='function'){ done(); return; }
+  fetch('/api/win95/emision',{credentials:'same-origin'}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
+    if(d&&d.ok&&d.tags&&d.tags.length){ MP.tagsCache=d.tags; MP.tagsAt=now(); }
+    done();
+  }).catch(function(){ done(); });
+}
 function mpStatus(s){ qs('#mpSt').textContent=s; }
 function mpLive(on){ MP.live=on; var l=qs('#mpLive'); l.classList.toggle('on',on); l.lastChild.textContent=on?'EN DIRECTO':'SIN SEÑAL'; }
-function mpCard(msg){ var fr=qs('#mpFrame'); fr.style.display='none'; qs('#mpCard').style.display='flex'; qs('#mpMsg').textContent=msg; }
+function mpCard(msg){
+  var fr=qs('#mpFrame'), v=mpVid();
+  fr.style.display='none'; if(v) v.style.display='none';
+  qs('#mpCard').style.display='flex'; if(msg) qs('#mpMsg').textContent=msg;
+}
+function mpShowVideo(){ qs('#mpCard').style.display='none'; qs('#mpFrame').style.display='none'; var v=mpVid(); v.style.display='block'; MP.mode='video'; }
+function mpShowFrame(){ qs('#mpCard').style.display='none'; var v=mpVid(); if(v) v.style.display='none'; qs('#mpFrame').style.display='block'; MP.mode='iframe'; }
+function mpTitle(extra){
+  qs('#mpT').textContent=mpName()+(extra?(' - '+extra):'');
+  qs('#mpTag').textContent=mpTag();
+}
+function mpToggleIcon(){
+  var on=MP.playing&&!MP.paused, btn=qs('#mpPlay');
+  btn.innerHTML='<svg viewBox="0 0 9 9"><path d="'+(on?TP.bPause:TP.bPlay)+'"/></svg>';
+  btn.title=on?'Pausa':'Reproducir';
+  btn.setAttribute('aria-label',btn.title);
+}
+function mpApplyVol(){
+  var v=mpVid(); if(!v) return;
+  v.muted=!!SYSVOL.muted; v.volume=SYSVOL.muted?0:Math.max(0,Math.min(1,SYSVOL.v));
+}
+function mpClearMedia(){
+  var v=mpVid(), fr=qs('#mpFrame');
+  if(v){ try{ v.pause(); }catch(e){} v.removeAttribute('src'); try{ v.load(); }catch(e){} v.style.display='none'; }
+  if(fr) fr.removeAttribute('src');
+  MP.mode='none'; MP.list=[]; MP.piece=0;
+}
 function mpTune(msg){
-  var tags=mpTagList(), n=tags.length, fr=qs('#mpFrame');
-  MP.cur=tags[MP.idx%n]; var url=mpUrl(MP.cur);
-  qs('#mpT').textContent='Reproductor multimedia - admira.tv '+mpTag(); qs('#mpTag').textContent=mpTag();
+  var tags=mpTagList(), n=tags.length, fr=qs('#mpFrame'), v=mpVid();
+  if(!n){ mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin hashtag'); mpLive(false); return; }
+  MP.cur=tags[MP.idx%n];
+  MP.list=mpPiezas(MP.cur);
+  if(MP.piece>=MP.list.length) MP.piece=0;
+  var piece=MP.list[MP.piece], url=piece?mpSafeUrl(piece.url):'', title=(piece&&piece.titulo)?piece.titulo:(mpTag());
+  mpTitle('admira.tv '+mpTag()); qs('#mpTag').textContent=mpTag();
   clearTimeout(MP.timer2); mpLive(false);
-  if(!url){ fr.removeAttribute('src'); mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin conectar: falta la pantalla de admira.tv'); return; }
-  mpCard(msg||'Sintonizando el canal…'); fr.setAttribute('src',url); mpStatus('Conectando con admira.tv… '+mpTag());
+  if(url){
+    MP.mode='video'; MP.t0=now();
+    mpCard(msg||('Sintonizando '+mpTag()+'…'));
+    mpStatus('Cargando '+title+' · '+mpTag()+' · desde admira.studio');
+    fr.removeAttribute('src'); v.style.display='none';
+    v.autoplay=true; v.playsInline=true; mpApplyVol();
+    v.src=url; v.play().catch(function(){ try{ v.muted=true; v.play().catch(function(){}); }catch(e){} });
+    return;
+  }
+  var canal=mpUrl(MP.cur);
+  if(!canal){ fr.removeAttribute('src'); mpClearMedia(); mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin conectar: falta la pantalla de admira.tv'); return; }
+  MP.mode='iframe'; MP.t0=now();
+  if(v){ try{ v.pause(); }catch(e){} v.removeAttribute('src'); v.style.display='none'; }
+  mpCard(msg||'Sintonizando el canal…'); fr.setAttribute('src',canal); mpStatus('Conectando con admira.tv… '+mpTag());
   MP.timer2=setTimeout(function(){
-    if(!MP.playing) return; qs('#mpCard').style.display='none'; fr.style.display='block';
+    if(!MP.playing||MP.paused) return; mpShowFrame();
     mpStatus('Canal '+CONFIG.mediaPlayer.screen+' · '+mpTag()+(n>1?' ('+((MP.idx%n)+1)+' de '+n+')':'')+' · desde admira.studio');
   },2500);
 }
 function mpPlay(){
-  MP.playing=true; MP.t0=now(); mpTune();
+  var v=mpVid();
+  MP.playing=true; MP.paused=false;
+  if(MP.mode==='video'&&v&&v.getAttribute('src')){
+    mpShowVideo(); mpApplyVol(); v.play().catch(function(){}); mpLive(true); mpToggleIcon();
+    var piece=MP.list[MP.piece];
+    mpStatus((piece&&piece.titulo?piece.titulo+' · ':'')+mpTag()+' · desde admira.studio');
+    return;
+  }
+  if(MP.mode==='iframe'&&qs('#mpFrame').getAttribute('src')){
+    mpShowFrame(); mpToggleIcon();
+    mpStatus('Canal '+CONFIG.mediaPlayer.screen+' · '+mpTag()+' · desde admira.studio');
+    return;
+  }
+  MP.t0=now();
+  mpLoadTags(function(){ if(!MP.playing||MP.paused) return; mpTune(); });
   clearInterval(MP.rot);
   MP.rot=setInterval(function(){
-    if(!MP.playing||mpTagList().length<2) return;
-    MP.idx++; MP.t0=now(); var l=mpTagList(); mpTune('Cambiando a #'+l[MP.idx%l.length]+'…');
+    if(!MP.playing||MP.paused||MP.mode==='video') return;
+    var l=mpTagList(); if(l.length<2) return;
+    MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+l[MP.idx%l.length]+'…');
   },(CONFIG.mediaPlayer.rotateSeconds||60)*1000);
+  mpToggleIcon();
 }
-function mpStop(msg){ MP.playing=false; clearTimeout(MP.timer); clearTimeout(MP.timer2); clearInterval(MP.rot); qs('#mpFrame').removeAttribute('src'); mpCard(msg||'Detenido'); mpLive(false); mpStatus(msg||'Detenido'); }
-function mpSync(){ if(!MP.playing||!MP.cur) return; var u=mpUrl(MP.cur), fr=qs('#mpFrame'); if(u&&fr.getAttribute('src')!==u) fr.setAttribute('src',u); }
+function mpPause(){
+  if(!MP.playing&&MP.mode==='none') return;
+  MP.paused=true; MP.playing=false;
+  var v=mpVid();
+  if(MP.mode==='video'&&v){ try{ v.pause(); }catch(e){} }
+  else { qs('#mpFrame').style.display='none'; qs('#mpCard').style.display='flex'; qs('#mpMsg').textContent='En pausa'; }
+  mpStatus('En pausa'); mpToggleIcon();
+}
+function mpTogglePlay(){ if(MP.playing&&!MP.paused) mpPause(); else mpPlay(); }
+function mpStop(msg){
+  MP.playing=false; MP.paused=false; clearTimeout(MP.timer); clearTimeout(MP.timer2); clearInterval(MP.rot);
+  var v=mpVid();
+  if(MP.mode==='video'&&v&&v.getAttribute('src')){ try{ v.pause(); v.currentTime=0; }catch(e){} }
+  else { qs('#mpFrame').removeAttribute('src'); }
+  mpCard(msg||'Detenido'); mpLive(false); mpStatus(msg||'Detenido'); MP.t0=now(); mpToggleIcon();
+}
+function mpEject(){
+  MP.playing=false; MP.paused=false; clearTimeout(MP.timer); clearTimeout(MP.timer2); clearInterval(MP.rot);
+  mpClearMedia(); mpCard('Disco expulsado'); mpLive(false); mpStatus('Sin disco'); mpTitle(); mpToggleIcon();
+}
+function mpNextPiece(){
+  if(!MP.playing||MP.paused) return;
+  var tags=mpTagList();
+  if(MP.list&&MP.piece<MP.list.length-1){ MP.piece++; MP.t0=now(); mpTune(); return; }
+  if(tags.length>1){ MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+tags[MP.idx%tags.length]+'…'); return; }
+  MP.piece=0; MP.t0=now(); mpTune();
+}
+function mpSync(){
+  mpApplyVol();
+  if(!MP.playing||MP.paused||MP.mode!=='iframe'||!MP.cur) return;
+  var u=mpUrl(MP.cur), fr=qs('#mpFrame'); if(u&&fr.getAttribute('src')!==u) fr.setAttribute('src',u);
+}
+function mpRestoreSize(){
+  var w=qs('#mpw');
+  w.classList.remove('max');
+  if(MP.rect){ w.style.left=MP.rect.left; w.style.top=MP.rect.top; w.style.width=MP.rect.width; w.style.height=MP.rect.height; }
+  MP.max=false; MP.rect=null;
+  var b=qs('#mpMax'); if(b) b.textContent='□';
+}
+function mpMaximize(on){
+  var w=qs('#mpw');
+  if(on){
+    if(!MP.max) MP.rect={left:w.style.left,top:w.style.top,width:w.style.width||'356px',height:w.style.height||'372px'};
+    w.classList.add('max'); w.style.left='0px'; w.style.top='0px'; w.style.width='640px'; w.style.height='452px';
+    MP.max=true; var b=qs('#mpMax'); if(b) b.textContent='❐';
+  } else mpRestoreSize();
+}
+function mpIsFs(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+function mpRequestFS(){
+  var el=qs('#mpw'), fn=el&&(el.requestFullscreen||el.webkitRequestFullscreen);
+  mpMaximize(true);
+  if(!fn) return;
+  try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){}
+}
+function mpExitFS(){
+  try{
+    if(mpIsFs()){
+      var fn=document.exitFullscreen||document.webkitExitFullscreen;
+      if(fn) fn.call(document);
+    }
+  }catch(e){}
+  mpMaximize(false);
+}
+function mpToggleFS(){ if(mpIsFs()||MP.max) mpExitFS(); else mpRequestFS(); }
 function openMedia(){
   var w=qs('#mpw'); w.style.display='block'; MP.open=true;
-  addTask('mpw','Reproductor multimedia','media',[w]); focusWin(w);
-  if(PL.state==='play') pause();   // la música de AdmirAmp deja paso al canal
-  if(!MP.playing) mpPlay();
+  addTask('mpw',mpName(),'media',[w]); focusWin(w);
+  mpTitle('admira.tv '+mpTag());
+  if(PL.state==='play') pause();
+  if(!MP.playing||MP.paused) mpPlay();
 }
-function closeMedia(){ mpStop(); MP.open=false; qs('#mpw').style.display='none'; removeTask('mpw'); }
-function mpThumb(){ if(!MP.open) return; var R=CONFIG.mediaPlayer.rotateSeconds||60, k=MP.playing?((now()-MP.t0)/1000%R)/R:0; qs('#mpThumb').style.left=Math.round(k*(qs('.mptrk').offsetWidth-11))+'px'; }
+function closeMedia(){ mpExitFS(); mpStop(); MP.open=false; qs('#mpw').style.display='none'; removeTask('mpw'); }
+function mpThumb(){
+  if(!MP.open) return;
+  var trk=qs('#mpw .mptrk'), thumb=qs('#mpThumb'), k=0, v=mpVid();
+  if(MP.mode==='video'&&v&&v.duration&&isFinite(v.duration)&&v.duration>0) k=Math.max(0,Math.min(1,v.currentTime/v.duration));
+  else if(MP.playing&&!MP.paused){ var R=CONFIG.mediaPlayer.rotateSeconds||60; k=((now()-MP.t0)/1000%R)/R; }
+  if(!MP.seek) thumb.style.left=Math.round(k*Math.max(0,(trk.offsetWidth-11)))+'px';
+}
+function mpSeekRatio(e){
+  var trk=qs('#mpw .mptrk'), r=trk.getBoundingClientRect(), w=Math.max(1,r.width-11);
+  return Math.max(0,Math.min(1,(e.clientX-r.left-5)/w));
+}
+function mpSeekTo(k){
+  var v=mpVid(), thumb=qs('#mpThumb'), trk=qs('#mpw .mptrk');
+  thumb.style.left=Math.round(k*Math.max(0,(trk.offsetWidth-11)))+'px';
+  if(MP.mode==='video'&&v&&v.duration&&isFinite(v.duration)&&v.duration>0){
+    try{ v.currentTime=k*v.duration; }catch(e){}
+    var t=Math.round(v.currentTime), d=Math.round(v.duration);
+    mpStatus((MP.paused?'En pausa · ':'')+t+' / '+d+' s · '+mpTag());
+  }
+}
 function wireMedia(){
-  qs('#mpT').textContent='Reproductor multimedia - admira.tv '+mpTag(); qs('#mpTag').textContent=mpTag();
-  var g={mpPlay:TP.bPlay,mpPause:TP.bPause,mpStop:TP.bStop,mpEject:TP.bEject};
+  qs('#mpT').textContent=mpName(); qs('#mpTag').textContent=mpTag();
+  var g={mpPlay:TP.bPlay,mpStop:TP.bStop,mpEject:TP.bEject};
   Object.keys(g).forEach(function(id){ qs('#'+id).innerHTML='<svg viewBox="0 0 9 9"><path d="'+g[id]+'"/></svg>'; });
-  qs('#mpPlay').addEventListener('click',function(){ if(!MP.playing) mpPlay(); });
-  qs('#mpPause').addEventListener('click',function(){ if(MP.playing) mpStop('En pausa'); });
-  qs('#mpStop').addEventListener('click',function(){ mpStop('Detenido'); });
-  qs('#mpEject').addEventListener('click',function(){ sfxDing(); msgBox('Reproductor multimedia','No hay ninguna cinta que expulsar.\nLos contenidos llegan desde admira.studio\ncon el hashtag '+mpTag()+'.','info'); });
+  qs('#mpPlay').title='Reproducir'; qs('#mpStop').title='Detener'; qs('#mpEject').title='Expulsar';
+  qs('#mpPlay').addEventListener('click',function(e){ e.stopPropagation(); mpTogglePlay(); });
+  qs('#mpStop').addEventListener('click',function(e){ e.stopPropagation(); mpStop('Detenido'); });
+  qs('#mpEject').addEventListener('click',function(e){ e.stopPropagation(); sfxDing(); mpEject(); });
   qs('[data-close="mpw"]').addEventListener('click',closeMedia);
-  qs('[data-min="mpw"]').addEventListener('click',function(){ minimize('mpw'); });
-  // el canal de admira.tv avisa a la página que lo contiene (postMessage) cuando está emitiendo
+  qs('[data-min="mpw"]').addEventListener('click',function(){ if(mpIsFs()) mpExitFS(); minimize('mpw'); });
+  qs('#mpMax').addEventListener('click',function(e){ e.stopPropagation(); mpToggleFS(); });
+  qs('#mpw .tb').addEventListener('dblclick',function(e){ if(e.target.closest('.x')) return; e.preventDefault(); mpToggleFS(); });
+  qs('#mpw .mpv').addEventListener('dblclick',function(e){ e.preventDefault(); e.stopPropagation(); mpToggleFS(); });
+  var trk=qs('#mpw .mptrk');
+  trk.addEventListener('pointerdown',function(e){
+    e.stopPropagation(); MP.seek=true;
+    try{ trk.setPointerCapture(e.pointerId); }catch(err){}
+    mpSeekTo(mpSeekRatio(e));
+  });
+  trk.addEventListener('pointermove',function(e){ if(!MP.seek) return; mpSeekTo(mpSeekRatio(e)); });
+  function endSeek(e){ if(!MP.seek) return; MP.seek=false; try{ trk.releasePointerCapture(e.pointerId); }catch(err){} }
+  trk.addEventListener('pointerup',endSeek); trk.addEventListener('pointercancel',endSeek);
+  var v=mpVid();
+  v.addEventListener('playing',function(){
+    if(!MP.open) return; MP.playing=true; MP.paused=false; mpShowVideo(); mpLive(true); mpToggleIcon();
+    var piece=MP.list[MP.piece];
+    mpTitle((piece&&piece.titulo?piece.titulo+' · ':'')+'admira.tv '+mpTag());
+    mpStatus((piece&&piece.titulo?piece.titulo+' · ':'')+mpTag()+' · desde admira.studio');
+  });
+  v.addEventListener('pause',function(){
+    if(!MP.open||MP.seek) return;
+    if(!MP.playing&&MP.paused) mpStatus('En pausa');
+  });
+  v.addEventListener('ended',function(){ if(MP.playing&&!MP.paused) mpNextPiece(); });
+  v.addEventListener('error',function(){
+    if(!MP.open) return;
+    mpLive(false); mpCard('No se pudo cargar el vídeo'); mpStatus('Error de reproducción · '+mpTag());
+    MP.mode='none';
+  });
   window.addEventListener('message',function(e){
     if(!e.data||e.data.source!=='admira-tv-canal') return;
     if(!/^https:\/\/(www\.)?admira\.tv$/.test(e.origin)) return;
-    if(MP.playing&&!MP.live){ mpLive(true); mpStatus('En directo desde admira.tv · '+mpTag()+' (admira.studio)'); }
+    if(MP.playing&&!MP.live&&MP.mode==='iframe'){ mpLive(true); mpStatus('En directo desde admira.tv · '+mpTag()+' (admira.studio)'); }
+  });
+  document.addEventListener('fullscreenchange',function(){ if(!mpIsFs()&&MP.max) mpMaximize(false); });
+  document.addEventListener('webkitfullscreenchange',function(){ if(!mpIsFs()&&MP.max) mpMaximize(false); });
+  window.addEventListener('keydown',function(e){
+    if(e.key!=='Escape') return;
+    if(mpIsFs()){ mpExitFS(); e.preventDefault(); return; }
+    if(MP.max&&MP.open){ mpMaximize(false); e.preventDefault(); return; }
+    if(SS.on){ ssStop(); e.preventDefault(); }
   });
   setInterval(mpThumb,250);
-  mpLoadTags(); setInterval(mpLoadTags,60000);
+  mpLoadTags(); setInterval(function(){ MP.tagsAt=0; mpLoadTags(); },60000);
+  mpToggleIcon();
 }
 
 /* ---------- Bandeja de entrada + salamandra USB ---------- */
 var MAIL_BASE=[
   {from:'Jensen',subj:'Bienvenido/a a «Vuelta al 95»',when:'09:12',body:'Hola:\n\nAsí eran las pantallas en 1995… y en este mismo PC puedes ver lo que hacen hoy.\nPregunta al equipo por AdmiraNeXT.\n\n— Jensen, consejero AdmiraNeXT'},
-  {from:'admira.tv',subj:'Tu pieza #win95 ya está en antena',when:'08:47',body:'La playlist #win95 tiene contenido nuevo.\nÁbrelo en el Reproductor multimedia del escritorio.\n\n— Canal admira.tv'},
+  {from:'admira.tv',subj:'Tu pieza #win95 ya está en antena',when:'08:47',body:'La playlist #win95 tiene contenido nuevo.\nÁbrelo en el Windows Media Player del escritorio.\n\n— Canal admira.tv'},
   {from:'Morfeo',subj:'¿Has visto la salamandra?',when:'Ayer',body:'Cada vez que llega un correo, la salamandra USB mueve los ojos.\nTecnología punta de 1999. No la mojes.\n\n— Morfeo'},
   {from:'Mi primo del 56K',subj:'FW: FW: FW: RE: chiste.txt',when:'Ayer',body:'>>>> No te lo vas a creer… (el adjunto pesa 2 MB, déjalo bajando esta noche)'}
 ];
 var MAIL_NEW=[
   {from:'Jensen',subj:'¡Tiene correo nuevo!',body:'¿Has visto cómo se mueve la salamandra?\nEso es una notificación… de 1999. Hoy las pantallas de tu tienda avisan solas.\n\n— Jensen'},
-  {from:'admira.studio',subj:'Nuevo contenido #win95',body:'Acaba de publicarse una pieza con #win95.\nSaldrá en el Reproductor multimedia de este PC.'},
+  {from:'admira.studio',subj:'Nuevo contenido #win95',body:'Acaba de publicarse una pieza con #win95.\nSaldrá en el Windows Media Player de este PC.'},
   {from:'Morfeo',subj:'Re: la salamandra',body:'Si se le mueven los ojos, es que te ha llegado correo. Así de fácil era el futuro.\n\n— Morfeo'},
   {from:'AdmiraNeXT',subj:'Invitación: demo en tu tienda',body:'¿Quieres ver AdmiraNeXT en tus pantallas?\nPídeselo al equipo que tienes al lado.'}
 ];
@@ -2036,18 +2401,18 @@ function closeStart(){ qs('#smenu').classList.remove('open'); qs('#sub').style.d
 function buildStart(){
   qs('#start').addEventListener('click',function(){ var m=qs('#smenu'); if(m.classList.contains('open')) closeStart(); else { m.classList.add('open'); qs('#start').classList.add('on'); } });
   var sub=qs('#sub');
-  [['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['media','Reproductor multimedia'],['inbox','Bandeja de entrada']].forEach(function(p){
+  [['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['media',CONFIG.names.media],['inbox','Bandeja de entrada']].forEach(function(p){
     var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app',p[0]); it.innerHTML='<span data-ico="'+p[0]+'">'+ICONS[p[0]]+'</span><span></span>'; it.lastChild.textContent=p[1];
     it.addEventListener('click',function(){ closeStart(); openApp(p[0]); }); sub.appendChild(it);
   });
   qs('#mi-programs').addEventListener('click',function(){ var m=qs('#smenu'), it=qs('#mi-programs'); sub.style.display='block'; sub.style.left=(m.offsetLeft+m.offsetWidth-3)+'px'; sub.style.top=(m.offsetTop+it.offsetTop-3)+'px'; it.classList.add('hl'); });
   var simple={
     'mi-docs':function(){ openApp('readme'); },
-    'mi-settings':function(){ msgBox('Configuración','Pantalla: 640 × 480 · 256 colores\nProtector de pantalla: «Admira volando» (espera: '+CONFIG.screensaverSeconds+' s)\n(Lo más moderno del mercado.)','info'); },
+    'mi-settings':function(){ msgBox('Configuración','Pantalla: 640 × 480 · 256 colores\nProtector de pantalla: «Admira volando» (se lanza al pulsar la hora de la bandeja)\n(Lo más moderno del mercado.)','info'); },
     'mi-find':function(){ msgBox('Buscar','Buscando «el futuro»…\nEncontrado en C:\\ADMIRA\\NEXT\\','info'); },
     'mi-help':function(){ msgBox('Ayuda de Admira 95','¿Dudas de estrategia? Pregunta a Jensen.\n¿Todo lo demás? Pregunta a Morfeo.','info'); },
     'mi-run':function(){ msgBox('Ejecutar','C:\\ADMIRA\\NEXT.EXE\n\nNo se puede ejecutar: aún estamos en 1997.','warn'); },
-    'mi-shutdown':function(){ if(MODE==='interactive'){ var tk=RUN.token; shutdownSeq(tk).then(function(){ if(RUN.token===tk) resetDesktop(); }).catch(function(){}); } }
+    'mi-shutdown':function(){ if(MODE==='interactive') openShutdownDlg(); }
   };
   Object.keys(simple).forEach(function(id){ qs('#'+id).addEventListener('click',function(){ closeStart(); simple[id](); }); });
   stage.addEventListener('pointerdown',function(e){ if(!e.target.closest('#smenu,#sub,#start')) closeStart(); },true);
@@ -2157,12 +2522,12 @@ async function attractLoop(tk,withBoot){
       await wait(1900,tk);
       var ob=qsa('#icqOpts .btn'); await ghostClick(ob[picks[k]]||ob[0],tk);
     }
-    // 5 · AdmiraScape (lo abre el enlace de Jensen): módem, web de 1997 y salto a 2026
+    // 5 · Netscape Navigator (lo abre el enlace de Jensen): módem, web de 1997 y salto a 2026
     await waitUntil(function(){ return BR.loaded&&BR.page==='home'; },tk,15000); await wait(3500,tk);
     await ghostClick(qs('#brPage a[data-go="futuro"]'),tk);
     await waitUntil(function(){ return BR.loaded&&BR.page==='futuro'; },tk,10000); await wait(3500,tk);
     await ghostMove(qs('#brView'),tk); await scrollView(qs('#brView'),tk); await wait(4000,tk);
-    // 5b · Reproductor multimedia: el canal de admira.tv con lo que llega de admira.studio (#win95)
+    // 5b · Windows Media Player: el canal de admira.tv con lo que llega de admira.studio (#win95)
     if(CONFIG.mediaPlayer.channelUrl&&mpHasContent()){
       await ghostClick(qs('#start'),tk); await wait(500,tk);
       await ghostClick(qs('#mi-programs'),tk); await wait(500,tk);
@@ -2180,7 +2545,7 @@ async function attractLoop(tk,withBoot){
 function resetDesktop(){
   closeStart(); closeAmp(); closeNote(); closeNap(); closeIcq(); closeBrowser(); closeMedia(); closeMail(); mailReset(); closeDialogs(); resetIcons(); selectIcon(null);
   qs('#mail').style.left='70px'; qs('#mail').style.top='46px';
-  qs('#mpw').style.left='140px'; qs('#mpw').style.top='28px';
+  winRestoreAll(); qs('#mpw').style.left='140px'; qs('#mpw').style.top='28px'; qs('#mpw').style.width='356px'; qs('#mpw').style.height='372px';
   qs('#brw').style.left='40px'; qs('#brw').style.top='10px'; qs('#dun').style.left='180px'; qs('#dun').style.top='150px';
   dockIcq(); qs('#icqc').style.left='140px'; qs('#icqc').style.top='96px';
   qs('#nap').style.left='88px'; qs('#nap').style.top='24px';
@@ -2257,12 +2622,17 @@ function init(){
 
   // ventanas
   qsa('#desk > .win, #desk > .skin').forEach(function(w){ w.addEventListener('pointerdown',function(){ focusWin(w); }); var h=qs('.tb,.atb',w); if(h) makeDraggable(h,w); });
+  wireWinChrome(); wireShutdownDlg();
+  window.addEventListener('pagehide',function(){ if(MODE==='interactive') saveIconLayout(); });
+  window.addEventListener('beforeunload',function(){ if(MODE==='interactive') saveIconLayout(); });
   qs('[data-close="note"]').addEventListener('click',closeNote);
   qs('[data-min="note"]').addEventListener('click',function(){ minimize('note'); });
   qs('#ampClose').addEventListener('click',closeAmp);
   qs('#ampMin').addEventListener('click',function(){ minimize('amp'); });
   qs('[data-close="eqw"]').addEventListener('click',function(){ toggleSub('#eqw','#tEQ'); });
   qs('[data-close="plw"]').addEventListener('click',function(){ toggleSub('#plw','#tPL'); });
+  qs('[data-min="eqw"]').addEventListener('click',function(){ toggleSub('#eqw','#tEQ'); });
+  qs('[data-min="plw"]').addEventListener('click',function(){ toggleSub('#plw','#tPL'); });
 
   // reproductor
   lcdCtx=qs('#lcd').getContext('2d'); marqCtx=qs('#marq').getContext('2d'); infoCtx=qs('#info').getContext('2d'); eqgCtx=qs('#eqg').getContext('2d'); plCtx=qs('#plinfo').getContext('2d');
@@ -2292,9 +2662,16 @@ function init(){
   renderPlaylist(); drawEqGraph();
   wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireNet(); icqgInit();
 
-  // reloj
+  // reloj: pulsar la hora lanza el protector (ya no arranca solo)
   function clock(){ var d=new Date(); qs('#clock').textContent=pad2(d.getHours())+':'+pad2(d.getMinutes()); }
   clock(); setInterval(clock,10000);
+  qs('#clock').title='Protector de pantalla';
+  qs('#clock').addEventListener('click',function(e){
+    e.stopPropagation();
+    if(SS.on){ ssStop(); return; }
+    if(MODE!=='interactive') takeOver();
+    ssStart();
+  });
 
   // bucles
   var lastT=0;
@@ -2305,7 +2682,6 @@ function init(){
     if(MODE!=='interactive') return;
     var idle=now()-lastInput;
     if(idle>CONFIG.idleSeconds*1000) backToDemo();
-    else if(!SS.on&&idle>CONFIG.screensaverSeconds*1000) ssStart();
   },1000);
 
   ['pointerdown','pointermove','keydown','wheel','touchstart'].forEach(function(t){ window.addEventListener(t,onInput,{capture:true,passive:true}); });

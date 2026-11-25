@@ -45,3 +45,29 @@ de `.ico` de terceros.
 
 Los iconos, logotipos y marcas de Microsoft, Netscape, Napster, Winamp
 y demás siguen siendo propiedad de sus dueños.
+
+
+## Icono de Admira (nube blanca sobre verde)
+
+- `icons/admira-nube.png` es el icono oficial de Admira (nube de
+  contorno blanco sobre verde #679243), y las variantes
+  `admira-nube-{10,16,22,32,64}.png` son reescalados nítidos en dos
+  colores para el botón Inicio, el throbber de Navigator, las pestañas
+  y el protector «Admira volando».
+- Sustituye la «A» naranja en esos sitios. En Navigator se conservan
+  las estrellas fugaces del recuadro del logo.
+- Marca de Admira; uso interno en esta Xperiencia, con sesión.
+
+## Iconos del menú Inicio de Windows 95
+
+Recreaciones propias a 32×32 (`icons/start-programs.png`,
+`start-docs.png`, `start-settings.png`, `start-find.png`,
+`start-help.png`, `start-run.png`, `start-shutdown.png`) a partir de
+capturas públicas del menú Inicio de Windows 95, para esta Xperiencia
+interna detrás de login, sin uso comercial del signo. No se ha
+comprado ni descargado el kit de pago de Creative Market, ni se han
+extraído iconos de un Windows ni de un pack de `.ico` de terceros.
+
+La banda vertical del menú muestra «Windows 95» (tipografía y colores
+del menú original). El botón Inicio lleva el icono-nube de Admira, no
+la bandera de Microsoft.

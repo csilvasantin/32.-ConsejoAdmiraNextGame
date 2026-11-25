@@ -1,0 +1,135 @@
+========================================================================
+ESTILO DE LAS COMUNICACIONES ICQGRAM
+Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Estilo comunicaciones ICQGram.txt».
+Es un fichero de sistema, de solo lectura. Aplica a todos los
+consejeros. Quien lo lea responde «Leído y aplicado» y lo aplica.
+
+------------------------------------------------------------------------
+1. ALCANCE
+------------------------------------------------------------------------
+Esta norma rige cada espejo de una conversación que Carlos escribe
+desde Win95 / ICQGram (Admira95) y que un consejero relanza en un
+chat de Grok Bot.
+
+Consejeros a los que aplica:
+
+  LEYENDAS   Jobs, Wozniak, Disney y Lucas
+  ACTUALES   Musk, Huang, Murati y Lasseter
+
+Un chat directo de Grok Bot (sin pasar por ICQGram) no lleva esta
+cabecera. La cabecera con caras es precisamente lo que distingue un
+espejo de Win95 de un chat directo.
+
+------------------------------------------------------------------------
+2. LA CABECERA CON CARAS  (arriba del texto)
+------------------------------------------------------------------------
+Cada espejo lleva, ADJUNTA ARRIBA DEL TEXTO, una imagen de cabecera.
+No se describe con palabras: se adjunta la imagen.
+
+La imagen tiene, en este orden:
+
+  - Barra de título azul al estilo Windows 95, con el logotipo de
+    cuatro colores (rojo, verde, azul, amarillo) y el texto
+    «WIN95 · ICQGRAM».
+  - Una fila por cada persona que habla: su cara recortada a la
+    izquierda y, a la derecha, la línea
+
+      ▓ NOMBRE · CANAL · HH:MM
+
+Todos los que hablan llevan su cara, Carlos incluido. Si falta la
+cara de Carlos o la de un consejero, el espejo no está bien hecho.
+Eso es lo que falló al relanzar un mensaje sin los iconos de las
+cabezas.
+
+Referencia aprobada por Carlos (25-11-2026):
+
+  /workspace/avatares-espejo/espejo-enc-7725.png
+
+  — barra «WIN95 · ICQGRAM»
+  — cara de Carlos + «▓ CARLOS · ADMIRA.LIVE · 21:12»
+  — cara de Jobs   + «▓ JOBS · GROK BOT · 21:12»
+
+También sirve de ejemplo:
+
+  /workspace/avatares-espejo/ejemplo-carlos-jobs.png
+
+------------------------------------------------------------------------
+3. COMO GENERAR LA CABECERA
+------------------------------------------------------------------------
+Se genera en el ordenador compartido (la box) con este comando
+exacto:
+
+  cd /workspace/avatares-espejo && python3 generar.py
+
+El script recorta las caras de las fotos de las mesas del Consejo
+(ruta fijada en el propio script: /tmp/cng/assets/consejo-vacio/)
+y deja, en /workspace/avatares-espejo/, estos ficheros:
+
+  Avatares a 96 px:
+    carlos.png, jobs.png, wozniak.png, disney.png, lucas.png,
+    musk.png, huang.png, murati.png, lasseter.png
+
+  Avatares a 48 px (son los que usa la cabecera):
+    carlos-48.png, jobs-48.png, wozniak-48.png, disney-48.png,
+    lucas-48.png, musk-48.png, huang-48.png, murati-48.png,
+    lasseter-48.png
+
+  hoja-contacto.png         las nueve caras en una tira
+  ejemplo-carlos-jobs.png   cabecera de ejemplo (Carlos y Jobs)
+
+Para un espejo concreto se parte de ese generador y se cambian las
+filas: quién habla, el canal y la hora real de Madrid. El PNG que
+salga se adjunta ARRIBA del texto del mensaje en el chat de
+Grok Bot.
+
+------------------------------------------------------------------------
+4. EL TEXTO DEL ESPEJO
+------------------------------------------------------------------------
+Primera línea, en un recuadro de código:
+
+  ▓ ⊞ WIN95 · ICQGRAM  ·  encargo #NNNN  ·  título corto
+
+Después, por cada mensaje, en este orden:
+
+  ▓ NOMBRE · CANAL · HH:MM
+  el texto literal de ese mensaje
+
+La línea «▓ NOMBRE · CANAL · HH:MM» va en un recuadro de código
+(code span). El texto va debajo, tal cual se escribió. Las horas
+son las horas reales de Madrid (Europe/Madrid).
+
+Ejemplo (encargo #7725, 25-11-2026):
+
+  ▓ ⊞ WIN95 · ICQGRAM  ·  encargo #7725
+
+  ▓ CARLOS · ADMIRA.LIVE · 21:12
+  por fin podemos hablar desde una interface como si fuera GrokBot !!
+
+  ▓ JOBS · GROK BOT · 21:12
+  ¡Por fin, Carlos! Y además en ICQGram...
+
+------------------------------------------------------------------------
+5. SECRETOS Y LO NO COMPROBADO
+------------------------------------------------------------------------
+Nunca se muestran secretos: ni IPs, ni MACs, ni tokens, ni
+contraseñas, ni ningún secreto, ni en el texto del espejo ni en
+la imagen, ni en informes, chats, commits, PRs o evidencias.
+
+Lo que no se haya comprobado se marca «sin verificar».
+
+------------------------------------------------------------------------
+6. CONFIRMACION
+------------------------------------------------------------------------
+Cada consejero, al leer esta norma, responde exactamente:
+
+  Leído y aplicado
+
+y la aplica en todos los espejos de ICQGram a partir de ahora.
+
+========================================================================
+Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================

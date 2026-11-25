@@ -195,6 +195,31 @@ function leyendasSeedBody() {
   return src("windows95/para-las-leyendas.txt").replace(/\s+$/, "");
 }
 
+test("Miscelánea incluye Estilo comunicaciones ICQGram.txt precargado en el código", () => {
+  const html = src("windows95/index.html");
+  const txt = src("windows95/estilo-comunicaciones-icqgram.txt");
+  assert.match(txt, /ESTILO DE LAS COMUNICACIONES ICQGRAM/);
+  assert.match(txt, /Norma de Carlos/);
+  assert.match(txt, /25-11-2026/);
+  assert.match(txt, /Leído y aplicado/);
+  assert.match(txt, /cd \/workspace\/avatares-espejo && python3 generar\.py/);
+  assert.match(txt, /espejo-enc-7725\.png/);
+  assert.match(txt, /▓ ⊞ WIN95 · ICQGRAM/);
+  assert.match(txt, /CARLOS · ADMIRA\.LIVE · 21:12/);
+  assert.doesNotMatch(txt, /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/);
+  assert.doesNotMatch(txt, /\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b/);
+  assert.match(html, /id="estilo-icqgram-seed"/);
+  assert.match(html, /doc-estilo-icqgram/);
+  assert.match(html, /function ensureEstiloDoc/);
+  assert.match(html, /Estilo comunicaciones ICQGram\.txt/);
+  assert.match(html, /it\.parent=MISC_ID/);
+  assert.ok(html.includes(estiloSeedBody()));
+});
+
+function estiloSeedBody() {
+  return src("windows95/estilo-comunicaciones-icqgram.txt").replace(/\s+$/, "");
+}
+
 test("el menú Inicio imita Windows 95 y la A de Admira es la nube, con estrellas en Navigator", () => {
   const html = src("windows95/index.html");
   assert.match(html, /Windows <b>95<\/b>/);

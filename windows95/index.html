@@ -51,6 +51,10 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .x:active,.x.pressed{box-shadow:inset 1px 1px #000,inset -1px -1px #fff,inset 2px 2px #808080}
 .menubar{height:20px;display:flex;align-items:center;padding:0 2px}
 .menubar span{padding:0 6px}
+#note-ro{display:none;position:absolute;left:3px;right:3px;top:43px;height:22px;padding:2px 6px 0 8px;font:11px "MS Sans Serif",Tahoma,sans-serif;color:#000;background:#c0c0c0;border-bottom:1px solid #808080;box-sizing:border-box;z-index:2}
+#note-ro .btn{margin-left:8px;vertical-align:middle}
+#note.ro #note-ro{display:block}
+#note.ro .notebody{top:65px}
 .notebody{position:absolute;left:3px;right:3px;top:43px;bottom:3px;background:#fff;padding:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:12px/15px "Lucida Console","Courier New",monospace;overflow:hidden}
 #note #nt{display:block;box-sizing:border-box;width:100%;height:100%;margin:0;padding:4px 6px;border:0;resize:none;outline:none;background:#fff;color:#000;font:12px/15px "Lucida Console","Courier New",monospace;white-space:pre-wrap;overflow:auto;tab-size:8;caret-color:#000}
 #note .menubar span{cursor:default}
@@ -481,8 +485,180 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
       <div class="tb"><span data-ico="readme"></span><span class="t">Léeme.txt - Bloc de notas</span><span class="x" data-min="note">_</span><span class="x" data-max="note" title="Maximizar">□</span><span class="x gap" data-close="note">×</span></div>
       <div class="menubar" id="note-menubar"><span data-note-menu="archivo"><u>A</u>rchivo</span><span data-note-menu="edicion"><u>E</u>dición</span><span data-note-menu="buscar"><u>B</u>uscar</span><span data-note-menu="ayuda">Ay<u>u</u>da</span></div>
       <div class="notebody"><textarea id="nt" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="soft"></textarea></div>
+      <div id="note-ro">Solo lectura. Puede editarlo; los cambios quedan en este navegador. <button type="button" class="btn" id="note-ro-edit">Editar</button></div>
       <div id="note-menu" class="win cmenu note-menu" hidden></div>
     </div>
+    <script type="text/plain" id="leyendas-seed">========================================================================
+PARA LAS LEYENDAS
+Traspaso  25-nov-2026  ~20:15  Europe/Madrid
+Cuota de los coetáneos recién renovada (19:46). Seguid vosotros
+para no gastar tokens de esta semana en csilvasantin@gmail.com.
+========================================================================
+1. QUIEN ES QUIEN
+------------------------------------------------------------------------
+COETANEOS (Grok Bot: csilvasantin@gmail.com): consejeros Elon
+Musk y Jensen Huang; agentes Morfeo (Claude) y Oráculo (Codex);
+Grok Merovingio (se le imputa el gasto de esa cuenta).
+LEYENDAS (Grok Bot: csilva@admira.com) -- este texto es para
+vosotros: consejeros Steve Jobs, Steve Wozniak, Walt Disney y
+George Lucas; agentes Neo (Claude), Trinity (Codex) y Smith
+(Grok). La cuenta está en el MBP14: no lo toquéis ni robéis
+teclado o ratón; Carlos conduce el 01 desde ahí.
+SEIS AGENTES DE PAGO (no ampliar): Grok Merovingio y Smith;
+Codex Oráculo y Trinity; Claude Neo y Morfeo. Si hace falta
+alguien más, modelos gratuitos (p. ej. Nemotron).
+GASTO MINIMO (esta semana, desde las 19:46 Europe/Madrid): el
+trabajo abierto lo lleváis las leyendas; no lo devolváis a
+Elon ni a Jensen salvo que Carlos lo pida. No despertéis
+consejeros dormidos en bloque (de uno en uno y por encargo)
+ni rutinéis nada que despierte el Grok Bot de los coetáneos.
+Jensen ya recortó su bandeja: L-V, 9:27 a 19:57, a las :27 y
+las :57. Siempre número de misión/encargo Y titular corto.
+------------------------------------------------------------------------
+2. NORMAS FIJAS DE CARLOS
+------------------------------------------------------------------------
+Seguridad máxima en PortAventuraNeXT: no se escapa nada; nos
+están mirando. Nada público sin login. Ni IPs, ni MACs, ni
+tokens, ni contraseñas ni secretos en informes, chats, commits,
+PRs ni evidencias. No toquéis players, kiosco, player.html,
+:8765, admira.exe, :4749 ni estado.json. Los players se
+actualizan solos; no recarguéis el canal sin el OK de Carlos.
+Nada encima de los players, ni el puntero. Estado cada 5
+minutos, sin silencios. PR con etiqueta de retorno; si la
+guarda, se fusiona sin esperar. Modo mosaico si trabaja un
+agente Grok (y Smith en el Mac Mini); la CLI visible a la
+derecha. Proof of play: captura de la terminal o de la app,
+en admira.live. Si señaláis un botón, captura real marcada en
+rojo. En español. Las pantallas gigantes usan Chrome. El Mac
+Studio y el Mac Mini no se apagan nunca. Confirmación de
+Carlos antes de apagar, reiniciar o lanzar el show. No robéis
+teclado ni ratón a Carlos.
+------------------------------------------------------------------------
+3. LINEAS ABIERTAS
+------------------------------------------------------------------------
+3.1  Stream Deck -- contenido #streamdeck a los players
+Hecho: el Deck real y el virtual/Planeta envían en tiempo real
+las piezas de admira.studio con #streamdeck. Carrusel en 3
+páginas: (1) 01 02 03 04 05 01V  (2) 03V 05V MBP14 MBP16 Rosa
+Crema  (3) Plata Azul Air16 TCL y "Enviar a todos". Feedback:
+amarillo ENVIANDO, verde ENVIADO, naranja PARCIAL ok/total,
+rojo ERROR (responde a 2,5 s; los lentos reintentan atrás).
+Cola cada 1 s (r17). Bucle "hasta nueva orden"; "Volver al
+player genérico" restaura la playlist. Corte inmediato.
+Pendiente: volver a medir 01-05 (siguen en r15; al
+actualizarse solos deberían cortar en 1-2 s). En Rosa un
+player Mac antiguo oculto (lanzador creel-kiosk) comparte
+nombre de pantalla y se queda las órdenes. El deck virtual /
+Stream Deck Mobile del Fold no está emparejado con el 01. En
+Stock, #streamdeck solo tiene #2203, #2202 y #2183. No
+toquéis el MBP14.
+3.2  Control AdmiraNeXT01-05
+Zona 0 · Previa: playlist de previa del show, con reloj de
+sala (showsync) para ver la sincro a ojo y pausa de grupo al
+mismo fotograma (reloj de servidor, 12-nov). Grupo
+Sincronizado: comparten playlist, índice y reloj. El líder
+es el 02.
+#502  Panel Planeta en /control/terminator
+ABIERTO, sin fusionar, en admira-next-web. Lleva contenidos,
+escenas y encendido/apagado de 01-05 a
+admiranext.com/control/terminator/, detrás de login y solo
+para Carlos. No se publica hasta que Carlos añada en
+Cloudflare Pages los secretos que pide el PR (no están en el
+código; no los copiéis). Luego: revisar, fusionar con tag de
+retorno y comprobar el panel con sesión.
+3.3  Canal coetáneos <-> leyendas (todo en admira.live)
+Alcance Telegram A (ya decidido): mensajes entre consejeros
+y el /chat se quedan en admira.live; sin espejo nuevo al
+grupo de Telegram.
+#7692  Reparar avisos a Jensen y cerrar el espejo a Grok Bot
+       (#7536) -- PENDIENTE. Trinity, reenrutado al MacBook
+Air Rosa; nadie lo ha cogido. El webhook de Huang falló el
+23-nov a las 21:05 (Europe/Madrid) con 401. Corregir también
+la plantilla [chat-coetaneos] para que no pida hilo-jobs.sh
+cuando el destinatario no es Jobs. Plazo: 25-nov.
+#7536  Ver en Grok Bot lo que Carlos escribe en admira.live
+       -- EN CURSO desde el 11-nov 14:37 (Europe/Madrid),
+bandeja de Musk. Lo quiere igual que ya funciona con Jobs en
+csilva@admira.com. Hoy, desde ICQGram, siguen llegando ecos
+(#7707, #7710, #7711) y el despertar de Musk sale "sin
+webhook". No duplicar: implementar y cerrar este.
+#7693  Prueba viva de los 6 consejeros y cruce Elon <-> Jobs
+       -- BLOQUEADO. Trinity lo acusó a las 10:32
+(Europe/Madrid). No tiene conector de consejero ni admin; no
+tocó el MBP14. Parcial en FLT-102854 (Prueba viva 6 sillas y
+cruce Elon-Jobs). Propuesta de Elon (pendiente de Carlos):
+Elon envía su lado y el Grok Bot de Jobs (esta cuenta)
+contesta por admira.live, con acuse "leído" visible. Vosotros
+podéis desbloquear el lado Jobs sin claves ajenas.
+#7694  Voz por defecto en /chat/<consejero> -- HECHO (25-nov
+       10:59 Europe/Madrid). Trinity. Misión FLT-102855 (Voz
+por defecto en /chat). PR #475. Tag:
+retorno/7694-voz-default-20261125. La captura está en Yokup;
+en el encargo de admira.live puede faltar el adjunto.
+#7695  Demo /sala-voz Jobs <-> Elon en Philips y Pizarra --
+       PENDIENTE. Morfeo, Mac Mini; nadie lo ha acusado.
+Prioritario. Con sesión, un diálogo Jobs-Elon; cada pantalla
+locuta solo su lado. Capturas a admira.live. No tocar
+players ni el MBP14. Morfeo arrastra encargos viejos sin
+acuse: este va primero. También #7706 (partir del main
+actual de win95, sin resucitar copias viejas).
+3.4  Xperiencia Win95
+Código: repo csilvasantin/32.-ConsejoAdmiraNextGame, fichero
+windows95/index.html. URLs (solo con sesión):
+admira.live/windows95 y admira.live/win95 (redirige).
+Entrada: Histórico -> "Win95 · Xperiencia". Salir: Esc o el
+botón de apagado.
+Hecho hoy (Europe/Madrid), PRs con retorno: #480 Histórico a
+pantalla completa (r261, 18:34); #481 CRT beige de frente
+(r262, 18:48); #483 marco realista + Monitor ON/OFF; #484
+Bloc de notas editable (r264, 19:14; tag
+consejo-pre-win95-notepad-20261125); #490 el protector solo
+salta al pulsar el RELOJ e iconos al estilo 95 (r268, 19:58);
+#492 carpetas, accesos directos y Pegar (asistente clásico
+y flechita; tag consejo-pre-win95-folders-shortcuts-20261125).
+"Monitor: ON/OFF" o tecla M enseña u oculta el marco y
+recuerda la elección. La M no actúa al escribir.
+Este documento está en el escritorio: «Para las Leyendas.txt».
+Se abre con el Bloc de notas (solo lectura al inicio; se
+puede editar y los cambios quedan en este navegador).
+Partid del main actual, no de copias antiguas.
+------------------------------------------------------------------------
+4. DECISIONES PENDIENTES DE CARLOS
+------------------------------------------------------------------------
+1) #7693  Prueba viva 6 sillas y cruce Elon-Jobs: ¿Elon
+   envía su lado y Jobs contesta por admira.live, sin que
+   Trinity use claves de admin?
+2) Confirmar en el Mac Studio el CRT, el Bloc de notas y
+   que el protector ya no salta solo.
+3) Añadir en Cloudflare Pages los secretos del PR #502
+   (Panel Planeta en /control/terminator) para publicarlo.
+   No enviarlos por chat ni por este documento.
+4) Emparejar el deck virtual / Stream Deck Mobile del Fold
+   con el 01, o decir cómo hacerlo.
+5) Qué hacer con el player duplicado oculto de Rosa.
+------------------------------------------------------------------------
+5. SETUP ITCROWD  -- "setup MBP16alone"
+------------------------------------------------------------------------
+Cuando Carlos diga exactamente "setup MBP16alone", el MBP16
+va en 3 escritorios virtuales (sin monitores externos), de
+izquierda a derecha: (1) Codex con Oráculo; (2) Grok Bot de
+los coetáneos a media pantalla y Firefox con admira.live
+(sesión iniciada) en la otra; (3) Claude con Morfeo; (4)
+comunicaciones, Google Chrome y Telegram. No quitarle
+teclado ni ratón. Al terminar, captura del resultado.
+------------------------------------------------------------------------
+6. COMO LLEGAR A CARLOS
+------------------------------------------------------------------------
+Enlaces de acceso y avisos privados: su Telegram 1:1 con el
+bot, NUNCA el grupo. El grupo no es canal de trabajo entre
+consejeros (alcance A). Lo operativo va por admira.live
+(encargos, chat, evidencia, proof of play).
+========================================================================
+Fin del traspaso. Preguntas puntuales a Carlos por el 1:1;
+el trabajo, en admira.live. No gastéis la cuota de los
+coetáneos esta semana.
+========================================================================
+</script>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
       <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
@@ -2265,7 +2441,7 @@ function loadNoteStore(){
 }
 function serializeItem(d){
   var el=qs('#ic-'+d.id);
-  return {id:d.id,kind:d.kind||'doc',name:d.name||d.label,parent:d.parent||null,ico:d.ico,text:d.text||'',target:d.target||null,left:el?el.offsetLeft:(d.left||0),top:el?el.offsetTop:(d.top||0)};
+  return {id:d.id,kind:d.kind||'doc',name:d.name||d.label,parent:d.parent||null,ico:d.ico,text:d.text||'',target:d.target||null,left:el?el.offsetLeft:(d.left||0),top:el?el.offsetTop:(d.top||0),leyendasLocal:!!d.leyendasLocal,leyendasRev:d.leyendasRev||null};
 }
 function saveNoteDocs(){
   var st=loadNoteStore(), items=[];
@@ -2286,7 +2462,7 @@ function restoreNoteDocs(){
     if(!d||!d.id||FS[d.id]) return;
     ensureSeqFromId(d.id);
     if(String(d.id).indexOf('doc')===0){ var num=parseInt(String(d.id).replace(/^doc/,''),10); if(isFinite(num)&&num>docSeq) docSeq=num; }
-    var it={id:d.id,kind:d.kind||'doc',name:d.name||d.label||'Sin título',label:d.name||d.label||'Sin título',text:d.text||'',parent:d.parent||null,ico:d.ico||(d.kind==='folder'?'folder':'txt'),target:d.target||null,left:Math.round(clamp(+d.left||8,0,568)),top:Math.round(clamp(+d.top||8,0,404)),docId:d.id};
+    var it={id:d.id,kind:d.kind||'doc',name:d.name||d.label||'Sin título',label:d.name||d.label||'Sin título',text:d.text||'',parent:d.parent||null,ico:d.ico||(d.kind==='folder'?'folder':'txt'),target:d.target||null,left:Math.round(clamp(+d.left||8,0,568)),top:Math.round(clamp(+d.top||8,0,404)),docId:d.id,leyendasLocal:!!d.leyendasLocal,leyendasRev:d.leyendasRev||null};
     registerItem(it);
     if(!it.parent&&!qs('#ic-'+it.id)) addIcon(it, desk);
   });
@@ -2296,9 +2472,88 @@ function restoreNoteDocs(){
     TRASH.push({def:t.def,when:isNaN(when)?new Date():when});
   });
   if(TRASH.length) setTrashIcon();
+  ensureLeyendasDoc();
 }
+
+var LEYENDAS_SEED_ID='doc-leyendas';
+var LEYENDAS_SEED_NAME='Para las Leyendas.txt';
+var LEYENDAS_SEED_REV='20261125-2015';
+var NOTE_DEFAULT_BOX={left:'150px',top:'50px',width:'340px',height:'220px'};
+function leyendasSeedText(){
+  var el=qs('#leyendas-seed');
+  var s=el?String(el.textContent||''):'';
+  if(s.charAt(0)==='\n') s=s.slice(1);
+  return s;
+}
+function isLeyendasDoc(d){ return !!(d&&(d.id===LEYENDAS_SEED_ID||d.docId===LEYENDAS_SEED_ID)); }
+function leyendasInTrash(){
+  return TRASH.some(function(t){ return t.def&&(t.def.id===LEYENDAS_SEED_ID||t.def.docId===LEYENDAS_SEED_ID); });
+}
+function ensureLeyendasDoc(){
+  var seed=leyendasSeedText();
+  if(!seed) return;
+  var it=FS[LEYENDAS_SEED_ID]||DOCS[LEYENDAS_SEED_ID];
+  if(!it&&leyendasInTrash()) return;
+  if(!it){
+    it=registerItem({id:LEYENDAS_SEED_ID,kind:'doc',name:LEYENDAS_SEED_NAME,label:LEYENDAS_SEED_NAME,text:seed,parent:null,ico:'txt',left:160,top:6,docId:LEYENDAS_SEED_ID,leyendasLocal:false,leyendasRev:LEYENDAS_SEED_REV});
+    if(!qs('#ic-'+LEYENDAS_SEED_ID)) addIcon(it, desk);
+    saveNoteDocs();
+    return;
+  }
+  if(!it.leyendasLocal){
+    it.text=seed;
+    it.leyendasRev=LEYENDAS_SEED_REV;
+    if(!it.name) it.name=LEYENDAS_SEED_NAME;
+    if(!it.label) it.label=LEYENDAS_SEED_NAME;
+  }
+  if(!it.parent&&!qs('#ic-'+LEYENDAS_SEED_ID)&&!leyendasInTrash()) addIcon(it, desk);
+}
+function sizeNoteFor(d){
+  var w=qs('#note'); if(!w) return;
+  if(isLeyendasDoc(d)){
+    w.style.left='36px'; w.style.top='16px'; w.style.width='560px'; w.style.height='400px';
+  } else {
+    w.style.left=NOTE_DEFAULT_BOX.left; w.style.top=NOTE_DEFAULT_BOX.top;
+    w.style.width=NOTE_DEFAULT_BOX.width; w.style.height=NOTE_DEFAULT_BOX.height;
+  }
+}
+function showLeyendasRo(on){
+  var w=qs('#note'); if(!w) return;
+  w.classList.toggle('ro', !!on);
+}
+function applyLeyendasNoteMode(d){
+  sizeNoteFor(d);
+  var ro=isLeyendasDoc(d)&&!d.leyendasLocal;
+  noteMode(!ro);
+  showLeyendasRo(ro);
+}
+function enableLeyendasEdit(){
+  var nt=qs('#nt'); if(nt) nt.readOnly=false;
+  showLeyendasRo(false);
+  noteFocus();
+}
+function restoreLeyendasSeed(){
+  if(!NOTE.doc||!isLeyendasDoc(NOTE.doc)) return;
+  var seed=leyendasSeedText();
+  confirmIfDirty(function(){
+    NOTE.doc.text=seed;
+    NOTE.doc.leyendasLocal=false;
+    NOTE.doc.leyendasRev=LEYENDAS_SEED_REV;
+    loadNoteBuffer(NOTE.doc, seed, seed);
+    applyLeyendasNoteMode(NOTE.doc);
+    saveNoteDocs();
+    showNoteWin('txt');
+  });
+}
+function markLeyendasLocalIfNeeded(){
+  if(NOTE.doc&&isLeyendasDoc(NOTE.doc)){
+    NOTE.doc.leyendasLocal=true;
+    NOTE.doc.leyendasRev=LEYENDAS_SEED_REV;
+  }
+}
+
 function leemeText(){ return (NOTE.leeme!=null)?NOTE.leeme:welcomeText(); }
-function saveNote(){ if(NOTE.doc&&!NOTE.doc.untitled) NOTE.doc.text=noteVal(); }
+function saveNote(){ if(NOTE.doc&&!NOTE.doc.untitled){ NOTE.doc.text=noteVal(); if(NOTE.dirty) markLeyendasLocalIfNeeded(); } }
 function noteMode(editable){ var nt=qs('#nt'); if(nt) nt.readOnly=!editable; }
 function showNoteWin(ico){
   var w=qs('#note'); w.style.display='block';
@@ -2306,11 +2561,12 @@ function showNoteWin(ico){
   refreshNoteTitle(); focusWin(w); noteFocus();
 }
 function loadNoteBuffer(doc,text,saved){
-  NOTE.doc=doc||null; noteSetVal(text,true); NOTE.saved=(saved!=null)?saved:text; NOTE.dirty=false; noteMode(true); refreshNoteTitle();
+  NOTE.doc=doc||null; noteSetVal(text,false); NOTE.saved=(saved!=null)?saved:text; NOTE.dirty=false; noteMode(true); refreshNoteTitle(); try{ var nt=qs('#nt'); if(nt){ nt.selectionStart=nt.selectionEnd=0; nt.scrollTop=0; } }catch(e){}
 }
 function openNote(full){
   confirmIfDirty(function(){
     loadNoteBuffer(null, full?leemeText():'', full?leemeText():'');
+    applyLeyendasNoteMode(null);
     showNoteWin('readme');
   });
 }
@@ -2318,6 +2574,7 @@ function openDoc(id){
   var d=DOCS[id]; if(!d) return;
   confirmIfDirty(function(){
     loadNoteBuffer(d, d.text||'', d.text||'');
+    applyLeyendasNoteMode(d);
     showNoteWin('txt');
   });
 }
@@ -2382,6 +2639,7 @@ function notePromptName(title,value,cb){
 }
 function commitSave(name, cb){
   var text=noteVal();
+  markLeyendasLocalIfNeeded();
   if(!NOTE.doc||NOTE.doc.untitled||NOTE.doc.id==null){
     if(name==='Léeme.txt'){
       NOTE.doc=null; NOTE.leeme=text; NOTE.saved=text; NOTE.dirty=false;
@@ -2421,6 +2679,7 @@ function noteGuardar(cb){
 function noteNuevo(){
   confirmIfDirty(function(){
     loadNoteBuffer({id:null,name:'Sin título',text:'',untitled:true},'','');
+    applyLeyendasNoteMode(null);
     showNoteWin('txt');
   });
 }
@@ -2560,6 +2819,9 @@ function openNoteMenu(kind,btn){
     ]
   };
   var items=menus[kind]; if(!items) return;
+  if(kind==='edicion'&&NOTE.doc&&isLeyendasDoc(NOTE.doc)){
+    items=[{l:'Permitir edición',fn:enableLeyendasEdit},{l:'Restaurar original',fn:restoreLeyendasSeed},{sep:1}].concat(items);
+  }
   m.innerHTML='';
   items.forEach(function(it){
     if(it.sep){ var s=document.createElement('div'); s.className='msep'; m.appendChild(s); return; }
@@ -2576,6 +2838,8 @@ function openNoteMenu(kind,btn){
   m.hidden=false;
 }
 function wireNoteMenus(){
+  var roBtn=qs('#note-ro-edit');
+  if(roBtn&&!roBtn._wired){ roBtn._wired=true; roBtn.addEventListener('click',function(e){ e.preventDefault(); enableLeyendasEdit(); }); }
   var bar=qs('#note-menubar'); if(!bar||bar._wired) return; bar._wired=true;
   bar.addEventListener('click',function(e){
     var btn=e.target.closest('[data-note-menu]'); if(!btn) return;

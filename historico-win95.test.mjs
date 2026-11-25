@@ -123,24 +123,32 @@ test("el protector de pantalla solo arranca al pulsar el reloj de la bandeja", (
   assert.doesNotMatch(idle.slice(0, 80), /ssStart/);
 });
 
-test("los iconos del escritorio son pixel-art Win95 propio, no bitmaps de terceros", () => {
+test("los iconos del escritorio son 32x32 pixelados y Netscape vuelve al PNG anterior", () => {
   const html = src("windows95/index.html");
-  assert.match(html, /iconFiles:\s*\{\s*\}/);
-  assert.doesNotMatch(html, /icono_netscape\.png/);
-  assert.doesNotMatch(html, /icono_napster\.png/);
+  assert.match(html, /icono_netscape\.png/);
+  assert.match(html, /icono_napster\.png/);
+  assert.match(html, /icons\/mypc\.png/);
+  assert.match(html, /icons\/trash\.png/);
+  assert.match(html, /icons\/trash-full\.png/);
+  assert.match(html, /icons\/folder\.png/);
   assert.match(html, /image-rendering:pixelated/);
   assert.match(html, /filter:url\(#win95-sel\)/);
   assert.match(html, /id="win95-sel"/);
-  assert.match(html, /border:1px dotted transparent/);
-  assert.match(html, /border-color:#ffff00/);
-  // paleta VGA en Mi PC
-  assert.match(html, /mypc:SV\('0 0 32 32'/);
-  const mypc = html.slice(html.indexOf("mypc:SV("), html.indexOf("trash:SV("));
-  assert.match(mypc, /#C0C0C0/);
-  assert.match(mypc, /#008080/);
-  assert.match(mypc, /#000000/);
-  assert.match(html, /p2p:SV\('0 0 32 32'/);
-  assert.match(html, /browser:SV\('0 0 32 32'/);
+  const files = [
+    "windows95/icono_netscape.png",
+    "windows95/icono_napster.png",
+    "windows95/icons/mypc.png",
+    "windows95/icons/trash.png",
+    "windows95/icons/folder.png",
+    "windows95/icons/readme.png",
+    "windows95/icons/inbox.png",
+    "windows95/icons/media.png",
+  ];
+  for (const f of files) {
+    const buf = readFileSync(join(raiz, f));
+    assert.ok(buf.length > 50, f);
+    assert.equal(buf.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", f + " no es PNG");
+  }
 });
 
 test("el escritorio permite crear carpetas y accesos directos", () => {

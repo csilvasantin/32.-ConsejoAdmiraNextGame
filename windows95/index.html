@@ -4994,16 +4994,16 @@ function mpRequestFS(){
   var el=w, fn=el.requestFullscreen||el.webkitRequestFullscreen;
   var v=mpVid();
   function fallback(){ if(!mpApiFS()&&!mpVidWebkitFS()) mpCssFS(true); }
-  if(v&&MP.mode==='video'&&typeof v.webkitEnterFullscreen==='function'&&!fn){
-    try{ v.webkitEnterFullscreen(); return; }catch(e){}
+  function after(p){
+    var check=function(){ setTimeout(fallback, 300); };
+    if(p&&typeof p.then==='function') p.then(check).catch(function(){ fallback(); });
+    else check();
   }
   if(fn){
-    try{
-      var p=fn.call(el);
-      if(p&&p.catch) p.catch(function(){ fallback(); });
-      else setTimeout(function(){ if(!mpApiFS()) fallback(); },400);
-      return;
-    }catch(e){ fallback(); return; }
+    try{ after(fn.call(el)); return; }catch(e){ /* sigue con el vídeo o CSS */ }
+  }
+  if(v&&MP.mode==='video'&&typeof v.webkitEnterFullscreen==='function'){
+    try{ v.webkitEnterFullscreen(); after(); return; }catch(e){}
   }
   fallback();
 }

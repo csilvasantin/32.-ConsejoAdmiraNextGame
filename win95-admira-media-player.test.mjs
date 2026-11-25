@@ -38,5 +38,7 @@ test('t1393u: pantalla completa usa Fullscreen API con fallback CSS y sale con E
   assert.match(html, /el\.requestFullscreen\|\|el\.webkitRequestFullscreen/);
   assert.match(html, /function mpCssFS\(on\)\{/);
   assert.match(html, /v\.webkitEnterFullscreen/);
+  assert.match(html, /if\(!mpApiFS\(\)&&!mpVidWebkitFS\(\)\) mpCssFS\(true\)/);
+  assert.match(html, /p\.then\(check\)\.catch\(function\(\)\{ fallback\(\); \}\)/);
   assert.match(html, /window\.addEventListener\('keydown',function\(e\)\{\s*if\(e\.key!=='Escape'\) return;\s*if\(mpIsFs\(\)\)\{ mpExitFS\(\); e\.preventDefault\(\); e\.stopPropagation\(\); \}/);
 });

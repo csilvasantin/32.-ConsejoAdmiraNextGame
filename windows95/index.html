@@ -462,6 +462,18 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #mpLive.on i{background:#e00000;animation:blink 1s steps(1) infinite}
 #mpPos{margin-left:8px;font:bold 10px Arial,sans-serif;color:#000;white-space:nowrap}
 #mpw.fs #mpPos,#mpw:fullscreen #mpPos,#mpw:-webkit-full-screen #mpPos{display:none}
+#mpList{display:none;position:absolute;left:8px;right:8px;top:44px;bottom:72px;z-index:5;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#mpList.on{display:block}
+#mpw.max #mpList{top:44px;bottom:72px}
+#mpw.fs #mpList,#mpw:fullscreen #mpList,#mpw:-webkit-full-screen #mpList{display:none!important}
+#mpList .it{display:flex;align-items:center;min-height:22px;padding:3px 6px;cursor:pointer;font:11px 'MS Sans Serif',Arial,sans-serif;color:#000}
+#mpList .it .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mpList .it .tag{flex:none;margin-left:8px;color:#000080;white-space:nowrap}
+#mpList .it.sel{background:#000080;color:#fff}
+#mpList .it.sel .tag{color:#fff}
+#mpList .it:active{background:#000080;color:#fff}
+#mpList .it:active .tag{color:#fff}
+#mpList .empty{padding:8px 6px;color:#808080;font:11px 'MS Sans Serif',Arial,sans-serif}
 #mpw .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
 
 /* ---------- iconos arrastrables, menú del escritorio y papelera ---------- */
@@ -589,7 +601,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #shut.more .l2,#shut.more .l3{opacity:1}
 #ghost{position:absolute;left:0;top:0;width:13px;height:20px;z-index:9500;pointer-events:none;display:none}
 </style>
-<link rel="stylesheet" href="/assets/win95-crt.css?v=20261125-crt2">
+<link rel="stylesheet" href="/assets/win95-crt.css?v=20261125-crt3">
 <script>(function(){try{var q=new URL(location.href).searchParams.get("crt");var on=q==="0"?false:q==="1"?true:localStorage.getItem("admira-win95-crt")!=="0";document.documentElement.classList.toggle("crt-frame-off",!on);}catch(e){}})();</script>
 </head>
 <body class="attract">
@@ -1007,7 +1019,8 @@ Fin del documento. Está en Miscelánea, solo lectura.
         <div id="mpCard"><div class="bars"><i style="background:#c0c0c0"></i><i style="background:#c0c000"></i><i style="background:#00c0c0"></i><i style="background:#00c000"></i><i style="background:#c000c0"></i><i style="background:#c00000"></i><i style="background:#0000c0"></i></div><div class="low"></div><div class="box">admira.tv · <span id="mpTag">#win95</span><small id="mpMsg">Esperando contenidos de admira.studio…</small></div></div>
       </div>
       <div class="mptrk"><div class="groove"></div><div class="ticks"></div><div class="thumb" id="mpThumb"></div></div>
-      <div class="mpbtns"><button class="btn" id="mpPlay" type="button" title="Reproducir"></button><button class="btn" id="mpStop" type="button" title="Detener"></button><span class="sep"></span><button class="btn" id="mpEject" type="button" title="Expulsar"></button><span id="mpLive"><i></i>SIN SEÑAL</span><span id="mpPos" hidden></span></div>
+      <div class="mpbtns"><button class="btn" id="mpPlay" type="button" title="Reproducir"></button><button class="btn" id="mpStop" type="button" title="Detener"></button><span class="sep"></span><button class="btn" id="mpPrev" type="button" title="Anterior"></button><button class="btn" id="mpNext" type="button" title="Siguiente"></button><span class="sep"></span><button class="btn" id="mpEject" type="button" title="Lista de reproducción"></button><span id="mpLive"><i></i>SIN SEÑAL</span><span id="mpPos" hidden></span></div>
+      <div id="mpList" role="listbox" aria-label="Playlist"></div>
       <div class="sbar1" id="mpSt">Listo</div>
     </div>
     <!-- ICQGram: lista de contactos -->
@@ -4929,7 +4942,7 @@ function mpPlay(){
   MP.rot=setInterval(function(){
     if(!MP.playing||MP.paused||MP.mode==='video') return;
     var list=mpPlaylist();
-    if(list.length>1){ mpNextPiece(); return; }
+    if(list.length>1){ mpNextPiece(true); return; }
     var l=mpTagList(); if(l.length<2) return;
     MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+l[MP.idx%l.length]+'…');
   },(CONFIG.mediaPlayer.rotateSeconds||60)*1000);
@@ -4951,26 +4964,79 @@ function mpStop(msg){
   else { qs('#mpFrame').removeAttribute('src'); }
   mpCard(msg||'Detenido'); mpLive(false); mpStatus(msg||'Detenido'); MP.t0=now(); mpToggleIcon();
 }
-function mpEject(){
-  MP.playing=false; MP.paused=false; clearTimeout(MP.timer); clearTimeout(MP.timer2); clearInterval(MP.rot);
-  mpClearMedia(); mpCard('Disco expulsado'); mpLive(false); mpStatus('Sin disco'); mpTitle(); mpToggleIcon(); mpUpdatePos();
+function mpSkip(dir){
+  var list=mpPlaylist(), label=dir<0?'Anterior':'Siguiente';
+  if(!MP.known){ mpStatus('Cargando playlist…'); return; }
+  if(!list.length){ mpStatus('Playlist vacía · 0/0'); mpUpdatePos(); return; }
+  MP.list=list;
+  MP.piece=(MP.piece+dir+list.length)%list.length;
+  MP.t0=now();
+  MP.playing=true; MP.paused=false;
+  var n=list[MP.piece];
+  mpTune(n&&n.titulo?(label+': '+n.titulo+'…'):(label+' · '+mpTag()+'…'));
+  mpToggleIcon();
+  mpPaintList();
 }
-function mpNextPiece(){
-  if(!MP.playing||MP.paused) return;
+function mpPrevPiece(){ mpSkip(-1); }
+function mpNextPiece(auto){
+  if(auto&&(!MP.playing||MP.paused)) return;
   var list=mpPlaylist();
-  if(list.length){
-    MP.list=list;
-    MP.piece=(MP.piece+1)%list.length;
-    MP.t0=now();
-    var n=list[MP.piece];
-    mpTune(n&&n.titulo?('Siguiente: '+n.titulo+'…'):('Siguiente · '+mpTag()+'…'));
+  if(auto&&!list.length){
+    var tags=mpTagList();
+    if(MP.list&&MP.piece<MP.list.length-1){ MP.piece++; MP.t0=now(); mpTune(); return; }
+    if(tags.length>1){ MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+tags[MP.idx%tags.length]+'…'); return; }
+    MP.piece=0; MP.t0=now(); mpTune();
     return;
   }
-  var tags=mpTagList();
-  if(MP.list&&MP.piece<MP.list.length-1){ MP.piece++; MP.t0=now(); mpTune(); return; }
-  if(tags.length>1){ MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+tags[MP.idx%tags.length]+'…'); return; }
-  MP.piece=0; MP.t0=now(); mpTune();
+  mpSkip(1);
 }
+function mpGoTo(i){
+  var list=mpPlaylist();
+  if(!MP.known){ mpStatus('Cargando playlist…'); return; }
+  if(!list.length){ mpStatus('Playlist vacía · 0/0'); mpUpdatePos(); return; }
+  i=+i; if(i<0||i>=list.length) return;
+  MP.list=list; MP.piece=i; MP.t0=now();
+  MP.playing=true; MP.paused=false;
+  var n=list[i];
+  mpTune(n&&n.titulo?('Reproduciendo: '+n.titulo+'…'):('Reproduciendo · '+mpTag()+'…'));
+  mpToggleIcon();
+  mpPaintList();
+}
+function mpListOpen(){ var el=qs('#mpList'); return !!(el&&el.classList.contains('on')); }
+function mpPaintList(){
+  var el=qs('#mpList'); if(!el||!mpListOpen()) return;
+  var list=mpPlaylist(), i, row, tEl, tagEl, p;
+  el.innerHTML='';
+  if(!MP.known){ el.innerHTML='<div class="empty">Cargando playlist…</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty">No hay contenidos (0/0)</div>'; return; }
+  for(i=0;i<list.length;i++){
+    p=list[i];
+    row=document.createElement('div');
+    row.className='it'+(i===MP.piece?' sel':'');
+    row.setAttribute('role','option');
+    row.setAttribute('data-i',String(i));
+    row.setAttribute('aria-selected',i===MP.piece?'true':'false');
+    tEl=document.createElement('span'); tEl.className='t'; tEl.textContent=p.titulo||('Pieza '+(i+1));
+    tagEl=document.createElement('span'); tagEl.className='tag'; tagEl.textContent=p.tag?('#'+p.tag):'';
+    row.appendChild(tEl); row.appendChild(tagEl);
+    el.appendChild(row);
+  }
+  row=el.querySelector('.it.sel');
+  if(row&&row.scrollIntoView) try{ row.scrollIntoView({block:'nearest'}); }catch(e){ row.scrollIntoView(); }
+}
+function mpShowList(){
+  if(mpIsFs()) return;
+  var el=qs('#mpList'), b=qs('#mpEject'); if(!el) return;
+  el.classList.add('on');
+  if(b){ b.classList.add('pressed'); b.title='Ocultar lista'; b.setAttribute('aria-pressed','true'); }
+  mpPaintList();
+}
+function mpHideList(){
+  var el=qs('#mpList'), b=qs('#mpEject'); if(!el) return;
+  el.classList.remove('on');
+  if(b){ b.classList.remove('pressed'); b.title='Lista de reproducción'; b.setAttribute('aria-pressed','false'); }
+}
+function mpToggleList(){ if(mpListOpen()) mpHideList(); else mpShowList(); }
 function mpSync(){
   mpApplyVol();
   if(!MP.playing||MP.paused||MP.mode!=='iframe'||!MP.cur) return;
@@ -5011,7 +5077,8 @@ function mpCssFS(on){
   }
   mpUpdatePos();
 }
-function mpRequestFS(){
+function mpRequestFS(){ mpHideList();
+
   var w=qs('#mpw'); if(!w||!MP.open) return;
   var el=w, fn=el.requestFullscreen||el.webkitRequestFullscreen;
   var v=mpVid();
@@ -5050,7 +5117,7 @@ function openMedia(){
   if(!MP.playing||MP.paused) mpPlay();
   else mpLoadTags(function(){ mpUpdatePos(); });
 }
-function closeMedia(){ mpExitFS(); mpStop(); MP.open=false; qs('#mpw').style.display='none'; removeTask('mpw'); }
+function closeMedia(){ mpExitFS(); mpHideList(); mpStop(); MP.open=false; qs('#mpw').style.display='none'; removeTask('mpw'); }
 function mpThumb(){
   if(!MP.open) return;
   var trk=qs('#mpw .mptrk'), thumb=qs('#mpThumb'), k=0, v=mpVid();
@@ -5073,42 +5140,28 @@ function mpSeekTo(k){
 }
 function wireMedia(){
   qs('#mpT').textContent=mpName(); qs('#mpTag').textContent=mpTag();
-  var g={mpPlay:TP.bPlay,mpStop:TP.bStop,mpEject:TP.bEject};
+  var g={mpPlay:TP.bPlay,mpStop:TP.bStop,mpPrev:TP.bPrev,mpNext:TP.bNext,mpEject:TP.bEject};
   Object.keys(g).forEach(function(id){ qs('#'+id).innerHTML='<svg viewBox="0 0 9 9"><path d="'+g[id]+'"/></svg>'; });
-  qs('#mpPlay').title='Reproducir'; qs('#mpStop').title='Detener'; qs('#mpEject').title='Expulsar';
+  qs('#mpPlay').title='Reproducir'; qs('#mpStop').title='Detener';
+  qs('#mpPrev').title='Anterior'; qs('#mpNext').title='Siguiente';
+  qs('#mpEject').title='Lista de reproducción'; qs('#mpEject').setAttribute('aria-pressed','false');
   qs('#mpPlay').addEventListener('click',function(e){ e.stopPropagation(); mpTogglePlay(); });
   qs('#mpStop').addEventListener('click',function(e){ e.stopPropagation(); mpStop('Detenido'); });
-  qs('#mpEject').addEventListener('click',function(e){ e.stopPropagation(); sfxDing(); mpEject(); });
+  qs('#mpPrev').addEventListener('click',function(e){ e.stopPropagation(); mpPrevPiece(); });
+  qs('#mpNext').addEventListener('click',function(e){ e.stopPropagation(); mpNextPiece(); });
+  qs('#mpEject').addEventListener('click',function(e){ e.stopPropagation(); mpToggleList(); });
+  qs('#mpList').addEventListener('click',function(e){
+    var it=e.target.closest('.it'); if(!it) return;
+    e.stopPropagation();
+    mpGoTo(it.getAttribute('data-i'));
+  });
   qs('[data-close="mpw"]').addEventListener('click',closeMedia);
   qs('[data-min="mpw"]').addEventListener('click',function(){ if(mpIsFs()) mpExitFS(); minimize('mpw'); });
   qs('#mpMax').addEventListener('click',function(e){ e.stopPropagation(); mpToggleFS(); });
-  /* Clic en la barra (sin arrastrar) maximiza o restaura la ventana. El □ es pantalla completa. */
-  (function(){
-    var tb=qs('#mpw .tb'), st={armed:false,moved:false,x:0,y:0,ignoreUntil:0};
-    tb.addEventListener('pointerdown',function(e){
-      if(e.target.closest('.x,.sbx')) return;
-      st.armed=true; st.moved=false; st.x=e.clientX; st.y=e.clientY;
-    });
-    tb.addEventListener('pointermove',function(e){
-      if(!st.armed) return;
-      if(Math.abs(e.clientX-st.x)+Math.abs(e.clientY-st.y)>6) st.moved=true;
-    });
-    tb.addEventListener('pointerup',function(e){
-      if(!st.armed) return; st.armed=false;
-      if(e.target.closest('.x,.sbx')||st.moved) return;
-      if(now()<st.ignoreUntil) return;
-      st.ignoreUntil=now()+400;
-      var w=qs('#mpw');
-      if(w.classList.contains('max')) winRestore(w); else winMaximize(w);
-      MP.max=w.classList.contains('max');
-      mpUpdatePos();
-    });
-    tb.addEventListener('dblclick',function(e){
-      if(e.target.closest('.x,.sbx')) return;
-      e.preventDefault(); e.stopPropagation();
-    },true);
-  })();
-  qs('#mpw .mpv').addEventListener('dblclick',function(e){ e.preventDefault(); e.stopPropagation(); mpToggleFS(); });
+  /* t1395u: doble clic en la barra maximiza o restaura (lo hace wireWinChrome → winToggleMax).
+     Un clic simple no maximiza, para poder arrastrar. El □ es pantalla completa sin marco. */
+  qs('#mpw .tb').addEventListener('dblclick',function(){ MP.max=qs('#mpw').classList.contains('max'); mpUpdatePos(); });
+  qs('#mpw .mpv').addEventListener('dblclick',function(e){ e.preventDefault(); e.stopPropagation(); if(!mpListOpen()) mpToggleFS(); });
   var trk=qs('#mpw .mptrk');
   trk.addEventListener('pointerdown',function(e){
     e.stopPropagation(); MP.seek=true;
@@ -5131,7 +5184,7 @@ function wireMedia(){
     if(!MP.open||MP.seek) return;
     if(!MP.playing&&MP.paused) mpStatus('En pausa');
   });
-  v.addEventListener('ended',function(){ if(MP.playing&&!MP.paused) mpNextPiece(); });
+  v.addEventListener('ended',function(){ mpNextPiece(true); });
   v.addEventListener('error',function(){
     if(!MP.open) return;
     mpLive(false); mpCard('No se pudo cargar el vídeo'); mpStatus('Error de reproducción · '+mpTag());
@@ -5155,7 +5208,7 @@ function wireMedia(){
     if(mpIsFs()){ mpExitFS(); e.preventDefault(); e.stopPropagation(); }
   },true);
   setInterval(mpThumb,250);
-  mpLoadTags(function(){ mpUpdatePos(); }); setInterval(function(){ MP.tagsAt=0; MP.playlist=null; mpLoadTags(function(){ if(MP.open) mpUpdatePos(); }); },60000);
+  mpLoadTags(function(){ mpUpdatePos(); mpPaintList(); }); setInterval(function(){ MP.tagsAt=0; MP.playlist=null; mpLoadTags(function(){ if(MP.open){ mpUpdatePos(); mpPaintList(); } }); },60000);
   mpToggleIcon(); mpUpdatePos();
 }
 

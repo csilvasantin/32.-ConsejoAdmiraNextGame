@@ -238,11 +238,70 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .throb.on i{animation:meteor .9s linear infinite}
 .throb.on i:nth-of-type(2){animation-delay:.3s}.throb.on i:nth-of-type(3){animation-delay:.6s}
 @keyframes meteor{0%{transform:translate(-14px,-10px) rotate(35deg);opacity:0}25%{opacity:1}100%{transform:translate(40px,22px) rotate(35deg);opacity:0}}
-.brloc{height:24px;display:flex;align-items:center;padding:0 4px}
-.brloc .fin{flex:1;height:20px;margin-left:5px;padding:2px 4px}
-.brdir{height:22px;padding:1px 4px 0;white-space:nowrap}
-.brdir .btn{min-width:0;height:19px;padding:0 6px;margin-right:3px;font-size:10px}
-.brview{position:absolute;left:3px;right:3px;top:131px;bottom:26px;overflow-x:hidden;overflow-y:auto;background:#fff;touch-action:pan-y;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.brloc{height:24px;display:flex;align-items:center;padding:0 4px;gap:3px}
+.brloc .brlbl{flex:none;margin-right:2px}
+.brloc .fin{flex:1;min-width:0;height:20px;padding:2px 4px 2px 20px;border:0;outline:none;font:11px Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;color:#000;position:relative}
+.brloc .omni{position:relative;flex:1;min-width:0;display:flex}
+.brloc .omni .fin{width:100%}
+.brloc .omni .lk{position:absolute;left:5px;top:4px;width:11px;height:12px;pointer-events:none;opacity:.35}
+.brloc .omni.sec .lk{opacity:1}
+.brloc .fin:focus{background:#fff}
+.brloc .fin::selection{background:#000080;color:#fff}
+.brloc .btn{min-width:0;height:20px;padding:0 6px;font-size:10px}
+.brloc #brGoDrop{width:16px;padding:0;margin-left:-3px}
+.brloc .star{flex:none;width:20px;height:20px;padding:0;font-size:13px;line-height:18px;color:#806000}
+.brloc .star.on{color:#e0a000}
+#brw .menubar span{cursor:default}
+#brw .menubar span.open,#brw .menubar span.hl{background:#000080;color:#fff}
+#br-menu{min-width:210px}
+#br-menu .mi2.dis{color:#808080;text-shadow:1px 1px #fff}
+#br-menu .mi2.dis.hl{background:transparent;color:#808080}
+#br-menu .mi2 .fav{position:absolute;left:4px;top:4px;width:12px;height:12px;border-radius:2px;font:bold 9px/12px Arial,sans-serif;color:#fff;text-align:center}
+.brtabs{height:20px;display:flex;align-items:flex-end;padding:2px 3px 0;gap:1px;box-shadow:inset 0 -1px #fff}
+.brtab{position:relative;flex:0 1 150px;min-width:46px;height:17px;display:flex;align-items:center;padding:0 2px 0 6px;background:#b4b4b4;color:#202020;border-radius:3px 3px 0 0;box-shadow:inset 1px 1px #fff,inset -1px 0 #000,inset -2px 0 #808080;cursor:default}
+.brtab.on{height:20px;background:#c0c0c0;color:#000;font-weight:bold;z-index:1}
+.brtab .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brtab .tx{flex:none;width:13px;height:13px;margin-left:2px;font:bold 10px/12px Arial,sans-serif;text-align:center;border-radius:2px}
+.brtab .tx:hover{background:#000080;color:#fff}
+.brtab .fv{flex:none;width:10px;height:10px;margin-right:4px;border-radius:2px;background:#ff6a00}
+.brtab.ld .fv{animation:brspin .8s linear infinite;border-radius:50%;background:conic-gradient(#000080 0 25%,transparent 0)}
+@keyframes brspin{to{transform:rotate(360deg)}}
+.brtab-new{flex:none;width:20px;height:17px;margin-left:2px;font:bold 13px/16px Arial,sans-serif;text-align:center;background:#c0c0c0;box-shadow:inset 1px 1px #fff,inset -1px -1px #000,inset -2px -2px #808080;cursor:default}
+.brtab-new:active{box-shadow:inset 1px 1px #000,inset -1px -1px #fff}
+.brdir{height:22px;padding:1px 4px 0;white-space:nowrap;overflow:hidden;display:flex;align-items:center}
+.brdir .btn{min-width:0;height:19px;padding:0 6px;margin-right:3px;font-size:10px;flex:none}
+.brdir .bk{display:inline-flex;align-items:center;gap:3px;padding:0 5px}
+.brdir .bk i,.brpage-fav{display:inline-block;width:10px;height:10px;border-radius:2px;font:bold 8px/10px Arial,sans-serif;color:#fff;text-align:center;font-style:normal}
+.brdir .bksep{flex:none;width:2px;height:16px;margin:0 4px 0 1px;box-shadow:inset 1px 0 #808080,inset -1px 0 #fff}
+.brdir #brBkMore{margin-left:auto;margin-right:0;padding:0 4px}
+#brw.nobk .brdir{display:none}
+#brw.nobk .brview{top:129px!important}
+#brPage.live.webp{background:#fff}
+#brPage .p26-web{height:100%;display:flex;flex-direction:column;min-height:0;background:#fff}
+#brPage .webbar{flex:none;height:18px;display:flex;align-items:center;gap:6px;padding:0 6px;background:#ffffe1;border-bottom:1px solid #808080;font-size:10px;color:#000;white-space:nowrap;overflow:hidden}
+#brPage .webbar a{margin-left:auto;color:#0000ee;text-decoration:underline;cursor:pointer}
+#brWeb{flex:1;width:100%;border:0;background:#fff;min-height:200px}
+#brPage .p26-ext{min-height:100%;box-sizing:border-box;padding:28px 22px;background:linear-gradient(160deg,#0d0f12,#1b2230);color:#e8ecf1;font:13px/1.5 Tahoma,sans-serif;text-align:center}
+#brPage .p26-ext h1{margin:6px 0 4px;font-size:22px;color:#fff}
+#brPage .p26-ext p{max-width:380px;margin:8px auto;color:#b8c2d0}
+#brPage .p26-ext .go,#brPage .pnt .go{display:inline-block;margin-top:12px;padding:8px 16px;border-radius:18px;background:#1f6feb;color:#fff;font-weight:bold;cursor:pointer;text-decoration:none}
+#brPage .p26-ext .big{display:inline-block;width:46px;height:46px;border-radius:10px;font:bold 22px/46px Arial,sans-serif;color:#fff}
+#brPage .pnt{min-height:100%;box-sizing:border-box;padding:26px 16px 16px;background:#fff;color:#202124;font:12px/1.4 Arial,sans-serif;text-align:center}
+#brPage .pnt .logo{font:bold 30px/1 Arial,sans-serif;letter-spacing:-1px}
+#brPage .pnt .logo b:nth-child(1){color:#4285f4}#brPage .pnt .logo b:nth-child(2){color:#ea4335}#brPage .pnt .logo b:nth-child(3){color:#fbbc05}#brPage .pnt .logo b:nth-child(4){color:#34a853}
+#brPage .pnt .q{display:flex;max-width:380px;margin:14px auto 18px;height:30px;border-radius:15px;border:1px solid #dadce0;overflow:hidden;box-shadow:0 1px 4px rgba(32,33,36,.15)}
+#brPage .pnt .q input{flex:1;border:0;outline:none;padding:0 14px;font:13px Arial,sans-serif;background:#fff}
+#brPage .pnt .tiles{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:440px;margin:0 auto}
+#brPage .pnt .tile{width:76px;padding:8px 2px;border-radius:8px;cursor:pointer;color:#202124}
+#brPage .pnt .tile:hover{background:#f1f3f4}
+#brPage .pnt .tile i{display:block;width:34px;height:34px;margin:0 auto 6px;border-radius:50%;font:bold 15px/34px Arial,sans-serif;color:#fff;font-style:normal}
+#brPage .pnt .tile span{display:block;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#brPage .psr{padding:14px 16px;font:12px/1.45 Arial,sans-serif;color:#202124;background:#fff;min-height:100%;box-sizing:border-box}
+#brPage .psr .r{margin:0 0 14px}
+#brPage .psr .r a{font-size:14px;color:#1a0dab;cursor:pointer;text-decoration:none}
+#brPage .psr .r a:hover{text-decoration:underline}
+#brPage .psr .r cite{display:block;color:#006621;font-style:normal;font-size:11px}
+.brview{position:absolute;left:3px;right:3px;top:151px;bottom:26px;overflow-x:hidden;overflow-y:auto;background:#fff;touch-action:pan-y;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .brview.live{overflow:hidden}
 #brPage.live{height:100%;padding:0;margin:0;background:#0d0f12}
 #brPage .p26-consejo{height:100%;display:flex;flex-direction:column;min-height:0}
@@ -690,7 +749,9 @@ coetáneos esta semana.
     <!-- AdmiraScape (homenaje navegador) -->
     <div id="brw" class="win" style="left:40px;top:10px;width:560px;height:430px;display:none">
       <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">Netscape Navigator</span><span class="x" data-min="brw">_</span><span class="x" data-max="brw" title="Maximizar">□</span><span class="x gap" data-close="brw">×</span></div>
-      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>I<u>r</u></span><span><u>M</u>arcadores</span><span><u>O</u>pciones</span><span>Ay<u>u</u>da</span></div>
+      <div class="brtabs" id="brTabs" role="tablist" aria-label="Pestañas"></div>
+      <div class="menubar" id="br-menubar"><span data-br-menu="archivo"><u>A</u>rchivo</span><span data-br-menu="edicion"><u>E</u>dición</span><span data-br-menu="ver"><u>V</u>er</span><span data-br-menu="ir" id="brMenuIr">I<u>r</u></span><span data-br-menu="marcadores"><u>M</u>arcadores</span><span data-br-menu="opciones"><u>O</u>pciones</span><span data-br-menu="ayuda">Ay<u>u</u>da</span></div>
+      <div id="br-menu" class="win cmenu note-menu" hidden></div>
       <div class="brtools">
         <div class="tbtn" id="brBack" data-tico="back"><span>Atrás</span></div>
         <div class="tbtn" id="brFwd" data-tico="fwd"><span>Adelante</span></div>
@@ -702,8 +763,8 @@ coetáneos esta semana.
         <div class="tbtn" id="brStop" data-tico="stop"><span>Detener</span></div>
         <div class="throb" id="brThrob"><div class="tA">A</div><i></i><i></i><i></i></div>
       </div>
-      <div class="brloc">Dirección: <span class="fin" id="brUrl"></span></div>
-      <div class="brdir"><button class="btn" data-dgo="novedades">Novedades</button><button class="btn" data-dgo="cool">Lo más cool</button><button class="btn" data-dgo="@find">Buscar en la red</button><button class="btn" data-dgo="libro">Personas</button><button class="btn" data-dgo="@soft">Software</button></div>
+      <div class="brloc"><span class="brlbl">Dirección:</span><span class="omni" id="brOmni"><svg class="lk" viewBox="0 0 11 12"><rect x=".5" y="5.5" width="10" height="6" fill="#ffd800" stroke="#000"/><path d="M2.5 5.5V4a3 3 0 0 1 6 0v1.5" fill="none" stroke="#000"/></svg><input class="fin" id="brUrl" type="text" spellcheck="false" autocomplete="off" aria-label="Barra de direcciones" placeholder="Busca o escribe una dirección web"></span><button class="btn" id="brGoBtn" title="Ir a la dirección">Ir</button><button class="btn" id="brGoDrop" title="Sitios de AdmiraNeXT" aria-label="Desplegar Ir">▾</button><button class="btn star" id="brStar" title="Añadir a marcadores">☆</button></div>
+      <div class="brdir" id="brDir"><button class="btn" data-dgo="novedades">Novedades</button><span class="bksep"></span><span id="brBk" style="display:contents"></span><button class="btn" id="brBkMore" title="Más marcadores">»</button></div>
       <div class="brview" id="brView"><div class="page" id="brPage"></div></div>
       <div class="brstat"><div class="key"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="7" r="3" fill="#ffd800" stroke="#000"/><path d="M7.5 7h5M10 7v3M12 7v2" stroke="#000" stroke-width="1.5"/></svg></div><div id="brSt">Sin conexión</div><div class="brprog"><i id="brProg"></i></div></div>
     </div>
@@ -2011,7 +2072,7 @@ function openUrl(url){
   try{ window.open(url,'_blank','noopener,noreferrer'); }catch(e){}
   openBrowser();
   try{
-    qs('#brUrl').textContent=url;
+    qs('#brUrl').value=url;
     qs('#brT').textContent=CONFIG.names.browser+' - ['+url+']';
     if(BR.online) qs('#brPage').innerHTML='<div style="padding:16px;line-height:16px">Se ha abierto:<br><b>'+esc(url)+'</b></div>';
   }catch(e){}
@@ -3256,7 +3317,7 @@ function wireIcq(){
 }
 
 /* ---------- AdmiraScape (homenaje navegador) ---------- */
-var BR={open:false,online:false,dialing:false,dialId:0,loadId:0,loaded:false,page:null,hist:[],pos:-1,visits:427};
+var BR={open:false,online:false,dialing:false,dialId:0,loadId:0,loaded:false,page:null,hist:[],pos:-1,visits:427,pend:null,tabs:[{hist:[],pos:-1,page:null,title:'Nueva pestaña'}],tab:0};
 var TICO={
   back:'<svg viewBox="0 0 20 20"><path d="M3 10l7-7v4h7v6h-7v4z" fill="#3a9a3a" stroke="#000"/></svg>',
   fwd:'<svg viewBox="0 0 20 20"><path d="M17 10l-7-7v4H3v6h7v4z" fill="#3a9a3a" stroke="#000"/></svg>',
@@ -3374,17 +3435,18 @@ async function brNovedades(){
 function brHost(u){ return u.replace(/^https?:\/\//,'').split('/')[0]; }
 function brButtons(){ qs('#brBack').classList.toggle('dis',BR.pos<=0); qs('#brFwd').classList.toggle('dis',BR.pos>=BR.hist.length-1); }
 function setReveal(list,k){ list.forEach(function(el){ var v='inset(0 0 '+Math.round((1-k)*100)+'% 0)'; el.style.clipPath=v; el.style.webkitClipPath=v; el.style.filter=k<1?'blur('+(2.5*(1-k)).toFixed(1)+'px)':''; }); }
-function brGo(key){ if(!BR.online||!PAGES[key]) return; BR.hist=BR.hist.slice(0,BR.pos+1); BR.hist.push(key); BR.pos=BR.hist.length-1; brLoad(key); }
+function brGo(key){ if(!PAGES[key]) return; if(!BR.online){ BR.pend=key; if(!BR.dialing) dialUp(); return; } BR.hist=BR.hist.slice(0,BR.pos+1); BR.hist.push(key); BR.pos=BR.hist.length-1; brLoad(key); }
 async function brLoad(key){
   var id=++BR.loadId, p=PAGES[key], fast=p.era===26, host=brHost(p.url);
-  BR.loaded=false; BR.page=key; qs('#brUrl').textContent=p.url; qs('#brThrob').classList.add('on'); brButtons();
+  BR.loaded=false; BR.page=key; brSetUrl(p); qs('#brThrob').classList.add('on'); brButtons(); brTabLoading(true);
   brStatus('Conectando con '+host+'…',0);
   await sleep(fast?150:700); if(id!==BR.loadId) return;
   brStatus('Host contactado. Esperando respuesta…',0);
   await sleep(fast?150:600); if(id!==BR.loadId) return;
   if(key==='home') BR.visits++;
-  qs('#brPage').classList.toggle('live',!!p.live); qs('#brView').classList.toggle('live',!!p.live); qs('#brPage').innerHTML=p.html(); qs('#brView').scrollTop=0;
-  if(p.live){ var fr=qs('#brLive'); if(fr){ fr.addEventListener('load',function onL(){ try{ if(!fr.contentDocument) brPintarConsejo(p); }catch(e){ brPintarConsejo(p); } }); fr.addEventListener('error',function(){ brPintarConsejo(p); }); } }
+  var full=!!(p.live||p.web); qs('#brPage').classList.toggle('live',full); qs('#brPage').classList.toggle('webp',!!p.web); qs('#brView').classList.toggle('live',full); qs('#brPage').innerHTML=p.html(); qs('#brView').scrollTop=0;
+  if(key==='newtab'){ var nq=qs('#brNtQ'); if(nq) setTimeout(function(){ try{ qs('#brUrl').focus(); }catch(e){} },0); }
+  if(p.live&&p.persona){ var fr=qs('#brLive'); if(fr){ fr.addEventListener('load',function onL(){ try{ if(!fr.contentDocument) brPintarConsejo(p); }catch(e){ brPintarConsejo(p); } }); fr.addEventListener('error',function(){ brPintarConsejo(p); }); } }
   var imgs=qsa('#brPage .pi'); setReveal(imgs,0);
   var dur=fast?600:3200, t0=performance.now();
   for(;;){
@@ -3395,8 +3457,196 @@ async function brLoad(key){
   }
   brStatus(fast?'Documento: Terminado (en 0,02 s)':'Documento: Terminado',0);
   qs('#brThrob').classList.remove('on'); qs('#brT').textContent=CONFIG.names.browser+' - ['+p.title+']'; BR.loaded=true;
+  brTabTitle(p.title); brTabLoading(false);
 }
-function brStop(){ if(BR.loaded||!BR.page) return; BR.loadId++; qs('#brThrob').classList.remove('on'); brStatus('Transferencia interrumpida',0); BR.loaded=true; }
+function brStop(){ if(BR.loaded||!BR.page) return; BR.loadId++; qs('#brThrob').classList.remove('on'); brStatus('Transferencia interrumpida',0); BR.loaded=true; brTabLoading(false); }
+
+/* ---------- Netscape «como un Chrome de hoy» (Jobs · 25-11-2026 · petición de Carlos) ----------
+ * Barra de direcciones tipo omnibox (Intro navega, sin https:// se completa, si no es dirección busca),
+ * pestañas, Atrás/Adelante/Recargar/Inicio de verdad, menú «Ir» desplegable con los sitios de
+ * AdmiraNeXT y barra de marcadores. Las webs reales se abren dentro (iframe) si se dejan incrustar;
+ * si no (admira.store: login con frame-ancestors 'none'), se ofrece abrirlas en una pestaña real. */
+var BR_SITES=[
+  {h:'admira.studio',n:'Admira Studio',url:'https://admira.studio/',c:'#7b3fe4',l:'S',frame:true,d:'Crea contenidos, interactivos y vídeo con IA.'},
+  {h:'admira.store',n:'Admira Store',url:'https://admira.store/',c:'#e0563b',l:'St',frame:false,d:'La tienda de AdmiraNeXT. Pide iniciar sesión con Google y no se deja abrir dentro de otra web, así que se abre en una pestaña real.'},
+  {h:'admira.tv',n:'Admira TV',url:'https://admira.tv/',c:'#d4145a',l:'TV',frame:true,d:'El canal: contenido, música con licencia y turnos.'},
+  {h:'admira.app',n:'Admira App',url:'https://admira.app/',c:'#1f8f4e',l:'A',frame:true,d:'La app de AdmiraNeXT.'},
+  {h:'admira.biz',n:'Admira Biz',url:'https://admira.biz/',c:'#1f6feb',l:'B',frame:true,d:'AdmiraNeXT para empresas.'}
+];
+var BR_BK_KEY='vuelta95.marcadores';
+function brTabNuevo(){ return {hist:[],pos:-1,page:null,title:'Nueva pestaña'}; }
+function brSitio(h){ h=String(h||'').toLowerCase().replace(/^www\./,''); for(var i=0;i<BR_SITES.length;i++) if(BR_SITES[i].h===h) return BR_SITES[i]; return null; }
+function brSinEsquema(u){ return String(u||'').replace(/^https?:\/\//i,'').replace(/\/+$/,'').toLowerCase(); }
+PAGES.newtab={url:'',title:'Nueva pestaña',kb:12,era:26,html:function(){
+  return '<div class="pnt"><div class="logo"><b>A</b><b>d</b><b>m</b><b>i</b>raScape</div>'+
+    '<form class="q" id="brNtF"><input id="brNtQ" type="text" autocomplete="off" spellcheck="false" placeholder="Busca o escribe una dirección web"></form>'+
+    '<div class="tiles">'+BR_SITES.map(function(s){ return '<div class="tile" data-site="'+esc(s.h)+'" title="'+esc(s.url)+'"><i style="background:'+s.c+'">'+esc(s.l)+'</i><span>'+esc(s.h)+'</span></div>'; }).join('')+'</div></div>';
+}};
+function brPaginaWeb(url){
+  var key='web:'+url; if(PAGES[key]) return key;
+  var host=brHost(url).toLowerCase(), s=brSitio(host);
+  PAGES[key]={url:url,title:s?s.n+' · '+s.h:host,kb:900,era:26,web:true,site:s,html:function(){ return brWebHtml(this); }};
+  return key;
+}
+function brWebHtml(p){
+  var s=p.site, host=esc(brHost(p.url));
+  if(s&&!s.frame){
+    return '<div class="p26-ext"><span class="big" style="background:'+s.c+'">'+esc(s.l)+'</span><h1>'+esc(s.h)+'</h1><p>'+esc(s.d)+'</p>'+
+      '<a class="go" data-ext="'+esc(p.url)+'">Abrir '+esc(s.h)+' en una pestaña nueva ↗</a><p style="font-size:11px">Volver: botón Atrás o menú Ir.</p></div>';
+  }
+  return '<div class="p26-web"><div class="webbar"><span>🔒 '+host+'</span><span style="color:#555">'+(s?esc(s.d):'Si la página sale en blanco, no se deja abrir dentro de otra web.')+'</span><a data-ext="'+esc(p.url)+'">Abrir en pestaña nueva ↗</a></div>'+
+    '<iframe id="brWeb" title="'+host+'" src="'+esc(p.url)+'" referrerpolicy="no-referrer" allow="autoplay; fullscreen; clipboard-write"></iframe></div>';
+}
+function brPaginaBusqueda(q){
+  var key='search:'+q.toLowerCase(); if(PAGES[key]) return key;
+  PAGES[key]={url:'https://www.google.com/search?q='+encodeURIComponent(q),title:q+' - Buscar',kb:40,era:26,html:function(){
+    var low=q.toLowerCase(), hits=BR_SITES.filter(function(s){ return (s.h+' '+s.n+' '+s.d).toLowerCase().indexOf(low)>=0; });
+    if(!hits.length) hits=BR_SITES;
+    return '<div class="psr"><p style="color:#70757a;margin:0 0 12px">Resultados en AdmiraNeXT para «'+esc(q)+'»</p>'+
+      hits.map(function(s){ return '<div class="r"><cite>'+esc(s.url)+'</cite><a data-site="'+esc(s.h)+'">'+esc(s.n)+'</a><div>'+esc(s.d)+'</div></div>'; }).join('')+
+      '<div class="r"><cite>google.com</cite><a data-ext="'+esc(this.url)+'">Buscar «'+esc(q)+'» en Google ↗</a><div>Google no se deja abrir dentro de otra web: se abre en una pestaña real.</div></div></div>';
+  }};
+  return key;
+}
+// Omnibox: dirección, sitio de AdmiraNeXT, página del 97 o búsqueda
+function brResolver(txt){
+  var t=String(txt||'').trim(); if(!t) return null;
+  var s=brSitio(t.replace(/^https?:\/\//i,'').replace(/\/+$/,''));
+  if(s) return s.frame?brPaginaWeb(s.url):brPaginaWeb(s.url);
+  var bare=brSinEsquema(t);
+  for(var k in PAGES){ if(PAGES[k].url&&brSinEsquema(PAGES[k].url)===bare&&!PAGES[k].web) return k; }
+  if(/^https?:\/\/[^\s]+$/i.test(t)) return brPaginaWeb(t);
+  if(/^[a-z][a-z0-9+.-]*:/i.test(t)&&!/^[^\s:]+\.[a-z]{2,}(:\d+)?(\/|$)/i.test(t)) return brPaginaBusqueda(t);   // javascript:, data:… nunca se navegan
+  if(/^(localhost|[^\s\/]+\.[a-z]{2,})(:\d+)?(\/\S*)?$/i.test(t)) return brPaginaWeb('https://'+t);
+  return brPaginaBusqueda(t);
+}
+function brNavegar(txt){ var k=brResolver(txt); if(!k) return; closeBrMenu(); try{ qs('#brUrl').blur(); }catch(e){} brGo(k); }
+function brIrSitio(h){ var s=brSitio(h); if(s){ closeBrMenu(); brGo(brPaginaWeb(s.url)); } }
+function brAbrirReal(url){ if(!/^https?:\/\//i.test(String(url||''))) return; try{ window.open(url,'_blank','noopener,noreferrer'); }catch(e){} brStatus('Abierto en una pestaña nueva: '+brHost(url),0); }
+function brSecure(u){ var o=qs('#brOmni'); if(o) o.classList.toggle('sec',/^https:/i.test(u||'')); }
+function brSetUrl(p){ var i=qs('#brUrl'); if(!i) return; i.value=p.url||''; brSecure(p.url); brStarPaint(); }
+function brFocoOmni(){ var i=qs('#brUrl'); if(!i) return; i.focus(); try{ i.select(); }catch(e){} }
+function brAtras(){ if(BR.pos>0){ BR.pos--; brLoad(BR.hist[BR.pos]); } }
+function brAdelante(){ if(BR.pos<BR.hist.length-1){ BR.pos++; brLoad(BR.hist[BR.pos]); } }
+function brInicio(){ if(BR.online) brGo('home'); else if(!BR.dialing) dialUp(); }
+function brReload(){ if(BR.page) brLoad(BR.page); }
+function brUrlActual(){ var p=BR.page&&PAGES[BR.page]; return p&&/^https?:/i.test(p.url)?p.url:''; }
+// ---- pestañas ----
+function brGuardaTab(){ var t=BR.tabs[BR.tab]; if(!t) return; t.hist=BR.hist; t.pos=BR.pos; t.page=BR.page; }
+function brTabTitle(ti){ var t=BR.tabs[BR.tab]; if(t){ t.title=ti; brRenderTabs(); } }
+function brTabLoading(on){ var el=qs('#brTabs .brtab.on'); if(el) el.classList.toggle('ld',!!on); }
+function brRenderTabs(){
+  var box=qs('#brTabs'); if(!box) return;
+  box.innerHTML=BR.tabs.map(function(t,i){ return '<div class="brtab'+(i===BR.tab?' on':'')+'" role="tab" data-tab="'+i+'" title="'+esc(t.title||'')+'"><i class="fv"></i><span class="tt">'+esc(t.title||'Nueva pestaña')+'</span><span class="tx" data-tabx="'+i+'" title="Cerrar pestaña (Ctrl+W)">×</span></div>'; }).join('')+
+    '<div class="brtab-new" id="brTabNew" title="Nueva pestaña (Ctrl+T)">+</div>';
+}
+function brCambiaTab(i){
+  if(i===BR.tab||!BR.tabs[i]) return; brGuardaTab(); BR.loadId++; BR.tab=i; var t=BR.tabs[i];
+  BR.hist=t.hist; BR.pos=t.pos; BR.page=t.page; brRenderTabs();
+  if(BR.page) brLoad(BR.page); else brGo('newtab');
+}
+function brNuevaTab(key){
+  if(!BR.online&&!key){ brInicio(); return; }
+  brGuardaTab(); BR.loadId++; BR.tabs.push(brTabNuevo()); BR.tab=BR.tabs.length-1; BR.hist=[]; BR.pos=-1; BR.page=null; brRenderTabs();
+  brGo(key||'newtab');
+}
+function brCierraTab(i){
+  if(BR.tabs.length<=1){ closeBrowser(); return; }
+  brGuardaTab(); BR.tabs.splice(i,1);
+  var nt=i<BR.tab?BR.tab-1:(i===BR.tab?Math.min(i,BR.tabs.length-1):BR.tab);
+  BR.tab=-1; brCambiaTab(nt);
+}
+// ---- marcadores ----
+function brMarcadoresPropios(){ try{ var a=JSON.parse(localStorage.getItem(BR_BK_KEY)||'[]'); return Array.isArray(a)?a.filter(function(m){ return m&&/^https?:\/\//i.test(m.url); }):[]; }catch(e){ return []; } }
+function brEsMarcado(u){ if(!u) return false; if(brSitio(brHost(u))&&brSinEsquema(u)===brSinEsquema(brSitio(brHost(u)).url)) return true; return brMarcadoresPropios().some(function(m){ return brSinEsquema(m.url)===brSinEsquema(u); }); }
+function brStarPaint(){ var b=qs('#brStar'); if(!b) return; var on=brEsMarcado(brUrlActual()); b.classList.toggle('on',on); b.textContent=on?'★':'☆'; b.title=on?'Está en marcadores':'Añadir a marcadores'; }
+function brMarcar(){
+  var u=brUrlActual(); if(!u){ brStatus('Esta página no se puede guardar en marcadores',0); return; }
+  if(brSitio(brHost(u))){ brStatus('Ya está en la barra de marcadores',0); return; }
+  var a=brMarcadoresPropios(), i=-1; a.forEach(function(m,j){ if(brSinEsquema(m.url)===brSinEsquema(u)) i=j; });
+  if(i>=0){ a.splice(i,1); brStatus('Quitado de marcadores',0); } else { a.push({url:u,title:(PAGES[BR.page]&&PAGES[BR.page].title)||brHost(u)}); brStatus('Añadido a marcadores',0); }
+  try{ localStorage.setItem(BR_BK_KEY,JSON.stringify(a.slice(-20))); }catch(e){}
+  brStarPaint();
+}
+function brRenderBk(){
+  var box=qs('#brBk'); if(!box) return;
+  box.innerHTML=BR_SITES.map(function(s){ return '<button class="btn bk" data-bk="'+esc(s.h)+'" title="'+esc(s.n+' · '+s.url)+'"><i style="background:'+s.c+'">'+esc(s.l.charAt(0))+'</i>'+esc(s.h)+'</button>'; }).join('');
+}
+// ---- menús desplegables (Archivo, Edición, Ver, Ir, Marcadores, Opciones, Ayuda) ----
+function closeBrMenu(){ var m=qs('#br-menu'); if(m){ m.hidden=true; m.innerHTML=''; } qsa('#br-menubar span').forEach(function(x){ x.classList.remove('open','hl'); }); }
+function brItemsSitios(){ return BR_SITES.map(function(s){ return {l:s.h+(s.frame?'':'  ↗'),fav:s,fn:function(){ brIrSitio(s.h); }}; }); }
+function brItemsHistorial(){
+  var out=[], seen={}; for(var i=BR.hist.length-1;i>=0&&out.length<6;i--){ var k=BR.hist[i], p=PAGES[k]; if(!p||seen[k]||k==='newtab') continue; seen[k]=1; (function(k,p){ out.push({l:p.title,fn:function(){ brGo(k); }}); })(k,p); }
+  return out;
+}
+function openBrMenu(kind,btn,anchor){
+  var m=qs('#br-menu'), w=qs('#brw'); if(!m||!w) return;
+  var off=!BR.online;
+  var menus={
+    archivo:[{l:'Nueva pestaña',acc:'Ctrl+T',fn:function(){ brNuevaTab(); }},{l:'Abrir en una pestaña real',acc:'↗',dis:!brUrlActual(),fn:function(){ brAbrirReal(brUrlActual()); }},{l:'Cerrar pestaña',acc:'Ctrl+W',fn:function(){ brCierraTab(BR.tab); }},{sep:1},{l:'Salir',fn:closeBrowser}],
+    edicion:[{l:'Ir a la barra de direcciones',acc:'Ctrl+L',fn:brFocoOmni},{l:'Copiar dirección',dis:!brUrlActual(),fn:function(){ try{ navigator.clipboard.writeText(brUrlActual()); brStatus('Dirección copiada',0); }catch(e){} }}],
+    ver:[{l:'Recargar',acc:'F5',dis:!BR.page,fn:brReload},{l:'Detener',acc:'Esc',dis:BR.loaded||!BR.page,fn:brStop},{sep:1},{l:(qs('#brw').classList.contains('nobk')?'Mostrar':'Ocultar')+' barra de marcadores',fn:function(){ qs('#brw').classList.toggle('nobk'); }}],
+    ir:[{l:'Atrás',acc:'Alt+←',dis:BR.pos<=0,fn:brAtras},{l:'Adelante',acc:'Alt+→',dis:BR.pos>=BR.hist.length-1,fn:brAdelante},{l:'Inicio',acc:'Alt+Inicio',fn:brInicio},{sep:1}].concat(brItemsSitios(),(function(){ var h=brItemsHistorial(); return h.length?[{sep:1}].concat(h):[]; })()),
+    marcadores:[{l:(brEsMarcado(brUrlActual())?'Quitar':'Añadir')+' esta página',acc:'Ctrl+D',dis:!brUrlActual(),fn:brMarcar},{sep:1}].concat(brItemsSitios(),brMarcadoresPropios().map(function(mk){ return {l:mk.title||brHost(mk.url),fn:function(){ brGo(brPaginaWeb(mk.url)); }}; })),
+    opciones:[{l:'Página de inicio: AdmiraNeXT 1997',fn:brInicio},{l:(qs('#brw').classList.contains('nobk')?'Mostrar':'Ocultar')+' barra de marcadores',fn:function(){ qs('#brw').classList.toggle('nobk'); }}],
+    ayuda:[{l:'Atajos de teclado',fn:function(){ msgBox('Atajos','Ctrl+L  barra de direcciones\nCtrl+T  nueva pestaña · Ctrl+W  cerrar pestaña\nAlt+← / Alt+→  atrás / adelante\nF5  recargar · Ctrl+D  marcador','info'); }},{l:'Acerca de Netscape Navigator',fn:function(){ msgBox('Acerca de','Netscape Navigator · edición 1997 → 2026\nCon pestañas, barra de direcciones inteligente\ny los sitios de AdmiraNeXT a un clic.','info'); }}],
+    mas:[{l:'Lo más cool',fn:function(){ brGo('cool'); }},{l:'Personas',fn:function(){ brGo('libro'); }},{l:'Buscar en la red',fn:brFocoOmni},{l:'Software',fn:function(){ msgBox('Software','Netscape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); }}].concat(brMarcadoresPropios().length?[{sep:1}].concat(brMarcadoresPropios().map(function(mk){ return {l:mk.title||brHost(mk.url),fn:function(){ brGo(brPaginaWeb(mk.url)); }}; })):[])
+  };
+  var items=menus[kind]; if(!items) return;
+  m.innerHTML='';
+  items.forEach(function(it){
+    if(it.sep){ var sp=document.createElement('div'); sp.className='msep'; m.appendChild(sp); return; }
+    var row=document.createElement('div'); row.className='mi2'+(it.dis?' dis':'');
+    if(it.fav){ var f=document.createElement('i'); f.className='fav'; f.style.background=it.fav.c; f.textContent=it.fav.l.charAt(0); row.appendChild(f); row.setAttribute('data-site-item',it.fav.h); }
+    row.appendChild(document.createTextNode(it.l));
+    if(it.acc){ var a=document.createElement('i'); a.className='acc'; a.textContent=it.acc; row.appendChild(a); }
+    row.addEventListener('mouseenter',function(){ qsa('.mi2',m).forEach(function(r){ r.classList.toggle('hl',r===row); }); });
+    row.addEventListener('click',function(e){ e.stopPropagation(); if(it.dis) return; closeBrMenu(); it.fn(); });
+    m.appendChild(row);
+  });
+  qsa('#br-menubar span').forEach(function(x){ x.classList.toggle('open',x===btn); x.classList.toggle('hl',x===btn); });
+  var ref=anchor||btn, wr=w.getBoundingClientRect(), rr=ref.getBoundingClientRect(), sc=wr.width/(w.offsetWidth||wr.width)||1;
+  m.hidden=false;
+  var left=(rr.left-wr.left)/sc, top=(rr.bottom-wr.top)/sc;
+  left=Math.max(2,Math.min(left,w.clientWidth-m.offsetWidth-2));
+  m.style.left=left+'px'; m.style.top=top+'px'; m.setAttribute('data-kind',kind);
+}
+function wireChrome(){
+  if(wireChrome._on) return; wireChrome._on=true;
+  brRenderTabs(); brRenderBk();
+  var bar=qs('#br-menubar');
+  bar.addEventListener('click',function(e){ var b=e.target.closest('[data-br-menu]'); if(!b) return; e.stopPropagation(); if(b.classList.contains('open')) closeBrMenu(); else openBrMenu(b.getAttribute('data-br-menu'),b); });
+  bar.addEventListener('pointerover',function(e){ var open=qs('#br-menubar span.open'); if(!open) return; var b=e.target.closest('[data-br-menu]'); if(!b||b===open) return; openBrMenu(b.getAttribute('data-br-menu'),b); });
+  document.addEventListener('mousedown',function(e){ var m=qs('#br-menu'); if(!m||m.hidden) return; if(m.contains(e.target)||bar.contains(e.target)||e.target.closest('#brGoDrop,#brBkMore')) return; closeBrMenu(); });
+  var url=qs('#brUrl');
+  url.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); brNavegar(url.value); } else if(e.key==='Escape'){ e.preventDefault(); var p=BR.page&&PAGES[BR.page]; url.value=p?p.url:''; url.blur(); } });
+  url.addEventListener('focus',function(){ setTimeout(function(){ try{ url.select(); }catch(e){} },0); });
+  qs('#brGoBtn').addEventListener('click',function(){ var p=BR.page&&PAGES[BR.page], v=url.value.trim(); if(v&&(!p||v!==p.url)) brNavegar(v); else openBrMenu('ir',qs('#brMenuIr'),qs('#brGoBtn')); });
+  qs('#brGoDrop').addEventListener('click',function(e){ e.stopPropagation(); var m=qs('#br-menu'); if(m&&!m.hidden&&m.getAttribute('data-kind')==='ir') closeBrMenu(); else openBrMenu('ir',qs('#brMenuIr'),qs('#brGoBtn')); });
+  qs('#brStar').addEventListener('click',brMarcar);
+  qs('#brBkMore').addEventListener('click',function(e){ e.stopPropagation(); var m=qs('#br-menu'); if(m&&!m.hidden&&m.getAttribute('data-kind')==='mas') closeBrMenu(); else openBrMenu('mas',null,qs('#brBkMore')); });
+  qs('#brBk').addEventListener('click',function(e){ var b=e.target.closest('[data-bk]'); if(b) brIrSitio(b.getAttribute('data-bk')); });
+  qs('#brTabs').addEventListener('click',function(e){
+    if(e.target.closest('#brTabNew')){ brNuevaTab(); return; }
+    var x=e.target.closest('[data-tabx]'); if(x){ e.stopPropagation(); brCierraTab(+x.getAttribute('data-tabx')); return; }
+    var t=e.target.closest('[data-tab]'); if(t) brCambiaTab(+t.getAttribute('data-tab'));
+  });
+  qs('#brTabs').addEventListener('auxclick',function(e){ var t=e.target.closest('[data-tab]'); if(t&&e.button===1){ e.preventDefault(); brCierraTab(+t.getAttribute('data-tab')); } });
+  qs('#brView').addEventListener('submit',function(e){ if(e.target&&e.target.id==='brNtF'){ e.preventDefault(); brNavegar(qs('#brNtQ').value); } });
+  qs('#brw').addEventListener('keydown',function(e){
+    var k=e.key, ctrl=e.ctrlKey||e.metaKey;
+    if(ctrl&&(k==='l'||k==='L')){ e.preventDefault(); brFocoOmni(); }
+    else if(ctrl&&(k==='t'||k==='T')){ e.preventDefault(); brNuevaTab(); }
+    else if(ctrl&&(k==='w'||k==='W')){ e.preventDefault(); brCierraTab(BR.tab); }
+    else if(ctrl&&(k==='d'||k==='D')){ e.preventDefault(); brMarcar(); }
+    else if(k==='F5'||(ctrl&&(k==='r'||k==='R'))){ e.preventDefault(); brReload(); }
+    else if(e.altKey&&k==='ArrowLeft'){ e.preventDefault(); brAtras(); }
+    else if(e.altKey&&k==='ArrowRight'){ e.preventDefault(); brAdelante(); }
+    else if(e.altKey&&k==='Home'){ e.preventDefault(); brInicio(); }
+    else if(k==='Escape'){ var m=qs('#br-menu'); if(m&&!m.hidden){ e.preventDefault(); closeBrMenu(); } else brStop(); }
+  });
+}
+
 async function dialUp(){
   var id=++BR.dialId, d=qs('#dun'), st=qs('#dunSt');
   BR.dialing=true; d.style.display='block'; focusWin(d); sfxModem();
@@ -3406,40 +3656,43 @@ async function dialUp(){
   st.textContent='Verificando usuario y contraseña…'; await sleep(900); if(id!==BR.dialId) return;
   st.textContent='Conectado a 28.800 bps'; await sleep(700); if(id!==BR.dialId) return;
   d.style.display='none'; BR.dialing=false; BR.online=true;
-  if(BR.open){ focusWin(qs('#brw')); brGo('home'); }
+  if(BR.open){ focusWin(qs('#brw')); var pk=BR.pend; BR.pend=null; brGo(pk&&PAGES[pk]?pk:'home'); }
 }
-function cancelDial(){ BR.dialId++; BR.dialing=false; qs('#dun').style.display='none'; brStatus('No se ha podido conectar. Pulsa Inicio para volver a intentarlo.',0); }
+function cancelDial(){ BR.dialId++; BR.dialing=false; BR.pend=null; qs('#dun').style.display='none'; brStatus('No se ha podido conectar. Pulsa Inicio para volver a intentarlo.',0); }
 function openBrowser(){
   var w=qs('#brw'); w.style.display='block'; BR.open=true;
   addTask('brw',CONFIG.names.browser,'browser',[w]); focusWin(w);
   if(BR.online){ if(!BR.page) brGo('home'); } else if(!BR.dialing) dialUp();
 }
 function closeBrowser(){
-  BR.loadId++; BR.dialId++; BR.dialing=false; BR.online=false; BR.open=false; BR.loaded=false; BR.page=null; BR.hist=[]; BR.pos=-1;
+  BR.loadId++; BR.dialId++; BR.dialing=false; BR.online=false; BR.open=false; BR.loaded=false; BR.page=null; BR.hist=[]; BR.pos=-1; BR.pend=null; BR.tabs=[brTabNuevo()]; BR.tab=0; closeBrMenu(); brRenderTabs();
   qs('#brw').style.display='none'; qs('#dun').style.display='none'; removeTask('brw');
-  qs('#brPage').innerHTML=''; qs('#brUrl').textContent=''; qs('#brT').textContent=CONFIG.names.browser; qs('#brThrob').classList.remove('on'); brStatus('Sin conexión',0); brButtons();
+  qs('#brPage').innerHTML=''; qs('#brUrl').value=''; brSecure(''); qs('#brT').textContent=CONFIG.names.browser; qs('#brThrob').classList.remove('on'); brStatus('Sin conexión',0); brButtons();
 }
 function wireBrowser(){
   qsa('#brw [data-tico]').forEach(function(b){ b.insertAdjacentHTML('afterbegin',TICO[b.getAttribute('data-tico')]); });
   qs('#brView').addEventListener('click',function(e){
+    var x=e.target.closest('[data-ext]'); if(x){ e.preventDefault(); brAbrirReal(x.getAttribute('data-ext')); return; }
+    var st=e.target.closest('[data-site]'); if(st){ e.preventDefault(); brIrSitio(st.getAttribute('data-site')); return; }
     var a=e.target.closest('[data-go]'); if(!a) return; e.preventDefault();
     var g=a.getAttribute('data-go');
     if(g==='firma'){ sfxDing(); msgBox('Libro de visitas','¡Gracias por firmar!\nTu mensaje se publicará cuando el webmaster\nvuelva de vacaciones… en 1998.','info'); return; }
     brGo(g);
   });
-  qs('#brBack').addEventListener('click',function(){ if(BR.pos>0){ BR.pos--; brLoad(BR.hist[BR.pos]); } });
-  qs('#brFwd').addEventListener('click',function(){ if(BR.pos<BR.hist.length-1){ BR.pos++; brLoad(BR.hist[BR.pos]); } });
+  qs('#brBack').addEventListener('click',brAtras);
+  qs('#brFwd').addEventListener('click',brAdelante);
   qs('#brHome').addEventListener('click',function(){ if(BR.online) brGo('home'); else if(!BR.dialing) dialUp(); });
-  qs('#brReload').addEventListener('click',function(){ if(BR.page) brLoad(BR.page); });
+  qs('#brReload').addEventListener('click',brReload);
   qs('#brStop').addEventListener('click',brStop);
   qs('#brImg').addEventListener('click',function(){ msgBox('Imágenes','Las imágenes ya se están cargando…\nmuy… muy… despacio.','info'); });
   qs('#brPrint').addEventListener('click',function(){ msgBox('Imprimir','Enviando a la impresora matricial…\n(El ruido va incluido.)','info'); });
-  function find(){ msgBox('Buscar en la red','Todavía no hay ningún buscador bueno.\nVuelve dentro de un año.','info'); }
+  function find(){ brFocoOmni(); brStatus('Escribe lo que buscas en la barra de direcciones y pulsa Intro',0); }
   qs('#brFind').addEventListener('click',find);
   qsa('#brw [data-dgo]').forEach(function(b){ b.addEventListener('click',function(){ var g=b.getAttribute('data-dgo'); if(g==='@find') find(); else if(g==='novedades') brNovedades(); else if(g==='@soft') msgBox('Software','Netscape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); else brGo(g); }); });
   qs('[data-close="brw"]').addEventListener('click',closeBrowser);
   qs('[data-min="brw"]').addEventListener('click',function(){ minimize('brw'); });
   qs('#dunCancel').addEventListener('click',cancelDial); qs('#dunX').addEventListener('click',cancelDial);
+  wireChrome();
   brButtons();
 }
 

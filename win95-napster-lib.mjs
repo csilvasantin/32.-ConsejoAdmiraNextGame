@@ -249,11 +249,24 @@ export function publico(c) {
   };
 }
 
+export function contarTipos(lista) {
+  let canciones = 0, videos = 0;
+  for (const p of Array.isArray(lista) ? lista : []) {
+    if (esVideoPieza(p)) videos += 1;
+    else if (esAudioPieza(p)) canciones += 1;
+  }
+  return { canciones, videos };
+}
+
 export function responder(leido, consulta) {
-  const { total, results } = buscar(leido && leido.canciones, consulta);
+  const lista = leido && leido.canciones;
+  const { total, results } = buscar(lista, consulta);
+  const tipos = contarTipos(lista);
   return {
     ok: true,
     total,
+    canciones: tipos.canciones,
+    videos: tipos.videos,
     results: results.map(publico),
     fuente: "stock.admira.store",
     at: new Date((leido && leido.at) || Date.now()).toISOString(),

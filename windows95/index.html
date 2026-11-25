@@ -157,7 +157,12 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .tabs{position:relative;z-index:1;display:flex;height:24px;padding:4px 4px 0}
 .tab{position:relative;top:2px;height:20px;margin-right:-1px;padding:3px 10px 0;background:#c0c0c0;border-radius:3px 3px 0 0;box-shadow:inset 1px 1px #fff,inset -1px 0 #000,inset -2px 0 #808080;white-space:nowrap}
 .tab.on{top:0;z-index:2;height:23px;margin:0 -1px 0 -2px;padding:4px 12px 0}
+#nap .panel{bottom:51px}
 .panel{position:absolute;left:3px;right:3px;top:103px;bottom:25px;display:none;padding:8px;box-shadow:inset 1px 1px #fff,inset -1px -1px #000,inset -2px -2px #808080}
+#nap .nap-player{position:absolute;left:3px;right:3px;bottom:25px;height:26px;display:flex;align-items:center;padding:0 6px;background:#c0c0c0;box-shadow:inset 1px 0 #fff,inset -1px 0 #808080}
+#nap .nap-player .btn{min-width:26px;width:26px;height:22px;margin-right:4px;padding:0}
+#napAudTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px;font:11px "MS Sans Serif",Tahoma,sans-serif}
+#napAudio{display:none}
 .panel.on{display:block}
 .fin{display:inline-block;height:21px;vertical-align:middle;padding:3px 4px;background:#fff;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .fin.focus::after{content:'';display:inline-block;width:1px;height:12px;background:#000;vertical-align:-2px;animation:blink 1s steps(1) infinite}
@@ -964,7 +969,7 @@ Fin del documento. Está en Miscelánea, solo lectura.
 </script>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
-      <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
+      <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 Transfer</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span>A<u>c</u>ciones</span><span>A<u>y</u>uda</span></div>
       <div class="hdr"><span data-ico="p2p"></span><div class="brand">Nap<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
       <div class="tabs"><div class="tab" data-tab="home">Inicio</div><div class="tab on" data-tab="search">Buscar</div><div class="tab" data-tab="lib">Biblioteca</div><div class="tab" data-tab="xfer">Transferencias</div></div>
@@ -976,19 +981,25 @@ Fin del documento. Está en Miscelánea, solo lectura.
       </div>
       <div class="panel on" data-panel="search">
         <div>Artista: <span class="fin" id="napArtist" style="width:150px"></span> &nbsp;Título: <span class="fin" id="napTitle" style="width:108px"></span> &nbsp;<button class="btn" id="napSearch">Buscar</button><button class="btn" id="napClear" style="min-width:58px;margin-left:4px">Borrar</button></div>
-        <div class="lv" id="napRes" style="height:136px;margin-top:8px"></div>
+        <div class="lv" id="napRes" style="height:118px;margin-top:8px"></div>
         <div class="prow2"><button class="btn" id="napDl" disabled>Descargar</button><span id="napCount"></span></div>
       </div>
       <div class="panel" data-panel="lib">
-        <div style="margin-bottom:6px">Tus canciones compartidas:</div>
-        <div class="lv" id="napLib" style="height:143px"></div>
+        <div style="margin-bottom:6px">Tus descargas completadas (quedan en este PC):</div>
+        <div class="lv" id="napLib" style="height:118px"></div>
         <div class="prow2"><button class="btn" id="napLibPlay" disabled>Reproducir</button></div>
       </div>
       <div class="panel" data-panel="xfer">
-        <div class="lv" id="napX" style="height:160px"></div>
+        <div class="lv" id="napX" style="height:136px"></div>
         <div class="prow2"><button class="btn" id="napPlay" disabled>Reproducir</button><button class="btn" id="napClean">Borrar terminadas</button><span class="turbo">TURBO 2026 ×120</span></div>
       </div>
-      <div class="sbar"><div id="napS1" style="flex:none;width:150px">Compartiendo 0 canciones</div><div id="napS2">Descargas: 0</div><div id="napS3" style="flex:none;width:96px">Desconectado</div></div>
+      <div id="napPlayer" class="nap-player">
+        <button class="btn" id="napAudPlay" type="button" title="Reproducir">▶</button>
+        <button class="btn" id="napAudStop" type="button" title="Detener">■</button>
+        <span id="napAudTitle">Reproductor de audio de Napster</span>
+        <audio id="napAudio" preload="none"></audio>
+      </div>
+      <div class="sbar"><div id="napS1" style="flex:none;width:220px">admira.studio</div><div id="napS2">Descargas: 0</div><div id="napS3" style="flex:none;width:96px">Desconectado</div></div>
     </div>
     <!-- AdmiraScape (homenaje navegador) -->
     <div id="brw" class="win nobk" style="left:40px;top:10px;width:560px;height:430px;display:none">
@@ -3793,8 +3804,8 @@ var CON={'T1':{kb:48,dur:5,col:'#00c000'},'Cable':{kb:26,dur:7,col:'#00c000'},'R
 var NAP_CONS=Object.keys(CON);
 var COLS_RES=[['Nombre de archivo',190],['Tamaño',54],['Bitrate',46],['Duración',50],['Usuario',92],['Conexión',62]];
 var COLS_X=[['Nombre de archivo',170],['Estado',86],['Progreso',110],['Velocidad',70],['Usuario',74]];
-var COLS_LIB=[['Nombre de archivo',260],['Tamaño',70],['Bitrate',70],['Duración',70]];
-var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:0,songs:0};
+var COLS_LIB=[['Nombre de archivo',260],['Tamaño',70],['Tipo',70],['Duración',70]];
+var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:0,songs:0,canciones:null,videos:null,haveSplit:false,library:[],aud:null};
 
 var DL_STORE='admira-win95-descargas';
 function napEsVideo(r){ var t=String(r&&(r.tipo||r.type)||'').toLowerCase(); if(t==='video') return true; if(t==='audio'||t==='music') return false; return /\.(mp4|webm|mkv|mov)(\?|$)/i.test(String(r&&r.url||'')); }
@@ -3907,22 +3918,87 @@ function napRenderX(){
   var cur=NAP.xfers[NAP.xsel]; qs('#napPlay').disabled=!(cur&&cur.state==='done');
   napStatus();
 }
+function napBiblioteca(){
+  var list=descargasDe('').slice(), i;
+  list.sort(function(a,b){ return (Number(b.at)||0)-(Number(a.at)||0); });
+  NAP.library=list;
+  return list;
+}
+function napLibNombre(rec){
+  if(!rec) return 'archivo';
+  if(rec.name) return rec.name;
+  return napFileOf({titulo:rec.titulo,artista:rec.artista,url:rec.url,tipo:rec.tipo,id:rec.id||rec.stockId});
+}
 function napRenderLib(){
-  var h=lvHeader(COLS_LIB);
-  CONFIG.tracks.forEach(function(t,i){ var r={t:i,m:1,br:128}; h+=lvRow(i,COLS_LIB,[esc(t.artist+' - '+t.title)+'.mp3',fmtMB(napSize(r)),'128',fmt(trackDur(i))],i===NAP.libSel); });
+  var list=napBiblioteca(), h=lvHeader(COLS_LIB), i, rec, tam, dur, tipo;
+  if(!list.length){
+    qs('#napLib').innerHTML=h+'<div class="lvmsg">No hay descargas todavía. Busca en admira.studio y pulsa Descargar; lo completado aparece aquí y se recuerda en este PC.</div>';
+    qs('#napLibPlay').disabled=true;
+    return;
+  }
+  for(i=0;i<list.length;i++){
+    rec=list[i];
+    tam=Number(rec.size)>0?fmtMB(rec.size/1024/1024):'—';
+    dur=Number(rec.duracion)>0?fmt(rec.duracion):'—';
+    tipo=napEsVideo(rec)?'vídeo':'audio';
+    h+=lvRow(i,COLS_LIB,[esc(napLibNombre(rec)),tam,tipo,dur],i===NAP.libSel);
+  }
   qs('#napLib').innerHTML=h; qs('#napLibPlay').disabled=NAP.libSel<0;
+}
+function napStopAudio(){
+  var a=qs('#napAudio');
+  if(a){ try{ a.pause(); }catch(e){} a.removeAttribute('src'); try{ a.load(); }catch(e){} }
+  NAP.aud=null;
+  var t=qs('#napAudTitle'); if(t) t.textContent='Reproductor de audio de Napster';
+  var b=qs('#napAudPlay'); if(b) b.textContent='▶';
+}
+function napPlayAudio(rec){
+  var a=qs('#napAudio'), url=rec&&rec.url;
+  if(!a||!url) return;
+  if(PL.state==='play') pause();
+  NAP.aud=rec;
+  a.src=url;
+  a.play().catch(function(){});
+  var label=(rec.artista?rec.artista+' - ':'')+(rec.titulo||rec.name||'audio');
+  qs('#napAudTitle').textContent=label;
+  qs('#napAudPlay').textContent='⏸';
+}
+function napToggleAudio(){
+  var a=qs('#napAudio');
+  if(!a||!NAP.aud){ if(NAP.libSel>=0) napPlayLib(NAP.libSel); return; }
+  if(a.paused){ a.play().catch(function(){}); qs('#napAudPlay').textContent='⏸'; }
+  else { a.pause(); qs('#napAudPlay').textContent='▶'; }
+}
+function napPlayLib(i){
+  var list=NAP.library&&NAP.library.length?NAP.library:napBiblioteca();
+  i=+i; if(i<0||i>=list.length) return;
+  var rec=list[i]; NAP.libSel=i; napRenderLib();
+  if(napEsVideo(rec)){
+    napStopAudio();
+    openMediaFile({stockId:rec.id||rec.stockId,url:rec.url,tag:rec.tag||napTagOf(rec),tipo:rec.tipo||'video',name:napLibNombre(rec),artist:rec.artista,duration:rec.duracion,size:rec.size});
+    return;
+  }
+  napPlayAudio(rec);
 }
 function napTab(name){
   NAP.tab=name;
   qsa('#nap .tab').forEach(function(t){ t.classList.toggle('on',t.getAttribute('data-tab')===name); });
   qsa('#nap .panel').forEach(function(p){ p.classList.toggle('on',p.getAttribute('data-panel')===name); });
   if(name==='xfer') napRenderX();
+  if(name==='lib') napRenderLib();
 }
 function napFocus(f){ qsa('#nap .fin').forEach(function(x){ x.classList.toggle('focus',x===f); }); NAP.field=f; }
+function napCatalogoTexto(){
+  if(!NAP.haveSplit) return NAP.songs?('admira.studio · '+fmtNum(NAP.songs)):'admira.studio';
+  var c=Number(NAP.canciones)||0, v=Number(NAP.videos)||0;
+  function n(num, uno, muchos){ return fmtNum(num)+' '+(num===1?uno:muchos); }
+  return 'admira.studio · '+n(c,'canción','canciones')+' · '+n(v,'vídeo','vídeos');
+}
 function napStats(){
-  if(!NAP.conn){ qs('#napSt').textContent='Desconectado'; return; }
-  qs('#napSt').innerHTML='Conectado<br>admira.studio · '+fmtNum(NAP.songs)+' canciones';
-  qs('#napS1').textContent='admira.studio · '+fmtNum(NAP.songs);
+  if(!NAP.conn){ qs('#napSt').textContent='Desconectado'; var s1=qs('#napS1'); if(s1) s1.textContent='admira.studio'; return; }
+  var txt=napCatalogoTexto();
+  qs('#napSt').innerHTML='Conectado<br>'+txt;
+  qs('#napS1').textContent=txt;
 }
 function napConnect(){
   qs('#napSt').textContent='Conectando con admira.studio…';
@@ -3934,7 +4010,11 @@ function napConnect(){
       if(!NAP.open) return;
       if(x.status===401){ NAP.conn=false; NAP.songs=0; napError('No hay sesión. Recarga la página e inicia sesión para buscar en admira.studio.'); return; }
       if(!x.d||x.d.ok!==true){ NAP.conn=false; NAP.songs=0; napError((x.d&&x.d.error)||'admira.studio no contesta. Inténtalo de nuevo.'); return; }
-      NAP.conn=true; NAP.songs=Number(x.d.total)||0; napStats(); qs('#napS3').textContent='En línea';
+      NAP.conn=true; NAP.songs=Number(x.d.total)||0;
+      if(Object.prototype.hasOwnProperty.call(x.d,'canciones')&&Object.prototype.hasOwnProperty.call(x.d,'videos')){
+        NAP.canciones=Number(x.d.canciones)||0; NAP.videos=Number(x.d.videos)||0; NAP.haveSplit=true;
+      } else { NAP.haveSplit=false; NAP.canciones=null; NAP.videos=null; }
+      napStats(); qs('#napS3').textContent='En línea';
     })
     .catch(function(){
       if(!NAP.open) return;
@@ -3959,7 +4039,11 @@ function napSearch(){
       NAP.searching=false;
       if(x.status===401){ NAP.msg='No hay sesión. Recarga la página e inicia sesión para buscar en admira.studio.'; napRenderRes(); return; }
       if(!x.d||x.d.ok!==true){ NAP.msg=(x.d&&x.d.error)||'admira.studio no contesta. Inténtalo de nuevo.'; napRenderRes(); return; }
-      NAP.songs=Number(x.d.total)||NAP.songs; napStats();
+      NAP.songs=Number(x.d.total)||NAP.songs;
+      if(Object.prototype.hasOwnProperty.call(x.d,'canciones')&&Object.prototype.hasOwnProperty.call(x.d,'videos')){
+        NAP.canciones=Number(x.d.canciones)||0; NAP.videos=Number(x.d.videos)||0; NAP.haveSplit=true;
+      }
+      napStats();
       NAP.results=(x.d.results||[]).map(napRow);
       if(!NAP.results.length) NAP.msg='No se ha encontrado nada para «'+raw+'». Prueba con «80» o «admira».';
       napRenderRes();
@@ -4008,6 +4092,7 @@ function napFinish(x){
   if(!napEsVideo(x.r)) napEnsureTrack(x.r);
   if(PL.open) void refreshWinamp();
   if(typeof mpMergeDownloads==='function') mpMergeDownloads();
+  napRenderLib();
   napProgressUpdate(x);
   setTimeout(napProgressHide, 700);
 }
@@ -4029,15 +4114,16 @@ function napTick(){
 function napPlay(){ var x=NAP.xfers[NAP.xsel]; if(!x||x.state!=='done') return; openMediaFile({stockId:x.r.id,url:x.r.url,tag:x.r.tag||napTagOf(x.r),tipo:x.r.tipo,name:x.r.f,artist:x.r.artista,duration:x.r.duracion,size:x.r.size}); }
 function openNap(){
   var w=qs('#nap'); w.style.display='block'; NAP.open=true;
-  addTask('nap','Napster v2.0 BETA 7','p2p',[w]); focusWin(w);
+  addTask('nap','Napster v2.0 Transfer','p2p',[w]); focusWin(w);
   if(!NAP.conn){ napConnect(); }
   else napStats();
   if(MODE==='interactive'&&!qs('#napArtist').textContent) qs('#napArtist').textContent='admira';
-  napTab(NAP.tab); napRenderRes();
+  napTab(NAP.tab); napRenderRes(); napRenderLib();
 }
 function closeNap(){
+  napStopAudio();
   qs('#nap').style.display='none'; removeTask('nap'); clearTimeout(NAP.connTimer);
-  NAP.open=false; NAP.conn=false; NAP.songs=0; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
+  NAP.open=false; NAP.conn=false; NAP.songs=0; NAP.canciones=null; NAP.videos=null; NAP.haveSplit=false; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
   qs('#napArtist').textContent=''; qs('#napTitle').textContent=''; qsa('#nap .fin').forEach(function(f){ f.classList.remove('focus'); });
   qs('#napSt').textContent='Desconectado'; qs('#napS3').textContent='Desconectado';
   napTab('search'); napRenderRes(); napRenderX(); napRenderLib();
@@ -4062,8 +4148,13 @@ function wireNap(){
   qs('#napPlay').addEventListener('click',napPlay);
   qs('#napClean').addEventListener('click',function(){ NAP.xfers=NAP.xfers.filter(function(x){ return x.state!=='done'; }); NAP.xsel=-1; napRenderX(); });
   qs('#napLib').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.libSel=+r.getAttribute('data-i'); lvSelect(qs('#napLib'),NAP.libSel); qs('#napLibPlay').disabled=false; });
-  qs('#napLib').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; openAmp(false); play(+r.getAttribute('data-i')); });
-  qs('#napLibPlay').addEventListener('click',function(){ if(NAP.libSel>=0){ openAmp(false); play(NAP.libSel); } });
+  qs('#napLib').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; napPlayLib(+r.getAttribute('data-i')); });
+  qs('#napLibPlay').addEventListener('click',function(){ if(NAP.libSel>=0) napPlayLib(NAP.libSel); });
+  qs('#napAudPlay').addEventListener('click',function(e){ e.stopPropagation(); napToggleAudio(); });
+  qs('#napAudStop').addEventListener('click',function(e){ e.stopPropagation(); napStopAudio(); });
+  qs('#napAudio').addEventListener('ended',function(){ var b=qs('#napAudPlay'); if(b) b.textContent='▶'; });
+  qs('#napAudio').addEventListener('play',function(){ var b=qs('#napAudPlay'); if(b) b.textContent='⏸'; });
+  qs('#napAudio').addEventListener('pause',function(){ var a=qs('#napAudio'); if(a&&a.ended) return; var b=qs('#napAudPlay'); if(b) b.textContent='▶'; });
   qs('[data-close="nap"]').addEventListener('click',closeNap);
   qs('[data-min="nap"]').addEventListener('click',function(){ minimize('nap'); });
   window.addEventListener('keydown',napKey);

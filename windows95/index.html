@@ -1375,11 +1375,11 @@ var PRESET_I=0;
 function applyVol(){ if(!A.ctx||!VOL) return; A.vol.gain.value=VOL.v*VOL.v; if(A.pan) A.pan.pan.value=(BAL.v-0.5)*2; }
 function applyEq(){ if(!A.ctx) return; for(var i=0;i<10;i++) A.bands[i].gain.value=PL.eqOn?EQV[i]:0; A.pre.gain.value=PL.eqOn?Math.pow(10,PRE/20):1; }
 function ensureEl(){
-  if(A.el) return; A.el=new Audio(); A.el.preload='auto';
+  if(A.el) return; A.el=new Audio(); A.el.crossOrigin='anonymous'; A.el.preload='auto';
   A.el.addEventListener('ended',function(){ if(PL.state==='play') onTrackEnd(); });
   try{ if(A.ctx){ A.elNode=A.ctx.createMediaElementSource(A.el); A.elNode.connect(A.input); } }catch(e){}
 }
-function trackDur(i){ var t=CONFIG.tracks[i]; if(t.src&&A.el&&PL.cur===i&&isFinite(A.el.duration)) return A.el.duration; return t.bars*16*(60/t.bpm/4); }
+function trackDur(i){ var t=CONFIG.tracks[i]; if(t.src&&A.el&&PL.cur===i&&isFinite(A.el.duration)) return A.el.duration; return t.stockId ? t.duration : t.bars*16*(60/t.bpm/4); }
 function elapsed(){ var t=CONFIG.tracks[PL.cur]; if(t.src&&A.el) return A.el.currentTime||0; return SEQ.step*SEQ.spb; }
 function stopSound(){ SEQ.playing=false; if(A.el) A.el.pause(); }
 function play(i){
@@ -4187,10 +4187,57 @@ function ssFrame(t){
 }
 
 /* ---------- AdmirAmp: abrir / cerrar ---------- */
+var originalTrackCount = CONFIG.tracks.length;
+var syncingWinamp = false;
+async function readWinampStock(url) {
+  var response = await fetch(url, {cache:'no-store', credentials:'omit', signal:AbortSignal.timeout(20000)});
+  if (!response.ok) throw Error('Stock');
+  var data = await response.json();
+  if (!Array.isArray(data.items)) throw Error('Stock');
+  return data.items;
+}
+async function refreshWinamp() {
+  if (!PL.open || syncingWinamp) return;
+  syncingWinamp = true;
+  try {
+    var results = await Promise.allSettled([
+      readWinampStock('https://stock.admira.store/stock/index.json'),
+      readWinampStock('https://api.admira.store/stock/list?limit=200')
+    ]);
+    if (results.every(r => r.status === 'rejected')) return;
+    var tracks = new Map();
+    if (results[0].status === 'rejected') {
+      CONFIG.tracks.slice(originalTrackCount).forEach(t => tracks.set(t.stockId, t));
+    }
+    for (var result of results) {
+      if (result.status !== 'fulfilled') continue;
+      for (var item of result.value) {
+        if (!item || !item.id) continue;
+        var tags = Array.isArray(item.tags) ? item.tags : [];
+        var tagged = tags.some(t => String(t).trim().replace(/^#/, '').toLowerCase() === 'winamp');
+        if (!tagged || !['audio','music'].includes(item.type)) { tracks.delete(item.id); continue; }
+        tracks.set(item.id, {stockId:item.id, artist:item.artist || 'Admira Studio',
+          title:item.title || item.comment || item.id, duration:Number(item.duration) || 0,
+          bpm:120, src:'https://api.admira.store/stock/asset/' + encodeURIComponent(item.id)});
+      }
+    }
+    var previous = CONFIG.tracks[PL.cur], selected = CONFIG.tracks[PL.sel];
+    if (previous.stockId && PL.state !== 'stop' && !tracks.has(previous.stockId)) tracks.set(previous.stockId, previous);
+    var next = Array.from(tracks.values());
+    if (JSON.stringify(CONFIG.tracks.slice(originalTrackCount)) === JSON.stringify(next)) return;
+    CONFIG.tracks = CONFIG.tracks.slice(0, originalTrackCount).concat(next);
+    function index(track) {
+      return Math.max(0, CONFIG.tracks.findIndex(t => t === track || (track?.stockId && t.stockId === track.stockId)));
+    }
+    PL.cur = index(previous); PL.sel = index(selected);
+    qs('#plist').replaceChildren(); renderPlaylist(); MARQ.dirty = true;
+  } finally { syncingWinamp = false; }
+}
+
 function openAmp(autoplay){
   var wins=[qs('#amp'),qs('#eqw'),qs('#plw')];
   wins.forEach(function(w){ if(w.getAttribute('data-hidden')!=='1') w.style.display='block'; });
-  PL.open=true; addTask('amp',CONFIG.names.player,'amp',wins); focusWin(qs('#amp'));
+  PL.open=true; void refreshWinamp(); addTask('amp',CONFIG.names.player,'amp',wins); focusWin(qs('#amp'));
   audioInit(); if(autoplay&&PL.state!=='play') play();
 }
 function closeAmp(){ stop(); ['#amp','#eqw','#plw'].forEach(function(s){ qs(s).style.display='none'; }); PL.open=false; removeTask('amp'); }
@@ -4411,6 +4458,7 @@ function onInput(e){
    ARRANQUE
    ========================================================= */
 function init(){
+  setInterval(refreshWinamp, 60000);
   stage=qs('#stage'); desk=qs('#desk'); ghostEl=qs('#ghost'); ctaEl=qs('#cta'); hintEl=qs('#hint');
   fit(); window.addEventListener('resize',fit);
   qsa('[data-ico]').forEach(function(el){ if(!el.firstChild) el.innerHTML=ICONS[el.getAttribute('data-ico')]||''; });

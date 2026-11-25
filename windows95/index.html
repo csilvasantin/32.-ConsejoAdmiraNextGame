@@ -15,6 +15,8 @@
   - Música: pistas sintetizadas de demostración. Para usar el catálogo de admira.tv,
     añade `src: 'archivo.mp3'` a cada pista de CONFIG.tracks (archivo en esta misma carpeta).
   - URL: ?visita=Nombre personaliza el saludo del Léeme.
+  - Admira Director (ainimation.studio) la ajusta: abre esta página con ?director=1&origen=… y habla por postMessage;
+    la página carga /api/win95/ajuste (esquema + lo guardado) sobre CONFIG antes de arrancar. Esquema: win95-ajuste-lib.mjs.
 -->
 <style>
 *{box-sizing:border-box}
@@ -729,6 +731,92 @@ var CONFIG = {
   }
 };
 (function(){ var m=/[?&]visita=([^&]+)/.exec(location.search||''); if(m){ try{ CONFIG.visitor=decodeURIComponent(m[1].replace(/\+/g,' ')).slice(0,40); }catch(e){} } })();
+
+/* =========================================================
+   AJUSTE DESDE ADMIRA DIRECTOR (ainimation.studio) · DeepAgent Neo, 25-nov-2026
+   El Director abre esta página en una ventana (?director=1&origen=https://www.ainimation.studio) y
+   habla por postMessage. La página carga /api/win95/ajuste (lo guardado + el esquema), lo funde
+   sobre CONFIG antes de arrancar y, si hay un borrador del Director (sessionStorage), lo aplica
+   encima. Guardar y restaurar los hace la propia página con su cookie: el Director nunca toca la API.
+   ========================================================= */
+var AJUSTE={ datos:{}, esquema:null, fabrica:{}, at:null, by:'', borrador:null, cargado:false };
+var DIRECTOR=(function(){
+  var ORIGENES=['https://www.ainimation.studio','https://ainimation.studio'];
+  var q=location.search||'', on=/[?&]director=1(&|$)/.test(q), m=/[?&]origen=([^&]+)/.exec(q), origen='';
+  try{ origen=m?decodeURIComponent(m[1]):''; }catch(e){ origen=''; }
+  if(ORIGENES.indexOf(origen)<0) origen=ORIGENES[0];
+  return { on:on&&!!window.opener, origen:origen, origenes:ORIGENES, clave:'vuelta95.ajuste.borrador' };
+})();
+function fusionAjuste(dst,src){
+  if(!src||typeof src!=='object') return dst;
+  Object.keys(src).forEach(function(k){
+    var v=src[k];
+    if(v&&typeof v==='object'&&!Array.isArray(v)&&dst[k]&&typeof dst[k]==='object'&&!Array.isArray(dst[k])) fusionAjuste(dst[k],v);
+    else dst[k]=Array.isArray(v)?v.map(function(x){ return x&&typeof x==='object'?Object.assign({},x):x; }):v;
+  });
+  return dst;
+}
+function rutaValor(o,ruta){ return String(ruta).split('.').reduce(function(x,k){ return x&&typeof x==='object'?x[k]:undefined; },o); }
+function rutaPoner(o,ruta,v){ var p=String(ruta).split('.'),x=o; for(var i=0;i<p.length-1;i++){ if(!x[p[i]]||typeof x[p[i]]!=='object') x[p[i]]={}; x=x[p[i]]; } x[p[p.length-1]]=v; }
+function extraerFabrica(esquema){
+  var out={}; if(!esquema||!esquema.grupos) return out;
+  esquema.grupos.forEach(function(g){ (g.campos||[]).forEach(function(c){ var v=rutaValor(CONFIG,c.ruta); if(v!==undefined) rutaPoner(out,c.ruta,JSON.parse(JSON.stringify(v))); }); });
+  return out;
+}
+function leerBorrador(){ if(!DIRECTOR.on) return null; try{ var b=JSON.parse(sessionStorage.getItem(DIRECTOR.clave)||'null'); return b&&typeof b==='object'?b:null; }catch(e){ return null; } }
+function cargarAjuste(cb){
+  var hecho=false, fin=function(){ if(hecho) return; hecho=true; AJUSTE.cargado=true; cb(); };
+  var tmr=setTimeout(fin,4000);
+  try{
+    fetch('/api/win95/ajuste',{credentials:'same-origin',cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
+      if(d&&d.ok){ AJUSTE.datos=d.ajuste||{}; AJUSTE.esquema=d.esquema||null; AJUSTE.fabrica=extraerFabrica(AJUSTE.esquema); AJUSTE.at=d.at||null; AJUSTE.by=d.by||''; fusionAjuste(CONFIG,AJUSTE.datos); }
+      AJUSTE.borrador=leerBorrador(); if(AJUSTE.borrador) fusionAjuste(CONFIG,AJUSTE.borrador);
+      clearTimeout(tmr); fin();
+    }).catch(function(){ clearTimeout(tmr); fin(); });
+  }catch(e){ clearTimeout(tmr); fin(); }
+}
+function directorEnviar(tipo,extra){
+  if(!DIRECTOR.on||!window.opener) return;
+  var msg={ type:'admira:xperiencia:'+tipo, id:'vuelta-al-95', version:1 };
+  if(extra) Object.keys(extra).forEach(function(k){ msg[k]=extra[k]; });
+  try{ window.opener.postMessage(msg,DIRECTOR.origen); }catch(e){}
+}
+function directorEstado(){
+  var vigente={}; fusionAjuste(vigente,AJUSTE.datos); if(AJUSTE.borrador) fusionAjuste(vigente,AJUSTE.borrador);
+  directorEnviar('estado',{ esquema:AJUSTE.esquema, fabrica:AJUSTE.fabrica, guardado:AJUSTE.datos, ajuste:vigente, at:AJUSTE.at, by:AJUSTE.by, borrador:!!AJUSTE.borrador, titulo:document.title, url:location.origin+location.pathname });
+}
+function directorPeticion(ruta,metodo,cuerpo){
+  var o={ method:metodo, credentials:'same-origin', cache:'no-store', headers:{} };
+  if(cuerpo!==undefined){ o.headers['content-type']='application/json'; o.body=JSON.stringify(cuerpo); }
+  return fetch(ruta,o).then(function(r){ return r.json().then(function(d){ d=d||{}; d.status=r.status; return d; }); });
+}
+function directorReiniciar(){ setTimeout(function(){ location.reload(); },150); }
+(function(){
+  if(!DIRECTOR.on) return;
+  window.addEventListener('message',function(ev){
+    if(ev.source!==window.opener||DIRECTOR.origenes.indexOf(ev.origin)<0) return;
+    var d=ev.data||{}; if(typeof d.type!=='string'||d.type.indexOf('admira:xperiencia:')!==0) return;
+    if(d.id&&d.id!=='vuelta-al-95') return;
+    DIRECTOR.origen=ev.origin;
+    var tipo=d.type.slice('admira:xperiencia:'.length);
+    if(tipo==='hola'||tipo==='estado?'){ if(AJUSTE.cargado) directorEstado(); return; }
+    if(tipo==='aplicar'){ try{ sessionStorage.setItem(DIRECTOR.clave,JSON.stringify(d.ajuste||{})); }catch(e){} directorEnviar('aplicando',{}); directorReiniciar(); return; }
+    if(tipo==='descartar'){ try{ sessionStorage.removeItem(DIRECTOR.clave); }catch(e){} directorEnviar('aplicando',{}); directorReiniciar(); return; }
+    if(tipo==='guardar'){
+      directorPeticion('/api/win95/ajuste','PUT',{ ajuste:d.ajuste||{} }).then(function(r){
+        if(r.ok){ try{ sessionStorage.removeItem(DIRECTOR.clave); }catch(e){} directorEnviar('guardado',{ ok:true, at:r.at, by:r.by, errores:r.errores||[], ajuste:r.ajuste }); directorReiniciar(); }
+        else directorEnviar('guardado',{ ok:false, error:r.error||('HTTP '+r.status), errores:r.errores||[] });
+      }).catch(function(e){ directorEnviar('guardado',{ ok:false, error:String(e&&e.message||e) }); });
+      return;
+    }
+    if(tipo==='restaurar'){
+      directorPeticion('/api/win95/ajuste','DELETE').then(function(r){
+        if(r.ok){ try{ sessionStorage.removeItem(DIRECTOR.clave); }catch(e){} directorEnviar('guardado',{ ok:true, at:null, by:r.by, restaurado:true, ajuste:{} }); directorReiniciar(); }
+        else directorEnviar('guardado',{ ok:false, error:r.error||('HTTP '+r.status) });
+      }).catch(function(e){ directorEnviar('guardado',{ ok:false, error:String(e&&e.message||e) }); });
+    }
+  });
+})();
 
 /* =========================================================
    UTILIDADES
@@ -3242,7 +3330,7 @@ function preloadIcons(done){
   });
   setTimeout(end,2000);
 }
-window.addEventListener('load',function(){ preloadIcons(boot); });
+window.addEventListener('load',function(){ cargarAjuste(function(){ preloadIcons(boot); if(DIRECTOR.on){ directorEnviar('hola',{}); directorEstado(); } }); });
 function boot(){
   init();
   // Integración con el player de Admira (si existe admira_api_content.js)

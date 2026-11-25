@@ -43,8 +43,8 @@ test("Napster descarga con diálogo clásico, etiqueta #winamp o #AdmiraMediaPla
   assert.match(html, /Canción de Winamp/);
 });
 
-test("Admira Media Player solo lista #AdmiraMediaPlayer y las descargas de vídeo de Napster", () => {
-  assert.match(html, /function mpIsMediaTag\(tag\)\{ return String\(tag\|\|''\)\.replace\(\/\^#\/,''\)\.toLowerCase\(\)==='admiramediaplayer'; \}/);
+test("Admira Media Player lista #win95/#WindowsMediaPlayer/#AdmiraMediaPlayer y las descargas de vídeo de Napster", () => {
+  assert.match(html, /t==='win95'\|\|t==='genero95'\|\|t==='windowsmediaplayer'\|\|t==='admiramediaplayer'/);
   assert.match(html, /function mpPlayDownload\(r\)\{/);
   assert.match(html, /descargasDe\('AdmiraMediaPlayer'\)/);
   assert.match(html, /Pulsa Reproducir para ver la playlist #AdmiraMediaPlayer/);

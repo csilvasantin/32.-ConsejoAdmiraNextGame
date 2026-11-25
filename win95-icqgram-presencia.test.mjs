@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { presencia, senalLatido, despertar, cupoDesdeLecturas, ultimaLecturaCupo, CUPO_MEDIDOR } from "./win95-presencia-lib.mjs";
+import { presencia, senalLatido, despertar, cupoDesdeLecturas, ultimaLecturaCupo, CUPO_MEDIDOR, CUPO_FRESCO_H, intervencionesHoy, inicioDiaMadrid } from "./win95-presencia-lib.mjs";
 import { construir } from "./functions/api/win95/presencia.js";
 import { claveHilo } from "./chat-hilo-lib.mjs";
 
@@ -84,7 +84,9 @@ test("ICQGram: Fuera de línea = consejeros sin señal + los 3 de la demo; conta
   assert.match(html, /presencia:\{ url:'\/api\/win95\/presencia', cadaSeg:30 \}/);
   assert.match(html, /off=todos\.filter\(function\(c\)\{ return !c\.on; \}\)\.concat\(off\); html=grp\('Leyendas',de\('leyendas'\),'leyendas'\)\+grp\('Actuales',de\('actuales'\),'actuales'\)/);
   assert.match(html, /function cupoCab\(k\)/);
-  assert.match(html, /t\+' · '\+cu\.txt/);
+  assert.match(html, /cu\.txt\?' · '\+cu\.txt:''/);
+  assert.doesNotMatch(html, /txt:'— %'|class="cbar"|\.cbar/);
+  assert.match(html, /c\.hoy>0\)\?' \('\+c\.hoy\+'\)'/);
   assert.doesNotMatch(html, /grp\('Leyendas',de\('leyendas'\)\)\+grp\('Actuales',de\('actuales'\)\)/);
   assert.match(html, /\{id:'c-murati',persona:'murati',name:'Mira Murati',cuenta:'actuales',sinChat:true\}/);
   assert.match(html, /\{id:'c-lasseter',persona:'lasseter',name:'John Lasseter',cuenta:'actuales',sinChat:true\}/);
@@ -96,26 +98,25 @@ test("ICQGram: Fuera de línea = consejeros sin señal + los 3 de la demo; conta
 });
 
 
-const LECTURAS = [
+const LECTURAS_VIEJAS = [
   { ts: "2026-11-25T11:09:42.354Z", grupo: "leyendas", agente: "Grok Bot semanal", pct: 71, fuente: "auto", reset: "2026-11-26T20:58:00.000Z", cuenta: "csilva@admira.com", nota: "no debe salir" },
   { ts: "2026-11-25T11:09:41.636Z", grupo: "leyendas", agente: "SuperGrok Heavy semanal", pct: 0, fuente: "auto", reset: "2026-11-27T18:31:00.000Z" },
   { ts: "2026-11-25T11:09:43.289Z", grupo: "coetaneos", agente: "Grok Bot semanal", pct: 86, fuente: "auto", reset: "2026-11-25T18:46:00.000Z", cuenta: "csilvasantin@gmail.com", nota: "privado" },
 ];
+const LECTURAS_FRESCAS = [
+  { ts: "2026-11-25T22:21:00.000Z", grupo: "leyendas", agente: "Grok Bot semanal", pct: 86.3, fuente: "auto", reset: "2026-11-26T20:58:00.000Z", nota: "no debe salir" },
+  { ts: "2026-11-25T22:21:00.000Z", grupo: "coetaneos", agente: "Grok Bot semanal", pct: 12, fuente: "auto", reset: "2026-12-02T18:46:00.000Z" },
+];
 
-test("cupo: Leyendas usa Grok Bot semanal vigente; Actuales queda sin datos si el reset ya pasó", () => {
-  const ahora = Date.parse("2026-11-25T21:30:00Z"); // 22:30 Madrid, después del reset de Actuales (19:46)
-  const c = cupoDesdeLecturas(LECTURAS, ahora);
-  assert.equal(ultimaLecturaCupo(LECTURAS, "leyendas").agente, CUPO_MEDIDOR);
-  assert.equal(c.leyendas.pct, 71);
-  assert.equal(c.leyendas.fuente, "auto");
-  assert.equal(c.leyendas.medidor, "Grok Bot semanal");
-  assert.equal(c.leyendas.origen, "/api/consumos/lecturas");
-  assert.equal(c.leyendas.motivo, null);
-  assert.equal(c.leyendas.ts, "2026-11-25T11:09:42.354Z");
+test("cupo: una lectura de más de 2 h no se enseña (ni el 71 % viejo ni un — %)", () => {
+  const ahora = Date.parse("2026-11-25T21:30:00Z"); // 10 h después de las lecturas de las 12:09
+  const c = cupoDesdeLecturas(LECTURAS_VIEJAS, ahora);
+  assert.equal(CUPO_FRESCO_H, 2);
+  assert.equal(ultimaLecturaCupo(LECTURAS_VIEJAS, "leyendas").pct, 71);
+  assert.equal(c.leyendas.pct, null);
+  assert.equal(c.leyendas.motivo, "sin datos");
+  assert.equal(c.leyendas.anterior, 71);
   assert.equal(c.actuales.pct, null);
-  assert.equal(c.actuales.motivo, "sin datos");
-  assert.equal(c.actuales.anterior, 86);
-  assert.equal(c.actuales.reset, "2026-11-25T18:46:00.000Z");
   assert.equal(/csilva@|gmail|privado|no debe salir/.test(JSON.stringify(c)), false);
 });
 
@@ -124,27 +125,84 @@ test("cupo: sin lecturas o medidor distinto no se inventa un número", () => {
   assert.equal(vacio.leyendas.pct, null);
   assert.equal(vacio.actuales.pct, null);
   assert.equal(vacio.leyendas.motivo, "sin datos");
-  const otro = cupoDesdeLecturas([{ ts: "2026-11-25T11:00:00Z", grupo: "leyendas", agente: "SuperGrok Heavy semanal", pct: 0, reset: "2026-11-27T18:31:00.000Z" }], Date.parse("2026-11-25T21:30:00Z"));
+  const otro = cupoDesdeLecturas([{ ts: "2026-11-25T21:00:00Z", grupo: "leyendas", agente: "SuperGrok Heavy semanal", pct: 0, reset: "2026-11-27T18:31:00.000Z" }], Date.parse("2026-11-25T21:30:00Z"));
   assert.equal(otro.leyendas.pct, null);
 });
 
-test("cupo: Actuales también sale si su lectura sigue vigente", () => {
-  const antes = Date.parse("2026-11-25T16:00:00Z"); // 17:00 Madrid, antes del reset 19:46
-  const c = cupoDesdeLecturas(LECTURAS, antes);
-  assert.equal(c.leyendas.pct, 71);
-  assert.equal(c.actuales.pct, 86);
-  assert.equal(c.actuales.motivo, null);
+test("cupo: una lectura fresca (< 2 h) sí se enseña; si el reset ya pasó, no", () => {
+  const ahora = Date.parse("2026-11-25T22:30:00Z"); // 23:30 Madrid, 9 min después de la lectura
+  const c = cupoDesdeLecturas(LECTURAS_FRESCAS, ahora);
+  assert.equal(c.leyendas.pct, 86.3);
+  assert.equal(c.leyendas.motivo, null);
+  assert.equal(c.leyendas.fuente, "auto");
+  assert.equal(c.actuales.pct, 12);
+  const trasReset = cupoDesdeLecturas([
+    { ts: "2026-11-25T22:21:00.000Z", grupo: "coetaneos", agente: "Grok Bot semanal", pct: 86, fuente: "auto", reset: "2026-11-25T18:46:00.000Z" },
+  ], ahora);
+  assert.equal(trasReset.actuales.pct, null);
 });
 
-test("/api/win95/presencia: adjunta el cupo de las lecturas, sin textos ni correos", async () => {
+test("/api/win95/presencia: adjunta el cupo fresco y el recuento de hoy, sin textos ni correos", async () => {
   const env = { CHAT_KV: { get: async () => null } };
   const fetchImpl = async () => ({ ok: true, json: async () => ({ ok: true, consejeros: {}, items: [] }) });
-  const r = await construir({ env, fetchImpl, ahoraMs: Date.parse("2026-11-25T21:30:00Z"), lecturas: LECTURAS });
-  assert.equal(r.cuentas.leyendas.cupo.pct, 71);
-  assert.equal(r.cuentas.actuales.cupo.pct, null);
-  assert.equal(r.cuentas.actuales.cupo.motivo, "sin datos");
+  const r = await construir({ env, fetchImpl, ahoraMs: Date.parse("2026-11-25T22:30:00Z"), lecturas: LECTURAS_FRESCAS });
+  assert.equal(r.cuentas.leyendas.cupo.pct, 86.3);
+  assert.equal(r.cuentas.actuales.cupo.pct, 12);
+  assert.equal(typeof r.consejeros.find((c) => c.persona === "jobs").hoy, "number");
   assert.equal(/csilva@|gmail|privado|no debe salir/.test(JSON.stringify(r)), false);
-  const sin = await construir({ env: {}, fetchImpl: async () => { throw new Error("x"); }, ahoraMs: Date.parse("2026-11-25T21:30:00Z") });
+  const viejo = await construir({ env, fetchImpl, ahoraMs: Date.parse("2026-11-25T21:30:00Z"), lecturas: LECTURAS_VIEJAS });
+  assert.equal(viejo.cuentas.leyendas.cupo.pct, null);
+  const sin = await construir({ env: {}, fetchImpl: async () => { throw new Error("x"); }, ahoraMs: Date.parse("2026-11-25T22:30:00Z") });
   assert.equal(sin.cuentas.leyendas.cupo.pct, null);
   assert.equal(sin.cuentas.actuales.cupo.motivo, "sin datos");
+});
+
+test("inicioDiaMadrid: el día civil de Madrid empieza a las 00:00 (CET en noviembre)", () => {
+  assert.equal(inicioDiaMadrid(Date.parse("2026-11-25T22:21:00Z")), Date.parse("2026-11-24T23:00:00Z"));
+});
+
+test("intervencionesHoy: encargos done + respuestas del hilo + misiones, sin doble conteo ni textos", () => {
+  const ahora = Date.parse("2026-11-25T22:30:00Z");
+  const ini = Math.floor(inicioDiaMadrid(ahora) / 1000);
+  const items = [
+    { id: 10, status: "done", done_at: ini + 3600, text: "secreto" },
+    { id: 11, status: "done", done_at: ini + 7200 },
+    { id: 9, status: "done", done_at: ini - 86400 }, // ayer
+    { id: 12, status: "in_progress", ts: ini + 8000 },
+  ];
+  const turnos = [
+    { rol: "jobs", ts: new Date((ini + 4000) * 1000).toISOString(), texto: "privado" },
+    { rol: "jobs", ts: new Date((ini + 5000) * 1000).toISOString() },
+    { rol: "carlos", ts: new Date((ini + 4500) * 1000).toISOString() },
+    { rol: "jobs", ts: new Date((ini - 1000) * 1000).toISOString() }, // ayer
+  ];
+  const misiones = [
+    { encargo: 10, cuando: ini + 3500, mision: "no debe salir" }, // ya contada como done
+    { encargo: 12, cuando: ini + 8000 }, // misma que in_progress
+    { encargo: null, cuando: ini + 1000 }, // latido de misión sin encargo
+  ];
+  const r = intervencionesHoy({ turnos, items, misiones, persona: "jobs", ahoraMs: ahora });
+  assert.equal(r.encargos, 2);
+  assert.equal(r.respuestas, 2);
+  assert.equal(r.misiones, 2); // in_progress 12 + misión sin encargo; el 10 ya era done
+  assert.equal(r.hoy, 6);
+  const cero = intervencionesHoy({ turnos: [], items: [], misiones: [], persona: "jobs", ahoraMs: ahora });
+  assert.equal(cero.hoy, 0);
+});
+
+test("presencia: hoy sale en cada consejero; el texto de la misión no se filtra", () => {
+  const ahora = Date.parse("2026-11-25T22:30:00Z");
+  const iniS = Math.floor(inicioDiaMadrid(ahora) / 1000);
+  const r = presencia({
+    latido: { ok: true, consejeros: { Jobs: { at: iniS + 100 } }, misiones_hoy: { Jobs: [{ encargo: null, cuando: iniS + 50, mision: "secreto-mision" }] } },
+    hilos: { jobs: [{ rol: "jobs", ts: new Date((iniS + 80) * 1000).toISOString(), texto: "secreto-hilo" }] },
+    bandejas: { jobs: [{ id: 70, status: "done", done_at: iniS + 200, text: "secreto-bandeja" }] },
+    ahoraMs: ahora,
+  });
+  const j = r.consejeros.find((c) => c.persona === "jobs");
+  assert.equal(j.hoy, 3);
+  assert.deepEqual(j.hoy_detalle, { encargos: 1, respuestas: 1, misiones: 1 });
+  assert.equal(/secreto/.test(JSON.stringify(r)), false);
+  const mu = r.consejeros.find((c) => c.persona === "murati");
+  assert.equal(mu.hoy, 0);
 });

@@ -103,8 +103,10 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
     const sa = conHilo ? salud(turnos, c.persona, ahoraMs) : null;
     const pend = sa && sa.estado === "aviso" && sa.pendiente ? segIso(sa.pendiente.desde) : 0;
     const d = conHilo ? despertar(turnos) : { estado: null, cuando: 0, codigo: null };
+    const mh = misionesDe(latido, c.latido);
+    const inter = intervencionesHoy({ turnos: conHilo ? turnos : [], items: conBandeja ? items : [], misiones: mh, persona: c.persona, ahoraMs });
     return { c, datos: !!lat || conHilo || conBandeja, sl, resp, evidencia: resp ? (sh >= sb ? "respuesta en su hilo" : "encargo cerrado en su bandeja") : null,
-      vivo: (sl > 0 && ahoraS - sl <= vivoSeg) || (resp > 0 && ahoraS - resp <= respuestaSeg), pend, d };
+      vivo: (sl > 0 && ahoraS - sl <= vivoSeg) || (resp > 0 && ahoraS - resp <= respuestaSeg), pend, d, inter };
   });
   // 2) Estado uniforme por cuenta.
   const cuentas = {};
@@ -129,7 +131,8 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
     const cu = cuentas[x.c.cuenta];
     return { persona: x.c.persona, nombre: x.c.nombre, cuenta: x.c.cuenta, chat: x.c.chat ? `/chat/${x.c.persona}/` : null,
       online: cu.online, motivo: cu.motivo, ultima_senal: Math.max(x.sl, x.resp) || null, ultima_respuesta: x.resp || null,
-      evidencia: x.evidencia, pendiente_propio: !!x.pend, despertar: x.d.estado };
+      evidencia: x.evidencia, pendiente_propio: !!x.pend, despertar: x.d.estado,
+      hoy: x.inter.hoy, hoy_detalle: { encargos: x.inter.encargos, respuestas: x.inter.respuestas, misiones: x.inter.misiones } };
   });
   return {
     ok: true, generado: ahoraS, vivo_s: vivoSeg, respuesta_s: respuestaSeg,
@@ -148,19 +151,19 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
 /**
  * % de cupo Grok Bot semanal de cada cuenta, a partir de las lecturas ya
  * publicadas en /api/consumos/lecturas. Nunca inventa un número: si no hay
- * lectura, o el reset de esa lectura ya pasó y no hay otra posterior, pct es
- * null y el motivo queda en «sin datos».
- * Leyendas = lecturas.leyendas (csilva@admira.com).
- * Actuales = lecturas.coetaneos (csilvasantin@gmail.com).
+ * lectura, o el reset de esa lectura ya pasó y no hay otra posterior, o la
+ * lectura tiene más de CUPO_FRESCO_H horas, pct es null (la UI no enseña un
+ * número viejo ni un «— %»).
  */
 export const CUPO_MEDIDOR = "Grok Bot semanal";
 export const CUPO_ORIGEN = "/api/consumos/lecturas";
+export const CUPO_FRESCO_H = 2;
 const CUPO_MAPA = { leyendas: "leyendas", actuales: "coetaneos" };
 
 function edadCupo(ts, ahoraMs) {
   if (!ts) return { edadH: null, edadTexto: null };
   const edadH = Math.round(((ahoraMs - Date.parse(ts)) / 3600e3) * 10) / 10;
-  if (!(edadH > 6)) return { edadH, edadTexto: null };
+  if (!(edadH > CUPO_FRESCO_H)) return { edadH, edadTexto: null };
   return { edadH, edadTexto: "dato de hace " + (edadH >= 48 ? Math.floor(edadH / 24) + " días" : Math.round(edadH) + " h") };
 }
 
@@ -189,7 +192,72 @@ export function cupoDesdeLecturas(lecturas, ahoraMs = Date.now()) {
       out[dest] = { ...base, motivo: "sin datos", anterior: Math.round(Number(l.pct) * 100) / 100 };
       continue;
     }
+    if (edadH !== null && edadH > CUPO_FRESCO_H) {
+      out[dest] = { ...base, motivo: "sin datos", anterior: Math.round(Number(l.pct) * 100) / 100 };
+      continue;
+    }
     out[dest] = { ...base, pct: Math.round(Number(l.pct) * 100) / 100, motivo: null };
   }
   return out;
 }
+
+/** Inicio del día civil en Europe/Madrid, en ms UTC. */
+export function inicioDiaMadrid(ahoraMs = Date.now()) {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  const p = Object.fromEntries(fmt.formatToParts(new Date(ahoraMs)).filter((x) => x.type !== "literal").map((x) => [x.type, x.value]));
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return Date.UTC(+p.year, +p.month - 1, +p.day, 0, 0, 0) - (asUTC - ahoraMs);
+}
+
+function msDe(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return NaN;
+  return n < 1e12 ? n * 1000 : n;
+}
+
+function misionesDe(latido, nombre) {
+  const l = latido && latido.misiones_hoy && typeof latido.misiones_hoy === "object" ? latido.misiones_hoy[nombre] : null;
+  if (!Array.isArray(l)) return [];
+  return l.map((m) => (m && typeof m === "object" ? { encargo: m.encargo ?? null, cuando: m.cuando ?? null } : null)).filter(Boolean);
+}
+
+/**
+ * Veces que un consejero ha trabajado o intervenido en el día de Madrid:
+ * encargos cerrados (done/closed) + respuestas en su hilo + misiones de
+ * misiones_hoy (o un in_progress empezado hoy) que no estén ya contadas por id.
+ * Solo números; ningún texto de misión ni de mensaje.
+ */
+export function intervencionesHoy({ turnos, items, misiones, persona, ahoraMs = Date.now() } = {}) {
+  const desde = inicioDiaMadrid(ahoraMs), hasta = ahoraMs;
+  const enHoy = (ms) => Number.isFinite(ms) && ms >= desde && ms <= hasta;
+  const ids = new Set();
+  let encargos = 0, respuestas = 0, mision = 0;
+  for (const it of Array.isArray(items) ? items : []) {
+    if (!it) continue;
+    if ((it.status === "done" || it.status === "closed") && enHoy(msDe(it.done_at))) {
+      if (it.id != null) ids.add(it.id);
+      encargos++;
+    }
+  }
+  for (const m of Array.isArray(misiones) ? misiones : []) {
+    if (!m) continue;
+    if (m.cuando != null && !enHoy(msDe(m.cuando))) continue;
+    const id = m.encargo != null ? m.encargo : null;
+    if (id != null && ids.has(id)) continue;
+    if (id != null) ids.add(id);
+    mision++;
+  }
+  for (const it of Array.isArray(items) ? items : []) {
+    if (!it || it.status !== "in_progress") continue;
+    if (!enHoy(msDe(it.ts)) && !enHoy(msDe(it.ack_at))) continue;
+    if (it.id != null && ids.has(it.id)) continue;
+    if (it.id != null) ids.add(it.id);
+    mision++;
+  }
+  for (const t of Array.isArray(turnos) ? turnos : []) {
+    if (!t || t.rol !== persona) continue;
+    if (enHoy(Date.parse(t.ts))) respuestas++;
+  }
+  return { hoy: encargos + respuestas + mision, encargos, respuestas, misiones: mision };
+}
+

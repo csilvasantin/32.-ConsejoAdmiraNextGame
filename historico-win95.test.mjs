@@ -166,3 +166,23 @@ test("el escritorio permite crear carpetas y accesos directos", () => {
   assert.match(html, /st\.v=2/);
   assert.match(html, /st\.items/);
 });
+
+test("el escritorio incluye Para las Leyendas.txt precargado en el código", () => {
+  const html = src("windows95/index.html");
+  const txt = src("windows95/para-las-leyendas.txt");
+  assert.match(txt, /PARA LAS LEYENDAS/);
+  assert.match(txt, /COETANEOS/);
+  assert.match(txt, /LEYENDAS/);
+  assert.doesNotMatch(txt, /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/);
+  assert.doesNotMatch(txt, /\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b/);
+  assert.match(html, /id="leyendas-seed"/);
+  assert.match(html, /doc-leyendas/);
+  assert.match(html, /function ensureLeyendasDoc/);
+  assert.match(html, /Para las Leyendas\.txt/);
+  assert.match(html, /id="note-ro"/);
+  assert.ok(html.includes(leyendasSeedBody()));
+});
+
+function leyendasSeedBody() {
+  return src("windows95/para-las-leyendas.txt").replace(/\s+$/, "");
+}

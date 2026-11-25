@@ -407,7 +407,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #volpop .vm{position:absolute;left:0;right:0;bottom:9px;white-space:nowrap}
 .chk{position:relative;display:inline-block;width:13px;height:13px;margin-right:4px;vertical-align:-2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .chk.on::after{content:'';position:absolute;left:4px;top:1px;width:3px;height:7px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(40deg)}
-/* ---------- Windows Media Player (admira.tv / #win95 de admira.studio) ---------- */
+/* ---------- Admira Media Player (admira.tv / #win95 #WindowsMediaPlayer #AdmiraMediaPlayer) ---------- */
 #mpw .mpv{position:absolute;left:6px;right:6px;top:44px;height:auto;bottom:72px;overflow:hidden;background:#000;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
 #mpw .mptrk{top:auto;bottom:50px}
 #mpw .mpbtns{top:auto;bottom:26px}
@@ -415,9 +415,16 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #mpVideo{object-fit:contain;pointer-events:auto}
 #mpFrame{pointer-events:none}
 .win.max,.skin.max{left:0!important;top:0!important;width:640px!important;height:452px!important}
-#mpw.max .mpv,#mpw:fullscreen .mpv,#mpw:-webkit-full-screen .mpv{height:auto;top:44px;bottom:72px}
-#mpw.max .mptrk,#mpw:fullscreen .mptrk,#mpw:-webkit-full-screen .mptrk{top:auto;bottom:50px}
-#mpw.max .mpbtns,#mpw:fullscreen .mpbtns,#mpw:-webkit-full-screen .mpbtns{top:auto;bottom:26px}
+#mpw.max .mpv{height:auto;top:44px;bottom:72px}
+#mpw.max .mptrk{top:auto;bottom:50px}
+#mpw.max .mpbtns{top:auto;bottom:26px}
+#mpw.fs .mpv,#mpw:fullscreen .mpv,#mpw:-webkit-full-screen .mpv{left:0;right:0;top:0;bottom:0;height:auto;box-shadow:none}
+#mpw.fs .tb,#mpw:fullscreen .tb,#mpw:-webkit-full-screen .tb,
+#mpw.fs .menubar,#mpw:fullscreen .menubar,#mpw:-webkit-full-screen .menubar,
+#mpw.fs .mptrk,#mpw:fullscreen .mptrk,#mpw:-webkit-full-screen .mptrk,
+#mpw.fs .mpbtns,#mpw:fullscreen .mpbtns,#mpw:-webkit-full-screen .mpbtns,
+#mpw.fs .sbar1,#mpw:fullscreen .sbar1,#mpw:-webkit-full-screen .sbar1,
+#mpw.fs .grip,#mpw:fullscreen .grip,#mpw:-webkit-full-screen .grip{display:none}
 .win{overflow:hidden}
 .win.max .grip,.skin.max .grip{display:none}
 .grip{position:absolute;right:2px;bottom:2px;width:13px;height:13px;z-index:200;cursor:se-resize;pointer-events:auto;background:
@@ -426,6 +433,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
   linear-gradient(135deg,transparent 40%,#fff 40%,#fff 45%,#808080 45%,#808080 55%,transparent 55%) no-repeat}
 .win.max>.grip,.skin.max>.grip{display:none}
 #mpw:fullscreen,#mpw:-webkit-full-screen{left:0!important;top:0!important;width:100%!important;height:100%!important;z-index:10000}
+#mpw.fs{left:0!important;top:0!important;width:640px!important;height:480px!important;z-index:10000}
 #clock{cursor:pointer}
 #shutdlg .sdbody{padding:14px 16px 6px;display:flex;align-items:flex-start}
 #shutdlg .sdbody svg{width:32px;height:32px;margin-right:12px;flex:none}
@@ -450,6 +458,8 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #mpLive i{display:inline-block;width:8px;height:8px;margin-right:4px;border-radius:50%;background:#808080;vertical-align:-1px}
 #mpLive.on{color:#c00000}
 #mpLive.on i{background:#e00000;animation:blink 1s steps(1) infinite}
+#mpPos{margin-left:8px;font:bold 10px Arial,sans-serif;color:#000;white-space:nowrap}
+#mpw.fs #mpPos,#mpw:fullscreen #mpPos,#mpw:-webkit-full-screen #mpPos{display:none}
 #mpw .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
 
 /* ---------- iconos arrastrables, menú del escritorio y papelera ---------- */
@@ -987,15 +997,15 @@ Fin del documento. Está en Miscelánea, solo lectura.
       <div class="lv" id="trList" style="position:absolute;left:6px;right:6px;top:72px;bottom:28px"></div>
       <div class="sbar1" id="trSt">0 objeto(s)</div>
     </div>
-    <!-- Windows Media Player: piezas públicas de admira.studio (#win95) vía admira.tv, sin secretos -->
+    <!-- Admira Media Player: piezas públicas de admira.studio (#win95, #WindowsMediaPlayer, #AdmiraMediaPlayer) vía admira.tv, sin secretos -->
     <div id="mpw" class="win" style="left:140px;top:28px;width:356px;height:372px;display:none">
-      <div class="tb"><span data-ico="media"></span><span class="t" id="mpT">Windows Media Player</span><span class="x" data-min="mpw">_</span><span class="x" id="mpMax" data-max="mpw" title="Pantalla completa">□</span><span class="x gap" data-close="mpw">×</span></div>
+      <div class="tb"><span data-ico="media"></span><span class="t" id="mpT">Admira Media Player</span><span class="x" data-min="mpw">_</span><span class="x" id="mpMax" title="Pantalla completa">□</span><span class="x gap" data-close="mpw">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>D</u>ispositivo</span><span>E<u>s</u>cala</span><span>Ay<u>u</u>da</span></div>
       <div class="mpv"><video id="mpVideo" playsinline webkit-playsinline></video><iframe id="mpFrame" allow="autoplay; fullscreen" title="admira.tv"></iframe>
         <div id="mpCard"><div class="bars"><i style="background:#c0c0c0"></i><i style="background:#c0c000"></i><i style="background:#00c0c0"></i><i style="background:#00c000"></i><i style="background:#c000c0"></i><i style="background:#c00000"></i><i style="background:#0000c0"></i></div><div class="low"></div><div class="box">admira.tv · <span id="mpTag">#win95</span><small id="mpMsg">Esperando contenidos de admira.studio…</small></div></div>
       </div>
       <div class="mptrk"><div class="groove"></div><div class="ticks"></div><div class="thumb" id="mpThumb"></div></div>
-      <div class="mpbtns"><button class="btn" id="mpPlay" type="button" title="Reproducir"></button><button class="btn" id="mpStop" type="button" title="Detener"></button><span class="sep"></span><button class="btn" id="mpEject" type="button" title="Expulsar"></button><span id="mpLive"><i></i>SIN SEÑAL</span></div>
+      <div class="mpbtns"><button class="btn" id="mpPlay" type="button" title="Reproducir"></button><button class="btn" id="mpStop" type="button" title="Detener"></button><span class="sep"></span><button class="btn" id="mpEject" type="button" title="Expulsar"></button><span id="mpLive"><i></i>SIN SEÑAL</span><span id="mpPos" hidden></span></div>
       <div class="sbar1" id="mpSt">Listo</div>
     </div>
     <!-- ICQGram: lista de contactos -->
@@ -1194,18 +1204,19 @@ var CONFIG = {
   // Para reactivarlo: url:'http://127.0.0.1:9595/salamandra' cuando haya un interruptor de corriente (relé USB o enchufe inteligente).
   salamandra: { url:'', cooldownSeconds:15 },
   futureVideo: '',            // opcional: vídeo (p. ej. Admira_Next.mp4 en esta carpeta) para la página de 2026 de AdmiraScape
-  // Windows Media Player = piezas públicas de admira.studio (#win95, y #genero95 si hay) vía admira.tv.
-  // Muestra lo que se publique en admira.studio con el hashtag (sin #). Falta la pantalla (virtual) de admira.tv.
+  // Admira Media Player = piezas públicas de admira.studio con #win95, #WindowsMediaPlayer,
+  // #AdmiraMediaPlayer o #genero95 (traducción ya existente de #win95) vía admira.tv.
+  // Muestra lo que se publique en admira.studio con esos hashtags (sin #; mayúsculas indiferentes).
   // Nota de admira.tv: el parámetro tag= bloquea el gobierno remoto del canal (pensado para integraciones cerradas).
   // Player virtual dado de alta en admira.tv/virtual-players/ (25/11/2026): virtual-win95 · circuito itcrowd-win95.
   // channelUrl es el que devuelve admira.tv (no se construye a mano); aquí solo se añaden tag= y muted=.
-  // tags: hashtags de admira.studio que coge el reproductor (#win95 y su traducción #genero95); se alternan cada rotateSeconds.
+  // tags: hashtags de la playlist del player virtual; /api/win95/emision las une y deduplica.
   // Con el lanzador Admira95, mp_tags.js indica cuáles tienen piezas y se salta los vacíos.
   // inDemo: si no hay mp_tags.js (p. ej. en el player de Admira), decide si el reproductor sale en la demo automática.
   // Comprobar piezas: https://admira.tv/api/emision?screen=virtual-win95&tag=win95&resumen=1
-  mediaPlayer: { screen:'virtual-win95', tags:['win95','genero95'], rotateSeconds:60, inDemo:true,
+  mediaPlayer: { screen:'virtual-win95', tags:['win95','genero95','WindowsMediaPlayer','AdmiraMediaPlayer'], rotateSeconds:60, inDemo:true,
     channelUrl:'https://admira.tv/canal.html?screen=virtual-win95&circuit=itcrowd-win95&playerType=virtual&clean=1&mode=local&cam=0&shot=0&muted=1' },
-  names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster', media:'Windows Media Player' },
+  names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster', media:'Admira Media Player' },
   // Pistas sintetizadas de demostración (sin derechos de terceros).
   // Para el catálogo de admira.tv: añade src:'pista.mp3' (mismo directorio) y se usará el archivo.
   tracks: [
@@ -1761,7 +1772,7 @@ function makeDraggable(handle,win){
 }
 
 /* ---------- ventanas: maximizar, minimizar, cerrar, foco y arrastre ---------- */
-function winMaxBtn(el){ return qs('.x[data-max], .sbx[data-max], #ampMax', el) || qs('#mpMax', el); }
+function winMaxBtn(el){ return qs('.x[data-max], .sbx[data-max], #ampMax', el); }
 function winSaveRect(el){
   if(el.classList.contains('max')) return;
   el._winRect={left:el.style.left,top:el.style.top,width:el.style.width||(el.offsetWidth+'px'),height:el.style.height||(el.offsetHeight+'px')};
@@ -1784,7 +1795,6 @@ function winMaximize(el){
 }
 function winToggleMax(el){
   if(!el) return;
-  if(el.id==='mpw'&&typeof mpToggleFS==='function'){ mpToggleFS(); return; }
   if(el.classList.contains('max')) winRestore(el); else winMaximize(el);
 }
 function winRestoreAll(){ qsa('.win.max, .skin.max').forEach(winRestore); }
@@ -4709,9 +4719,40 @@ function wireBrowser(){
   brButtons();
 }
 
-/* ---------- Windows Media Player: piezas de admira.studio (#win95) vía admira.tv ---------- */
-var MP={open:false,playing:false,paused:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:'',piece:0,list:[],tagsCache:null,tagsAt:0,fetching:false,pend:null,rect:null,max:false,seek:false,mode:'none'};
-function mpName(){ return (CONFIG.names&&CONFIG.names.media)||'Windows Media Player'; }
+/* ---------- Admira Media Player: piezas de admira.studio vía admira.tv ---------- */
+var MP={open:false,playing:false,paused:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:'',piece:0,list:[],tagsCache:null,tagsAt:0,playlist:null,known:false,fetching:false,pend:null,rect:null,max:false,seek:false,mode:'none'};
+function mpName(){ return (CONFIG.names&&CONFIG.names.media)||'Admira Media Player'; }
+function mpNormTag(t){ return String(t||'').replace(/^#/,'').toLowerCase(); }
+function mpPiezaClave(p){ return p?String(p.id||p.stockId||p.url||''):''; }
+function mpPlaylist(){
+  if(MP.playlist&&MP.playlist.length) return MP.playlist;
+  var seen={}, out=[], cache=MP.tagsCache||[], i, t, j, p, k;
+  for(i=0;i<cache.length;i++){
+    t=cache[i]; if(!t||!t.piezas) continue;
+    for(j=0;j<t.piezas.length;j++){
+      p=t.piezas[j]; if(!p) continue;
+      k=mpPiezaClave(p); if(!k||seen[k]) continue;
+      seen[k]=1;
+      out.push({id:p.id,titulo:p.titulo,tipo:p.tipo,duracion:p.duracion,url:p.url,tag:t.tag||p.tag||''});
+    }
+  }
+  return out;
+}
+function mpPosText(){
+  if(!MP.known) return '';
+  var list=mpPlaylist(), x=list.length;
+  if(!x) return '0/0';
+  if((!MP.list||!MP.list.length)&&MP.mode==='none'&&!MP.playing) return '0/'+x;
+  var i=MP.piece>=0?Math.min(MP.piece+1,x):0;
+  if(i<1) i=1;
+  return i+'/'+x;
+}
+function mpUpdatePos(){
+  var el=qs('#mpPos'); if(!el) return;
+  var hide=mpIsFs(), txt=mpPosText();
+  if(hide||!txt){ el.hidden=true; el.textContent=''; return; }
+  el.hidden=false; el.textContent=txt;
+}
 function mpVid(){ return qs('#mpVideo'); }
 function mpFresh(){ return !!(window.MP_TAGS&&window.MP_TAGS_AT&&now()-window.MP_TAGS_AT<20*60*1000); }
 function mpCacheFresh(){ return !!(MP.tagsCache&&MP.tagsAt&&now()-MP.tagsAt<20*60*1000); }
@@ -4722,11 +4763,16 @@ function mpTagsWithMedia(){
   return out;
 }
 function mpTagList(){
-  var all=CONFIG.mediaPlayer.tags||['win95'];
+  var all=CONFIG.mediaPlayer.tags||['win95','genero95','WindowsMediaPlayer','AdmiraMediaPlayer'];
   var withMedia=mpTagsWithMedia();
   if(withMedia&&withMedia.length) return withMedia;
-  if(mpFresh()){ var f=all.filter(function(t){ return window.MP_TAGS.indexOf(t)>=0; }); if(f.length) return f; }
-  // Sin inventario aún: no rotar a un hashtag vacío (#genero95 no tenía piezas).
+  if(mpFresh()){
+    var f=all.filter(function(t){
+      return window.MP_TAGS.some(function(x){ return mpNormTag(x)===mpNormTag(t); });
+    });
+    if(f.length) return f;
+  }
+  // Sin inventario aún: no rotar a un hashtag vacío.
   return all.length? [all[0]] : ['win95'];
 }
 function mpHasContent(){ var m=mpTagsWithMedia(); if(m) return m.length>0; return mpFresh()?window.MP_TAGS.length>0:!!CONFIG.mediaPlayer.inDemo; }
@@ -4759,17 +4805,23 @@ function mpLoadTags(cb){
   function done(){ MP.fetching=false; var q=MP.pend||[]; MP.pend=[]; if(cb) q.push(cb); q.forEach(function(f){ try{ f(); }catch(e){} }); }
   if(location.protocol==='file:'){
     var s=document.createElement('script'); s.src='mp_tags.js?t='+now();
-    s.onload=s.onerror=function(){ if(s.parentNode) s.parentNode.removeChild(s); done(); };
+    s.onload=s.onerror=function(){
+      if(s.parentNode) s.parentNode.removeChild(s);
+      done();
+    };
     document.head.appendChild(s); return;
   }
   if(typeof fetch!=='function'){ done(); return; }
   fetch('/api/win95/emision',{credentials:'same-origin'}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
-    if(d&&d.ok&&d.tags&&d.tags.length){ MP.tagsCache=d.tags; MP.tagsAt=now(); }
+    if(d&&d.ok&&Array.isArray(d.tags)){
+      MP.tagsCache=d.tags; MP.tagsAt=now(); MP.known=true;
+      MP.playlist=Array.isArray(d.playlist)?d.playlist:null;
+    }
     done();
   }).catch(function(){ done(); });
 }
 function mpStatus(s){ qs('#mpSt').textContent=s; }
-function mpLive(on){ MP.live=on; var l=qs('#mpLive'); l.classList.toggle('on',on); l.lastChild.textContent=on?'EN DIRECTO':'SIN SEÑAL'; }
+function mpLive(on){ MP.live=on; var l=qs('#mpLive'); l.classList.toggle('on',on); l.lastChild.textContent=on?'EN DIRECTO':'SIN SEÑAL'; mpUpdatePos(); }
 function mpCard(msg){
   var fr=qs('#mpFrame'), v=mpVid();
   fr.style.display='none'; if(v) v.style.display='none';
@@ -4798,31 +4850,41 @@ function mpClearMedia(){
   MP.mode='none'; MP.list=[]; MP.piece=0;
 }
 function mpTune(msg){
-  var tags=mpTagList(), n=tags.length, fr=qs('#mpFrame'), v=mpVid();
-  if(!n){ mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin hashtag'); mpLive(false); return; }
-  MP.cur=tags[MP.idx%n];
-  MP.list=mpPiezas(MP.cur);
-  if(MP.piece>=MP.list.length) MP.piece=0;
+  var list=mpPlaylist(), fr=qs('#mpFrame'), v=mpVid(), tags=mpTagList();
+  if(list.length){
+    if(MP.piece<0||MP.piece>=list.length) MP.piece=0;
+    MP.list=list;
+    var piece=list[MP.piece];
+    MP.cur=piece.tag||tags[0]||'win95';
+  } else {
+    var n=tags.length;
+    if(!n){ mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin hashtag'); mpLive(false); mpUpdatePos(); return; }
+    MP.cur=tags[MP.idx%n];
+    MP.list=mpPiezas(MP.cur);
+    if(MP.piece>=MP.list.length) MP.piece=0;
+  }
   var piece=MP.list[MP.piece], url=piece?mpSafeUrl(piece.url):'', title=(piece&&piece.titulo)?piece.titulo:(mpTag());
   mpTitle('admira.tv '+mpTag()); qs('#mpTag').textContent=mpTag();
-  clearTimeout(MP.timer2); mpLive(false);
+  clearTimeout(MP.timer2); mpLive(false); mpUpdatePos();
   if(url){
     MP.mode='video'; MP.t0=now();
     mpCard(msg||('Sintonizando '+mpTag()+'…'));
-    mpStatus('Cargando '+title+' · '+mpTag()+' · desde admira.studio');
+    mpStatus('Cargando '+title+' · '+mpTag()+' · '+mpPosText()+' · desde admira.studio');
     fr.removeAttribute('src'); v.style.display='none';
     v.autoplay=true; v.playsInline=true; mpApplyVol();
     v.src=url; v.play().catch(function(){ try{ v.muted=true; v.play().catch(function(){}); }catch(e){} });
     return;
   }
   var canal=mpUrl(MP.cur);
-  if(!canal){ fr.removeAttribute('src'); mpClearMedia(); mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin conectar: falta la pantalla de admira.tv'); return; }
+  if(!canal){ fr.removeAttribute('src'); mpClearMedia(); mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin conectar: falta la pantalla de admira.tv'); mpUpdatePos(); return; }
   MP.mode='iframe'; MP.t0=now();
   if(v){ try{ v.pause(); }catch(e){} v.removeAttribute('src'); v.style.display='none'; }
   mpCard(msg||'Sintonizando el canal…'); fr.setAttribute('src',canal); mpStatus('Conectando con admira.tv… '+mpTag());
   MP.timer2=setTimeout(function(){
     if(!MP.playing||MP.paused) return; mpShowFrame();
-    mpStatus('Canal '+CONFIG.mediaPlayer.screen+' · '+mpTag()+(n>1?' ('+((MP.idx%n)+1)+' de '+n+')':'')+' · desde admira.studio');
+    var pos=mpPosText();
+    mpStatus('Canal '+CONFIG.mediaPlayer.screen+' · '+mpTag()+(pos?' · '+pos:'')+' · desde admira.studio');
+    mpUpdatePos();
   },2500);
 }
 function mpPlay(){
@@ -4844,6 +4906,8 @@ function mpPlay(){
   clearInterval(MP.rot);
   MP.rot=setInterval(function(){
     if(!MP.playing||MP.paused||MP.mode==='video') return;
+    var list=mpPlaylist();
+    if(list.length>1){ mpNextPiece(); return; }
     var l=mpTagList(); if(l.length<2) return;
     MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+l[MP.idx%l.length]+'…');
   },(CONFIG.mediaPlayer.rotateSeconds||60)*1000);
@@ -4867,10 +4931,19 @@ function mpStop(msg){
 }
 function mpEject(){
   MP.playing=false; MP.paused=false; clearTimeout(MP.timer); clearTimeout(MP.timer2); clearInterval(MP.rot);
-  mpClearMedia(); mpCard('Disco expulsado'); mpLive(false); mpStatus('Sin disco'); mpTitle(); mpToggleIcon();
+  mpClearMedia(); mpCard('Disco expulsado'); mpLive(false); mpStatus('Sin disco'); mpTitle(); mpToggleIcon(); mpUpdatePos();
 }
 function mpNextPiece(){
   if(!MP.playing||MP.paused) return;
+  var list=mpPlaylist();
+  if(list.length){
+    MP.list=list;
+    MP.piece=(MP.piece+1)%list.length;
+    MP.t0=now();
+    var n=list[MP.piece];
+    mpTune(n&&n.titulo?('Siguiente: '+n.titulo+'…'):('Siguiente · '+mpTag()+'…'));
+    return;
+  }
   var tags=mpTagList();
   if(MP.list&&MP.piece<MP.list.length-1){ MP.piece++; MP.t0=now(); mpTune(); return; }
   if(tags.length>1){ MP.idx++; MP.piece=0; MP.t0=now(); mpTune('Cambiando a #'+tags[MP.idx%tags.length]+'…'); return; }
@@ -4882,43 +4955,78 @@ function mpSync(){
   var u=mpUrl(MP.cur), fr=qs('#mpFrame'); if(u&&fr.getAttribute('src')!==u) fr.setAttribute('src',u);
 }
 function mpRestoreSize(){
-  var w=qs('#mpw');
-  w.classList.remove('max');
-  if(MP.rect){ w.style.left=MP.rect.left; w.style.top=MP.rect.top; w.style.width=MP.rect.width; w.style.height=MP.rect.height; }
+  var w=qs('#mpw'); if(!w) return;
+  winRestore(w);
   MP.max=false; MP.rect=null;
-  var b=qs('#mpMax'); if(b) b.textContent='□';
 }
 function mpMaximize(on){
-  var w=qs('#mpw');
-  if(on){
-    if(!MP.max) MP.rect={left:w.style.left,top:w.style.top,width:w.style.width||'356px',height:w.style.height||'372px'};
-    w.classList.add('max'); w.style.left='0px'; w.style.top='0px'; w.style.width='640px'; w.style.height='452px';
-    MP.max=true; var b=qs('#mpMax'); if(b) b.textContent='❐';
-  } else mpRestoreSize();
+  var w=qs('#mpw'); if(!w) return;
+  if(on){ if(!w.classList.contains('max')) winMaximize(w); }
+  else if(w.classList.contains('max')) winRestore(w);
+  MP.max=w.classList.contains('max');
+  mpUpdatePos();
 }
-function mpIsFs(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+function mpWinMax(){ var w=qs('#mpw'); return !!(w&&w.classList.contains('max')); }
+function mpInCssFS(){ var w=qs('#mpw'); return !!(w&&w.classList.contains('fs')); }
+function mpVidWebkitFS(){ var v=mpVid(); return !!(v&&v.webkitDisplayingFullscreen); }
+function mpApiFS(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+function mpIsFs(){ return !!(mpApiFS()||mpInCssFS()||mpVidWebkitFS()); }
+function mpCssFS(on){
+  var w=qs('#mpw'); if(!w) return;
+  if(on){
+    if(!mpInCssFS()&&!w.classList.contains('max')) winSaveRect(w);
+    w.classList.add('fs');
+    w.style.left='0px'; w.style.top='0px'; w.style.width='640px'; w.style.height='480px';
+    focusWin(w);
+  } else {
+    w.classList.remove('fs');
+    if(w.classList.contains('max')){
+      w.style.left='0px'; w.style.top='0px'; w.style.width='640px'; w.style.height='452px';
+    } else if(w._winRect){
+      var r=w._winRect;
+      w.style.left=r.left; w.style.top=r.top; w.style.width=r.width; w.style.height=r.height;
+    }
+  }
+  mpUpdatePos();
+}
 function mpRequestFS(){
-  var el=qs('#mpw'), fn=el&&(el.requestFullscreen||el.webkitRequestFullscreen);
-  mpMaximize(true);
-  if(!fn) return;
-  try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){}
+  var w=qs('#mpw'); if(!w||!MP.open) return;
+  var el=w, fn=el.requestFullscreen||el.webkitRequestFullscreen;
+  var v=mpVid();
+  function fallback(){ if(!mpApiFS()&&!mpVidWebkitFS()) mpCssFS(true); }
+  if(v&&MP.mode==='video'&&typeof v.webkitEnterFullscreen==='function'&&!fn){
+    try{ v.webkitEnterFullscreen(); return; }catch(e){}
+  }
+  if(fn){
+    try{
+      var p=fn.call(el);
+      if(p&&p.catch) p.catch(function(){ fallback(); });
+      else setTimeout(function(){ if(!mpApiFS()) fallback(); },400);
+      return;
+    }catch(e){ fallback(); return; }
+  }
+  fallback();
 }
 function mpExitFS(){
   try{
-    if(mpIsFs()){
+    var v=mpVid();
+    if(v&&v.webkitDisplayingFullscreen&&typeof v.webkitExitFullscreen==='function') v.webkitExitFullscreen();
+    if(mpApiFS()){
       var fn=document.exitFullscreen||document.webkitExitFullscreen;
       if(fn) fn.call(document);
     }
   }catch(e){}
-  mpMaximize(false);
+  if(mpInCssFS()) mpCssFS(false);
+  mpUpdatePos();
 }
-function mpToggleFS(){ if(mpIsFs()||MP.max) mpExitFS(); else mpRequestFS(); }
+function mpToggleFS(){ if(mpIsFs()) mpExitFS(); else mpRequestFS(); }
 function openMedia(){
   var w=qs('#mpw'); w.style.display='block'; MP.open=true;
   addTask('mpw',mpName(),'media',[w]); focusWin(w);
-  mpTitle('admira.tv '+mpTag());
+  mpTitle('admira.tv '+mpTag()); mpUpdatePos();
   if(PL.state==='play') pause();
   if(!MP.playing||MP.paused) mpPlay();
+  else mpLoadTags(function(){ mpUpdatePos(); });
 }
 function closeMedia(){ mpExitFS(); mpStop(); MP.open=false; qs('#mpw').style.display='none'; removeTask('mpw'); }
 function mpThumb(){
@@ -4952,7 +5060,32 @@ function wireMedia(){
   qs('[data-close="mpw"]').addEventListener('click',closeMedia);
   qs('[data-min="mpw"]').addEventListener('click',function(){ if(mpIsFs()) mpExitFS(); minimize('mpw'); });
   qs('#mpMax').addEventListener('click',function(e){ e.stopPropagation(); mpToggleFS(); });
-  qs('#mpw .tb').addEventListener('dblclick',function(e){ if(e.target.closest('.x')) return; e.preventDefault(); mpToggleFS(); });
+  /* Clic en la barra (sin arrastrar) maximiza o restaura la ventana. El □ es pantalla completa. */
+  (function(){
+    var tb=qs('#mpw .tb'), st={armed:false,moved:false,x:0,y:0,ignoreUntil:0};
+    tb.addEventListener('pointerdown',function(e){
+      if(e.target.closest('.x,.sbx')) return;
+      st.armed=true; st.moved=false; st.x=e.clientX; st.y=e.clientY;
+    });
+    tb.addEventListener('pointermove',function(e){
+      if(!st.armed) return;
+      if(Math.abs(e.clientX-st.x)+Math.abs(e.clientY-st.y)>6) st.moved=true;
+    });
+    tb.addEventListener('pointerup',function(e){
+      if(!st.armed) return; st.armed=false;
+      if(e.target.closest('.x,.sbx')||st.moved) return;
+      if(now()<st.ignoreUntil) return;
+      st.ignoreUntil=now()+400;
+      var w=qs('#mpw');
+      if(w.classList.contains('max')) winRestore(w); else winMaximize(w);
+      MP.max=w.classList.contains('max');
+      mpUpdatePos();
+    });
+    tb.addEventListener('dblclick',function(e){
+      if(e.target.closest('.x,.sbx')) return;
+      e.preventDefault(); e.stopPropagation();
+    },true);
+  })();
   qs('#mpw .mpv').addEventListener('dblclick',function(e){ e.preventDefault(); e.stopPropagation(); mpToggleFS(); });
   var trk=qs('#mpw .mptrk');
   trk.addEventListener('pointerdown',function(e){
@@ -4968,7 +5101,9 @@ function wireMedia(){
     if(!MP.open) return; MP.playing=true; MP.paused=false; mpShowVideo(); mpLive(true); mpToggleIcon();
     var piece=MP.list[MP.piece];
     mpTitle((piece&&piece.titulo?piece.titulo+' · ':'')+'admira.tv '+mpTag());
-    mpStatus((piece&&piece.titulo?piece.titulo+' · ':'')+mpTag()+' · desde admira.studio');
+    var pos=mpPosText();
+    mpStatus((piece&&piece.titulo?piece.titulo+' · ':'')+mpTag()+(pos?' · '+pos:'')+' · desde admira.studio');
+    mpUpdatePos();
   });
   v.addEventListener('pause',function(){
     if(!MP.open||MP.seek) return;
@@ -4985,29 +5120,33 @@ function wireMedia(){
     if(!/^https:\/\/(www\.)?admira\.tv$/.test(e.origin)) return;
     if(MP.playing&&!MP.live&&MP.mode==='iframe'){ mpLive(true); mpStatus('En directo desde admira.tv · '+mpTag()+' (admira.studio)'); }
   });
-  document.addEventListener('fullscreenchange',function(){ if(!mpIsFs()&&MP.max) mpMaximize(false); });
-  document.addEventListener('webkitfullscreenchange',function(){ if(!mpIsFs()&&MP.max) mpMaximize(false); });
+  function mpOnFsChange(){ if(!mpApiFS()&&!mpVidWebkitFS()&&mpInCssFS()){ /* API falló o salió: se mantiene el CSS si sigue pedido */ } mpUpdatePos(); }
+  document.addEventListener('fullscreenchange',mpOnFsChange);
+  document.addEventListener('webkitfullscreenchange',mpOnFsChange);
+  var vid=mpVid();
+  if(vid){
+    vid.addEventListener('webkitbeginfullscreen',mpUpdatePos);
+    vid.addEventListener('webkitendfullscreen',function(){ mpUpdatePos(); });
+  }
   window.addEventListener('keydown',function(e){
     if(e.key!=='Escape') return;
-    if(mpIsFs()){ mpExitFS(); e.preventDefault(); return; }
-    if(MP.max&&MP.open){ mpMaximize(false); e.preventDefault(); return; }
-    if(SS.on){ ssStop(); e.preventDefault(); }
-  });
+    if(mpIsFs()){ mpExitFS(); e.preventDefault(); e.stopPropagation(); }
+  },true);
   setInterval(mpThumb,250);
-  mpLoadTags(); setInterval(function(){ MP.tagsAt=0; mpLoadTags(); },60000);
-  mpToggleIcon();
+  mpLoadTags(function(){ mpUpdatePos(); }); setInterval(function(){ MP.tagsAt=0; MP.playlist=null; mpLoadTags(function(){ if(MP.open) mpUpdatePos(); }); },60000);
+  mpToggleIcon(); mpUpdatePos();
 }
 
 /* ---------- Bandeja de entrada + salamandra USB ---------- */
 var MAIL_BASE=[
   {from:'Jensen',subj:'Bienvenido/a a «Vuelta al 95»',when:'09:12',body:'Hola:\n\nAsí eran las pantallas en 1995… y en este mismo PC puedes ver lo que hacen hoy.\nPregunta al equipo por AdmiraNeXT.\n\n— Jensen, consejero AdmiraNeXT'},
-  {from:'admira.tv',subj:'Tu pieza #win95 ya está en antena',when:'08:47',body:'La playlist #win95 tiene contenido nuevo.\nÁbrelo en el Windows Media Player del escritorio.\n\n— Canal admira.tv'},
+  {from:'admira.tv',subj:'Tu pieza #win95 ya está en antena',when:'08:47',body:'La playlist #win95 tiene contenido nuevo.\nÁbrelo en el Admira Media Player del escritorio.\n\n— Canal admira.tv'},
   {from:'Morfeo',subj:'¿Has visto la salamandra?',when:'Ayer',body:'Cada vez que llega un correo, la salamandra USB mueve los ojos.\nTecnología punta de 1999. No la mojes.\n\n— Morfeo'},
   {from:'Mi primo del 56K',subj:'FW: FW: FW: RE: chiste.txt',when:'Ayer',body:'>>>> No te lo vas a creer… (el adjunto pesa 2 MB, déjalo bajando esta noche)'}
 ];
 var MAIL_NEW=[
   {from:'Jensen',subj:'¡Tiene correo nuevo!',body:'¿Has visto cómo se mueve la salamandra?\nEso es una notificación… de 1999. Hoy las pantallas de tu tienda avisan solas.\n\n— Jensen'},
-  {from:'admira.studio',subj:'Nuevo contenido #win95',body:'Acaba de publicarse una pieza con #win95.\nSaldrá en el Windows Media Player de este PC.'},
+  {from:'admira.studio',subj:'Nuevo contenido #win95',body:'Acaba de publicarse una pieza con #win95.\nSaldrá en el Admira Media Player de este PC.'},
   {from:'Morfeo',subj:'Re: la salamandra',body:'Si se le mueven los ojos, es que te ha llegado correo. Así de fácil era el futuro.\n\n— Morfeo'},
   {from:'AdmiraNeXT',subj:'Invitación: demo en tu tienda',body:'¿Quieres ver AdmiraNeXT en tus pantallas?\nPídeselo al equipo que tienes al lado.'}
 ];
@@ -5335,7 +5474,7 @@ async function attractLoop(tk,withBoot){
     await ghostClick(qs('#brPage a[data-go="futuro"]'),tk);
     await waitUntil(function(){ return BR.loaded&&BR.page==='futuro'; },tk,10000); await wait(3500,tk);
     await ghostMove(qs('#brView'),tk); await scrollView(qs('#brView'),tk); await wait(4000,tk);
-    // 5b · Windows Media Player: el canal de admira.tv con lo que llega de admira.studio (#win95)
+    // 5b · Admira Media Player: el canal de admira.tv con lo que llega de admira.studio (#win95)
     if(CONFIG.mediaPlayer.channelUrl&&mpHasContent()){
       await ghostClick(qs('#start'),tk); await wait(500,tk);
       await ghostClick(qs('#mi-programs'),tk); await wait(500,tk);

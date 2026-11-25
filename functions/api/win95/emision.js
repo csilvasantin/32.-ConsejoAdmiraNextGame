@@ -1,16 +1,16 @@
 /**
  * GET /api/win95/emision — inventario saneado de piezas públicas de
- * admira.tv para el player virtual-win95 (hashtags #win95 y #genero95).
- * No es un proxy abierto: pantalla y tags van fijos, y solo se devuelven
- * campos públicos (título, tipo, duración, URL https de hosts Admira).
- * Sin secretos. /api/* no pasa por la verja HTML, así que aquí se exige
- * cookie de la puerta o sesión de Google del visitante. 401 si no hay sesión.
+ * admira.tv para el player virtual-win95 (hashtags #win95, #genero95,
+ * #WindowsMediaPlayer y #AdmiraMediaPlayer). No es un proxy abierto:
+ * pantalla y tags van fijos, y solo se devuelven campos públicos
+ * (título, tipo, duración, URL https de hosts Admira). Sin secretos.
+ * /api/* no pasa por la verja HTML, así que aquí se exige cookie de
+ * la puerta o sesión de Google del visitante. 401 si no hay sesión.
  */
 import { verificar, leerCookie } from "../../_puerta.js";
 import { emailGoogle } from "../../../chat-hilo-lib.mjs";
+import { SCREEN, TAGS, playlistUnica } from "../../../win95-emision-lib.mjs";
 
-const SCREEN = "virtual-win95";
-const TAGS = ["win95", "genero95"];
 const UPSTREAM = "https://admira.tv/api/emision";
 const CABECERAS = {
   "content-type": "application/json; charset=utf-8",
@@ -92,7 +92,15 @@ export async function onRequestGet({ request, env, fetch: fetchImpl }) {
   const f = fetchImpl || fetch;
   try {
     const tags = await Promise.all(TAGS.map((t) => leerTag(t, f)));
-    return json({ ok: true, screen: SCREEN, tags, at: new Date().toISOString() });
+    const playlist = playlistUnica(tags);
+    return json({
+      ok: true,
+      screen: SCREEN,
+      tags,
+      playlist,
+      total: playlist.length,
+      at: new Date().toISOString(),
+    });
   } catch (e) {
     const name = e && e.name ? e.name : "error";
     return json({ ok: false, error: "admira.tv no contesta (" + name + ")" }, 502);

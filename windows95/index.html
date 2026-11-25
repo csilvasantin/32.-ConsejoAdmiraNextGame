@@ -221,6 +221,16 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #icqc .inp{position:absolute;left:3px;right:80px;top:auto;bottom:76px}
 #icqReal{position:absolute;left:3px;right:80px;top:auto;bottom:76px;height:21px;border:0;outline:none;padding:3px 4px;font:inherit;color:#000;background:#fff;-webkit-user-select:text;user-select:text;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 #icqc .hist{overflow-y:auto;touch-action:pan-y}
+/* Imágenes en ICQGram (Carlos t1389u): pegar (Ctrl/Cmd+V), clip para elegir una y miniatura en el hilo */
+#icqc.conclip #icqReal{right:106px}
+#icqClip{position:absolute;right:78px;top:auto;bottom:76px;width:25px;min-width:0;height:22px;padding:0}
+#icqClip svg{display:block;width:14px;height:14px;margin:0 auto}
+#icqAdj{display:none;position:absolute;right:8px;bottom:102px;z-index:3;align-items:center;gap:4px;padding:3px;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080}
+#icqAdj.on{display:flex}
+#icqAdj img{display:block;max-width:64px;max-height:44px;border:1px solid #808080;background:#fff}
+#icqAdj span{font-size:10px;color:#404040;white-space:nowrap}
+#icqAdj .btn{min-width:0;width:18px;height:18px;padding:0;line-height:14px}
+.im .img{display:block;margin:3px 0 0 8px;max-width:180px;max-height:120px;border:1px solid #808080;background:#fff;cursor:pointer}
 #icqSend{position:absolute;right:3px;top:auto;bottom:76px;width:72px;min-width:0;height:22px}
 #icqc .opts{position:absolute;left:3px;right:3px;top:auto;bottom:24px;height:52px;overflow:hidden}
 #icqc .opts .btn{min-width:0;height:22px;margin:0 4px 4px 0;padding:0 8px}
@@ -482,17 +492,25 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .foldbody.v-small .icon{width:150px;margin:0 4px 1px 0}
 .foldbody.v-list{display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;overflow-x:auto;overflow-y:hidden}
 .foldbody.v-list .icon{width:160px;margin:0 6px 1px 0}
-.foldbody.v-details{padding:2px 2px 2px 2px;background:#fff}
-.foldbody.v-details .icon{width:auto;min-width:440px;margin:0}
-.foldbody.v-details .icon span{order:1;width:168px;flex:none}
-.foldbody.v-details .icon .dc{display:block;flex:none;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal;color:#000}
-.foldbody.v-details .icon .dc-size{order:2;width:58px;text-align:right}
-.foldbody.v-details .icon .dc-type{order:3;width:118px}
-.foldbody.v-details .icon .dc-date{order:4;width:104px}
-.foldbody.v-details .dethead{position:sticky;top:-2px;z-index:2;display:flex;height:17px;min-width:448px;margin:-2px -2px 2px}
-.foldbody.v-details .dethead div{flex:none;padding:2px 4px 0;white-space:nowrap;overflow:hidden;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080;cursor:default}
+/* Detalles (Carlos t1389u, 25-11-2026): cabecera y filas comparten los anchos (variables --c-*),
+   orden Nombre | Tamaño | Modificado | Tipo y separadores arrastrables (ratón y táctil) como en Win95. */
+.foldbody.v-details{padding:0;background:#fff;--c-name:195px;--c-size:66px;--c-date:112px;--c-type:126px;--c-tot:499px}
+.foldbody.v-details .icon{width:auto;min-width:var(--c-tot);margin:0;padding:0;box-sizing:border-box}
+.foldbody.v-details .icon svg,.foldbody.v-details .icon img{margin:0 3px 0 4px}
+.foldbody.v-details .icon .lnk-arr{left:4px}
+.foldbody.v-details .icon span{order:1;width:calc(var(--c-name) - 23px);box-sizing:border-box;flex:none}
+.foldbody.v-details .icon .dc{display:block;flex:none;box-sizing:border-box;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal;color:#000}
+.foldbody.v-details .icon .dc-size{order:2;width:var(--c-size);text-align:right}
+.foldbody.v-details .icon .dc-date{order:3;width:var(--c-date)}
+.foldbody.v-details .icon .dc-type{order:4;width:var(--c-type)}
+.foldbody.v-details .dethead{position:sticky;top:0;z-index:2;display:flex;height:17px;min-width:var(--c-tot);margin:0 0 2px;background:#c0c0c0}
+.foldbody.v-details .dethead div{position:relative;box-sizing:border-box;flex:none;padding:2px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080;cursor:default}
 .foldbody.v-details .dethead div:active{box-shadow:inset 1px 1px #808080}
-.foldbody.v-details .dethead .h-name{width:195px}.foldbody.v-details .dethead .h-size{width:66px;text-align:right}.foldbody.v-details .dethead .h-type{width:126px}.foldbody.v-details .dethead .h-date{width:112px}
+.foldbody.v-details .dethead .h-name{width:var(--c-name)}.foldbody.v-details .dethead .h-size{width:var(--c-size);text-align:right}.foldbody.v-details .dethead .h-date{width:var(--c-date)}.foldbody.v-details .dethead .h-type{width:var(--c-type)}
+.foldbody.v-details .dethead .h-fill{flex:1 1 auto;min-width:0;padding:0}
+.foldbody.v-details .dethead .h-fill:active{box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080}
+.foldbody.v-details .dethead .colgrip{position:absolute;top:0;right:0;width:9px;height:100%;cursor:col-resize;touch-action:none;z-index:3}
+.foldbody.v-details .dethead.resizing,.foldbody.v-details .dethead.resizing div{cursor:col-resize}
 .foldbody .foldmsg{position:absolute;left:8px;bottom:4px;right:8px;color:#404040;font-size:10px;pointer-events:none}
 .foldbody:not(.v-large) .foldmsg{position:static;margin-top:6px}
 #note.ro-remote #note-ro-edit{display:none}
@@ -851,6 +869,9 @@ coetáneos esta semana.
       <div class="hist" id="icqHist"></div>
       <div class="fin focus inp" id="icqInp"></div>
       <input id="icqReal" type="text" maxlength="300" placeholder="Escribe aquí y pulsa Enviar" style="display:none">
+      <button class="btn" id="icqClip" type="button" title="Adjuntar imagen (o pégala con Ctrl/Cmd+V)" style="display:none"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 4.5v6a2.5 2.5 0 0 1-5 0V3.8a1.6 1.6 0 0 1 3.2 0v6.4a.7.7 0 0 1-1.4 0V5" fill="none" stroke="#000" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+      <input id="icqFile" type="file" accept="image/*" style="display:none">
+      <div id="icqAdj"><img alt="imagen pegada"><span></span><button class="btn" type="button" title="Quitar imagen">×</button></div>
 
       <button class="btn" id="icqSend">Enviar</button>
       <div class="opts" id="icqOpts"></div>
@@ -2217,16 +2238,19 @@ function renderFolder(id){
   if(TASKS['fw-'+id]) TASKS['fw-'+id].btn.lastChild.textContent=it.name;
   var v=folderView(id), sel=selectedIcon(), selId=sel&&sel._def?sel._def.id:null, sTop=body.scrollTop;
   body.className='foldbody v-'+v.mode;
+  applyColWidths(body, v.cols);
   body.innerHTML='';
   var kids=folderChildren(id);
   if(v.mode==='details'){
     var hd=document.createElement('div'); hd.className='dethead';
-    [['name','Nombre'],['size','Tamaño'],['type','Tipo'],['date','Modificado']].forEach(function(c){
+    DET_COLS.forEach(function(c){
       var h=document.createElement('div'); h.className='h-'+c[0]; h.setAttribute('data-sort',c[0]);
       h.textContent=c[1]+(v.sort===c[0]?(v.dir<0?' ▼':' ▲'):'');
-      h.addEventListener('click',function(e){ e.stopPropagation(); var cv=folderView(id); setFolderView(id,{sort:c[0],dir:cv.sort===c[0]?-cv.dir:1}); });
+      h.addEventListener('click',function(e){ e.stopPropagation(); if(e.target.closest('.colgrip')||now()-COLDRAG.at<350) return; var cv=folderView(id); setFolderView(id,{sort:c[0],dir:cv.sort===c[0]?-cv.dir:1}); });
+      colGrip(h, c[0], id, body, hd);
       hd.appendChild(h);
     });
+    var fill=document.createElement('div'); fill.className='h-fill'; hd.appendChild(fill);
     body.appendChild(hd);
   }
   // en la vista de iconos grandes se respetan las posiciones; en el resto, el orden manda
@@ -2237,7 +2261,7 @@ function renderFolder(id){
     var el=addIcon(ch, body);
     if(v.mode==='details'){
       var m=itemMeta(ch), lab=el.lastChild;
-      [['size',m.size==null?'':fmtSize(m.size)],['type',m.type],['date',m.mtime?fecha95(m.mtime):'']].forEach(function(c){ var n=document.createElement('i'); n.className='dc dc-'+c[0]; n.textContent=c[1]; el.insertBefore(n, lab); });
+      [['size',m.size==null?'':fmtSize(m.size)],['date',m.mtime?fecha95(m.mtime):''],['type',m.type]].forEach(function(c){ var n=document.createElement('i'); n.className='dc dc-'+c[0]; n.textContent=c[1]; el.insertBefore(n, lab); });
     }
     if(ch.id===selId) el.classList.add('sel');
   }
@@ -2600,7 +2624,43 @@ function loadViews(){ if(FVIEW) return FVIEW; try{ FVIEW=JSON.parse(localStorage
 var VIEW_MODES=['large','small','list','details'], SORT_KEYS=['name','type','size','date'];
 function folderView(id){
   var v=loadViews()[id||'desk']||{};
-  return {mode:VIEW_MODES.indexOf(v.mode)>=0?v.mode:'large',sort:SORT_KEYS.indexOf(v.sort)>=0?v.sort:'name',dir:v.dir===-1?-1:1};
+  return {mode:VIEW_MODES.indexOf(v.mode)>=0?v.mode:'large',sort:SORT_KEYS.indexOf(v.sort)>=0?v.sort:'name',dir:v.dir===-1?-1:1,cols:colWidths(v.cols)};
+}
+/* Columnas de Detalles (Carlos t1389u): Nombre | Tamaño | Modificado | Tipo; anchos por carpeta,
+   ajustables arrastrando el separador derecho de cada cabecera (pointer events: ratón y táctil). */
+var DET_COLS=[['name','Nombre',195],['size','Tamaño',66],['date','Modificado',112],['type','Tipo',126]], COL_MIN=36, COL_MAX=640, COLDRAG={at:0};
+function colWidths(c){
+  var o={}; c=(c&&typeof c==='object')?c:{};
+  DET_COLS.forEach(function(d){ var w=Math.round(+c[d[0]]); o[d[0]]=isFinite(w)&&w>0?clamp(w,COL_MIN,COL_MAX):d[2]; });
+  return o;
+}
+function applyColWidths(body, cols){
+  cols=colWidths(cols); var tot=0;
+  DET_COLS.forEach(function(d){ body.style.setProperty('--c-'+d[0], cols[d[0]]+'px'); tot+=cols[d[0]]; });
+  body.style.setProperty('--c-tot', tot+'px');
+  body._cols=cols;
+}
+function colGrip(h, key, id, body, hd){
+  var g=document.createElement('b'); g.className='colgrip'; g.title='Arrastre para cambiar el ancho de la columna';
+  g.addEventListener('click',function(e){ e.stopPropagation(); });
+  g.addEventListener('dblclick',function(e){ e.stopPropagation(); var c=colWidths(body._cols); DET_COLS.forEach(function(d){ if(d[0]===key) c[key]=d[2]; }); setFolderView(id,{cols:c}); });
+  g.addEventListener('pointerdown',function(e){
+    if(e.button>0) return;
+    e.preventDefault(); e.stopPropagation(); focusWin(body.closest('.win')||body);
+    var x0=toStage(e).x, cols=colWidths(body._cols), w0=cols[key], pid=e.pointerId;
+    try{ g.setPointerCapture(pid); }catch(err){}
+    hd.classList.add('resizing');
+    function mv(ev){ if(ev.pointerId!==pid) return; ev.preventDefault(); cols[key]=clamp(Math.round(w0+toStage(ev).x-x0),COL_MIN,COL_MAX); applyColWidths(body, cols); }
+    function up(ev){
+      if(ev.pointerId!==pid) return;
+      g.removeEventListener('pointermove',mv); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+      try{ g.releasePointerCapture(pid); }catch(err){}
+      hd.classList.remove('resizing'); COLDRAG.at=now();
+      if(cols[key]!==w0) setFolderView(id,{cols:cols});
+    }
+    g.addEventListener('pointermove',mv); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+  });
+  h.appendChild(g);
 }
 function setFolderView(id, patch){
   var all=loadViews(), cur=folderView(id), k=id||'desk';
@@ -3623,7 +3683,7 @@ function icqgLive(){ return ICQG.on&&MODE==='interactive'; }
 // Solo en admira.live: carga el cliente oficial del chat (sesión de Google, /api/chat/hilo y /api/chat/enviar).
 function icqgInit(){
   if(!(CONFIG.icqgram&&CONFIG.icqgram.enabled&&/admira\.live$/.test(location.hostname))) return;
-  var s=document.createElement('script'); s.src='/assets/chat-hilo-client.js';
+  var s=document.createElement('script'); s.src='/assets/chat-hilo-client.js?v=t1389u';
   s.onload=function(){
     var C=chc();
     if(!C){ ICQG.on=false; renderContacts(); return; }
@@ -3633,7 +3693,52 @@ function icqgInit(){
   };
   document.head.appendChild(s);
 }
-function realInput(on){ qs('#icqReal').style.display=on?'block':'none'; qs('#icqInp').style.display=on?'none':''; qs('#icqReal').value=''; }
+function realInput(on){ qs('#icqReal').style.display=on?'block':'none'; qs('#icqInp').style.display=on?'none':''; qs('#icqReal').value=''; qs('#icqClip').style.display=on?'block':'none'; qs('#icqc').classList.toggle('conclip',!!on); quitarImagen(); }
+/* ---------- Imagen pegada en ICQGram (Carlos t1389u, 25-11-2026) ----------
+   Se reduce en el cliente (lado mayor ≤ 1600 px, JPEG, ≤ 1,5 MB), se sube a /api/chat/adjunto al enviar
+   y su URL viaja con el mensaje (turno.imagen) hasta el encargo y el despertar del consejero. */
+var ICQIMG={blob:null,url:'',busy:false}, IMG_MAX_LADO=1600, IMG_MAX_BYTES=1500000;
+function quitarImagen(){ if(!ICQIMG) return; if(ICQIMG.url){ try{ URL.revokeObjectURL(ICQIMG.url); }catch(e){} } ICQIMG.blob=null; ICQIMG.url=''; var a=qs('#icqAdj'); if(a){ a.classList.remove('on'); qs('img',a).removeAttribute('src'); } }
+function imgReducir(file){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file), im=new Image();
+    im.onload=function(){
+      var w=im.naturalWidth||1, h=im.naturalHeight||1, k=Math.min(1,IMG_MAX_LADO/Math.max(w,h)), q=0.86, intento=0;
+      var c=document.createElement('canvas'), x=c.getContext('2d');
+      function pase(){
+        c.width=Math.max(1,Math.round(w*k)); c.height=Math.max(1,Math.round(h*k));
+        x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height);
+        c.toBlob(function(b){
+          if(!b){ URL.revokeObjectURL(u); rej(new Error('canvas')); return; }
+          if(b.size<=IMG_MAX_BYTES||intento>=6){ URL.revokeObjectURL(u); if(b.size>IMG_MAX_BYTES) rej(new Error('grande')); else res(b); return; }
+          intento++; q=Math.max(0.5,q-0.1); k*=0.8; pase();
+        },'image/jpeg',q);
+      }
+      pase();
+    };
+    im.onerror=function(){ URL.revokeObjectURL(u); rej(new Error('formato')); };
+    im.src=u;
+  });
+}
+function ponerImagen(file){
+  if(!file||!/^image\//i.test(file.type||'')) return false;
+  if(!consejero(ICQ.who)||qs('#icqReal').style.display==='none'){ setStatus('Las imágenes solo se pueden enviar a un consejero con hilo real'); return true; }
+  if(file.size>25*1024*1024){ setStatus('La imagen es demasiado grande'); return true; }
+  setStatus('Preparando la imagen…');
+  imgReducir(file).then(function(b){
+    quitarImagen(); ICQIMG.blob=b; ICQIMG.url=URL.createObjectURL(b);
+    var a=qs('#icqAdj'); qs('img',a).src=ICQIMG.url; qs('span',a).textContent=Math.max(1,Math.round(b.size/1024))+' KB'; a.classList.add('on');
+    setStatus('Imagen lista · escribe un mensaje (opcional) y pulsa Enviar');
+    try{ qs('#icqReal').focus(); }catch(e){}
+  }).catch(function(){ setStatus('No se pudo leer la imagen'); });
+  return true;
+}
+function imagenDePegado(e){
+  var cd=e.clipboardData||window.clipboardData, items=cd&&cd.items; if(!items) return null;
+  for(var i=0;i<items.length;i++){ if(items[i].kind==='file'&&/^image\//i.test(items[i].type)){ var f=items[i].getAsFile(); if(f) return f; } }
+  return null;
+}
+var ADJ_RE=/(?:https?:\/\/[^\s"'<>]+)?\/api\/chat\/adjunto\?id=[a-f0-9]{16,40}/i;
 function stripVisita(txt){
   var re=CONFIG.icqgram.prefixLegacy||/^\s*\[Visita[^\]]*\]\s*/i;
   return String(txt||'').replace(re,'');
@@ -3666,7 +3771,15 @@ function addTurn(cg,t){
   var d=document.createElement('div'); d.className='im'; if(t.id) d.setAttribute('data-mid',t.id);
   d.innerHTML='<b class="who '+cls+'"></b> <span class="ts"></span><div class="tx"></div>';
   d.firstChild.textContent=name+':'; qs('.ts',d).textContent='('+(t.hora||hhmm())+')'; qs('.tx',d).textContent=txt;
-  var h=qs('#icqHist'); h.appendChild(d); h.scrollTop=h.scrollHeight;
+  var src=t.imagenLocal||t.imagen||((String(t.texto||'').match(ADJ_RE)||[])[0]||'');
+  var h=qs('#icqHist');
+  if(src){
+    var im=document.createElement('img'); im.className='img'; im.alt='imagen'; im.title='Abrir la imagen';
+    var abrir=t.imagen||src; im.addEventListener('click',function(){ try{ window.open(abrir,'_blank','noopener'); }catch(e){} });
+    im.addEventListener('load',function(){ h.scrollTop=h.scrollHeight; });
+    im.src=src; d.appendChild(im);
+  }
+  h.appendChild(d); h.scrollTop=h.scrollHeight;
   if(mine) updateTicks(t);
 }
 function loginPrompt(cg){
@@ -3717,14 +3830,23 @@ function pollReal(cg,id){
 }
 function sendReal(text){
   var cg=consejero(ICQ.who), C=chc(), cfg=CONFIG.icqgram; if(!cg||!C) return;
-  text=String(text||'').replace(/\s+/g,' ').trim(); if(!text) return;
+  text=String(text||'').replace(/\s+/g,' ').trim();
+  var blob=ICQIMG.blob, local=ICQIMG.url;
+  if(!text&&!blob) return;
+  if(ICQIMG.busy) return;
   if(text.length>cfg.maxLen) text=text.slice(0,cfg.maxLen);
   var wait=cfg.minGapSeconds*1000-(now()-ICQG.sent);
   if(wait>0){ setStatus('Espera '+Math.ceil(wait/1000)+' s antes de enviar otro mensaje'); return; }
   ICQG.sent=now(); var id=ICQ.chatId, msgId=C.nuevoId(); ICQG.known[msgId]=1;
-  addTurn(cg,{rol:'carlos',texto:text,hora:hhmm(),id:msgId,autor_nombre:ICQG.yo||'Carlos'}); qs('#icqReal').value=''; setStatus('Enviando…');
+  if(blob){ ICQIMG.blob=null; ICQIMG.url=''; qs('#icqAdj').classList.remove('on'); }
+  addTurn(cg,{rol:'carlos',texto:text||(blob?'🖼 Imagen adjunta':''),imagenLocal:local||'',hora:hhmm(),id:msgId,autor_nombre:ICQG.yo||'Carlos'}); qs('#icqReal').value=''; setStatus(blob?'Subiendo la imagen…':'Enviando…');
   var sb=qs('#icqSend'); sb.classList.add('pressed'); setTimeout(function(){ sb.classList.remove('pressed'); },150);
-  C.enviarTurno(cg.persona,text,msgId,{canal:'win95'}).then(function(r){
+  var subida=blob&&C.subirImagen?(ICQIMG.busy=true,C.subirImagen(blob).then(function(u){ ICQIMG.busy=false; return u; },function(e){ ICQIMG.busy=false; throw e; })):Promise.resolve(null);
+  subida.then(function(u){
+    if(u&&!u.url){ var err=new Error('subida'); err.r=u; throw err; }
+    if(blob) setStatus('Enviando…');
+    return C.enviarTurno(cg.persona,text,msgId,{canal:'win95',imagen:u&&u.url||undefined});
+  }).then(function(r){
     if(id!==ICQ.chatId) return;
     if(r.status===401){ loginPrompt(cg); return; }
     if(r.turno&&r.turno.autor_nombre) ICQG.yo=r.turno.autor_nombre;
@@ -3740,8 +3862,12 @@ function sendReal(text){
       if(tu.id&&tu.id!==msgId) updateTicks({id:tu.id,rol:'carlos',entrega:tu.entrega||'entregado',encargo:tu.encargo,encargo_estado:tu.encargo_estado,autor_nombre:tu.autor_nombre});
       ICQG.waitingSince=now(); sfxBlip(); if(ICQG.kick) ICQG.kick(); setStatus('Entregado'+(tu.encargo?' · encargo #'+tu.encargo:'')+' · '+cg.name.split(' ').pop()+' está escribiendo… (puede tardar unos segundos)');
     }
-    else setStatus('No se pudo enviar ('+r.status+')');
-  }).catch(function(){ if(id===ICQ.chatId) setStatus('Sin conexión con admira.live'); });
+    else setStatus('No se pudo enviar ('+r.status+')'+(r.error?': '+r.error:''));
+  }).catch(function(e){
+    if(id!==ICQ.chatId) return;
+    if(e&&e.r){ ICQG.sent=0; if(e.r.status===401){ loginPrompt(cg); return; } setStatus('No se pudo subir la imagen ('+e.r.status+(e.r.error?': '+e.r.error:'')+')'); return; }
+    setStatus('Sin conexión con admira.live');
+  });
 }
 // Gancho de prueba (sin efecto en producción): permite probar la interfaz con un cliente simulado.
 window.Vuelta95 = { icqgTest:function(stub,pres){ window.ChatHiloClient=stub; ICQG.on=true; if(pres!==undefined) PRES.datos=pres; renderContacts(); } };
@@ -3851,6 +3977,16 @@ function wireIcq(){
   qs('#icqMain').addEventListener('click',function(){ sfxDing(); msgBox('ICQGram','Menú principal de ICQGram\n\nAñadir contactos, preferencias, cambiar estado…\n(Disponible en la versión 99b.)','info'); });
   qs('#icqSend').addEventListener('click',function(){ if(consejero(ICQ.who)){ sendReal(qs('#icqReal').value); return; } var b=qs('#icqOpts .btn'); if(b) b.click(); });
   qs('#icqReal').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendReal(qs('#icqReal').value); } });
+  // Pegar una imagen en la caja de texto (o en cualquier punto de la conversación) y clip para elegirla
+  qs('#icqc').addEventListener('paste',function(e){ var f=imagenDePegado(e); if(f&&ponerImagen(f)) e.preventDefault(); });
+  document.addEventListener('paste',function(e){
+    if(e.defaultPrevented||qs('#icqc').style.display!=='block'||!consejero(ICQ.who)) return;
+    var a=document.activeElement; if(a&&a!==document.body&&!qs('#icqc').contains(a)&&(a.isContentEditable||/^(INPUT|TEXTAREA)$/.test(a.tagName))) return;
+    var f=imagenDePegado(e); if(f&&ponerImagen(f)) e.preventDefault();
+  });
+  qs('#icqClip').addEventListener('click',function(){ qs('#icqFile').click(); });
+  qs('#icqFile').addEventListener('change',function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f) ponerImagen(f); });
+  qs('#icqAdj .btn').addEventListener('click',function(){ quitarImagen(); setStatus('Imagen quitada'); });
   qs('[data-close="icq"]').addEventListener('click',closeIcq);
   qs('[data-min="icq"]').addEventListener('click',function(){ minimize('icq'); });
   qs('[data-close="icqc"]').addEventListener('click',closeChat);

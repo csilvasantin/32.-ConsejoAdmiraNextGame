@@ -177,10 +177,23 @@
     if (!jwt) return Promise.resolve({ status: 401, turno: null });
     var cuerpo = { persona: persona, texto: texto, msg_id: msgId };
     if (opts.canal) cuerpo.canal = opts.canal;
+    if (opts.imagen) cuerpo.imagen = opts.imagen;
     return f((opts.base || "") + "/api/chat/enviar", { method: "POST", cache: "no-store", credentials: "same-origin", headers: { "content-type": "application/json", Authorization: "Bearer " + jwt }, body: JSON.stringify(cuerpo) })
       .then(function (r) {
         if (r.status === 401) olvidar();
         return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, turno: (d && d.turno) || null, error: d && d.error, espera_s: d && d.espera_s }; });
+      });
+  }
+
+  // Imagen pegada (t1389u, 25-11-2026): sube el Blob ya reducido a /api/chat/adjunto (máx. 1,5 MB) → { status, url }.
+  function subirImagen(blob, opts) {
+    opts = opts || {};
+    var jwt = credencial(), f = opts.fetch || root.fetch.bind(root);
+    if (!jwt) return Promise.resolve({ status: 401, url: null });
+    return f((opts.base || "") + "/api/chat/adjunto", { method: "POST", cache: "no-store", credentials: "same-origin", headers: { "content-type": (blob && blob.type) || "image/jpeg", Authorization: "Bearer " + jwt }, body: blob })
+      .then(function (r) {
+        if (r.status === 401) olvidar();
+        return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, url: (d && d.ok && d.url) || null, error: d && d.error }; });
       });
   }
 
@@ -211,7 +224,7 @@
     esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado, origenTurno: origenTurno, horaMadrid: horaMadrid, metaTurno: metaTurno,
     fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
     credencial: credencial, nombreSesion: nombreSesion, nombreDesdeEmail: nombreDesdeEmail, guardar: guardar, olvidar: olvidar, SESION: SESION, abrirSesion: abrirSesion, restaurarSesion: restaurarSesion,
-    leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
+    leerHilo: leerHilo, enviarTurno: enviarTurno, subirImagen: subirImagen, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
   };
   if (root.document && root.fetch && root.location && /admira\.live$|pages\.dev$|localhost$/.test(root.location.hostname || "")) restaurarSesion();
 })(typeof window !== "undefined" ? window : globalThis);

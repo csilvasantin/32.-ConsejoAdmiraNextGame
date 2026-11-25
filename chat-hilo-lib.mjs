@@ -299,9 +299,10 @@ export function textoEncargo(persona, turnos, turno, sitio = "https://www.admira
   const via = win95 ? " · ICQGram (Vuelta al 95)" : "";
   const cabecera = `${MARCA_CHAT} ${nombreAutor} → ${nombre} · hilo compartido admira.live${via}`;
   const instruccion = `Lee el hilo ${sitio}/api/chat/hilo?persona=${persona} antes de contestar (hilo-jobs.sh leer 20) y responde EN EL HILO con rol ${persona}, origen rutina, msg_id enc-<número de este encargo>-resp (POST /api/chat/hilo). Cierra también este encargo con telegram_responder (done + la misma respuesta). Mensaje: msg_id ${turno.id}.`;
-  const pie = win95
+  const img = turno && turno.imagen ? `\nImagen adjunta (ábrela y mírala antes de contestar): ${turno.imagen}` : "";
+  const pie = (win95
     ? `Mensaje de ${nombreAutor} desde ICQGram (admira.live/windows95):\n${turno.texto}`
-    : `Mensaje de ${nombreAutor} desde admira.live:\n${turno.texto}`;
+    : `Mensaje de ${nombreAutor} desde admira.live:\n${turno.texto}`) + img;
   let lineas = contexto;
   const montar = () => [cabecera, "Contexto:", lineas.length ? lineas.join("\n") : "(sin historial)", instruccion, pie].join("\n");
   while (montar().length > 3900 && lineas.length) lineas = lineas.slice(1);
@@ -354,6 +355,7 @@ export function mensajeLimpio(persona, turno, autorEmail) {
     canal: win95 ? "icqgram/" + persona : "chat/" + persona,
     para: NOMBRES[persona] || persona,
     ts: turno.ts, hora: horaMadrid(turno.ts), zona: "Europe/Madrid", texto: turno.texto, msg_id: turno.id,
+    ...(turno.imagen ? { imagenes: [turno.imagen] } : {}),
   };
 }
 

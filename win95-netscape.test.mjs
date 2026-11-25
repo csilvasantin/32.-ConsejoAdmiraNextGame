@@ -33,3 +33,31 @@ test("Netscape de Win95: admira.store no se incrusta (frame-ancestors 'none') y 
 test("windows95 conserva la verja de login", () => {
   assert.match(html, /<script src="\/auth-gate\.js"><\/script>/);
 });
+
+test("Netscape de Win95: la barra de marcadores arranca oculta y el menú dice Mostrar", () => {
+  assert.match(html, /id="brw" class="win nobk"/);
+  assert.match(html, /var BR_BK_BAR_KEY='vuelta95\.netscape\.barra-marcadores'/);
+  assert.match(html, /var BR_BK_BAR_VER=1/);
+  assert.match(html, /function brInitBarra\(/);
+  assert.match(html, /function brToggleBarra\(/);
+  assert.match(
+    html,
+    /Elección explícita posterior al cambio de default \(v>=1\)\. Un valor antiguo sin versión se ignora: arranca oculta\./
+  );
+  assert.match(html, /l:\(brBarOculta\(\)\?'Mostrar':'Ocultar'\)\+' barra de marcadores',fn:brToggleBarra/);
+});
+
+test("Netscape de Win95: Ver tiene Pantalla completa bajo Recargar y Detener; Esc solo sale del modo", () => {
+  assert.match(
+    html,
+    /ver:\[\{l:'Recargar',acc:'F5'[\s\S]*?\{l:'Detener',acc:'Esc'[\s\S]*?\{l:'Pantalla completa',acc:'F11',fn:brToggleFs\},\{sep:1\}/
+  );
+  assert.match(html, /id="brFsHint" hidden>Pulsa Esc para salir de pantalla completa</);
+  assert.match(html, /#brw\.fs\{left:0!important;top:0!important;width:640px!important;height:480px!important/);
+  assert.match(html, /function brEnterFs\(/);
+  assert.match(html, /function brExitFs\(/);
+  assert.match(
+    html,
+    /window\.addEventListener\('keydown',function\(e\)\{[\s\S]*?if\(e\.key!=='Escape'\) return;[\s\S]*?e\.preventDefault\(\); e\.stopPropagation\(\); brExitFs\(\);[\s\S]*?\},true\)/
+  );
+});

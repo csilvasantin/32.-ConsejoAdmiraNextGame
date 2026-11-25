@@ -289,6 +289,12 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .brdir #brBkMore{margin-left:auto;margin-right:0;padding:0 4px}
 #brw.nobk .brdir{display:none}
 #brw.nobk .brview{top:129px!important}
+#brw.fs{left:0!important;top:0!important;width:640px!important;height:480px!important;z-index:8600!important;padding:0}
+#brw.fs>.tb,#brw.fs>.brtabs,#brw.fs>.menubar,#brw.fs>.brtools,#brw.fs>.brloc,#brw.fs>.brdir,#brw.fs>.brstat,#brw.fs>.grip,#brw.fs>#br-menu{display:none!important}
+#brw.fs .brview{left:0!important;right:0!important;top:0!important;bottom:0!important;box-shadow:none}
+#brFsHint{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:5;font:11px Tahoma,"MS Sans Serif",sans-serif;color:#000;background:#ffffe1;border:1px solid #000;padding:3px 8px;white-space:nowrap;pointer-events:none;opacity:1;transition:opacity .7s linear;box-shadow:1px 1px 0 #808080}
+#brFsHint.fade{opacity:0}
+#brw:not(.fs) #brFsHint,#brFsHint[hidden]{display:none!important}
 #brPage.live.webp{background:#fff}
 #brPage .p26-web{height:100%;display:flex;flex-direction:column;min-height:0;background:#fff}
 #brPage .webbar{flex:none;height:18px;display:flex;align-items:center;gap:6px;padding:0 6px;background:#ffffe1;border-bottom:1px solid #808080;font-size:10px;color:#000;white-space:nowrap;overflow:hidden}
@@ -935,7 +941,7 @@ Fin del documento. Está en Miscelánea, solo lectura.
       <div class="sbar"><div id="napS1" style="flex:none;width:150px">Compartiendo 4 canciones</div><div id="napS2">Descargas: 0</div><div id="napS3" style="flex:none;width:96px">Desconectado</div></div>
     </div>
     <!-- AdmiraScape (homenaje navegador) -->
-    <div id="brw" class="win" style="left:40px;top:10px;width:560px;height:430px;display:none">
+    <div id="brw" class="win nobk" style="left:40px;top:10px;width:560px;height:430px;display:none">
       <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">Netscape Navigator</span><span class="x" data-min="brw">_</span><span class="x" data-max="brw" title="Maximizar">□</span><span class="x gap" data-close="brw">×</span></div>
       <div class="brtabs" id="brTabs" role="tablist" aria-label="Pestañas"></div>
       <div class="menubar" id="br-menubar"><span data-br-menu="archivo"><u>A</u>rchivo</span><span data-br-menu="edicion"><u>E</u>dición</span><span data-br-menu="ver"><u>V</u>er</span><span data-br-menu="ir" id="brMenuIr">I<u>r</u></span><span data-br-menu="marcadores"><u>M</u>arcadores</span><span data-br-menu="opciones"><u>O</u>pciones</span><span data-br-menu="ayuda">Ay<u>u</u>da</span></div>
@@ -955,6 +961,7 @@ Fin del documento. Está en Miscelánea, solo lectura.
       <div class="brdir" id="brDir"><button class="btn" data-dgo="novedades">Novedades</button><span class="bksep"></span><span id="brBk" style="display:contents"></span><button class="btn" id="brBkMore" title="Más marcadores">»</button></div>
       <div class="brview" id="brView"><div class="page" id="brPage"></div></div>
       <div class="brstat"><div class="key"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="7" r="3" fill="#ffd800" stroke="#000"/><path d="M7.5 7h5M10 7v3M12 7v2" stroke="#000" stroke-width="1.5"/></svg></div><div id="brSt">Sin conexión</div><div class="brprog"><i id="brProg"></i></div></div>
+      <div id="brFsHint" hidden>Pulsa Esc para salir de pantalla completa</div>
     </div>
     <!-- Acceso telefónico a redes -->
     <div id="dun" class="win dlg" style="left:180px;top:150px;width:280px;height:132px;display:none">
@@ -1897,7 +1904,7 @@ function saveDeskLayout(){
   });
   qsa('#desk > .win, #desk > .skin').forEach(function(el){
     if(!el.id) return;
-    var r=el.classList.contains('max')?el._winRect:null;
+    var r=(el.classList.contains('max')||el.classList.contains('fs'))?el._winRect:null;
     var left=r?parseInt(r.left,10):el.offsetLeft;
     var top=r?parseInt(r.top,10):el.offsetTop;
     var width=r?parseInt(r.width,10):el.offsetWidth;
@@ -1978,7 +1985,7 @@ function addTask(key,label,ico,wins){
   qs('#tasks').appendChild(b); TASKS[key]={btn:b,wins:wins,min:false};
 }
 function removeTask(key){ var t=TASKS[key]; if(!t) return; t.btn.parentNode.removeChild(t.btn); delete TASKS[key]; }
-function minimize(key){ var t=TASKS[key]; if(!t) return; t.min=true; t.wins.forEach(function(w){ w.style.display='none'; }); t.btn.classList.remove('on'); }
+function minimize(key){ if(key==='brw'&&typeof brExitFs==='function') brExitFs(); var t=TASKS[key]; if(!t) return; t.min=true; t.wins.forEach(function(w){ w.style.display='none'; }); t.btn.classList.remove('on'); }
 function toggleTask(key){
   var t=TASKS[key]; if(!t) return;
   if(t.min){ t.min=false; t.wins.forEach(function(w){ if(w.getAttribute('data-hidden')!=='1') w.style.display='block'; }); focusWin(t.wins[0]); }
@@ -4329,6 +4336,69 @@ var BR_SITES=[
   {h:'admira.biz',n:'Admira Biz',url:'https://admira.biz/',c:'#1f6feb',l:'B',frame:true,d:'AdmiraNeXT para empresas.'}
 ];
 var BR_BK_KEY='vuelta95.marcadores';
+var BR_BK_BAR_KEY='vuelta95.netscape.barra-marcadores';
+var BR_BK_BAR_VER=1; // default oculto; solo se honra una elección explícita guardada con esta versión
+function brBarOculta(){ var w=qs('#brw'); return !w||w.classList.contains('nobk'); }
+function brAplicarBarra(ocultar,guardar){
+  var w=qs('#brw'); if(!w) return;
+  w.classList.toggle('nobk',!!ocultar);
+  if(guardar){ try{ localStorage.setItem(BR_BK_BAR_KEY,JSON.stringify({v:BR_BK_BAR_VER,ocultar:!!ocultar})); }catch(e){} }
+}
+function brInitBarra(){
+  var ocultar=true;
+  try{
+    var raw=localStorage.getItem(BR_BK_BAR_KEY);
+    if(raw){
+      var o=JSON.parse(raw);
+      // Elección explícita posterior al cambio de default (v>=1). Un valor antiguo sin versión se ignora: arranca oculta.
+      if(o&&typeof o==='object'&&o.v>=BR_BK_BAR_VER&&typeof o.ocultar==='boolean') ocultar=o.ocultar;
+    }
+  }catch(e){}
+  brAplicarBarra(ocultar,false);
+}
+function brToggleBarra(){ brAplicarBarra(!brBarOculta(),true); }
+function brIsFs(){ var w=qs('#brw'); return !!(w&&w.classList.contains('fs')); }
+function brHintFs(){
+  var h=qs('#brFsHint'); if(!h) return;
+  h.hidden=false; h.classList.remove('fade');
+  clearTimeout(brHintFs._t); clearTimeout(brHintFs._t2);
+  brHintFs._t=setTimeout(function(){ h.classList.add('fade'); },2400);
+  brHintFs._t2=setTimeout(function(){ h.hidden=true; h.classList.remove('fade'); },3400);
+}
+function brEnterFs(){
+  var w=qs('#brw'); if(!w||brIsFs()||!BR.open) return;
+  closeBrMenu();
+  if(!w.classList.contains('max')) winSaveRect(w);
+  w.classList.add('fs');
+  w.style.left='0px'; w.style.top='0px'; w.style.width='640px'; w.style.height='480px';
+  focusWin(w);
+  brHintFs();
+}
+function brExitFs(){
+  var w=qs('#brw'); if(!w||!brIsFs()) return;
+  w.classList.remove('fs');
+  var h=qs('#brFsHint'); if(h){ h.hidden=true; h.classList.remove('fade'); }
+  clearTimeout(brHintFs._t); clearTimeout(brHintFs._t2);
+  if(w.classList.contains('max')){
+    w.style.left='0px'; w.style.top='0px'; w.style.width='640px'; w.style.height='452px';
+  } else if(w._winRect){
+    var r=w._winRect;
+    w.style.left=r.left; w.style.top=r.top; w.style.width=r.width; w.style.height=r.height;
+  }
+}
+function brToggleFs(){ if(brIsFs()) brExitFs(); else brEnterFs(); }
+// Capture en window (antes que document) para que Esc no detenga la carga ni salga del modo portátil/Duo (?fs=1).
+window.addEventListener('keydown',function(e){
+  if(e.key==='F11'){
+    if(!BR.open) return;
+    var w=qs('#brw'); if(!w||w.classList.contains('inactive')) return;
+    e.preventDefault(); e.stopPropagation(); brToggleFs();
+    return;
+  }
+  if(e.key!=='Escape') return;
+  if(!brIsFs()) return;
+  e.preventDefault(); e.stopPropagation(); brExitFs();
+},true);
 function brTabNuevo(){ return {hist:[],pos:-1,page:null,title:'Nueva pestaña'}; }
 function brSitio(h){ h=String(h||'').toLowerCase().replace(/^www\./,''); for(var i=0;i<BR_SITES.length;i++) if(BR_SITES[i].h===h) return BR_SITES[i]; return null; }
 function brSinEsquema(u){ return String(u||'').replace(/^https?:\/\//i,'').replace(/\/+$/,'').toLowerCase(); }
@@ -4440,11 +4510,11 @@ function openBrMenu(kind,btn,anchor){
   var menus={
     archivo:[{l:'Nueva pestaña',acc:'Ctrl+T',fn:function(){ brNuevaTab(); }},{l:'Abrir en una pestaña real',acc:'↗',dis:!brUrlActual(),fn:function(){ brAbrirReal(brUrlActual()); }},{l:'Cerrar pestaña',acc:'Ctrl+W',fn:function(){ brCierraTab(BR.tab); }},{sep:1},{l:'Salir',fn:closeBrowser}],
     edicion:[{l:'Ir a la barra de direcciones',acc:'Ctrl+L',fn:brFocoOmni},{l:'Copiar dirección',dis:!brUrlActual(),fn:function(){ try{ navigator.clipboard.writeText(brUrlActual()); brStatus('Dirección copiada',0); }catch(e){} }}],
-    ver:[{l:'Recargar',acc:'F5',dis:!BR.page,fn:brReload},{l:'Detener',acc:'Esc',dis:BR.loaded||!BR.page,fn:brStop},{sep:1},{l:(qs('#brw').classList.contains('nobk')?'Mostrar':'Ocultar')+' barra de marcadores',fn:function(){ qs('#brw').classList.toggle('nobk'); }}],
+    ver:[{l:'Recargar',acc:'F5',dis:!BR.page,fn:brReload},{l:'Detener',acc:'Esc',dis:BR.loaded||!BR.page||brIsFs(),fn:brStop},{l:'Pantalla completa',acc:'F11',fn:brToggleFs},{sep:1},{l:(brBarOculta()?'Mostrar':'Ocultar')+' barra de marcadores',fn:brToggleBarra}],
     ir:[{l:'Atrás',acc:'Alt+←',dis:BR.pos<=0,fn:brAtras},{l:'Adelante',acc:'Alt+→',dis:BR.pos>=BR.hist.length-1,fn:brAdelante},{l:'Inicio',acc:'Alt+Inicio',fn:brInicio},{sep:1}].concat(brItemsSitios(),(function(){ var h=brItemsHistorial(); return h.length?[{sep:1}].concat(h):[]; })()),
     marcadores:[{l:(brEsMarcado(brUrlActual())?'Quitar':'Añadir')+' esta página',acc:'Ctrl+D',dis:!brUrlActual(),fn:brMarcar},{sep:1}].concat(brItemsSitios(),brMarcadoresPropios().map(function(mk){ return {l:mk.title||brHost(mk.url),fn:function(){ brGo(brPaginaWeb(mk.url)); }}; })),
-    opciones:[{l:'Página de inicio: AdmiraNeXT 1997',fn:brInicio},{l:(qs('#brw').classList.contains('nobk')?'Mostrar':'Ocultar')+' barra de marcadores',fn:function(){ qs('#brw').classList.toggle('nobk'); }}],
-    ayuda:[{l:'Atajos de teclado',fn:function(){ msgBox('Atajos','Ctrl+L  barra de direcciones\nCtrl+T  nueva pestaña · Ctrl+W  cerrar pestaña\nAlt+← / Alt+→  atrás / adelante\nF5  recargar · Ctrl+D  marcador','info'); }},{l:'Acerca de Netscape Navigator',fn:function(){ msgBox('Acerca de','Netscape Navigator · edición 1997 → 2026\nCon pestañas, barra de direcciones inteligente\ny los sitios de AdmiraNeXT a un clic.','info'); }}],
+    opciones:[{l:'Página de inicio: AdmiraNeXT 1997',fn:brInicio},{l:(brBarOculta()?'Mostrar':'Ocultar')+' barra de marcadores',fn:brToggleBarra}],
+    ayuda:[{l:'Atajos de teclado',fn:function(){ msgBox('Atajos','Ctrl+L  barra de direcciones\nCtrl+T  nueva pestaña · Ctrl+W  cerrar pestaña\nAlt+← / Alt+→  atrás / adelante\nF5  recargar · Esc  detener · F11  pantalla completa\nEsc  sale de pantalla completa · Ctrl+D  marcador','info'); }},{l:'Acerca de Netscape Navigator',fn:function(){ msgBox('Acerca de','Netscape Navigator · edición 1997 → 2026\nCon pestañas, barra de direcciones inteligente\ny los sitios de AdmiraNeXT a un clic.','info'); }}],
     mas:[{l:'Lo más cool',fn:function(){ brGo('cool'); }},{l:'Personas',fn:function(){ brGo('libro'); }},{l:'Buscar en la red',fn:brFocoOmni},{l:'Software',fn:function(){ msgBox('Software','Netscape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); }}].concat(brMarcadoresPropios().length?[{sep:1}].concat(brMarcadoresPropios().map(function(mk){ return {l:mk.title||brHost(mk.url),fn:function(){ brGo(brPaginaWeb(mk.url)); }}; })):[])
   };
   var items=menus[kind]; if(!items) return;
@@ -4468,7 +4538,7 @@ function openBrMenu(kind,btn,anchor){
 }
 function wireChrome(){
   if(wireChrome._on) return; wireChrome._on=true;
-  brRenderTabs(); brRenderBk();
+  brRenderTabs(); brRenderBk(); brInitBarra();
   var bar=qs('#br-menubar');
   bar.addEventListener('click',function(e){ var b=e.target.closest('[data-br-menu]'); if(!b) return; e.stopPropagation(); if(b.classList.contains('open')) closeBrMenu(); else openBrMenu(b.getAttribute('data-br-menu'),b); });
   bar.addEventListener('pointerover',function(e){ var open=qs('#br-menubar span.open'); if(!open) return; var b=e.target.closest('[data-br-menu]'); if(!b||b===open) return; openBrMenu(b.getAttribute('data-br-menu'),b); });
@@ -4498,7 +4568,8 @@ function wireChrome(){
     else if(e.altKey&&k==='ArrowLeft'){ e.preventDefault(); brAtras(); }
     else if(e.altKey&&k==='ArrowRight'){ e.preventDefault(); brAdelante(); }
     else if(e.altKey&&k==='Home'){ e.preventDefault(); brInicio(); }
-    else if(k==='Escape'){ var m=qs('#br-menu'); if(m&&!m.hidden){ e.preventDefault(); closeBrMenu(); } else brStop(); }
+    else if(k==='F11'){ e.preventDefault(); brToggleFs(); }
+    else if(k==='Escape'){ var m=qs('#br-menu'); if(brIsFs()){ e.preventDefault(); e.stopPropagation(); brExitFs(); } else if(m&&!m.hidden){ e.preventDefault(); closeBrMenu(); } else brStop(); }
   });
 }
 
@@ -4520,6 +4591,7 @@ function openBrowser(){
   if(BR.online){ if(!BR.page) brGo('home'); } else if(!BR.dialing) dialUp();
 }
 function closeBrowser(){
+  brExitFs();
   BR.loadId++; BR.dialId++; BR.dialing=false; BR.online=false; BR.open=false; BR.loaded=false; BR.page=null; BR.hist=[]; BR.pos=-1; BR.pend=null; BR.tabs=[brTabNuevo()]; BR.tab=0; closeBrMenu(); brRenderTabs();
   qs('#brw').style.display='none'; qs('#dun').style.display='none'; removeTask('brw');
   qs('#brPage').innerHTML=''; qs('#brUrl').value=''; brSecure(''); qs('#brT').textContent=CONFIG.names.browser; qs('#brThrob').classList.remove('on'); brStatus('Sin conexión',0); brButtons();

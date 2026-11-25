@@ -1,0 +1,222 @@
+========================================================================
+CÓMO FUNCIONA WIN95 XPERIENCE
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Cómo funciona Win95 Xperience.txt».
+Es un fichero de sistema, de solo lectura. Sirve para que un consejero
+nuevo sepa cómo está montada la experiencia y dónde está el código.
+
+Página: admira.live/win95  (código: windows95/index.html).
+Repo: csilvasantin/32.-ConsejoAdmiraNextGame.
+Cloudflare es la referencia: se compara con lo publicado
+(https://www.admira.live/version.json) y nunca se pisa código más nuevo.
+
+La página vive detrás de la verja de inicio de sesión. Nada de esto
+es público. En los informes, commits, PRs o evidencias no se ponen
+IPs, MACs, tokens, contraseñas ni secretos.
+
+------------------------------------------------------------------------
+1. ESCRITORIO Y EXPLORADOR
+------------------------------------------------------------------------
+El escritorio imita Windows 95: iconos, menú Inicio, barra de tareas
+y reloj. Las carpetas y el escritorio tienen Ver (Iconos grandes,
+Iconos pequeños, Lista, Detalles), Organizar iconos, arrastrar y
+botón derecho clásico (Abrir, Cortar, Copiar, Eliminar, Cambiar
+nombre, Propiedades, Nuevo, Pegar). En Detalles las columnas son
+Nombre | Tamaño | Modificado | Tipo; se puede redimensionar y
+ordenar pulsando la cabecera.
+
+Persistencia en este navegador (localStorage):
+  · admira-win95-notepad   documentos y posiciones
+  · admira-win95-vistas    vista de cada carpeta
+  · Descargas, marcadores y barra de Netscape (claves propias)
+
+Miscelánea (carpeta del escritorio):
+  · Comunicaciones entre consejeros, solo lectura, desde
+    GET /api/win95/comunicaciones (hace falta sesión; 401 si no).
+    Se refrescan al abrir la carpeta.
+  · Documentos de sistema del Consejo (este fichero, el de estilo
+    ICQGram, el de encargos y el de normas). También de solo
+    lectura: para editarlos, Copiar → Pegar una copia propia.
+  · Si se envían a la Papelera, no se borran del servidor: solo
+    se ocultan en este navegador.
+
+Descargas: carpeta del escritorio. Ahí aterrizan las transferencias
+de Napster (se recuerdan en este PC).
+
+Papelera de reciclaje: Restaurar y Vaciar. Los del sistema y las
+comunicaciones del Consejo, al vaciar, solo se ocultan. Pendiente
+(MDAT-3, t1435u, sin empezar): rectángulo de selección, arrastrar
+varios a la Papelera, Eliminar con botón derecho dentro de la
+Papelera, y el arreglo de iconos con texto superpuesto.
+
+«Para las Leyendas.txt» está en el escritorio (no en Miscelánea).
+Es la nota de mano de obra de esta semana para Jobs, Wozniak,
+Disney y Lucas.
+
+------------------------------------------------------------------------
+2. MENÚ INICIO Y DEMO
+------------------------------------------------------------------------
+El menú Inicio imita Windows 95 (Programas, Documentos, Configuración,
+Buscar, Ayuda, Ejecutar, Apagar). El logotipo es la nube de Admira.
+
+La demo del ratón fantasma YA NO arranca sola (PR #507, encargos
+#7728 y #7729). Se lanza solo desde Inicio → Ejecutar → «demo»,
+o con ?demo=1 en la URL.
+
+Netscape muestra un contador real de visitas (GET/POST
+/api/win95/visitas; una suma por sesión del navegador).
+
+Protector de pantalla «Admira volando»: hoy se lanza pulsando la
+hora de la bandeja; el icono también está en el escritorio. Pendiente
+(MDAT-3): pasarlo al menú Inicio (junto a Ayuda) y quitarlo del
+reloj y del escritorio.
+
+El ajuste de fábrica de «Vuelta al 95» se puede cambiar desde
+Admira Director: /api/win95/ajuste (esquema en win95-ajuste-lib.mjs).
+
+Otras piezas del escritorio:
+  · Mi PC — ficha de época (133 MHz, etc.), sin datos reales.
+  · Bloc de notas — editable, con menús y archivos del escritorio.
+  · Bandeja de entrada — correo de demostración (admira.tv / studio).
+
+------------------------------------------------------------------------
+3. ICQGRAM
+------------------------------------------------------------------------
+Código: windows95/index.html (openIcq, presenciaCargar, cupoCab).
+API: GET /api/win95/presencia  (regla: win95-presencia-lib.mjs).
+Chat real (solo en admira.live, con sesión): /assets/chat-hilo-client.js
+habla con /api/chat/hilo, /api/chat/enviar y /api/chat/adjunto.
+
+La presencia es POR CUENTA, no por silla suelta (PR #501, #515):
+
+  LEYENDAS   Jobs, Wozniak, Disney, Lucas
+  ACTUALES   Musk, Huang, Murati, Lasseter
+
+Una cuenta está en línea si cualquiera de los suyos tiene evidencia
+(respuesta en su hilo o encargo cerrado en 24 h, o latido < 15 min)
+y la cuenta no está atascada ni con el despertar roto. Si Carlos
+escribió y llevan más de 10 min sin respuesta, o el último despertar
+falló y nadie de la cuenta ha respondido después, quedan fuera de
+línea. Murati y Lasseter aún no tienen hilo propio en
+admira.live/chat/<persona> (chat:false): no se inventa la ruta.
+
+Junto al nombre del grupo puede salir el % de cupo («Leyendas · 86 %»).
+Sale de /api/consumos/lecturas, medidor «Grok Bot semanal». Se oculta
+(no se pinta el %) si la lectura tiene más de 2 h o si el reset del
+cupo ya pasó. Cada cuenta tiene su lectura (leyendas / coetáneos).
+La de Leyendas se mantiene con lecturas periódicas; la de Actuales
+tiene que escribirla esa misma cuenta. Ver el documento de encargos.
+
+Al lado de cada consejero, si hay, sale el recuento de intervenciones
+de hoy (día civil de Madrid): encargos cerrados + respuestas en su
+hilo + misiones_hoy (o un in_progress empezado hoy), sin textos.
+
+Se pueden pegar imágenes en el chat (lado mayor ≤ 1600 px, JPEG,
+≤ 1,5 MB). Suben a /api/chat/adjunto.
+
+Espejo hacia un chat de Grok Bot: ver «Estilo comunicaciones
+ICQGram.txt» en esta misma carpeta (cabecera con caras + texto
+▓ ⊞ WIN95 · ICQGRAM). Generador:
+  cd /workspace/avatares-espejo && python3 generar.py
+
+------------------------------------------------------------------------
+4. NETSCAPE NAVIGATOR
+------------------------------------------------------------------------
+Navegador de la experiencia (menú Ir con sitios de AdmiraNeXT,
+barra de direcciones, pestañas, marcadores).
+«Novedades» abre el hilo del Consejo.
+
+Barra de marcadores: oculta por defecto (PR #505). Se muestra u
+oculta desde Ver. La elección se guarda en este navegador.
+
+Pantalla completa: F11 (también en el menú Ver). Esc sale.
+Atajos: Ctrl+L, Ctrl+T, Ctrl+W, Alt+← / Alt+→, F5, Ctrl+D.
+
+------------------------------------------------------------------------
+5. NAPSTER v2.0 TRANSFER
+------------------------------------------------------------------------
+Código: windows95/index.html (openNap, biblioteca, transferencias).
+API: GET /api/win95/napster  (win95-napster-lib.mjs).
+Fuente: índice público de Stock (stock.admira.store/stock/index.json).
+Hace falta sesión (401 si no). 502 si Stock no contesta: no se
+inventan canciones.
+
+Pestañas: Inicio, Buscar, Biblioteca, Transferencias.
+La consulta «80» o «#80» busca primero el hashtag, luego título y
+artista (PR #506). Las descargas quedan en este PC (Biblioteca +
+carpeta Descargas) con recuento real (PR #511, #516).
+
+Al terminar una transferencia se etiqueta EN LOCAL, no en Stock:
+  · audio → #winamp
+  · vídeo → #AdmiraMediaPlayer
+Escribir esa etiqueta de verdad en Stock está pendiente del sí
+de Carlos (ver encargos).
+
+------------------------------------------------------------------------
+6. WINAMP Y ADMIRA MEDIA PLAYER
+------------------------------------------------------------------------
+Winamp (AdmirAmp): playlist vacía al arrancar; se llena con las
+descargas de Napster etiquetadas #winamp y, si hay, con piezas de
+Stock que ya traen esa etiqueta. Al abrir el icono NO arranca solo
+(openAmp(false)). Suena al pulsar Reproducir o al abrir una pista
+de Descargas.
+
+Admira Media Player: vídeos y piezas públicas de admira.studio
+vía /api/win95/emision y las descargas #AdmiraMediaPlayer.
+Al abrir el icono tampoco arranca solo. Controles: Reproducir,
+Anterior/Siguiente, lista en ⏏, maximizar (barra o doble clic) y
+pantalla completa (Esc sale; si la Fullscreen API no entra, cae a
+un overlay CSS; en Firefox, Esc de la API también retira el overlay).
+PRs #508–#514.
+
+------------------------------------------------------------------------
+7. DÓNDE ESTÁ EL CÓDIGO
+------------------------------------------------------------------------
+  windows95/index.html                 interfaz
+  windows95/*.txt                      documentos precargados
+  functions/api/win95/presencia.js     presencia + cupo + recuento
+  functions/api/win95/napster.js       catálogo y búsqueda
+  functions/api/win95/comunicaciones.js  ficheros de Miscelánea
+  functions/api/win95/ajuste.js        ajuste desde Director
+  functions/api/win95/visitas.js       contador de Netscape
+  functions/api/win95/emision.js       inventario para el Media Player
+  win95-presencia-lib.mjs, win95-napster-lib.mjs,
+  win95-comunicaciones-lib.mjs, win95-ajuste-lib.mjs
+  Tests: win95-*.test.mjs, historico-win95.test.mjs
+
+PRs recientes de esta experiencia (25-nov-2026), r276–r291 aprox.:
+  #501 presencia por cuenta   #502 Explorador / Miscelánea
+  #503 columnas e imágenes en ICQGram   #504 estilo ICQGram
+  #505 Netscape pantalla completa   #506 Napster / Stock
+  #507 demo solo con Ejecutar   #508–#514 Admira Media Player
+  #510 y #515 cupo e intervenciones de hoy
+  #511 y #516 descargas, biblioteca y Transfer
+
+------------------------------------------------------------------------
+8. CÓMO PUBLICAR
+------------------------------------------------------------------------
+1) git fetch y rebase sobre origin/main (varios agentes editan a
+   la vez).
+2) Comparar el git de https://www.admira.live/version.json con
+   origin/main. Cloudflare es la referencia. Nunca pisar un
+   publicado más nuevo.
+3) Rama, tests, PR, merge a main.
+4) Desde la raíz del repo, con la identidad de quien publica:
+     ADMIRA_RELEASE_AGENT=… ADMIRA_RELEASE_MACHINE=… ./deploy.sh
+   El sello (v.DD.MM.AAAA.rN.HH:MM) lo genera tools/sello-siguiente.py
+   a partir de lo ya publicado, no se teclea.
+5) deploy.sh casi siempre termina con código 1 por dos post-chequeos
+   conocidos (barra sellada y machine-id.js): en producción, sin
+   sesión, responden 401. El despliegue en sí suele haber salido
+   bien. Se confirma en /version.json (sello, git, firmante).
+6) Hace falta una captura real como prueba.
+
+En este documento no hay secretos. Lo no comprobado se marca
+«sin verificar».
+
+========================================================================
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================

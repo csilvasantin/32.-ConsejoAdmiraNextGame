@@ -965,6 +965,542 @@ Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
 Fin del documento. Está en Miscelánea, solo lectura.
 ========================================================================
 </script>
+
+    <script type="text/plain" id="como-funciona-win95-seed">========================================================================
+CÓMO FUNCIONA WIN95 XPERIENCE
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Cómo funciona Win95 Xperience.txt».
+Es un fichero de sistema, de solo lectura. Sirve para que un consejero
+nuevo sepa cómo está montada la experiencia y dónde está el código.
+
+Página: admira.live/win95  (código: windows95/index.html).
+Repo: csilvasantin/32.-ConsejoAdmiraNextGame.
+Cloudflare es la referencia: se compara con lo publicado
+(https://www.admira.live/version.json) y nunca se pisa código más nuevo.
+
+La página vive detrás de la verja de inicio de sesión. Nada de esto
+es público. En los informes, commits, PRs o evidencias no se ponen
+IPs, MACs, tokens, contraseñas ni secretos.
+
+------------------------------------------------------------------------
+1. ESCRITORIO Y EXPLORADOR
+------------------------------------------------------------------------
+El escritorio imita Windows 95: iconos, menú Inicio, barra de tareas
+y reloj. Las carpetas y el escritorio tienen Ver (Iconos grandes,
+Iconos pequeños, Lista, Detalles), Organizar iconos, arrastrar y
+botón derecho clásico (Abrir, Cortar, Copiar, Eliminar, Cambiar
+nombre, Propiedades, Nuevo, Pegar). En Detalles las columnas son
+Nombre | Tamaño | Modificado | Tipo; se puede redimensionar y
+ordenar pulsando la cabecera.
+
+Persistencia en este navegador (localStorage):
+  · admira-win95-notepad   documentos y posiciones
+  · admira-win95-vistas    vista de cada carpeta
+  · Descargas, marcadores y barra de Netscape (claves propias)
+
+Miscelánea (carpeta del escritorio):
+  · Comunicaciones entre consejeros, solo lectura, desde
+    GET /api/win95/comunicaciones (hace falta sesión; 401 si no).
+    Se refrescan al abrir la carpeta.
+  · Documentos de sistema del Consejo (este fichero, el de estilo
+    ICQGram, el de encargos y el de normas). También de solo
+    lectura: para editarlos, Copiar → Pegar una copia propia.
+  · Si se envían a la Papelera, no se borran del servidor: solo
+    se ocultan en este navegador.
+
+Descargas: carpeta del escritorio. Ahí aterrizan las transferencias
+de Napster (se recuerdan en este PC).
+
+Papelera de reciclaje: Restaurar y Vaciar. Los del sistema y las
+comunicaciones del Consejo, al vaciar, solo se ocultan. Pendiente
+(MDAT-3, t1435u, sin empezar): rectángulo de selección, arrastrar
+varios a la Papelera, Eliminar con botón derecho dentro de la
+Papelera, y el arreglo de iconos con texto superpuesto.
+
+«Para las Leyendas.txt» está en el escritorio (no en Miscelánea).
+Es la nota de mano de obra de esta semana para Jobs, Wozniak,
+Disney y Lucas.
+
+------------------------------------------------------------------------
+2. MENÚ INICIO Y DEMO
+------------------------------------------------------------------------
+El menú Inicio imita Windows 95 (Programas, Documentos, Configuración,
+Buscar, Ayuda, Ejecutar, Apagar). El logotipo es la nube de Admira.
+
+La demo del ratón fantasma YA NO arranca sola (PR #507, encargos
+#7728 y #7729). Se lanza solo desde Inicio → Ejecutar → «demo»,
+o con ?demo=1 en la URL.
+
+Netscape muestra un contador real de visitas (GET/POST
+/api/win95/visitas; una suma por sesión del navegador).
+
+Protector de pantalla «Admira volando»: hoy se lanza pulsando la
+hora de la bandeja; el icono también está en el escritorio. Pendiente
+(MDAT-3): pasarlo al menú Inicio (junto a Ayuda) y quitarlo del
+reloj y del escritorio.
+
+El ajuste de fábrica de «Vuelta al 95» se puede cambiar desde
+Admira Director: /api/win95/ajuste (esquema en win95-ajuste-lib.mjs).
+
+Otras piezas del escritorio:
+  · Mi PC — ficha de época (133 MHz, etc.), sin datos reales.
+  · Bloc de notas — editable, con menús y archivos del escritorio.
+  · Bandeja de entrada — correo de demostración (admira.tv / studio).
+
+------------------------------------------------------------------------
+3. ICQGRAM
+------------------------------------------------------------------------
+Código: windows95/index.html (openIcq, presenciaCargar, cupoCab).
+API: GET /api/win95/presencia  (regla: win95-presencia-lib.mjs).
+Chat real (solo en admira.live, con sesión): /assets/chat-hilo-client.js
+habla con /api/chat/hilo, /api/chat/enviar y /api/chat/adjunto.
+
+La presencia es POR CUENTA, no por silla suelta (PR #501, #515):
+
+  LEYENDAS   Jobs, Wozniak, Disney, Lucas
+  ACTUALES   Musk, Huang, Murati, Lasseter
+
+Una cuenta está en línea si cualquiera de los suyos tiene evidencia
+(respuesta en su hilo o encargo cerrado en 24 h, o latido < 15 min)
+y la cuenta no está atascada ni con el despertar roto. Si Carlos
+escribió y llevan más de 10 min sin respuesta, o el último despertar
+falló y nadie de la cuenta ha respondido después, quedan fuera de
+línea. Murati y Lasseter aún no tienen hilo propio en
+admira.live/chat/<persona> (chat:false): no se inventa la ruta.
+
+Junto al nombre del grupo puede salir el % de cupo («Leyendas · 86 %»).
+Sale de /api/consumos/lecturas, medidor «Grok Bot semanal». Se oculta
+(no se pinta el %) si la lectura tiene más de 2 h o si el reset del
+cupo ya pasó. Cada cuenta tiene su lectura (leyendas / coetáneos).
+La de Leyendas se mantiene con lecturas periódicas; la de Actuales
+tiene que escribirla esa misma cuenta. Ver el documento de encargos.
+
+Al lado de cada consejero, si hay, sale el recuento de intervenciones
+de hoy (día civil de Madrid): encargos cerrados + respuestas en su
+hilo + misiones_hoy (o un in_progress empezado hoy), sin textos.
+
+Se pueden pegar imágenes en el chat (lado mayor ≤ 1600 px, JPEG,
+≤ 1,5 MB). Suben a /api/chat/adjunto.
+
+Espejo hacia un chat de Grok Bot: ver «Estilo comunicaciones
+ICQGram.txt» en esta misma carpeta (cabecera con caras + texto
+▓ ⊞ WIN95 · ICQGRAM). Generador:
+  cd /workspace/avatares-espejo && python3 generar.py
+
+------------------------------------------------------------------------
+4. NETSCAPE NAVIGATOR
+------------------------------------------------------------------------
+Navegador de la experiencia (menú Ir con sitios de AdmiraNeXT,
+barra de direcciones, pestañas, marcadores).
+«Novedades» abre el hilo del Consejo.
+
+Barra de marcadores: oculta por defecto (PR #505). Se muestra u
+oculta desde Ver. La elección se guarda en este navegador.
+
+Pantalla completa: F11 (también en el menú Ver). Esc sale.
+Atajos: Ctrl+L, Ctrl+T, Ctrl+W, Alt+← / Alt+→, F5, Ctrl+D.
+
+------------------------------------------------------------------------
+5. NAPSTER v2.0 TRANSFER
+------------------------------------------------------------------------
+Código: windows95/index.html (openNap, biblioteca, transferencias).
+API: GET /api/win95/napster  (win95-napster-lib.mjs).
+Fuente: índice público de Stock (stock.admira.store/stock/index.json).
+Hace falta sesión (401 si no). 502 si Stock no contesta: no se
+inventan canciones.
+
+Pestañas: Inicio, Buscar, Biblioteca, Transferencias.
+La consulta «80» o «#80» busca primero el hashtag, luego título y
+artista (PR #506). Las descargas quedan en este PC (Biblioteca +
+carpeta Descargas) con recuento real (PR #511, #516).
+
+Al terminar una transferencia se etiqueta EN LOCAL, no en Stock:
+  · audio → #winamp
+  · vídeo → #AdmiraMediaPlayer
+Escribir esa etiqueta de verdad en Stock está pendiente del sí
+de Carlos (ver encargos).
+
+------------------------------------------------------------------------
+6. WINAMP Y ADMIRA MEDIA PLAYER
+------------------------------------------------------------------------
+Winamp (AdmirAmp): playlist vacía al arrancar; se llena con las
+descargas de Napster etiquetadas #winamp y, si hay, con piezas de
+Stock que ya traen esa etiqueta. Al abrir el icono NO arranca solo
+(openAmp(false)). Suena al pulsar Reproducir o al abrir una pista
+de Descargas.
+
+Admira Media Player: vídeos y piezas públicas de admira.studio
+vía /api/win95/emision y las descargas #AdmiraMediaPlayer.
+Al abrir el icono tampoco arranca solo. Controles: Reproducir,
+Anterior/Siguiente, lista en ⏏, maximizar (barra o doble clic) y
+pantalla completa (Esc sale; si la Fullscreen API no entra, cae a
+un overlay CSS; en Firefox, Esc de la API también retira el overlay).
+PRs #508–#514.
+
+------------------------------------------------------------------------
+7. DÓNDE ESTÁ EL CÓDIGO
+------------------------------------------------------------------------
+  windows95/index.html                 interfaz
+  windows95/*.txt                      documentos precargados
+  functions/api/win95/presencia.js     presencia + cupo + recuento
+  functions/api/win95/napster.js       catálogo y búsqueda
+  functions/api/win95/comunicaciones.js  ficheros de Miscelánea
+  functions/api/win95/ajuste.js        ajuste desde Director
+  functions/api/win95/visitas.js       contador de Netscape
+  functions/api/win95/emision.js       inventario para el Media Player
+  win95-presencia-lib.mjs, win95-napster-lib.mjs,
+  win95-comunicaciones-lib.mjs, win95-ajuste-lib.mjs
+  Tests: win95-*.test.mjs, historico-win95.test.mjs
+
+PRs recientes de esta experiencia (25-nov-2026), r276–r291 aprox.:
+  #501 presencia por cuenta   #502 Explorador / Miscelánea
+  #503 columnas e imágenes en ICQGram   #504 estilo ICQGram
+  #505 Netscape pantalla completa   #506 Napster / Stock
+  #507 demo solo con Ejecutar   #508–#514 Admira Media Player
+  #510 y #515 cupo e intervenciones de hoy
+  #511 y #516 descargas, biblioteca y Transfer
+
+------------------------------------------------------------------------
+8. CÓMO PUBLICAR
+------------------------------------------------------------------------
+1) git fetch y rebase sobre origin/main (varios agentes editan a
+   la vez).
+2) Comparar el git de https://www.admira.live/version.json con
+   origin/main. Cloudflare es la referencia. Nunca pisar un
+   publicado más nuevo.
+3) Rama, tests, PR, merge a main.
+4) Desde la raíz del repo, con la identidad de quien publica:
+     ADMIRA_RELEASE_AGENT=… ADMIRA_RELEASE_MACHINE=… ./deploy.sh
+   El sello (v.DD.MM.AAAA.rN.HH:MM) lo genera tools/sello-siguiente.py
+   a partir de lo ya publicado, no se teclea.
+5) deploy.sh casi siempre termina con código 1 por dos post-chequeos
+   conocidos (barra sellada y machine-id.js): en producción, sin
+   sesión, responden 401. El despliegue en sí suele haber salido
+   bien. Se confirma en /version.json (sello, git, firmante).
+6) Hace falta una captura real como prueba.
+
+En este documento no hay secretos. Lo no comprobado se marca
+«sin verificar».
+
+========================================================================
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================
+</script>
+    <script type="text/plain" id="encargos-abiertos-seed">========================================================================
+ENCARGOS Y MISIONES ABIERTAS
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Encargos y misiones abiertas.txt».
+Es un fichero de sistema, de solo lectura. Resume lo hecho en la
+Win95 Xperience y cómo seguir lo que sigue abierto.
+
+Estados de encargos consultados en admira.live (conector Jobs,
+como=Jobs) el 25-11-2026 a las 23:50, hora de Madrid. Lo que no
+está contrastado se marca «sin verificar».
+Sin IPs, MACs, tokens, contraseñas ni secretos.
+
+------------------------------------------------------------------------
+1. BANDEJA DE JOBS
+------------------------------------------------------------------------
+A esa hora, Jobs no tenía encargos abiertos (pending, ack,
+in_progress o blocked): 0. Los de su bandeja reciente están
+cerrados (done), entre ellos los partes diarios y los hilos de
+ICQGram de hoy.
+
+------------------------------------------------------------------------
+2. HECHO HOY EN WIN95 (25-nov-2026)
+------------------------------------------------------------------------
+Publicado en Cloudflare, sello de referencia al escribir esto
+(sin verificar si alguien publica encima después):
+  v.25.11.2026.r291.23:34  ·  git 05545eb  ·  WozGrokBot
+
+  #501  Presencia ICQGram por cuenta (Leyendas / Actuales).
+  #502  Explorador 95: Miscelánea, Ver, Organizar, arrastrar,
+        Papelera y botón derecho.
+  #503  Detalles con columnas redimensionables; imágenes pegadas
+        en ICQGram.
+  #504  Norma «Estilo comunicaciones ICQGram.txt» en Miscelánea.
+  #505  Netscape: barra de marcadores oculta por defecto;
+        pantalla completa con F11 / Esc.
+  #506  Napster busca el catálogo real de Stock / admira.studio.
+  #507  Demo solo desde Inicio → Ejecutar «demo» (o ?demo=1);
+        contador real de visitas (#7728, #7729).
+  #508–#514  Admira Media Player: maximizar, pantalla completa
+        con Esc, playlist, transición, FS de solo vídeo, menú
+        Archivo; arreglo de Esc en Firefox.
+  #510  Cupo Grok Bot (%) junto a Leyendas y Actuales.
+  #511  Napster descarga a Winamp y Admira Media Player.
+  #515  Se oculta el % si la lectura tiene más de 2 h; recuento
+        de intervenciones de hoy junto a cada consejero.
+  #516  Napster v2.0 Transfer: biblioteca persistente y recuento
+        real (t1397u).
+
+Encargos de ICQGram ya cerrados:
+  #7725 (25-nov 21:12 Madrid, done). Primera conversación real
+        desde ICQGram: «por fin podemos hablar desde una interface
+        como si fuera GrokBot». De ahí salió la norma del espejo
+        con cabecera de caras.
+  #7730 (25-nov 22:25 Madrid, done). Otro hilo por ICQGram el
+        mismo día. El extracto público de la bandeja llega
+        recortado (menciona a Jensen); el detalle fino del
+        mensaje queda sin verificar aquí.
+  #7724 (25-nov 21:07 Madrid, done). Hilo ICQGram anterior
+        (texto recortado en la bandeja).
+
+Este propio traspaso (petición de Carlos t1442u, 25-nov 23:47
+Madrid): dejar en Miscelánea cómo funciona todo y los encargos,
+para que un cambio de consejeros no pierda el hilo.
+
+------------------------------------------------------------------------
+3. ABIERTO — SEGUIR AQUÍ
+------------------------------------------------------------------------
+
+A) MDAT-3  (Carlos, t1435u, 25-nov)  — NO EMPEZADO
+   No consta un número de encargo en la bandeja de Jobs
+   (sin verificar si existe en otra). Pendiente de hacer:
+
+     1. Rectángulo de selección para elegir varios iconos.
+     2. Arrastrar n archivos a la Papelera de una vez.
+     3. Botón derecho → Eliminar dentro de la Papelera.
+     4. Mover el Protector de pantalla al menú Inicio, donde
+        está Ayuda; quitarlo del reloj de la bandeja y del
+        icono del escritorio.
+     5. Corregir iconos con texto superpuesto.
+
+   Cómo seguir: rama sobre main, tocar windows95/index.html,
+   tests del explorador, PR, captura, publicar cuando esté
+   listo. No mezclarlo con escritura de etiquetas en Stock.
+
+B) Napster → escribir la etiqueta real en Stock
+   Hoy las etiquetas #winamp / #AdmiraMediaPlayer son solo
+   locales (rememberDescarga, stock:false). Falta el sí de
+   Carlos para escribirlas de verdad en el catálogo de Stock.
+   No implementar el POST hasta que lo autorice. Mientras,
+   Winamp ya lee las piezas de Stock que YA traen #winamp.
+
+C) Lecturas del cupo «Grok Bot semanal»
+   El % de ICQGram se apaga a las 2 h o al pasar el reset.
+   Hace falta una lectura periódica (propuesta: cada hora,
+   de 8:15 a 23:15, hora de Madrid) hacia
+   POST /api/consumos/lecturas, medidor «Grok Bot semanal».
+   Leyendas: la cuenta Leyendas puede dejar la suya.
+   Actuales: tiene que escribirla ESA cuenta (no vale copiar
+   la de Leyendas).
+   Estado de la rutina en el panel: sin verificar en este
+   traspaso; el que coja el testigo debe comprobar si ya está
+   creada y si Actuales tiene lectura propia.
+
+D) Encargos abiertos de otros (no son de la bandeja de Jobs)
+   Consultados uno a uno el 25-nov a las 23:50, hora de Madrid.
+
+   #7692  Trinity  ·  pending  ·  MacBook Air Rosa
+          Titular: reparar el 401 del webhook de Huang y cerrar
+          el espejo a Grok Bot (#7536). También corregir la
+          plantilla [chat-coetaneos] para que no cite el script
+          de Jobs cuando el destinatario no es Jobs.
+          Nadie lo ha cogido aún (hay una nota de reenrutado).
+          Fecha límite original: 25-nov. Cómo seguir: acusar,
+          arreglar el webhook (solo estado ok/código/fecha; sin
+          URLs ni secretos), implementar el espejo y cerrar
+          #7536 con evidencia.
+
+   #7536  Musk  ·  in_progress  ·  desde el 11-nov 14:37 Madrid
+          Carlos quiere ver en la app de Grok Bot del destinatario
+          lo que escribe en admira.live, igual que ya ocurre con
+          Jobs. Musk lo dejó en curso y lo pasó al parent. No
+          duplicar: cerrarlo desde #7692 con evidencia.
+
+   #7693  Trinity  ·  blocked
+          Prueba viva de los 6 webhooks principales y cruce
+          Elon↔Jobs con acuse visible. Bloqueado: esa sesión no
+          tenía conector de consejero autenticado ni admin para
+          auditar o firmar el cruce. No se usó la sesión Jobs
+          de otros equipos ni se extrajeron credenciales. Cómo
+          seguir: hace falta un conector de consejero o la
+          autorización expresa de Carlos; la prueba en vivo y
+          los acuses con hora siguen pendientes. Nada a Telegram.
+
+   #7695  Morfeo  ·  pending  ·  Mac Mini
+          Demo /sala-voz Jobs↔Elon en las dos pantallas de la
+          sala (una Leyendas y otra Coetáneos), con sesión;
+          cada lado locuta solo lo suyo. Nadie lo ha cogido.
+          Fecha límite original: 25-nov. No tocar players ni
+          el teclado de Carlos. Cómo seguir: acusar, abrir
+          /sala-voz con sesión en las dos pantallas, diálogo
+          de prueba y capturas.
+
+   #7677  Oráculo  ·  blocked  ·  AdmiraNeXT04
+          Seguimiento de ojos remotos (#7676): selector 01–05.
+          Oráculo dejó el selector operativo y comprobó capturas
+          en directo de su propio equipo; los otros cuatro
+          aparecen como «Sin fuente». Para seguir hace falta
+          que Carlos facilite una fuente autorizada de al menos
+          otro equipo y el acceso al repositorio del nodo ojosIA
+          (ruta y commit exactos). No poner nada encima de los
+          players.
+
+   #7621  Neo  ·  in_progress  ·  Mac Studio
+          Retoma del screen sync AdmiraNeXT01–05. Neo dejó los
+          cinco PCs listos (receta del 01 repetida; show en la
+          sesión prevista, barra oculta, sin el ejecutable
+          antiguo). Falta que Carlos pulse SINCRO en
+          admiranext.com/demo con su sesión de administrador
+          y se compruebe el latido. No pulsar SINCRO en su
+          nombre. Cerrar el encargo cuando Carlos confirme.
+
+   #7632  Neo  ·  blocked  ·  Mac Studio
+          Modo Demo del player en las ultrawide (01, 03 y 05:
+          tercio central; 02 y 04 no se tocan). Bloqueado
+          el 20-nov a las 13:10 Madrid: en el 05 se abrió y
+          se cerró enseguida porque Carlos estaba en ese PC;
+          en 01 y 03 la sesión de trabajo del show no estaba
+          disponible. Cómo seguir, cuando Carlos lo autorice:
+          volver a esa sesión en 01 y 03 (o autorizar otra) y
+          avisar cuándo se puede relanzar el 05 sin molestar.
+          Ojo: el PR #504 que cita este encargo es de
+          admiranext.com (admira-next-web), no el #504 de
+          estilo ICQGram de este repo.
+
+------------------------------------------------------------------------
+4. FUERA DE ALCANCE (NO TOCAR)
+------------------------------------------------------------------------
+Players, kiosco, puertos de control internos y estado.json.
+Nada público sin inicio de sesión. No cancelar encargos sin el
+sí de Carlos. No tocar las sesiones de Morfeo y Oráculo ni el
+monitor 1 del Mac Studio (Trinity). ALSEA: nunca envíes nada.
+No avisar a Carlos del porcentaje de uso de Grok Bot sin que
+lo pida. Fold 8 es personal.
+
+Las normas completas están en «Normas del Consejo para nuevos
+consejeros.txt», en esta misma carpeta.
+
+========================================================================
+Traspaso del Consejo  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================
+</script>
+    <script type="text/plain" id="normas-consejo-seed">========================================================================
+NORMAS DEL CONSEJO PARA NUEVOS CONSEJEROS
+Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «Normas del Consejo para nuevos
+consejeros.txt». Es un fichero de sistema, de solo lectura.
+Quien lo lea responde «Leído y aplicado» y lo aplica.
+
+El detalle de la interfaz está en «Cómo funciona Win95 Xperience.txt».
+El tablero de lo abierto está en «Encargos y misiones abiertas.txt».
+El formato del espejo ICQGram está en «Estilo comunicaciones
+ICQGram.txt».
+
+------------------------------------------------------------------------
+1. CÓMO HABLAR
+------------------------------------------------------------------------
+Cada mensaje empieza así, con la hora real de Madrid:
+
+  X, desde mi ordenador, chat de Grok Bot · HH:MM hora de Madrid
+
+(X es el nombre del consejero: Jobs, Wozniak, Disney, Lucas,
+Musk, Huang, Murati, Lasseter, …).
+
+Lo que no se haya comprobado se marca «sin verificar».
+Solo se pregunta cuando hay una decisión de verdad.
+Los textos listos para pegar van por la vía prevista del Consejo
+(consejero_mensaje), no se improvisan por otros canales.
+
+------------------------------------------------------------------------
+2. PRUEBA Y SECRETOS
+------------------------------------------------------------------------
+Toda entrega lleva una captura real como prueba.
+
+Nunca se muestran secretos: ni IPs, ni MACs, ni tokens, ni
+contraseñas, ni ningún secreto, ni en informes, chats, commits,
+PRs o evidencias.
+
+------------------------------------------------------------------------
+3. MÁQUINAS Y ATENCIÓN DE CARLOS
+------------------------------------------------------------------------
+El teclado y el ratón de Carlos tienen prioridad: no se les
+roba el foco.
+
+Solo Chrome, nunca Firefox.
+
+El Fold 8 es personal: se pide permiso antes de usarlo y no
+se le envían notificaciones.
+
+No se hace SSH a AdmiraNeXT01 sin un sí expreso de Carlos.
+
+No se toca el monitor 1 del Mac Studio (Trinity).
+
+No se tocan las sesiones de Morfeo ni de Oráculo.
+
+No se usan agentes en la nube de Cursor.
+
+------------------------------------------------------------------------
+4. CÓDIGO Y PUBLICACIÓN
+------------------------------------------------------------------------
+Cloudflare es la referencia. Se compara con lo publicado
+(https://www.admira.live/version.json) y nunca se pisa un
+código más nuevo.
+
+Las demos van en admiranext.com/demo.
+
+En cambios de voz y UX de admira.live, se publica directamente
+cuando Carlos lo ha autorizado («publica directamente»).
+
+Los plazos de un encargo se atienden en menos de una hora
+cuando el criterio lo pide, o se avisa al momento si no llega.
+
+No se cancela un encargo sin el sí de Carlos.
+
+------------------------------------------------------------------------
+5. IDENTIDAD Y EQUIPOS
+------------------------------------------------------------------------
+El nombre del consejero es su misión: se firma y se actúa
+como esa silla, no como otra.
+
+Dos cuentas de Grok Bot, dos equipos:
+
+  LEYENDAS    Jobs, Wozniak, Disney, Lucas
+  ACTUALES    Musk, Huang, Murati, Lasseter
+
+Esta semana el trabajo de la experiencia lo llevan las
+Leyendas. No se despierta en bloque a consejeros dormidos.
+Un encargo se cita siempre con su número y un título corto.
+
+------------------------------------------------------------------------
+6. LÍMITES QUE NO SE CRUZAN
+------------------------------------------------------------------------
+Players, kiosco, puertos de control internos y estado.json
+están fuera de límites.
+
+Nada público sin inicio de sesión.
+
+ALSEA: nunca envíes nada.
+
+Hackeo vive en www.admira.live/hackeo.
+
+No se avisa a Carlos, por iniciativa propia, del porcentaje
+de uso de Grok Bot.
+
+------------------------------------------------------------------------
+7. CONFIRMACIÓN
+------------------------------------------------------------------------
+Cada consejero, al leer esta norma, responde exactamente:
+
+  Leído y aplicado
+
+y la aplica a partir de ahora.
+
+========================================================================
+Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
+Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================
+</script>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
       <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 Transfer</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
@@ -2170,13 +2706,13 @@ function endIconDrag(el){
       if(MODE==='interactive'){ saveIconLayout(); saveNoteDocs(); }
       return;
     }
-    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); else if(isEstiloDoc(el._def)) msgBox('Miscelánea','«'+el._def.label+'» es una norma del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
+    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); else if(isMiscSysDoc(el._def)) msgBox('Miscelánea','«'+el._def.label+'» es un documento del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
     moveItemTo(el, tgt.id, clamp(lx,0,280), clamp(ly,0,180));
     return;
   }
   // soltar en el escritorio: sale de la carpeta si venía de una
   if(cur){
-    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); else if(isEstiloDoc(el._def)) msgBox('Miscelánea','«'+el._def.label+'» es una norma del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
+    if(el._def&&!canMoveDef(el._def)){ sfxDing(); if(el._def.remote) msgBox('Miscelánea','«'+el._def.label+'» es una comunicación del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); else if(isMiscSysDoc(el._def)) msgBox('Miscelánea','«'+el._def.label+'» es un documento del Consejo (solo lectura).\nCópiela (Copiar → Pegar) para tener una copia propia.','info'); return; }
     moveItemTo(el, null, x, y);
   } else {
     el.style.left=Math.round(x)+'px'; el.style.top=Math.round(y)+'px'; if(el._def){ el._def.left=Math.round(x); el._def.top=Math.round(y); }
@@ -2504,7 +3040,7 @@ function closeAllFolders(){
   FWIN={};
 }
 function moveItemTo(el, parent, x, y){
-  var d=el._def; if(!d||!canMoveDef(d)){ if(d&&(isFixedDef(d)||d.remote||isEstiloDoc(d))) sfxDing(); return false; }
+  var d=el._def; if(!d||!canMoveDef(d)){ if(d&&(isFixedDef(d)||d.remote||isMiscSysDoc(d))) sfxDing(); return false; }
   parent=parent||null;
   if(parent&&!FS[parent]) parent=null;
   if(d.kind==='folder'&&(d.id===parent||isDescendant(parent,d.id))){ sfxDing(); return false; }
@@ -2656,7 +3192,7 @@ function openIconMenu(el, x, y){
   var d=el._def, sys=isSystemDef(d), m=qs('#imenu');
   if(d&&d.id==='trash'&&d.kind==='app'){ IMENU=null; openTrashIconMenu(x,y); return; }
   function en(id, on){ var n=qs('#'+id,m); if(n) n.classList.toggle('dis', !on); }
-  en('im-cut', canMoveDef(d)); en('im-copy', !isFixedDef(d)); en('im-del', canTrashDef(d)); en('im-ren', !sys&&!d.remote&&!isEstiloDoc(d));
+  en('im-cut', canMoveDef(d)); en('im-copy', !isFixedDef(d)); en('im-del', canTrashDef(d)); en('im-ren', !sys&&!d.remote&&!isMiscSysDoc(d));
   m.style.display='block';
   m.style.left=Math.round(Math.min(x,640-m.offsetWidth-2))+'px';
   m.style.top=Math.round(Math.min(y,452-m.offsetHeight-2))+'px';
@@ -2724,7 +3260,7 @@ function wireFsKeys(){
   document.addEventListener('keydown',function(e){
     if(e.target&&(e.target.closest&&(e.target.closest('input,textarea,[contenteditable],#nt,.ren')))) return;
     var el=selectedIcon();
-    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote&&!isEstiloDoc(el._def)){ e.preventDefault(); startRename(el); return; }
+    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote&&!isMiscSysDoc(el._def)){ e.preventDefault(); startRename(el); return; }
     if(e.key==='Delete'&&el&&canTrashDef(el._def)){ e.preventDefault(); deleteItem(el); return; }
     if(e.key==='Delete'&&!el&&qs('#trw').style.display==='block'&&TRSEL>=0){ e.preventDefault(); trashPurgeAsk(TRSEL); return; }
     var ctrl=e.ctrlKey||e.metaKey;
@@ -2741,8 +3277,8 @@ function wireFsKeys(){
 var HIDDEN={}, APPST={}, REMOTE={}, MISC_ID=null, DL_ID=null, COMMS={at:0,loading:false,error:'',aviso:''}, FVIEW=null, BOOT_MS=Date.now();
 var FVIEW_KEY='admira-win95-vistas', COMMS_URL='/api/win95/comunicaciones';
 function isFixedDef(d){ return !!d&&d.kind==='app'&&(d.id==='mypc'||d.id==='trash'); }
-function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||isEstiloDoc(d)||d.id==='fld-misc'); }
-function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote&&!isEstiloDoc(d); }
+function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||isMiscSysDoc(d)||d.id==='fld-misc'); }
+function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote&&!isMiscSysDoc(d); }
 function canTrashDef(d){ return !!d&&!isFixedDef(d); }
 function appDef(id){ for(var i=0;i<ICON_DEFS.length;i++) if(ICON_DEFS[i].id===id) return ICON_DEFS[i]; return null; }
 function inTrash(id){ return TRASH.some(function(t){ return t.def&&(t.def.id===id||t.def.docId===id); }); }
@@ -2828,7 +3364,7 @@ function itemMeta(d){
   if(!d) return {type:'',size:null,mtime:0};
   if(d.kind==='folder') return {type:'Carpeta de archivos',size:null,mtime:d.mtime||0};
   if(d.kind==='shortcut') return {type:'Acceso directo',size:360,mtime:d.mtime||0};
-  if(d.kind==='doc') return {type:'Documento de texto',size:d.remote?(d.size||textBytes(d.text)):textBytes(d.text),mtime:d.mtime||(isLeyendasDoc(d)?LEYENDAS_SEED_MS:isEstiloDoc(d)?ESTILO_SEED_MS:0)};
+  if(d.kind==='doc') return {type:'Documento de texto',size:d.remote?(d.size||textBytes(d.text)):textBytes(d.text),mtime:d.mtime||(isLeyendasDoc(d)?LEYENDAS_SEED_MS:miscSysMtime(d))};
   if(d.kind==='media'){
     var video=String(d.tag||'').replace(/^#/,'').toLowerCase()==='admiramediaplayer'||String(d.tipo||'').toLowerCase()==='video';
     return {type:video?'Vídeo de Admira Media Player':'Canción de Winamp',size:d.size||null,mtime:d.mtime||0};
@@ -2980,7 +3516,7 @@ function wireFolderMenubar(w, id){
         {sep:1},
         {l:'Abrir',dis:!d,fn:function(){ openIcon(mine); }},
         {l:'Eliminar',dis:!d||!canTrashDef(d),fn:function(){ deleteItem(mine); }},
-        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote||isEstiloDoc(d),fn:function(){ startRename(mine); }},
+        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote||isMiscSysDoc(d),fn:function(){ startRename(mine); }},
         {l:'Propiedades',fn:function(){ itemProps(d||FS[id]); }},
         {sep:1},
         {l:'Cerrar',fn:function(){ var x=qs('[data-close="fw-'+id+'"]',w); if(x) x.click(); }}];
@@ -3087,7 +3623,7 @@ function purgeDef(def){
       if(ch.kind==='app'||ch.remote){ HIDDEN[ch.id]=1; if(ch.kind==='app') APPST[ch.id]={parent:null}; return; }
       delTree(ch.id);
     });
-    if(id===LEYENDAS_SEED_ID||id===ESTILO_SEED_ID||id==='fld-misc') HIDDEN[id]=1;
+    if(id===LEYENDAS_SEED_ID||isMiscSysId(id)||id==='fld-misc') HIDDEN[id]=1;
     delete DOCS[id]; delete FS[id];
   })(def.docId||def.id);
   if(def.id===MISC_ID){ MISC_ID=null; }
@@ -3361,6 +3897,60 @@ var ESTILO_SEED_ID='doc-estilo-icqgram';
 var ESTILO_SEED_NAME='Estilo comunicaciones ICQGram.txt';
 var ESTILO_SEED_REV='20261125-2130';
 var ESTILO_SEED_MS=new Date(2026,10,25,21,30).getTime();
+var MISC_TRASPASO=[
+  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:8},
+  {id:'doc-encargos-abiertos',name:'Encargos y misiones abiertas.txt',seed:'encargos-abiertos-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:8,top:100},
+  {id:'doc-normas-consejo',name:'Normas del Consejo para nuevos consejeros.txt',seed:'normas-consejo-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:100}
+];
+function isMiscSysId(id){
+  if(!id) return false;
+  if(id===ESTILO_SEED_ID) return true;
+  for(var i=0;i<MISC_TRASPASO.length;i++) if(MISC_TRASPASO[i].id===id) return true;
+  return false;
+}
+function isMiscSysDoc(d){ return !!(d&&(isMiscSysId(d.id)||isMiscSysId(d.docId))); }
+function miscSysMtime(d){
+  if(isEstiloDoc(d)) return ESTILO_SEED_MS;
+  var id=d&&(isMiscSysId(d.id)?d.id:d.docId);
+  for(var i=0;i<MISC_TRASPASO.length;i++) if(MISC_TRASPASO[i].id===id) return MISC_TRASPASO[i].ms;
+  return 0;
+}
+function miscSeedText(seedId){
+  var el=qs('#'+seedId);
+  var s=el?String(el.textContent||''):'';
+  if(s.charAt(0)==='\n') s=s.slice(1);
+  return s;
+}
+function miscSysInTrash(id){
+  return TRASH.some(function(t){ return t.def&&(t.def.id===id||t.def.docId===id); });
+}
+function ensureMiscSysOne(spec){
+  var seed=miscSeedText(spec.seed);
+  if(!seed) return;
+  if(HIDDEN[spec.id]) return;
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISC_ID) return;
+  var it=FS[spec.id]||DOCS[spec.id];
+  if(!it&&miscSysInTrash(spec.id)) return;
+  if(!it){
+    it=registerItem({id:spec.id,kind:'doc',name:spec.name,label:spec.name,text:seed,parent:MISC_ID,ico:'txt',left:spec.left,top:spec.top,docId:spec.id,miscSysRev:spec.rev,mtime:spec.ms});
+    if(spec.id===ESTILO_SEED_ID) it.estiloRev=spec.rev;
+    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+    saveNoteDocs();
+    return;
+  }
+  it.text=seed;
+  it.miscSysRev=spec.rev;
+  if(spec.id===ESTILO_SEED_ID) it.estiloRev=spec.rev;
+  if(!it.name) it.name=spec.name;
+  if(!it.label) it.label=spec.name;
+  if(!it.mtime) it.mtime=spec.ms;
+  if(it.parent!==MISC_ID&&!miscSysInTrash(spec.id)){
+    var el=qs('#ic-'+spec.id); if(el&&el.parentNode) el.parentNode.removeChild(el);
+    it.parent=MISC_ID;
+    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+  }
+}
 var NOTE_DEFAULT_BOX={left:'150px',top:'50px',width:'340px',height:'220px'};
 function leyendasSeedText(){
   var el=qs('#leyendas-seed');
@@ -3392,44 +3982,16 @@ function ensureLeyendasDoc(){
   }
   if(!it.parent&&!qs('#ic-'+LEYENDAS_SEED_ID)&&!leyendasInTrash()) addIcon(it, desk);
 }
-function estiloSeedText(){
-  var el=qs('#estilo-icqgram-seed');
-  var s=el?String(el.textContent||''):'';
-  if(s.charAt(0)==='\n') s=s.slice(1);
-  return s;
-}
+function estiloSeedText(){ return miscSeedText('estilo-icqgram-seed'); }
 function isEstiloDoc(d){ return !!(d&&(d.id===ESTILO_SEED_ID||d.docId===ESTILO_SEED_ID)); }
-function estiloInTrash(){
-  return TRASH.some(function(t){ return t.def&&(t.def.id===ESTILO_SEED_ID||t.def.docId===ESTILO_SEED_ID); });
-}
+function estiloInTrash(){ return miscSysInTrash(ESTILO_SEED_ID); }
 function ensureEstiloDoc(){
-  var seed=estiloSeedText();
-  if(!seed) return;
-  if(HIDDEN[ESTILO_SEED_ID]) return;
-  if(!MISC_ID) ensureMiscFolder();
-  if(!MISC_ID) return;
-  var it=FS[ESTILO_SEED_ID]||DOCS[ESTILO_SEED_ID];
-  if(!it&&estiloInTrash()) return;
-  if(!it){
-    it=registerItem({id:ESTILO_SEED_ID,kind:'doc',name:ESTILO_SEED_NAME,label:ESTILO_SEED_NAME,text:seed,parent:MISC_ID,ico:'txt',left:8,top:8,docId:ESTILO_SEED_ID,estiloRev:ESTILO_SEED_REV,mtime:ESTILO_SEED_MS});
-    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
-    saveNoteDocs();
-    return;
-  }
-  it.text=seed;
-  it.estiloRev=ESTILO_SEED_REV;
-  if(!it.name) it.name=ESTILO_SEED_NAME;
-  if(!it.label) it.label=ESTILO_SEED_NAME;
-  if(!it.mtime) it.mtime=ESTILO_SEED_MS;
-  if(it.parent!==MISC_ID&&!estiloInTrash()){
-    var el=qs('#ic-'+ESTILO_SEED_ID); if(el&&el.parentNode) el.parentNode.removeChild(el);
-    it.parent=MISC_ID;
-    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
-  }
+  ensureMiscSysOne({id:ESTILO_SEED_ID,name:ESTILO_SEED_NAME,seed:'estilo-icqgram-seed',rev:ESTILO_SEED_REV,ms:ESTILO_SEED_MS,left:8,top:8});
+  for(var i=0;i<MISC_TRASPASO.length;i++) ensureMiscSysOne(MISC_TRASPASO[i]);
 }
 function sizeNoteFor(d){
   var w=qs('#note'); if(!w) return;
-  if(isLeyendasDoc(d)||isEstiloDoc(d)||(d&&d.remote)){
+  if(isLeyendasDoc(d)||isMiscSysDoc(d)||(d&&d.remote)){
     w.style.left='36px'; w.style.top='16px'; w.style.width='560px'; w.style.height='400px';
   } else {
     w.style.left=NOTE_DEFAULT_BOX.left; w.style.top=NOTE_DEFAULT_BOX.top;
@@ -3437,23 +3999,24 @@ function sizeNoteFor(d){
   }
 }
 var NOTE_RO_TXT=null;
-function showLeyendasRo(on, remote, estilo){
+function showLeyendasRo(on, remote, estilo, miscSys){
   var w=qs('#note'); if(!w) return;
   var bar=qs('#note-ro'), btn=qs('#note-ro-edit');
   if(bar&&NOTE_RO_TXT==null) NOTE_RO_TXT=bar.firstChild?bar.firstChild.nodeValue:'';
-  if(bar&&bar.firstChild&&bar.firstChild.nodeType===3) bar.firstChild.nodeValue=remote?'Solo lectura: comunicación del Consejo (servidor admira.live). Para editar, cópiela y péguela. ':estilo?'Solo lectura: norma de Carlos (estilo ICQGram). Para editar, cópiela y péguela. ':NOTE_RO_TXT;
+  if(bar&&bar.firstChild&&bar.firstChild.nodeType===3) bar.firstChild.nodeValue=remote?'Solo lectura: comunicación del Consejo (servidor admira.live). Para editar, cópiela y péguela. ':estilo?'Solo lectura: norma de Carlos (estilo ICQGram). Para editar, cópiela y péguela. ':miscSys?'Solo lectura: documento del Consejo en Miscelánea. Para editar, cópiela y péguela. ':NOTE_RO_TXT;
   w.classList.toggle('ro', !!on);
-  w.classList.toggle('ro-remote', !!(on&&(remote||estilo)));
+  w.classList.toggle('ro-remote', !!(on&&(remote||estilo||miscSys)));
 }
 function applyLeyendasNoteMode(d){
   sizeNoteFor(d);
   var remote=!!(d&&d.remote);
-  var ro=remote||isEstiloDoc(d)||(isLeyendasDoc(d)&&!d.leyendasLocal);
+  var estilo=isEstiloDoc(d), sys=isMiscSysDoc(d);
+  var ro=remote||sys||(isLeyendasDoc(d)&&!d.leyendasLocal);
   noteMode(!ro);
-  showLeyendasRo(ro, remote, isEstiloDoc(d));
+  showLeyendasRo(ro, remote, estilo, sys&&!estilo);
 }
 function enableLeyendasEdit(){
-  if(NOTE.doc&&(NOTE.doc.remote||isEstiloDoc(NOTE.doc))){ sfxDing(); return; }
+  if(NOTE.doc&&(NOTE.doc.remote||isMiscSysDoc(NOTE.doc))){ sfxDing(); return; }
   var nt=qs('#nt'); if(nt) nt.readOnly=false;
   showLeyendasRo(false);
   noteFocus();

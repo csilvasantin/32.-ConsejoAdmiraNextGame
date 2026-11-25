@@ -220,6 +220,45 @@ function estiloSeedBody() {
   return src("windows95/estilo-comunicaciones-icqgram.txt").replace(/\s+$/, "");
 }
 
+const NO_IP = /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/;
+const NO_MAC = /\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b/;
+
+test("Miscelánea incluye el traspaso del Consejo precargado en el código", () => {
+  const html = src("windows95/index.html");
+  const como = src("windows95/como-funciona-win95-xperience.txt");
+  const enc = src("windows95/encargos-y-misiones-abiertas.txt");
+  const nor = src("windows95/normas-del-consejo.txt");
+  assert.match(como, /CÓMO FUNCIONA WIN95 XPERIENCE/);
+  assert.match(como, /\/api\/win95\/presencia/);
+  assert.match(como, /Grok Bot semanal/);
+  assert.match(como, /deploy\.sh/);
+  assert.match(enc, /ENCARGOS Y MISIONES ABIERTAS/);
+  assert.match(enc, /MDAT-3/);
+  assert.match(enc, /#7692/);
+  assert.match(enc, /sin verificar/);
+  assert.match(nor, /NORMAS DEL CONSEJO PARA NUEVOS CONSEJEROS/);
+  assert.match(nor, /desde mi ordenador, chat de Grok Bot/);
+  assert.match(nor, /Leído y aplicado/);
+  assert.match(nor, /LEYENDAS/);
+  assert.match(nor, /ACTUALES/);
+  for (const txt of [como, enc, nor]) {
+    assert.doesNotMatch(txt, NO_IP);
+    assert.doesNotMatch(txt, NO_MAC);
+    assert.doesNotMatch(txt, /Bearer\s+[A-Za-z0-9._\-]+/);
+  }
+  assert.match(html, /id="como-funciona-win95-seed"/);
+  assert.match(html, /id="encargos-abiertos-seed"/);
+  assert.match(html, /id="normas-consejo-seed"/);
+  assert.match(html, /doc-como-funciona-win95/);
+  assert.match(html, /doc-encargos-abiertos/);
+  assert.match(html, /doc-normas-consejo/);
+  assert.match(html, /function isMiscSysDoc/);
+  assert.match(html, /function ensureMiscSysOne/);
+  assert.ok(html.includes(como.replace(/\s+$/, "")));
+  assert.ok(html.includes(enc.replace(/\s+$/, "")));
+  assert.ok(html.includes(nor.replace(/\s+$/, "")));
+});
+
 test("el menú Inicio imita Windows 95 y la A de Admira es la nube, con estrellas en Navigator", () => {
   const html = src("windows95/index.html");
   assert.match(html, /Windows <b>95<\/b>/);

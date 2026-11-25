@@ -1014,7 +1014,8 @@ var CONFIG = {
   icqgram: { enabled:true, maxLen:300, minGapSeconds:20,
     prefixLegacy:/^\s*\[Visita[^\]]*\]\s*/i,
     quick:['¡Hola desde 1995!','¿Qué es AdmiraNeXT?','¿Qué haríais con mi tienda?'],
-    // Presencia real (Carlos 25-11-2026): en verde solo quien dio señal en 15 min (latido o respuesta en su hilo);
+    // Presencia real (Carlos 25-11-2026 v2): en verde quien tiene el canal de despertar operativo (respondió o cerró un encargo en 24 h,
+    // o latido < 15 min) y no tiene un mensaje de Carlos sin contestar > 10 min ni el webhook roto;
     // el resto, en «Fuera de línea» con los 3 contactos de la demo. Si la fuente falla: desconocido (gris), nunca verde.
     presencia:{ url:'/api/win95/presencia', cadaSeg:30 } },
   // ICQGram · contactos de la demo (auto = respuesta automática; on:false = fuera de línea)
@@ -3110,14 +3111,14 @@ var CONSEJO=[
 ];
 function chc(){ return window.ChatHiloClient||null; }
 function consejero(id){ for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].id===id){ var c=CONSEJO[i], pr=presenciaDe(c.persona); return {id:c.id,persona:c.persona,name:c.name,chat:'/chat/'+c.persona+'/',status:presenciaTxt(pr),on:pr.online===true,desconocido:pr.online!==true&&pr.online!==false,real:true}; } return null; }
-/* Presencia real de los consejeros: /api/win95/presencia (latido público + última respuesta en su hilo). */
+/* Presencia real de los consejeros: /api/win95/presencia (canal de despertar con evidencia: respuesta/encargo en 24 h o latido; webhook roto o pregunta sin contestar = fuera). */
 var PRES={datos:null,at:0,timer:null,enVuelo:false};
 function presenciaDe(persona){ var d=PRES.datos, l=d&&d.consejeros||[]; for(var i=0;i<l.length;i++) if(l[i].persona===persona) return l[i]; return {persona:persona,online:null}; }
 function haceTxt(s){ if(!s) return ''; var m=Math.max(0,Math.round((now()/1000-s)/60)); return m<1?'ahora':m<60?'hace '+m+' min':m<2880?'hace '+Math.round(m/60)+' h':'hace '+Math.round(m/1440)+' d'; }
 function presenciaTxt(pr){
   var dir='admira.live/chat/'+pr.persona;
-  if(pr.online===true) return dir+' · en línea';
-  if(pr.online===false) return dir+' · fuera de línea'+(pr.ultima_senal?' · última señal '+haceTxt(pr.ultima_senal):'');
+  if(pr.online===true) return dir+' · en línea'+(pr.ultima_respuesta?' · respondió '+haceTxt(pr.ultima_respuesta):'');
+  if(pr.online===false) return dir+' · fuera de línea'+(pr.motivo?' · '+pr.motivo:'')+(pr.ultima_respuesta?' · última respuesta '+haceTxt(pr.ultima_respuesta):'');
   return dir+' · estado desconocido';
 }
 function presenciaCargar(){

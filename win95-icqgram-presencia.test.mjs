@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { presencia, senalLatido, VIVO_SEG } from "./win95-presencia-lib.mjs";
+import { presencia, senalLatido, despertar } from "./win95-presencia-lib.mjs";
 import { construir } from "./functions/api/win95/presencia.js";
 import { claveHilo } from "./chat-hilo-lib.mjs";
 
@@ -13,19 +13,31 @@ const AHORA = Date.parse("2026-11-25T19:30:00Z");
 const S = Math.floor(AHORA / 1000);
 const iso = (s) => new Date(s * 1000).toISOString();
 
-test("presencia: verde solo con señal en 15 min (latido o respuesta en su hilo)", () => {
+test("presencia v2: latido viejo pero respuesta/encargo en 24 h = en línea; sin evidencia = fuera", () => {
   const latido = { ok: true, consejeros: {
-    Jobs: { modo: "reposo", at: S - 60, desde: S - 60 },
-    Wozniak: { modo: "reposo", at: S - VIVO_SEG - 5 },
-    Huang: { modo: "trabajando", caducado: false, at: S - 3000, hasta: S + 300 },
+    Jobs: { modo: "reposo", at: S - 7 * 3600 },
+    Wozniak: { modo: "reposo", at: S - 60 },
+    Disney: { modo: "reposo", at: S - 20 * 3600 },
+    Lucas: { modo: "reposo", at: S - 40 * 3600 },
   } };
-  const hilos = { disney: [{ rol: "carlos", origen: "app", ts: iso(S - 900) }, { rol: "disney", ts: iso(S - 120) }], lucas: [] };
-  const r = presencia({ latido, hilos, ahoraMs: AHORA });
+  const hilos = { jobs: [{ rol: "carlos", origen: "live", ts: iso(S - 7 * 3600 - 30), entrega: "entregado", detalle: "despertar webhook 200" }, { rol: "jobs", ts: iso(S - 7 * 3600) }] };
+  const bandejas = { disney: [{ id: 1, status: "done", done_at: S - 20 * 3600 }], lucas: [{ id: 2, status: "done", done_at: S - 30 * 3600 }] };
+  const r = presencia({ latido, hilos, bandejas, ahoraMs: AHORA });
   const on = Object.fromEntries(r.consejeros.map((c) => [c.persona, c.online]));
-  assert.deepEqual(on, { jobs: true, wozniak: false, disney: true, lucas: false, musk: false, huang: true });
-  assert.equal(r.en_linea, 3);
-  assert.equal(r.consejeros.find((c) => c.persona === "disney").fuente, "hilo");
+  assert.deepEqual(on, { jobs: true, wozniak: true, disney: true, lucas: false, musk: false, huang: false });
+  const j = r.consejeros.find((c) => c.persona === "jobs");
+  assert.equal(j.evidencia, "respuesta en su hilo"); assert.equal(j.despertar, "ok");
+  assert.match(r.consejeros.find((c) => c.persona === "lucas").motivo, /sin respuestas en 24 h/);
   for (const c of r.consejeros) assert.equal(c.chat, "/chat/" + c.persona + "/");
+});
+
+test("presencia v2: webhook roto (401) deja fuera salvo que haya respondido después", () => {
+  const roto = [{ rol: "huang", ts: iso(S - 3600) }, { rol: "carlos", origen: "app", ts: iso(S - 300), entrega: "entregado", detalle: "despertar 401" }];
+  const h = presencia({ hilos: { huang: roto }, ahoraMs: AHORA }).consejeros.find((c) => c.persona === "huang");
+  assert.equal(h.online, false); assert.equal(h.despertar, "roto"); assert.match(h.motivo, /401/);
+  assert.equal(despertar(roto).codigo, "401");
+  const arreglado = roto.concat([{ rol: "huang", ts: iso(S - 60) }]);
+  assert.equal(presencia({ hilos: { huang: arreglado }, ahoraMs: AHORA }).consejeros.find((c) => c.persona === "huang").online, true);
 });
 
 test("presencia: mensaje de Carlos sin contestar > 10 min = fuera de línea aunque haya latido", () => {
@@ -37,21 +49,23 @@ test("presencia: mensaje de Carlos sin contestar > 10 min = fuera de línea aunq
 });
 
 test("presencia: sin fuentes no se inventa verde (desconocido)", () => {
-  const r = presencia({ latido: null, hilos: {}, ahoraMs: AHORA });
+  const r = presencia({ latido: null, hilos: {}, bandejas: {}, ahoraMs: AHORA });
   assert.equal(r.en_linea, 0);
   for (const c of r.consejeros) assert.equal(c.online, null);
   assert.equal(senalLatido(null, S), 0);
 });
 
-test("/api/win95/presencia: junta latido y hilos, sin textos de mensajes", async () => {
+test("/api/win95/presencia: junta latido, bandeja e hilos, sin textos", async () => {
   const store = { [claveHilo("jobs")]: JSON.stringify({ turnos: [{ rol: "jobs", ts: iso(S - 30), texto: "secreto" }] }) };
   const env = { CHAT_KV: { get: async (k) => store[k] ?? null } };
-  const fetchImpl = async () => ({ ok: true, json: async () => ({ ok: true, consejeros: { Huang: { at: S - 10 } } }) });
+  const fetchImpl = async (url) => ({ ok: true, json: async () => (String(url).includes("inbox")
+    ? { items: String(url).includes("Huang") ? [{ id: 9, status: "done", done_at: S - 100, text: "privado" }] : [] }
+    : { ok: true, consejeros: {} }) });
   const r = await construir({ env, fetchImpl, ahoraMs: AHORA });
   assert.equal(r.consejeros.find((c) => c.persona === "huang").online, true);
-  assert.equal(r.consejeros.find((c) => c.persona === "jobs").online, true);
-  assert.equal(r.consejeros.find((c) => c.persona === "jobs").fuente, "hilo");
-  assert.equal(JSON.stringify(r).includes("secreto"), false);
+  assert.equal(r.consejeros.find((c) => c.persona === "jobs").evidencia, "respuesta en su hilo");
+  assert.equal(r.consejeros.find((c) => c.persona === "musk").online, false);
+  assert.equal(/secreto|privado/.test(JSON.stringify(r)), false);
   const caido = await construir({ env: {}, fetchImpl: async () => { throw new Error("x"); }, ahoraMs: AHORA });
   assert.equal(caido.en_linea, 0);
   assert.ok(caido.consejeros.every((c) => c.online === null));

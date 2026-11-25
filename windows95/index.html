@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/auth-gate.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Vuelta al 95 · AdmiraNeXT</title>
+<!--
+  «Vuelta al 95» · AdmiraNeXT — versión 0.2
+  Escenas: Léeme · Admister (P2P) → AdmirAmp (reproductor) · ICQGram (mensajería) → AdmiraScape (navegador 1997 → 2026) · apagado
+  - Un solo archivo, sin medios remotos (formato Xperiencia / contenido HTML5 de Admira).
+  - Pensado para el motor del player HTML5 de Admira (≈ Chrome 80): sin flex-gap, sin CSS moderno.
+  - Si existe admira_api_content.js en la misma carpeta, arranca en onStart; si no, arranca solo.
+  - Escenario lógico 640×480 (Windows 95 real) escalado al tamaño de pantalla.
+  - Música: pistas sintetizadas de demostración. Para usar el catálogo de admira.tv,
+    añade `src: 'archivo.mp3'` a cada pista de CONFIG.tracks (archivo en esta misma carpeta).
+  - URL: ?visita=Nombre personaliza el saludo del Léeme.
+-->
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}
+body{-webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+body.attract,body.attract *{cursor:none!important}
+#stage{position:absolute;left:0;top:0;width:640px;height:480px;transform-origin:0 0;overflow:hidden;background:#008080;font-family:Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;font-size:11px;color:#000}
+canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
+[data-ico]{display:inline-flex;flex:none}
+[data-ico] svg{display:block}
+
+/* ---------- escritorio ---------- */
+#desk{position:absolute;left:0;top:0;width:640px;height:452px}
+.icon{position:absolute;left:4px;width:72px;text-align:center;color:#fff}
+.icon svg{display:block;width:32px;height:32px;margin:0 auto 3px}
+.icon span{display:inline-block;padding:0 2px;line-height:13px;border:1px dotted transparent}
+.icon.sel span{background:#000080;border-color:#ffff80}
+.icon.sel svg{filter:brightness(.55) sepia(1) hue-rotate(190deg) saturate(5)}
+
+/* ---------- controles 95 ---------- */
+.btn{font:inherit;font-size:11px;color:#000;background:#c0c0c0;border:0;border-radius:0;min-width:75px;height:23px;padding:0 8px;outline:none;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf}
+.btn:active,.btn.pressed,.btn.on{box-shadow:inset 1px 1px #000,inset -1px -1px #fff,inset 2px 2px #808080,inset -2px -2px #dfdfdf}
+.btn:active,.btn.pressed{padding:2px 7px 0 9px}
+.win{position:absolute;z-index:10;padding:3px;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #dfdfdf,inset -2px -2px #808080,inset 2px 2px #fff}
+.tb{height:18px;background:#000080;color:#fff;font-weight:bold;display:flex;align-items:center;padding:0 2px 0 3px}
+.win.inactive .tb{background:#808080;color:#c0c0c0}
+.tb .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px}
+.tb [data-ico] svg{width:16px;height:16px}
+.x{flex:none;width:16px;height:14px;margin-left:2px;background:#c0c0c0;color:#000;font:bold 11px/13px Arial,sans-serif;text-align:center;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf}
+.x.gap{margin-left:4px}
+.x:active,.x.pressed{box-shadow:inset 1px 1px #000,inset -1px -1px #fff,inset 2px 2px #808080}
+.menubar{height:20px;display:flex;align-items:center;padding:0 2px}
+.menubar span{padding:0 6px}
+.notebody{position:absolute;left:3px;right:3px;top:43px;bottom:3px;background:#fff;padding:4px 6px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:12px/15px "Lucida Console","Courier New",monospace;white-space:pre-wrap;overflow:hidden}
+.caret{display:inline-block;width:1px;height:13px;background:#000;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.dlg .body{display:flex;padding:14px 14px 4px}
+.dlg .body svg{flex:none;width:32px;height:32px;margin-right:14px}
+.dlg .msg{line-height:15px;padding-top:1px;white-space:pre-line}
+.dlg .acts{text-align:center;padding:10px 0 8px}
+
+/* ---------- barra de tareas ---------- */
+#taskbar{position:absolute;left:0;bottom:0;width:640px;height:28px;z-index:5000;background:#c0c0c0;box-shadow:inset 0 1px #dfdfdf,inset 0 2px #fff;display:flex;align-items:center;padding:2px 2px 0}
+#start{min-width:0;height:22px;display:flex;align-items:center;padding:0 6px 0 4px}
+#start [data-ico]{margin-right:4px}
+#start [data-ico] svg{width:16px;height:16px}
+#tasks{flex:1;display:flex;margin:0 4px;min-width:0;overflow:hidden}
+.task span{overflow:hidden;text-overflow:ellipsis}
+.task{min-width:32px;width:150px;flex:0 1 150px;height:22px;display:flex;align-items:center;margin-right:3px;padding:0 4px;white-space:nowrap;overflow:hidden;text-align:left}
+.task svg{width:16px;height:16px;margin-right:4px;flex:none}
+.task.on{font-weight:bold;background-color:#fff;background-image:linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%),linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%);background-size:2px 2px;background-position:0 0,1px 1px}
+#tray{height:22px;display:flex;align-items:center;padding:0 9px 0 6px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+#tray [data-ico]{margin-right:6px}
+#tray [data-ico] svg{width:16px;height:16px}
+
+/* ---------- menú Inicio ---------- */
+#smenu{left:2px;bottom:26px;width:182px;padding:3px 3px 3px 27px;display:none;z-index:6000}
+#smenu.open{display:block}
+#smenu .side{position:absolute;left:3px;top:3px;bottom:3px;width:21px;background:#808080;overflow:hidden}
+#smenu .side span{position:absolute;left:1px;bottom:6px;writing-mode:vertical-rl;transform:rotate(180deg);font:17px/19px Arial,sans-serif;color:#c0c0c0;white-space:nowrap}
+#smenu .side b{color:#fff}
+.mi{position:relative;height:32px;display:flex;align-items:center;padding:0 8px 0 4px;white-space:nowrap}
+.mi [data-ico]{margin-right:10px}
+.mi [data-ico] svg{width:24px;height:24px}
+.mi .arr{margin-left:auto;font-size:8px;font-style:normal}
+.mi.hl{background:#000080;color:#fff}
+.msep{height:2px;margin:3px 2px;box-shadow:inset 0 1px #808080,inset 0 -1px #fff}
+#sub{display:none;width:178px;z-index:6001}
+#sub .mi{height:22px}
+#sub .mi [data-ico]{margin-right:6px}
+#sub .mi [data-ico] svg{width:16px;height:16px}
+
+/* ---------- AdmirAmp (piel propia) ---------- */
+.skin{position:absolute;z-index:10;display:none;background:#2a2a34;box-shadow:inset 1px 1px #5c5c70,inset -1px -1px #0c0c10;color:#d8d8e0;font-family:Arial,sans-serif}
+.skin>*{position:absolute}
+.atb{left:0;top:0;width:100%;height:14px;display:flex;align-items:center;padding:0 3px;background:#1d1d25}
+.atb .ln{flex:1;height:7px;background:repeating-linear-gradient(180deg,#4c4c60 0,#4c4c60 1px,transparent 1px,transparent 2px)}
+.skin.act .atb .ln{background:repeating-linear-gradient(180deg,#c8a64a 0,#c8a64a 1px,transparent 1px,transparent 2px)}
+.atb b{font:bold 8px/14px Arial,sans-serif;letter-spacing:1.5px;color:#e8e8f0;padding:0 6px;white-space:nowrap}
+.sbx{flex:none;width:9px;height:9px;margin-left:3px;background:#3c3c4a;box-shadow:inset 1px 1px #77778a,inset -1px -1px #111;font:bold 8px/9px Arial,sans-serif;text-align:center;color:#ddd}
+.sk{background:linear-gradient(#5f5f70,#393946);box-shadow:inset 1px 1px #9090a4,inset -1px -1px #15151c;display:flex;align-items:center;justify-content:center;font:bold 7px/1 Arial,sans-serif;letter-spacing:.4px;color:#b8b8c8;white-space:nowrap}
+.sk.pressed,.sk:active{background:linear-gradient(#2c2c36,#43434f);box-shadow:inset 1px 1px #101016,inset -1px -1px #6c6c7c}
+.sk svg{width:9px;height:9px;fill:#e0e0ea}
+.tp{width:23px;height:18px}
+.tog::before{content:'';width:3px;height:3px;background:#1f3a1f;margin-right:3px;flex:none}
+.tog.on{color:#7f7}
+.tog.on::before{background:#3f3;box-shadow:0 0 2px #3f3}
+.hs,.seek{background:#0d0d12;box-shadow:inset 1px 1px #000,inset -1px -1px #4a4a5a}
+.hs{height:9px}
+.hs .fill{position:absolute;left:1px;top:3px;height:3px;background:linear-gradient(90deg,#1c8a1c,#d8d81c,#d81c1c)}
+.hs .mid{position:absolute;left:18px;top:2px;width:1px;height:5px;background:#666}
+.hs .knob,.seek .knob,.vs .knob{position:absolute;background:linear-gradient(#a2a2b6,#5a5a6c);box-shadow:inset 1px 1px #d6d6e6,inset -1px -1px #202028}
+.hs .knob{top:-1px;width:12px;height:11px}
+.seek{height:10px}
+.seek .knob{top:0;width:28px;height:10px;display:none}
+.seek.on .knob{display:block}
+.vs{width:14px;height:58px}
+.vs .trk{position:absolute;left:5px;top:0;width:4px;height:58px;background:#0d0d12;box-shadow:inset 1px 1px #000,inset -1px -1px #4a4a5a}
+.vs .lvl{position:absolute;left:5px;bottom:0;width:4px;background:linear-gradient(#d81c1c,#d8d81c 50%,#1c8a1c);background-size:4px 58px;background-position:0 100%}
+.vs .knob{left:0;width:14px;height:9px}
+.eql{width:22px;text-align:center;font:bold 6px/1 Arial,sans-serif;color:#a0a0b4}
+#plist{background:#000;overflow:hidden;font:9px/12px Arial,sans-serif;color:#00e000}
+.prow{height:12px;padding:0 3px;display:flex;white-space:nowrap}
+.prow .n{flex:1;overflow:hidden;text-overflow:ellipsis}
+.prow .d{padding-left:6px}
+.prow.cur{color:#fff}
+.prow.sel{background:#0000c6}
+.plsb{background:#0d0d12}
+.plsb div{position:absolute;left:1px;top:1px;width:5px;height:18px;background:linear-gradient(90deg,#7a7a8e,#4a4a5a)}
+.alogo{width:18px;height:18px;border-radius:4px;background:#ff6a00;color:#fff;font:bold 13px/18px Arial,sans-serif;text-align:center;box-shadow:inset -1px -1px rgba(0,0,0,.35),inset 1px 1px rgba(255,255,255,.35)}
+
+/* ---------- Admister (homenaje P2P) ---------- */
+#nap .hdr{height:38px;margin-top:2px;background:linear-gradient(#26263e,#111120);display:flex;align-items:center;padding:0 10px;color:#fff}
+#nap .hdr [data-ico] svg{width:28px;height:28px}
+#nap .hdr .brand{margin-left:8px;font:italic bold 21px/1 Arial,sans-serif;letter-spacing:-.5px}
+#nap .hdr .brand span{color:#ff8c1a}
+#nap .hdr .st{margin-left:auto;font-size:10px;line-height:13px;color:#9fd8c0;text-align:right;white-space:nowrap}
+.tabs{position:relative;z-index:1;display:flex;height:24px;padding:4px 4px 0}
+.tab{position:relative;top:2px;height:20px;margin-right:-1px;padding:3px 10px 0;background:#c0c0c0;border-radius:3px 3px 0 0;box-shadow:inset 1px 1px #fff,inset -1px 0 #000,inset -2px 0 #808080;white-space:nowrap}
+.tab.on{top:0;z-index:2;height:23px;margin:0 -1px 0 -2px;padding:4px 12px 0}
+.panel{position:absolute;left:3px;right:3px;top:103px;bottom:25px;display:none;padding:8px;box-shadow:inset 1px 1px #fff,inset -1px -1px #000,inset -2px -2px #808080}
+.panel.on{display:block}
+.fin{display:inline-block;height:21px;vertical-align:middle;padding:3px 4px;background:#fff;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.fin.focus::after{content:'';display:inline-block;width:1px;height:12px;background:#000;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+.lv{position:relative;overflow:hidden;padding:2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.lvh{display:flex;height:17px}
+.lvh div{flex:none;padding:2px 4px 0;white-space:nowrap;overflow:hidden;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080}
+.lvr{display:flex;height:16px;line-height:16px}
+.lvr div{flex:none;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lvr.sel{background:#000080;color:#fff}
+.lvmsg{padding:8px 6px;color:#000080}
+.dot{display:inline-block;width:7px;height:7px;margin-right:4px;border-radius:50%;box-shadow:inset -1px -1px rgba(0,0,0,.4)}
+.pbar{display:inline-block;width:100px;height:12px;padding:2px;vertical-align:-2px;background:#c0c0c0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+.pbar i{display:block;height:100%;background:repeating-linear-gradient(90deg,#000080 0,#000080 6px,transparent 6px,transparent 8px)}
+.prow2{margin-top:6px;white-space:nowrap}
+.prow2 .btn{margin-right:6px}
+.btn[disabled]{color:#808080;text-shadow:1px 1px #fff}
+.turbo{float:right;margin-top:5px;font:bold 10px Arial,sans-serif;color:#b00000;letter-spacing:1px}
+.sbar{position:absolute;left:3px;right:3px;bottom:3px;height:20px;display:flex}
+.sbar div{flex:1;min-width:0;margin-right:2px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+.home h3{margin:0 0 2px;font-size:13px;color:#000080}
+.home p{margin:0 0 8px;line-height:15px}
+.home .box{padding:6px 8px;margin-bottom:8px;background:#fff;line-height:15px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+
+/* ---------- ICQGram (homenaje mensajería) ---------- */
+#icq .qhdr{height:30px;margin-top:2px;display:flex;align-items:center;padding:0 6px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+#icq .qhdr [data-ico] svg{width:22px;height:22px}
+#icq .qhdr b{margin-left:5px;font:italic bold 14px/1 Arial,sans-serif;color:#1f8a2e}
+#icq .qhdr b span{color:#e02020}
+#icq .qhdr i{margin-left:auto;font-style:normal;font-size:9px;color:#707070}
+.clist{position:absolute;left:3px;right:3px;top:56px;bottom:52px;overflow:hidden;padding:3px 2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.cgrp{padding:3px 4px 2px;font-weight:bold;color:#000080}
+.crow{display:flex;align-items:center;height:18px;padding:0 4px 0 10px;white-space:nowrap}
+.crow svg{flex:none;width:14px;height:14px;margin-right:5px}
+.crow.off{color:#808080}
+.crow.sel{background:#000080;color:#fff}
+.crow .env{display:none;margin-left:auto}
+.crow .env svg{width:14px;height:10px;margin:0}
+.crow.msg{font-weight:bold}
+.crow.msg .env{display:block;animation:blink .8s steps(1) infinite}
+.cbot{position:absolute;left:3px;right:3px;bottom:3px}
+.cbot .btn{display:block;width:100%;min-width:0;height:22px;font-weight:bold}
+.cstat{height:20px;margin-top:3px;padding:3px 6px 0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+.sdot{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:50%;background:#3cc83c;box-shadow:inset -1px -1px rgba(0,0,0,.35)}
+#icqc .chdr{height:20px;margin-top:2px;display:flex;align-items:center;padding:0 4px}
+#icqc .chdr svg{width:14px;height:14px;margin-right:5px}
+#icqc .chdr span{margin-left:6px;color:#606060}
+#icqc .hist{position:absolute;left:3px;right:3px;top:44px;height:130px;overflow:hidden;padding:4px 6px;background:#fff;line-height:14px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.im{margin-bottom:5px}
+.im .who.them{color:#c00000}
+.im .who.me{color:#0000c0}
+.im .ts{font-size:10px;color:#808080}
+.im .tx{padding-left:8px}
+#icqc .inp{position:absolute;left:3px;right:80px;top:180px}
+#icqReal{position:absolute;left:3px;right:80px;top:180px;height:21px;border:0;outline:none;padding:3px 4px;font:inherit;color:#000;background:#fff;-webkit-user-select:text;user-select:text;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#icqc .hist{overflow-y:auto;touch-action:pan-y}
+#icqSend{position:absolute;right:3px;top:180px;width:72px;min-width:0;height:22px}
+#icqc .opts{position:absolute;left:3px;right:3px;top:207px;height:52px;overflow:hidden}
+#icqc .opts .btn{min-width:0;height:22px;margin:0 4px 4px 0;padding:0 8px}
+#icqc .cst{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;color:#404040;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+.blinking{animation:blink .8s steps(1) infinite}
+
+/* ---------- AdmiraScape (homenaje navegador) ---------- */
+.brtools{height:42px;display:flex;align-items:center;padding:2px 2px 2px 4px;box-shadow:inset 0 1px #fff,inset 0 -1px #808080}
+.tbtn{width:47px;height:38px;margin-right:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf}
+.tbtn svg{width:20px;height:20px;margin-bottom:1px}
+.tbtn:active,.tbtn.pressed{box-shadow:inset 1px 1px #000,inset -1px -1px #fff,inset 2px 2px #808080}
+.tbtn.dis{color:#808080;text-shadow:1px 1px #fff}
+.tbtn.dis svg{opacity:.35}
+.throb{position:relative;margin-left:auto;width:40px;height:38px;overflow:hidden;background:#000040;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
+.throb .tA{position:absolute;left:9px;top:8px;width:22px;height:22px;border-radius:5px;background:#ff6a00;color:#fff;font:bold 16px/22px Arial,sans-serif;text-align:center}
+.throb i{position:absolute;left:0;width:12px;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);opacity:0}
+.throb i:nth-of-type(1){top:6px}.throb i:nth-of-type(2){top:16px}.throb i:nth-of-type(3){top:26px}
+.throb.on i{animation:meteor .9s linear infinite}
+.throb.on i:nth-of-type(2){animation-delay:.3s}.throb.on i:nth-of-type(3){animation-delay:.6s}
+@keyframes meteor{0%{transform:translate(-14px,-10px) rotate(35deg);opacity:0}25%{opacity:1}100%{transform:translate(40px,22px) rotate(35deg);opacity:0}}
+.brloc{height:24px;display:flex;align-items:center;padding:0 4px}
+.brloc .fin{flex:1;height:20px;margin-left:5px;padding:2px 4px}
+.brdir{height:22px;padding:1px 4px 0;white-space:nowrap}
+.brdir .btn{min-width:0;height:19px;padding:0 6px;margin-right:3px;font-size:10px}
+.brview{position:absolute;left:3px;right:3px;top:131px;bottom:26px;overflow-x:hidden;overflow-y:auto;background:#fff;touch-action:pan-y;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.brview::-webkit-scrollbar{width:14px}
+.brview::-webkit-scrollbar-track{background-color:#fff;background-image:linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%),linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%);background-size:2px 2px;background-position:0 0,1px 1px}
+.brview::-webkit-scrollbar-thumb{background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080}
+.page{min-height:100%}
+.brstat{position:absolute;left:3px;right:3px;bottom:3px;height:20px;display:flex}
+.brstat>div{margin-right:2px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+.brstat .key{flex:none;width:24px;padding:2px 0 0 4px}
+.brstat .key svg{width:14px;height:14px}
+#brSt{flex:1;min-width:0}
+.brprog{flex:none;width:90px;margin-right:0!important;padding:4px!important}
+.brprog i{display:block;height:100%;width:0;background:#000080}
+#dun .dunb{display:flex;align-items:center;padding:12px 12px 4px;line-height:16px}
+#dun .dunb svg{flex:none;width:40px;height:32px;margin-right:12px}
+#dun .acts{text-align:center;padding:10px 0 6px}
+/* página de 1997 */
+.p97{padding:10px 14px 14px;font:13px/1.35 "Times New Roman",Times,serif;color:#000;background-color:#ece6d6;background-image:radial-gradient(#d6ccb4 1px,transparent 1px);background-size:6px 6px}
+.p97 a{color:#0000ee;text-decoration:underline;cursor:pointer}
+.p97 h2{margin:4px 0 8px;font:bold 22px "Times New Roman",serif;color:#800000}
+.p97 p{margin:0 0 8px}
+.p97-title{margin:2px 0 6px;text-align:center;font:bold 28px "Comic Sans MS","Comic Sans",cursive;color:#ff6a00;text-shadow:2px 2px 0 #000080,3px 3px 0 #000}
+.p97-title span{color:#ffd000}
+.p97-marq{overflow:hidden;white-space:nowrap;margin-bottom:8px;padding:2px 0;background:#000080;color:#ffff00;font:bold 12px Arial,sans-serif}
+.p97-marq span{display:inline-block;padding-left:100%;animation:marq 14s linear infinite}
+@keyframes marq{to{transform:translateX(-100%)}}
+.p97-uc{display:flex;align-items:center;justify-content:center;width:340px;height:34px;margin:0 auto 10px;border:2px outset #fff;background:repeating-linear-gradient(45deg,#ffd800 0,#ffd800 10px,#111 10px,#111 20px)}
+.p97-uc b{padding:2px 8px;border:1px solid #000;background:#ffd800;font:bold 12px Arial,sans-serif}
+.p97-uc svg{width:26px;height:26px;margin:0 8px}
+.p97-cols{display:flex;align-items:flex-start}
+.p97-menu{flex:none;width:158px;margin-right:12px;padding:6px 8px;border:3px ridge #c0a060;background:#fff8dc;font-weight:bold;line-height:22px}
+.p97-menu a.new{color:#e00000}
+.p97-body{flex:1;min-width:0}
+.p97-img{float:right;width:150px;height:96px;margin:0 0 6px 10px;border:2px solid #000}
+.p97-img svg{display:block;width:100%;height:100%}
+.blink{animation:blink 1s steps(1) infinite}
+.p97-hr{height:4px;margin:12px 0 8px;border:0;background:linear-gradient(90deg,red,orange,yellow,lime,cyan,blue,magenta)}
+.p97-counter{text-align:center;font-size:12px}
+.odo span{display:inline-block;width:12px;margin:0 1px;border:1px solid #444;background:#000;color:#3f3;font:bold 13px/17px "Courier New",monospace;text-align:center}
+.p97-foot{margin-top:8px;text-align:center;font-size:11px;color:#404040}
+.gb{margin-bottom:6px;padding:5px 8px;border:2px inset #ccc;background:#fff}
+.p404{padding:12px 16px;font:13px/1.4 "Times New Roman",serif}
+.p404 h1{margin:0 0 10px;font-size:26px}
+.p404 address{font-style:italic}
+/* página de 2026 */
+.p26{padding:18px 20px;color:#e9ecff;font:12px/1.45 "Segoe UI",Tahoma,Arial,sans-serif;background:radial-gradient(120% 80% at 85% 0%,#3b1f7a 0%,rgba(59,31,122,0) 60%),radial-gradient(90% 70% at 0% 100%,#7a2d10 0%,rgba(122,45,16,0) 55%),#0b0f1e}
+.p26 .eyebrow{font-size:10px;letter-spacing:3px;color:#ff9a3c}
+.p26 h1{margin:4px 0 6px;font:800 30px/1.05 "Segoe UI",Arial,sans-serif;letter-spacing:-1px;color:#fff}
+.p26 h1 span{background:linear-gradient(90deg,#ff6a00,#ffd000);-webkit-background-clip:text;background-clip:text;color:transparent}
+.p26 p{max-width:430px;margin:0 0 12px;color:#b9c0e0}
+.p26 .cards{display:flex;margin-bottom:12px}
+.p26 .card{flex:1;margin-right:8px;padding:9px 10px;border:1px solid rgba(255,255,255,.14);border-radius:8px;background:rgba(255,255,255,.05)}
+.p26 .card:last-child{margin-right:0}
+.p26 .card b{display:block;margin-bottom:3px;color:#fff;font-size:12px}
+.p26 .card span{color:#aab2d8;font-size:11px}
+.p26 .cta{padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#ff6a00,#ff9a00);color:#1a0d00;font-weight:600}
+.p26 a.back{display:inline-block;margin-top:10px;color:#9fb2ff;text-decoration:none;cursor:pointer}
+.p26 video{display:block;width:100%;max-height:150px;margin-bottom:12px;border-radius:8px;object-fit:cover}
+.rise{animation:rise .7s ease-out both}
+.rise.d1{animation-delay:.15s}.rise.d2{animation-delay:.3s}.rise.d3{animation-delay:.45s}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---------- volumen de la bandeja (estilo finales de los 90) ---------- */
+#traySpk{position:relative}
+#traySpk .mute{position:absolute;left:3px;top:3px;width:12px;height:12px;border:2px solid #e00000;border-radius:50%;display:none}
+#traySpk .mute::after{content:'';position:absolute;left:3px;top:-1px;width:2px;height:10px;background:#e00000;transform:rotate(45deg)}
+#traySpk.muted .mute{display:block}
+#volpop{right:2px;bottom:28px;width:74px;height:150px;display:none;z-index:6500;text-align:center}
+#volpop.open{display:block}
+#volpop .vt{padding-top:6px}
+.vtrk{position:absolute;left:28px;top:28px;width:24px;height:86px}
+.vtrk .groove{position:absolute;left:10px;top:0;width:4px;height:86px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
+.vtrk .tick{position:absolute;left:-7px;width:5px;height:1px;background:#000}
+.vtrk .knob{position:absolute;left:1px;width:22px;height:11px;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf}
+#volpop .vm{position:absolute;left:0;right:0;bottom:9px;white-space:nowrap}
+.chk{position:relative;display:inline-block;width:13px;height:13px;margin-right:4px;vertical-align:-2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.chk.on::after{content:'';position:absolute;left:4px;top:1px;width:3px;height:7px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(40deg)}
+/* ---------- Reproductor multimedia (admira.tv disfrazado) ---------- */
+#mpw .mpv{position:absolute;left:6px;right:6px;top:44px;height:250px;overflow:hidden;background:#000;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
+#mpFrame{position:absolute;left:2px;top:2px;width:calc(100% - 4px);height:calc(100% - 4px);border:0;display:none;pointer-events:none;background:#000}
+#mpCard{position:absolute;left:2px;top:2px;right:2px;bottom:2px;display:flex;flex-direction:column}
+#mpCard .bars{flex:1;display:flex}
+#mpCard .bars i{flex:1}
+#mpCard .low{height:22%;background:linear-gradient(90deg,#0a2a6a 0,#0a2a6a 14%,#fff 14%,#fff 28%,#3a006a 28%,#3a006a 42%,#111 42%,#111 100%)}
+#mpCard .box{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);padding:8px 14px;border:2px solid #fff;background:#000;color:#fff;text-align:center;font:bold 14px Arial,sans-serif;white-space:nowrap}
+#mpCard .box small{display:block;margin-top:4px;font-weight:normal;font-size:10px;color:#ccc}
+.mptrk{position:absolute;left:10px;right:10px;top:300px;height:16px}
+.mptrk .groove{position:absolute;left:0;right:0;top:6px;height:4px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
+.mptrk .ticks{position:absolute;left:5px;right:5px;top:14px;height:3px;background:repeating-linear-gradient(90deg,#000 0,#000 1px,transparent 1px,transparent 10%)}
+.mptrk .thumb{position:absolute;top:0;left:0;width:11px;height:14px;background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080}
+.mpbtns{position:absolute;left:8px;right:8px;top:321px;height:24px;display:flex;align-items:center}
+.mpbtns .btn{min-width:0;width:28px;height:22px;margin-right:2px;padding:0;display:flex;align-items:center;justify-content:center}
+.mpbtns .btn:active,.mpbtns .btn.pressed{padding:1px 0 0 1px}
+.mpbtns .btn svg{width:11px;height:11px}
+.mpbtns .sep{width:8px}
+#mpLive{margin-left:auto;font:bold 10px Arial,sans-serif;color:#707070;white-space:nowrap}
+#mpLive i{display:inline-block;width:8px;height:8px;margin-right:4px;border-radius:50%;background:#808080;vertical-align:-1px}
+#mpLive.on{color:#c00000}
+#mpLive.on i{background:#e00000;animation:blink 1s steps(1) infinite}
+#mpw .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+
+/* ---------- iconos arrastrables, menú del escritorio y papelera ---------- */
+.icon.dragging{z-index:9000;opacity:.55;pointer-events:none}
+.icon.drop span{background:#000080;border-color:#ffff80}
+.icon.drop svg{filter:brightness(.55) sepia(1) hue-rotate(190deg) saturate(5)}
+.icon span.ren{background:#fff;color:#000;border:1px solid #000;outline:none;-webkit-user-select:text;user-select:text;cursor:text}
+.cmenu{display:none;z-index:6600;width:170px;padding:3px}
+.mi2{position:relative;height:20px;display:flex;align-items:center;padding:0 8px 0 18px;white-space:nowrap}
+.mi2 .arr{margin-left:auto;font-size:8px;font-style:normal}
+.mi2.hl{background:#000080;color:#fff}
+.mi2.dis{color:#808080;text-shadow:1px 1px #fff}
+.mi2 svg{position:absolute;left:2px;top:2px;width:16px;height:16px}
+#trw .trtools{height:28px;padding:3px 4px 0}
+#trw .trtools .btn{min-width:0;height:22px;margin-right:4px;padding:0 8px}
+#trw .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+#nt[contenteditable]{outline:none;-webkit-user-select:text;user-select:text;cursor:text;display:block;min-height:100%}
+
+/* ---------- Bandeja de entrada (correo de los 90) ---------- */
+#mail .mtools{height:28px;padding:3px 4px 0;white-space:nowrap}
+#mail .mtools .btn{min-width:0;height:22px;margin-right:4px;padding:0 8px}
+#mail .mfold{position:absolute;left:3px;top:71px;width:122px;bottom:26px;padding:3px 2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#mail .mf{display:flex;align-items:center;height:18px;padding:0 3px;white-space:nowrap}
+#mail .mf svg{width:14px;height:14px;margin-right:4px;flex:none}
+#mail .mf.on{background:#000080;color:#fff}
+#mlList{position:absolute;left:128px;right:3px;top:71px;height:104px}
+#mlList .lvr.unread{font-weight:bold}
+#mlPrev{position:absolute;left:128px;right:3px;top:178px;bottom:26px;padding:6px 8px;overflow:hidden;background:#fff;line-height:15px;white-space:pre-wrap;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#mlPrev .mh{margin:-2px -4px 6px;padding:2px 4px 4px;border-bottom:1px solid #c0c0c0;color:#404040;font-size:10px;line-height:13px}
+#mail .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+#trayNet{display:none;margin-right:5px}
+#trayNet.on{display:inline-flex}
+#trayNet svg{width:16px;height:16px}
+#trayNet .s1,#trayNet .s2{fill:#0d3b3b}
+#trayNet.tx .s1,#trayNet.rx .s2{fill:#3cff3c}
+#trayMail{display:none}
+#trayMail.on{display:inline-flex}
+
+/* ---------- protector de pantalla ---------- */
+#ssaver{position:absolute;left:0;top:0;width:640px;height:480px;z-index:8800;display:none;background:#000}
+
+/* ---------- capas ---------- */
+.tip{position:absolute;z-index:5500;display:none;background:#ffffe1;border:1px solid #000;padding:3px 7px;line-height:14px;box-shadow:2px 2px 0 rgba(0,0,0,.35)}
+#cta{right:6px;bottom:34px;font-weight:bold;animation:cta 1.6s steps(1) infinite}
+@keyframes cta{50%{background:#fff3a0}}
+#hint{right:6px;bottom:34px;width:250px}
+#shade{position:absolute;left:0;top:0;width:640px;height:480px;z-index:7000;display:none;background-image:linear-gradient(45deg,rgba(0,0,0,.6) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.6) 75%),linear-gradient(45deg,rgba(0,0,0,.6) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.6) 75%);background-size:2px 2px;background-position:0 0,1px 1px}
+#boot,#shut{position:absolute;left:0;top:0;width:640px;height:480px;z-index:8000;display:none;background:#000;color:#fff;text-align:center;font-family:Arial,sans-serif}
+#boot{background:linear-gradient(#1d5cc0 0%,#3b84de 45%,#94caf6 100%)}
+#boot .clouds{position:absolute;left:-40px;top:0;width:720px;height:480px;animation:drift 5s linear infinite alternate;background:
+  radial-gradient(130px 34px at 14% 18%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%),
+  radial-gradient(170px 46px at 30% 24%,rgba(255,255,255,.75),rgba(255,255,255,0) 70%),
+  radial-gradient(120px 30px at 72% 14%,rgba(255,255,255,.85),rgba(255,255,255,0) 70%),
+  radial-gradient(190px 52px at 86% 30%,rgba(255,255,255,.7),rgba(255,255,255,0) 70%),
+  radial-gradient(220px 60px at 18% 70%,rgba(255,255,255,.8),rgba(255,255,255,0) 70%),
+  radial-gradient(160px 40px at 40% 82%,rgba(255,255,255,.7),rgba(255,255,255,0) 70%),
+  radial-gradient(240px 64px at 78% 76%,rgba(255,255,255,.85),rgba(255,255,255,0) 70%),
+  radial-gradient(140px 36px at 60% 58%,rgba(255,255,255,.5),rgba(255,255,255,0) 70%)}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-28px)}}
+#boot .art{position:absolute;left:170px;top:112px;width:300px;height:210px;filter:drop-shadow(2px 3px 2px rgba(0,0,40,.45))}
+#boot .art svg,#wall svg{display:block;width:100%;height:100%}
+#boot img,#wall img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
+#wall{position:absolute;left:0;top:0;width:640px;height:452px;z-index:-1;pointer-events:none;overflow:hidden}
+#wall .art{position:absolute;left:236px;top:150px;width:200px;height:140px}
+#boot .bar{position:absolute;left:0;bottom:0;width:640px;height:8px;background:linear-gradient(90deg,#000 0,#ff6a00 20%,#ffd000 35%,#00c8ff 55%,#7a3cff 75%,#000 100%);background-size:640px 8px;animation:bar 1.4s linear infinite}
+@keyframes bar{from{background-position:0 0}to{background-position:640px 0}}
+#shut .wait{position:absolute;left:0;right:0;top:222px;font-size:15px;color:#ccc}
+#shut .l1{position:absolute;left:0;right:0;top:198px;font:bold 22px Arial,sans-serif;color:#ff8c00}
+#shut .l2{position:absolute;left:0;right:0;top:240px;font-size:15px;opacity:0;transition:opacity .8s}
+#shut .l3{position:absolute;left:0;right:0;top:268px;font:bold 15px Arial,sans-serif;letter-spacing:2px;color:#ff6a00;opacity:0;transition:opacity .8s .5s}
+#shut.more .l2,#shut.more .l3{opacity:1}
+#ghost{position:absolute;left:0;top:0;width:13px;height:20px;z-index:9500;pointer-events:none;display:none}
+</style>
+</head>
+<body class="attract">
+<div id="stage">
+  <div id="desk">
+    <div id="wall"><div class="art"></div></div>
+    <!-- Bloc de notas -->
+    <div id="note" class="win" style="left:150px;top:50px;width:340px;height:220px;display:none">
+      <div class="tb"><span data-ico="readme"></span><span class="t">Léeme.txt - Bloc de notas</span><span class="x" data-min="note">_</span><span class="x">□</span><span class="x gap" data-close="note">×</span></div>
+      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>B</u>uscar</span><span>Ay<u>u</u>da</span></div>
+      <div class="notebody"><span id="nt"></span><span class="caret"></span></div>
+    </div>
+    <!-- Admister (homenaje P2P) -->
+    <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
+      <div class="tb"><span data-ico="p2p"></span><span class="t">Admister v2.0 BETA 7</span><span class="x" data-min="nap">_</span><span class="x">□</span><span class="x gap" data-close="nap">×</span></div>
+      <div class="menubar"><span><u>A</u>rchivo</span><span>A<u>c</u>ciones</span><span>A<u>y</u>uda</span></div>
+      <div class="hdr"><span data-ico="p2p"></span><div class="brand">Admi<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
+      <div class="tabs"><div class="tab" data-tab="home">Inicio</div><div class="tab on" data-tab="search">Buscar</div><div class="tab" data-tab="lib">Biblioteca</div><div class="tab" data-tab="xfer">Transferencias</div></div>
+      <div class="panel home" data-panel="home">
+        <h3>Bienvenido/a a Admister</h3>
+        <p>La mayor comunidad musical del planeta (de 1999).</p>
+        <div class="box"><b>NOTICIAS</b><br>· AdmiraNeXT anuncia pantallas que escuchan a la tienda.<br>· «Jensen &amp; Morfeo» arrasa con su nuevo single, «AdmiraNeXT».</div>
+        <div class="box"><b>CONSEJO DEL DÍA</b> (por Jensen)<br>«Comparte tu música… pero con licencia: para tiendas, el catálogo de admira.tv.»</div>
+      </div>
+      <div class="panel on" data-panel="search">
+        <div>Artista: <span class="fin" id="napArtist" style="width:150px"></span> &nbsp;Título: <span class="fin" id="napTitle" style="width:108px"></span> &nbsp;<button class="btn" id="napSearch">Buscar</button><button class="btn" id="napClear" style="min-width:58px;margin-left:4px">Borrar</button></div>
+        <div class="lv" id="napRes" style="height:136px;margin-top:8px"></div>
+        <div class="prow2"><button class="btn" id="napDl" disabled>Descargar</button><span id="napCount"></span></div>
+      </div>
+      <div class="panel" data-panel="lib">
+        <div style="margin-bottom:6px">Tus canciones compartidas:</div>
+        <div class="lv" id="napLib" style="height:143px"></div>
+        <div class="prow2"><button class="btn" id="napLibPlay" disabled>Reproducir</button></div>
+      </div>
+      <div class="panel" data-panel="xfer">
+        <div class="lv" id="napX" style="height:160px"></div>
+        <div class="prow2"><button class="btn" id="napPlay" disabled>Reproducir</button><button class="btn" id="napClean">Borrar terminadas</button><span class="turbo">TURBO 2026 ×120</span></div>
+      </div>
+      <div class="sbar"><div id="napS1" style="flex:none;width:150px">Compartiendo 4 canciones</div><div id="napS2">Descargas: 0</div><div id="napS3" style="flex:none;width:96px">Desconectado</div></div>
+    </div>
+    <!-- AdmiraScape (homenaje navegador) -->
+    <div id="brw" class="win" style="left:40px;top:10px;width:560px;height:430px;display:none">
+      <div class="tb"><span data-ico="browser"></span><span class="t" id="brT">AdmiraScape</span><span class="x" data-min="brw">_</span><span class="x">□</span><span class="x gap" data-close="brw">×</span></div>
+      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>I<u>r</u></span><span><u>M</u>arcadores</span><span><u>O</u>pciones</span><span>Ay<u>u</u>da</span></div>
+      <div class="brtools">
+        <div class="tbtn" id="brBack" data-tico="back"><span>Atrás</span></div>
+        <div class="tbtn" id="brFwd" data-tico="fwd"><span>Adelante</span></div>
+        <div class="tbtn" id="brHome" data-tico="home"><span>Inicio</span></div>
+        <div class="tbtn" id="brReload" data-tico="reload"><span>Recargar</span></div>
+        <div class="tbtn" id="brImg" data-tico="img"><span>Imágenes</span></div>
+        <div class="tbtn" id="brPrint" data-tico="print"><span>Imprimir</span></div>
+        <div class="tbtn" id="brFind" data-tico="find"><span>Buscar</span></div>
+        <div class="tbtn" id="brStop" data-tico="stop"><span>Detener</span></div>
+        <div class="throb" id="brThrob"><div class="tA">A</div><i></i><i></i><i></i></div>
+      </div>
+      <div class="brloc">Dirección: <span class="fin" id="brUrl"></span></div>
+      <div class="brdir"><button class="btn" data-dgo="home">Novedades</button><button class="btn" data-dgo="cool">Lo más cool</button><button class="btn" data-dgo="@find">Buscar en la red</button><button class="btn" data-dgo="libro">Personas</button><button class="btn" data-dgo="@soft">Software</button></div>
+      <div class="brview" id="brView"><div class="page" id="brPage"></div></div>
+      <div class="brstat"><div class="key"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="7" r="3" fill="#ffd800" stroke="#000"/><path d="M7.5 7h5M10 7v3M12 7v2" stroke="#000" stroke-width="1.5"/></svg></div><div id="brSt">Sin conexión</div><div class="brprog"><i id="brProg"></i></div></div>
+    </div>
+    <!-- Acceso telefónico a redes -->
+    <div id="dun" class="win dlg" style="left:180px;top:150px;width:280px;height:132px;display:none">
+      <div class="tb"><span class="t">Conectar a</span><span class="x" id="dunX">×</span></div>
+      <div class="dunb"><svg viewBox="0 0 40 32"><rect x="1.5" y="3.5" width="15" height="12" fill="#c0c0c0" stroke="#000"/><rect x="3.5" y="5.5" width="11" height="8" fill="#008080"/><rect x="23.5" y="13.5" width="15" height="12" fill="#c0c0c0" stroke="#000"/><rect x="25.5" y="15.5" width="11" height="8" fill="#008080"/><path d="M9 16v6h22v-2" fill="none" stroke="#000" stroke-dasharray="2 1"/></svg><div><b>AdmiraNeXT Online</b><br>Estado: <span id="dunSt">Marcando…</span></div></div>
+      <div class="acts"><button class="btn" id="dunCancel">Cancelar</button></div>
+    </div>
+    <!-- Bandeja de entrada -->
+    <div id="mail" class="win" style="left:70px;top:46px;width:500px;height:320px;display:none">
+      <div class="tb"><span data-ico="inbox"></span><span class="t">Bandeja de entrada - Correo Admira</span><span class="x" data-min="mail">_</span><span class="x">□</span><span class="x gap" data-close="mail">×</span></div>
+      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span><u>H</u>erramientas</span><span><u>R</u>edactar</span><span>Ay<u>u</u>da</span></div>
+      <div class="mtools"><button class="btn" id="mlSend">Enviar y recibir</button><button class="btn" id="mlNew">Nuevo mensaje</button><button class="btn" id="mlReply">Responder</button></div>
+      <div class="mfold"><div class="mf on" id="mfIn"><span data-ico="inbox"></span>Bandeja de entrada</div><div class="mf"><span data-ico="folder"></span>Bandeja de salida</div><div class="mf"><span data-ico="folder"></span>Elementos enviados</div><div class="mf"><span data-ico="trash"></span>Elementos eliminados</div></div>
+      <div class="lv" id="mlList"></div>
+      <div id="mlPrev"></div>
+      <div class="sbar1" id="mlSt"></div>
+    </div>
+    <!-- Papelera de reciclaje -->
+    <div id="trw" class="win" style="left:120px;top:60px;width:400px;height:250px;display:none">
+      <div class="tb"><span id="trwIco" data-ico="trash"></span><span class="t">Papelera de reciclaje</span><span class="x" data-min="trw">_</span><span class="x">□</span><span class="x gap" data-close="trw">×</span></div>
+      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span>Ay<u>u</u>da</span></div>
+      <div class="trtools"><button class="btn" id="trRestore" disabled>Restaurar</button><button class="btn" id="trEmpty" disabled>Vaciar Papelera de reciclaje</button></div>
+      <div class="lv" id="trList" style="position:absolute;left:6px;right:6px;top:72px;bottom:28px"></div>
+      <div class="sbar1" id="trSt">0 objeto(s)</div>
+    </div>
+    <!-- Reproductor multimedia: el canal de admira.tv disfrazado de 1995 -->
+    <div id="mpw" class="win" style="left:140px;top:28px;width:356px;height:372px;display:none">
+      <div class="tb"><span data-ico="media"></span><span class="t" id="mpT">Reproductor multimedia</span><span class="x" data-min="mpw">_</span><span class="x">□</span><span class="x gap" data-close="mpw">×</span></div>
+      <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>D</u>ispositivo</span><span>E<u>s</u>cala</span><span>Ay<u>u</u>da</span></div>
+      <div class="mpv"><iframe id="mpFrame" allow="autoplay; fullscreen" title="admira.tv"></iframe>
+        <div id="mpCard"><div class="bars"><i style="background:#c0c0c0"></i><i style="background:#c0c000"></i><i style="background:#00c0c0"></i><i style="background:#00c000"></i><i style="background:#c000c0"></i><i style="background:#c00000"></i><i style="background:#0000c0"></i></div><div class="low"></div><div class="box">admira.tv · <span id="mpTag">#win95</span><small id="mpMsg">Esperando contenidos de admira.studio…</small></div></div>
+      </div>
+      <div class="mptrk"><div class="groove"></div><div class="ticks"></div><div class="thumb" id="mpThumb"></div></div>
+      <div class="mpbtns"><button class="btn" id="mpPlay"></button><button class="btn" id="mpPause"></button><button class="btn" id="mpStop"></button><span class="sep"></span><button class="btn" id="mpEject"></button><span id="mpLive"><i></i>SIN SEÑAL</span></div>
+      <div class="sbar1" id="mpSt">Listo</div>
+    </div>
+    <!-- ICQGram: lista de contactos -->
+    <div id="icq" class="win" style="left:462px;top:18px;width:170px;height:330px;display:none">
+      <div class="tb"><span data-ico="chat"></span><span class="t">ICQGram</span><span class="x" data-min="icq">_</span><span class="x gap" data-close="icq">×</span></div>
+      <div class="qhdr"><span data-ico="chat"></span><b>ICQ<span>Gram</span></b><i>Nº 25111997</i></div>
+      <div class="clist" id="clist"></div>
+      <div class="cbot"><button class="btn" id="icqMain">ICQGram ▴</button><div class="cstat"><span class="sdot"></span>En línea</div></div>
+    </div>
+    <!-- ICQGram: conversación -->
+    <div id="icqc" class="win" style="left:140px;top:96px;width:330px;height:284px;display:none">
+      <div class="tb"><span data-ico="chat"></span><span class="t" id="icqcT">Conversación de ICQGram</span><span class="x" data-min="icqc">_</span><span class="x gap" data-close="icqc">×</span></div>
+      <div class="chdr" id="icqcH"></div>
+      <div class="hist" id="icqHist"></div>
+      <div class="fin focus inp" id="icqInp"></div>
+      <input id="icqReal" type="text" maxlength="300" placeholder="Escribe aquí y pulsa Enviar" style="display:none">
+
+      <button class="btn" id="icqSend">Enviar</button>
+      <div class="opts" id="icqOpts"></div>
+      <div class="cst" id="icqSt"></div>
+    </div>
+    <!-- AdmirAmp: ventana principal -->
+    <div id="amp" class="skin" data-group="amp" style="left:182px;top:16px;width:275px;height:116px">
+      <div class="atb"><i class="ln"></i><b id="ampName">ADMIRAMP</b><i class="ln"></i><span class="sbx" id="ampMin">_</span><span class="sbx" id="ampClose">×</span></div>
+      <canvas id="lcd" width="93" height="42" style="left:9px;top:20px"></canvas>
+      <canvas id="marq" width="155" height="11" style="left:110px;top:21px"></canvas>
+      <canvas id="info" width="155" height="9" style="left:110px;top:36px"></canvas>
+      <div class="hs" id="vol" style="left:110px;top:51px;width:68px"><div class="fill"></div><div class="knob"></div></div>
+      <div class="hs" id="bal" style="left:184px;top:51px;width:38px"><div class="mid"></div><div class="knob"></div></div>
+      <div class="sk tog on" id="tEQ" style="left:228px;top:50px;width:18px;height:11px">EQ</div>
+      <div class="sk tog on" id="tPL" style="left:248px;top:50px;width:18px;height:11px">PL</div>
+      <div class="seek" id="seek" style="left:12px;top:69px;width:251px"><div class="knob"></div></div>
+      <div class="sk tp" id="bPrev" style="left:12px;top:87px"></div>
+      <div class="sk tp" id="bPlay" style="left:35px;top:87px"></div>
+      <div class="sk tp" id="bPause" style="left:58px;top:87px"></div>
+      <div class="sk tp" id="bStop" style="left:81px;top:87px"></div>
+      <div class="sk tp" id="bNext" style="left:104px;top:87px"></div>
+      <div class="sk tp" id="bEject" style="left:133px;top:88px;width:22px;height:16px"></div>
+      <div class="sk tog" id="tShuf" style="left:162px;top:90px;width:42px;height:12px">MEZCLA</div>
+      <div class="sk tog on" id="tRep" style="left:206px;top:90px;width:30px;height:12px">REP</div>
+      <div class="alogo" style="left:247px;top:86px">A</div>
+    </div>
+    <!-- AdmirAmp: ecualizador -->
+    <div id="eqw" class="skin" data-group="amp" style="left:182px;top:132px;width:275px;height:116px">
+      <div class="atb"><i class="ln"></i><b>ECUALIZADOR</b><i class="ln"></i><span class="sbx" data-close="eqw">×</span></div>
+      <div class="sk tog on" id="eqOn" style="left:12px;top:19px;width:28px;height:12px">ON</div>
+      <div class="sk tog" id="eqAuto" style="left:42px;top:19px;width:34px;height:12px">AUTO</div>
+      <canvas id="eqg" width="113" height="19" style="left:84px;top:16px"></canvas>
+      <div class="sk" id="eqPre" style="left:205px;top:19px;width:58px;height:12px">PRESETS</div>
+    </div>
+    <!-- AdmirAmp: lista -->
+    <div id="plw" class="skin" data-group="amp" style="left:182px;top:248px;width:275px;height:150px">
+      <div class="atb"><i class="ln"></i><b>LISTA DE REPRODUCCIÓN</b><i class="ln"></i><span class="sbx" data-close="plw">×</span></div>
+      <div id="plist" style="left:10px;top:18px;width:246px;height:102px"></div>
+      <div class="plsb" style="left:259px;top:18px;width:7px;height:102px"><div></div></div>
+      <div class="sk" style="left:10px;top:127px;width:44px;height:13px">+ AÑADIR</div>
+      <div class="sk" style="left:56px;top:127px;width:44px;height:13px">- QUITAR</div>
+      <div class="sk" style="left:102px;top:127px;width:30px;height:13px">SEL</div>
+      <div class="sk" style="left:134px;top:127px;width:36px;height:13px">VARIOS</div>
+      <canvas id="plinfo" width="84" height="9" style="left:176px;top:129px"></canvas>
+    </div>
+  </div>
+
+  <div id="smenu" class="win">
+    <div class="side"><span><b>Admira</b>95</span></div>
+    <div class="mi" id="mi-programs"><span data-ico="folder"></span><span>Programas</span><i class="arr">▶</i></div>
+    <div class="mi" id="mi-docs"><span data-ico="docs"></span><span>Documentos</span><i class="arr">▶</i></div>
+    <div class="mi" id="mi-settings"><span data-ico="gear"></span><span>Configuración</span><i class="arr">▶</i></div>
+    <div class="mi" id="mi-find"><span data-ico="find"></span><span>Buscar</span><i class="arr">▶</i></div>
+    <div class="mi" id="mi-help"><span data-ico="help"></span><span>Ayuda</span></div>
+    <div class="mi" id="mi-run"><span data-ico="run"></span><span>Ejecutar...</span></div>
+    <div class="msep"></div>
+    <div class="mi" id="mi-shutdown"><span data-ico="power"></span><span>Apagar el sistema...</span></div>
+  </div>
+  <div id="sub" class="win"></div>
+  <div id="dmenu" class="win cmenu">
+    <div class="mi2 dis">Organizar iconos<i class="arr">▶</i></div>
+    <div class="mi2" id="dm-align">Alinear iconos</div>
+    <div class="msep"></div>
+    <div class="mi2 dis">Pegar</div>
+    <div class="mi2 dis">Pegar acceso directo</div>
+    <div class="msep"></div>
+    <div class="mi2" id="dm-new">Nuevo<i class="arr">▶</i></div>
+    <div class="msep"></div>
+    <div class="mi2" id="dm-props">Propiedades</div>
+  </div>
+  <div id="dmenu2" class="win cmenu">
+    <div class="mi2 dis">Carpeta</div>
+    <div class="mi2 dis">Acceso directo</div>
+    <div class="msep"></div>
+    <div class="mi2" id="dm-txt"><span data-ico="txt"></span>Documento de texto</div>
+  </div>
+
+  <div id="taskbar">
+    <button id="start" class="btn"><span data-ico="logo"></span><b>Inicio</b></button>
+    <div id="tasks"></div>
+    <div id="tray"><span id="trayNet" title="Conectado a AdmiraNeXT Online"><svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="0.5" y="0.5" width="9" height="7" fill="#c0c0c0" stroke="#000"/><rect class="s1" x="2" y="2" width="6" height="4"/><rect x="3" y="8" width="4" height="1" fill="#808080"/><rect x="6.5" y="6.5" width="9" height="7" fill="#c0c0c0" stroke="#000"/><rect class="s2" x="8" y="8" width="6" height="4"/><rect x="9" y="14" width="4" height="1.5" fill="#808080"/></svg></span><span id="trayMail" data-ico="mailtray" title="Tiene correo nuevo" class="blinking"></span><span id="trayIcq" data-ico="chat" title="ICQGram"></span><span id="traySpk" data-ico="speaker" title="Volumen"></span><span id="clock">--:--</span></div>
+  </div>
+  <div id="volpop" class="win"><div class="vt">Volumen</div><div class="vtrk" id="vtrk"><div class="groove"></div><div class="knob"></div></div><div class="vm" id="vmuteL"><span class="chk" id="vmute"></span>Silencio</div></div>
+
+  <div id="cta" class="tip">Toca la pantalla: ¡pruébalo tú!</div>
+  <div id="hint" class="tip"></div>
+  <div id="shade"></div>
+  <div id="boot"><div class="clouds"></div><div class="art"></div><div class="bar"></div></div>
+  <div id="shut"><div class="wait">Espere mientras se apaga el equipo...</div><div class="l1">Ya puede apagar el equipo.</div><div class="l2">...o mejor, venir a 2026.</div><div class="l3">ADMIRANEXT · ADMIRA.TV</div></div>
+  <canvas id="ssaver" width="640" height="480"></canvas>
+  <div id="ghost"><svg width="13" height="20" viewBox="0 0 13 20"><path d="M.5.5v16l4-4 2.6 6 2.4-1-2.6-6h5.6z" fill="#fff" stroke="#000" stroke-linejoin="miter"/></svg></div>
+</div>
+
+<script src="admira_api_content.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   CONFIGURACIÓN
+   ========================================================= */
+var CONFIG = {
+  idleSeconds: 60,            // sin tocar → vuelve la demo
+  screensaverSeconds: 30,     // sin tocar → protector de pantalla (modo interactivo)
+  visitor: '',                // también por URL: ?visita=Nombre
+  bootImage: '',              // opcional: imagen propia para la pantalla de carga (archivo en esta carpeta)
+  wallpaperImage: '',         // opcional: imagen propia de fondo de escritorio (archivo en esta carpeta)
+  // Iconos originales (opcional): copia los PNG (idealmente 32×32) en esta carpeta con estos nombres y se usarán
+  // en el escritorio, la barra de tareas, los títulos, el menú Inicio y la bandeja. Si no están, se usan los homenajes.
+  iconFiles: { browser:'icono_netscape.png', p2p:'icono_napster.png', chat:'icono_icq.png', media:'icono_mediaplayer.png' },
+  // Salamandra USB de finales de los 90: al abrir la Bandeja de entrada (o «Enviar y recibir») mueve los ojos.
+  // El lanzador Admira95 arranca el puente local vuelta95-salamandra.ps1, que reinicia su USB (como enchufarla).
+  // PAUSADO (25/11): sin driver se mueve todo el rato mientras tiene corriente, y Windows no puede cortar la del puerto USB.
+  // Para reactivarlo: url:'http://127.0.0.1:9595/salamandra' cuando haya un interruptor de corriente (relé USB o enchufe inteligente).
+  salamandra: { url:'', cooldownSeconds:15 },
+  futureVideo: '',            // opcional: vídeo (p. ej. Admira_Next.mp4 en esta carpeta) para la página de 2026 de AdmiraScape
+  // Reproductor multimedia = canal de admira.tv «disfrazado» de 1995.
+  // Muestra lo que se publique en admira.studio con el hashtag (sin #). Falta la pantalla (virtual) de admira.tv.
+  // Nota de admira.tv: el parámetro tag= bloquea el gobierno remoto del canal (pensado para integraciones cerradas).
+  // Player virtual dado de alta en admira.tv/virtual-players/ (25/11/2026): virtual-win95 · circuito itcrowd-win95.
+  // channelUrl es el que devuelve admira.tv (no se construye a mano); aquí solo se añaden tag= y muted=.
+  // tags: hashtags de admira.studio que coge el reproductor (#win95 y su traducción #genero95); se alternan cada rotateSeconds.
+  // Con el lanzador Admira95, mp_tags.js indica cuáles tienen piezas y se salta los vacíos.
+  // inDemo: si no hay mp_tags.js (p. ej. en el player de Admira), decide si el reproductor sale en la demo automática.
+  // Comprobar piezas: https://admira.tv/api/emision?screen=virtual-win95&tag=win95&resumen=1
+  mediaPlayer: { screen:'virtual-win95', tags:['win95','genero95'], rotateSeconds:60, inDemo:true,
+    channelUrl:'https://admira.tv/canal.html?screen=virtual-win95&circuit=itcrowd-win95&playerType=virtual&clean=1&mode=local&cam=0&shot=0&muted=1' },
+  names: { player:'AdmirAmp', browser:'AdmiraScape', chat:'ICQGram', p2p:'Admister' },
+  // Pistas sintetizadas de demostración (sin derechos de terceros).
+  // Para el catálogo de admira.tv: añade src:'pista.mp3' (mismo directorio) y se usará el archivo.
+  tracks: [
+    { artist:'admira.tv', title:'Ambient Store Mix', style:'chill',  bpm:92,  root:50, scale:'minor',  prog:[0,5,3,4], bars:32 },
+    { artist:'Bit Retail', title:'Pantallas de neón', style:'chip',   bpm:140, root:52, scale:'minor',  prog:[0,3,5,4], bars:48 },
+    { artist:'Modem Love', title:'56k al corazón',    style:'house',  bpm:122, root:45, scale:'dorian', prog:[0,3,0,4], bars:40 },
+    { artist:'Jensen & Morfeo', title:'AdmiraNeXT',   style:'trance', bpm:136, root:54, scale:'minor',  prog:[0,5,2,6], bars:48 }
+  ],
+  // ICQGram en línea: en admira.live/windows95 habla de verdad con los consejeros (mismo hilo que GrokBot/Telegram).
+  // Cada mensaje sale con la etiqueta de visita; límite de longitud y de ritmo para no saturar a los consejeros.
+  icqgram: { enabled:true, prefix:'[Visita ITCrowd · Win95 — charla de un visitante, no es un encargo] ', maxLen:300, minGapSeconds:20,
+    quick:['¡Hola desde 1995!','¿Qué es AdmiraNeXT?','¿Qué haríais con mi tienda?'] },
+  // ICQGram · contactos de la demo (auto = respuesta automática; on:false = fuera de línea)
+  contacts: [
+    { id:'jensen', name:'Jensen', status:'Consejero AdmiraNeXT', on:true },
+    { id:'morfeo', name:'Morfeo', status:'Moviendo el ratón', on:true },
+    { id:'tienda', name:'tienda_futuro', status:'Ocupado', on:true, auto:'Estoy atendiendo clientes en la tienda. Vuelvo enseguida.' },
+    { id:'primo', name:'Mi primo del 56K', on:false },
+    { id:'disquetes', name:'El de los disquetes', on:false },
+    { id:'bcn', name:'pantallas_bcn', on:false }
+  ],
+  // ICQGram · guiones (BORRADOR para revisar con Jensen). opts: [texto del botón, siguiente nodo | '@app' para abrir una app]
+  chat: {
+    jensen: { start:'hola', nodes:{
+      hola:        { msgs:['¡Hola! Soy Jensen y te escribo desde el año 2026. :-)'], opts:[['¿Desde 2026?','futuro'],['¿Quién eres?','quien']] },
+      quien:       { msgs:['Soy el consejero de AdmiraNeXT. Ayudo a que las tiendas hablen con sus clientes a través de las pantallas.'], opts:[['¿Y cómo es 2026?','futuro']] },
+      futuro:      { msgs:['En 2026 las pantallas de una tienda no solo ponen vídeos: entienden el momento, suenan y responden.'], opts:[['¿Pantallas que responden?','interactivo'],['¿Y la música?','musica']] },
+      interactivo: { msgs:['Como esta demo: un interactivo hecho con ainimation.studio que emite el player de admira.tv.'], opts:[['¿Y quién hace los vídeos?','director']] },
+      musica:      { msgs:['admira.tv lleva la música con licencia, la cartelería y hasta los turnos de la cola. Todo en un mismo canal.'], opts:[['¿Y quién hace los vídeos?','director']] },
+      director:    { msgs:['Admira Director: le das una idea y la IA te devuelve el vídeo. Sin disquetes y sin esperar descargas. ;-)'], opts:[['¡Quiero verlo!','si'],['Me quedo en 1997','no']] },
+      si:          { msgs:['¡Hecho! Abre AdmiraScape y entra en el futuro: te dejo el enlace. :-D'], opts:[['Abrir AdmiraScape','@browser']] },
+      no:          { msgs:['Respetable. Pero apunta: admira.tv. Te espero en el futuro. ;-)'], end:true, then:'morfeo' }
+    }},
+    morfeo: { start:'hola', nodes:{
+      hola: { msgs:['¡Hola! Soy Morfeo, el que mueve el ratón cuando no hay nadie. ;-)'], opts:[['¿Qué me recomiendas?','reco']] },
+      reco: { msgs:['Busca «admira» en Admister y escúchalo en AdmirAmp. Y sube el ecualizador, que para eso está.'], opts:[['Abrir Admister','@p2p'],['Abrir AdmirAmp','@amp']] }
+    }}
+  }
+};
+(function(){ var m=/[?&]visita=([^&]+)/.exec(location.search||''); if(m){ try{ CONFIG.visitor=decodeURIComponent(m[1].replace(/\+/g,' ')).slice(0,40); }catch(e){} } })();
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+function qs(s,r){ return (r||document).querySelector(s); }
+function qsa(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function now(){ return Date.now(); }
+function pad2(n){ n=Math.floor(n); return (n<10?'0':'')+n; }
+function fmt(sec){ sec=Math.max(0,Math.floor(sec||0)); return Math.floor(sec/60)+':'+pad2(sec%60); }
+function fmtDb(v){ return (v>=0?'+':'')+v.toFixed(1)+' DB'; }
+var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+/* ---------- iconos (originales) ---------- */
+function SV(vb,body){ return '<svg viewBox="'+vb+'" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">'+body+'</svg>'; }
+var ICONS={
+  mypc:SV('0 0 32 32','<rect x="4.5" y="3.5" width="23" height="18" fill="#c0c0c0" stroke="#000"/><rect x="7" y="6" width="18" height="13" fill="#008080"/><rect x="8" y="7" width="7" height="2" fill="#7fffff"/><rect x="12" y="22" width="8" height="3" fill="#808080"/><rect x="5.5" y="25.5" width="21" height="4" fill="#c0c0c0" stroke="#000"/><rect x="21" y="27" width="3" height="1" fill="#00c000"/>'),
+  trash:SV('0 0 32 32','<path d="M8.5 9.5h15l-2 19h-11z" fill="#e8e8e8" stroke="#000"/><rect x="6.5" y="6.5" width="19" height="3" fill="#c0c0c0" stroke="#000"/><path d="M12.5 12v14M16 12v14M19.5 12v14" stroke="#808080"/>'),
+  readme:SV('0 0 32 32','<rect x="6.5" y="4.5" width="19" height="25" fill="#fff" stroke="#000"/><path d="M9 10h14M9 13h14M9 16h14M9 19h10M9 22h12" stroke="#000080"/><path d="M9 2v5M13 2v5M17 2v5M21 2v5" stroke="#606060" stroke-width="2"/>'),
+  amp:SV('0 0 32 32','<rect x="2.5" y="6.5" width="27" height="20" fill="#2a2a34" stroke="#000"/><rect x="5" y="9" width="22" height="9" fill="#000"/><path d="M7 17v-3M10 17v-6M13 17v-4M16 17v-7M19 17v-5M22 17v-3M25 17v-2" stroke="#00e000" stroke-width="2"/><rect x="6" y="20" width="4" height="4" fill="#ff6a00"/><rect x="13" y="21" width="13" height="2" fill="#6a6a7c"/>'),
+  browser:SV('0 0 32 32','<circle cx="16" cy="16" r="12" fill="#1a5fd0" stroke="#000" shape-rendering="auto"/><path d="M8 10c3-1 5 2 8 1s2 5-1 6-3 5-6 3-4-7-1-10zM19 18c3-1 6 1 6 4s-4 3-6 1-2-4 0-5z" fill="#1fa43a" shape-rendering="auto"/><path d="M3 27C10 21 20 12 29 5" stroke="#ff8c1a" stroke-width="2" fill="none" shape-rendering="auto"/><circle cx="28.5" cy="5.5" r="2.5" fill="#ffd000" stroke="#000" stroke-width=".5" shape-rendering="auto"/>'),
+  chat:SV('0 0 32 32','<path d="M3.5 5.5h25v16h-14l-6 6v-6h-5z" fill="#fff" stroke="#000"/><circle cx="10.5" cy="13.5" r="2.2" fill="#1fa43a" shape-rendering="auto"/><circle cx="16" cy="13.5" r="2.2" fill="#1fa43a" shape-rendering="auto"/><circle cx="21.5" cy="13.5" r="2.2" fill="#e02020" shape-rendering="auto"/>'),
+  inbox:SV('0 0 32 32','<rect x="9.5" y="3.5" width="14" height="10" fill="#fff" stroke="#000"/><path d="M9.5 3.5l7 5.5 7-5.5" fill="none" stroke="#000"/><path d="M3.5 17.5l4-8h17l4 8v9h-25z" fill="#c0c0c0" stroke="#000"/><path d="M3.5 17.5h7l2 3h7l2-3h7" fill="none" stroke="#000"/><rect x="5" y="22" width="22" height="3" fill="#808080"/>'),
+  mailtray:SV('0 0 16 16','<rect x="1.5" y="3.5" width="13" height="9" fill="#ffe14a" stroke="#000"/><path d="M1.5 3.5l6.5 5 6.5-5" fill="none" stroke="#000"/>'),
+  txt:SV('0 0 32 32','<path d="M7.5 3.5h13l5 5v20h-18z" fill="#fff" stroke="#000"/><path d="M20.5 3.5v5h5" fill="#c0c0c0" stroke="#000"/><path d="M10 12h12M10 15h12M10 18h12M10 21h9M10 24h11" stroke="#808080"/>'),
+  trashFull:SV('0 0 32 32','<path d="M6.5 10L8 3.5l3.5 2.5 2.5-4.5 3 3.5 3.5-3 2 4.5 3-1.5.5 5z" fill="#fff" stroke="#000" stroke-width=".9" shape-rendering="auto"/><path d="M10 9l1.5-3 3 1.5M16 8.5l2-3 2.5 2.5M21 9l1-2" fill="none" stroke="#808080" stroke-width=".8" shape-rendering="auto"/><path d="M13 5.5l3-3 2 2" fill="#ffffa0" stroke="#000" stroke-width=".7" shape-rendering="auto"/><path d="M8.5 9.5h15l-2 19h-11z" fill="#e8e8e8" stroke="#000"/><path d="M12.5 12v14M16 12v14M19.5 12v14" stroke="#808080"/>'),
+  media:SV('0 0 32 32','<rect x="2.5" y="6.5" width="27" height="19" fill="#202028" stroke="#000"/><path d="M5 8h3v2H5zM11 8h3v2h-3zM17 8h3v2h-3zM23 8h3v2h-3zM5 22h3v2H5zM11 22h3v2h-3zM17 22h3v2h-3zM23 22h3v2h-3z" fill="#c0c0c0"/><path d="M13 11.5l7 4.5-7 4.5z" fill="#ff6a00" stroke="#000" stroke-width=".6"/>'),
+  ssaver:SV('0 0 32 32','<rect x="4.5" y="3.5" width="23" height="18" fill="#c0c0c0" stroke="#000"/><rect x="7" y="6" width="18" height="13" fill="#000"/><rect x="9" y="8" width="1" height="1" fill="#fff"/><rect x="22" y="8" width="1" height="1" fill="#fff"/><rect x="10" y="16" width="1" height="1" fill="#fff"/><rect x="23" y="16" width="1" height="1" fill="#fff"/><path d="M13 9.5c2-1.2 4 1 6.5 0v5c-2.5 1-4.5-1.2-6.5 0z" fill="#ff8a00" stroke="#000" stroke-width=".6" shape-rendering="auto"/><rect x="12" y="22" width="8" height="3" fill="#808080"/><rect x="5.5" y="25.5" width="21" height="4" fill="#c0c0c0" stroke="#000"/>'),
+  p2p:SV('0 0 32 32','<path d="M6 21v-6a10 10 0 0 1 20 0v6" fill="none" stroke="#202020" stroke-width="3" shape-rendering="auto"/><rect x="2.5" y="18.5" width="8" height="10" fill="#ff6a00" stroke="#000"/><rect x="21.5" y="18.5" width="8" height="10" fill="#ff6a00" stroke="#000"/>'),
+  logo:SV('0 0 16 16','<rect x="1" y="1" width="14" height="14" rx="3" fill="#ff6a00" shape-rendering="auto"/><path d="M4 12.5L8 3.5l4 9M5.6 9.5h4.8" stroke="#fff" stroke-width="2" fill="none" shape-rendering="auto"/>'),
+  folder:SV('0 0 24 24','<path d="M1.5 5.5h7l2 2h11v13h-20z" fill="#ffd84a" stroke="#000"/><path d="M2 9h19" stroke="#c09a1a"/>'),
+  docs:SV('0 0 24 24','<path d="M1.5 6.5h7l2 2h11v12h-20z" fill="#ffd84a" stroke="#000"/><rect x="8.5" y="2.5" width="11" height="13" fill="#fff" stroke="#000"/><path d="M10 6h7M10 8h7M10 10h5" stroke="#000080"/>'),
+  gear:SV('0 0 24 24','<rect x="2.5" y="3.5" width="19" height="15" fill="#c0c0c0" stroke="#000"/><rect x="4" y="5" width="16" height="3" fill="#000080"/><path d="M6 12h12M6 15h8" stroke="#000"/><rect x="15" y="13" width="4" height="4" fill="#e00000"/>'),
+  find:SV('0 0 24 24','<circle cx="10" cy="10" r="6.5" fill="#bfe6ff" stroke="#000" stroke-width="2" shape-rendering="auto"/><path d="M15 15l6 6" stroke="#000" stroke-width="3"/>'),
+  help:SV('0 0 24 24','<rect x="3.5" y="2.5" width="16" height="19" fill="#0050c0" stroke="#000"/><rect x="5" y="4" width="13" height="16" fill="#3a7ae0"/><text x="11.5" y="17" font-family="Arial" font-weight="bold" font-size="13" fill="#fff" text-anchor="middle">?</text>'),
+  run:SV('0 0 24 24','<rect x="2.5" y="4.5" width="19" height="15" fill="#fff" stroke="#000"/><rect x="3" y="5" width="18" height="3" fill="#000080"/><path d="M7 15l4-3-4-3" stroke="#000" stroke-width="2" fill="none"/>'),
+  power:SV('0 0 24 24','<rect x="3.5" y="3.5" width="17" height="13" fill="#c0c0c0" stroke="#000"/><rect x="5" y="5" width="14" height="10" fill="#000040"/><circle cx="12" cy="10" r="3" fill="#ffe680" shape-rendering="auto"/><circle cx="13.5" cy="9" r="2.6" fill="#000040" shape-rendering="auto"/><rect x="8.5" y="17.5" width="7" height="3" fill="#808080" stroke="#000"/>'),
+  info:SV('0 0 32 32','<circle cx="16" cy="16" r="13" fill="#fff" stroke="#000080" stroke-width="2" shape-rendering="auto"/><rect x="14" y="13" width="4" height="11" fill="#000080"/><rect x="14" y="7" width="4" height="4" fill="#000080"/>'),
+  warn:SV('0 0 32 32','<path d="M16 3L30 28H2z" fill="#ffd800" stroke="#000" stroke-width="1.5" shape-rendering="auto"/><rect x="14.5" y="11" width="3" height="10" fill="#000"/><rect x="14.5" y="23" width="3" height="3" fill="#000"/>'),
+  speaker:SV('0 0 16 16','<path d="M2 6h3l4-3v10l-4-3H2z" fill="#ffd800" stroke="#000" stroke-width=".8" shape-rendering="auto"/><path d="M11 5.5c1.5 1.5 1.5 3.5 0 5" stroke="#000" fill="none" shape-rendering="auto"/>')
+};
+/* ---------- logotipo homenaje «Admira 95» (bandera con estela de píxeles) ---------- */
+function logoSVG(txt,sub,gid){
+  var rows=['#ff6a00','#ff9500','#ffc400','#19a7e6','#3d6dff'], sq='';
+  for(var c=0;c<8;c++){
+    for(var r=0;r<5;r++){
+      if((c<3&&(r+c)%3===0)||(c<5&&(r*7+c*3)%5===0)) continue;
+      var s=3+c*1.05, x=34+c*14.5+(7-c)*0.4, y=32+r*15.5-c*0.9+Math.sin(c*0.9)*3.5;
+      sq+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+s.toFixed(1)+'" height="'+s.toFixed(1)+'" fill="'+rows[r]+'" opacity="'+(0.35+c*0.09).toFixed(2)+'"/>';
+    }
+  }
+  return '<svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">'+
+    '<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a00"/><stop offset=".55" stop-color="#ff9a00"/><stop offset="1" stop-color="#ffc400"/></linearGradient></defs>'+
+    sq+
+    '<path d="M152 34C174 22 198 44 226 30L226 108C198 122 174 98 152 110Z" fill="url(#'+gid+')" stroke="#141414" stroke-width="4" stroke-linejoin="round"/>'+
+    '<path d="M172 98L189 46L206 94M178 80H200" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-6 189 72)"/>'+
+    '<text x="96" y="152" font-family="Arial,sans-serif" font-style="italic" font-weight="bold" font-size="14" fill="'+txt+'">AdmiraNeXT</text>'+
+    '<text x="94" y="190" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="40" letter-spacing="-1" fill="'+txt+'">Admira</text>'+
+    '<text x="250" y="170" font-family="Arial,sans-serif" font-size="24" fill="'+sub+'">95</text>'+
+  '</svg>';
+}
+var TP={ bPrev:'M1 1h1.5v7H1zM8 1v7L2.5 4.5z', bPlay:'M2 1l6 3.5L2 8z', bPause:'M2 1h2v7H2zM5 1h2v7H5z', bStop:'M1.5 1.5h6v6h-6z', bNext:'M1 1l5.5 3.5L1 8zM6.5 1H8v7H6.5z', bEject:'M4.5 1L8 5H1zM1 6h7v2H1z' };
+
+/* ---------- fuente de píxeles 5×7 (LCD) ---------- */
+var FONT={
+' ':[0,0,0,0,0,0,0],
+'0':[0x0E,0x11,0x13,0x15,0x19,0x11,0x0E],'1':[0x04,0x0C,0x04,0x04,0x04,0x04,0x0E],'2':[0x0E,0x11,0x01,0x02,0x04,0x08,0x1F],
+'3':[0x1F,0x02,0x04,0x02,0x01,0x11,0x0E],'4':[0x02,0x06,0x0A,0x12,0x1F,0x02,0x02],'5':[0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E],
+'6':[0x06,0x08,0x10,0x1E,0x11,0x11,0x0E],'7':[0x1F,0x01,0x02,0x04,0x08,0x08,0x08],'8':[0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E],
+'9':[0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C],
+'A':[0x0E,0x11,0x11,0x1F,0x11,0x11,0x11],'B':[0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E],'C':[0x0E,0x11,0x10,0x10,0x10,0x11,0x0E],
+'D':[0x1C,0x12,0x11,0x11,0x11,0x12,0x1C],'E':[0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F],'F':[0x1F,0x10,0x10,0x1E,0x10,0x10,0x10],
+'G':[0x0E,0x11,0x10,0x17,0x11,0x11,0x0F],'H':[0x11,0x11,0x11,0x1F,0x11,0x11,0x11],'I':[0x0E,0x04,0x04,0x04,0x04,0x04,0x0E],
+'J':[0x07,0x02,0x02,0x02,0x02,0x12,0x0C],'K':[0x11,0x12,0x14,0x18,0x14,0x12,0x11],'L':[0x10,0x10,0x10,0x10,0x10,0x10,0x1F],
+'M':[0x11,0x1B,0x15,0x15,0x11,0x11,0x11],'N':[0x11,0x11,0x19,0x15,0x13,0x11,0x11],'O':[0x0E,0x11,0x11,0x11,0x11,0x11,0x0E],
+'P':[0x1E,0x11,0x11,0x1E,0x10,0x10,0x10],'Q':[0x0E,0x11,0x11,0x11,0x15,0x12,0x0D],'R':[0x1E,0x11,0x11,0x1E,0x14,0x12,0x11],
+'S':[0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E],'T':[0x1F,0x04,0x04,0x04,0x04,0x04,0x04],'U':[0x11,0x11,0x11,0x11,0x11,0x11,0x0E],
+'V':[0x11,0x11,0x11,0x11,0x11,0x0A,0x04],'W':[0x11,0x11,0x11,0x15,0x15,0x15,0x0A],'X':[0x11,0x11,0x0A,0x04,0x0A,0x11,0x11],
+'Y':[0x11,0x11,0x11,0x0A,0x04,0x04,0x04],'Z':[0x1F,0x01,0x02,0x04,0x08,0x10,0x1F],
+'-':[0,0,0,0x1F,0,0,0],'.':[0,0,0,0,0,0x0C,0x0C],',':[0,0,0,0,0x0C,0x04,0x08],':':[0,0x0C,0x0C,0,0x0C,0x0C,0],
+"'":[0x0C,0x04,0x08,0,0,0,0],'(':[0x02,0x04,0x08,0x08,0x08,0x04,0x02],')':[0x08,0x04,0x02,0x02,0x02,0x04,0x08],
+'/':[0,0x01,0x02,0x04,0x08,0x10,0],'&':[0x0C,0x12,0x14,0x08,0x15,0x12,0x0D],'!':[0x04,0x04,0x04,0x04,0x04,0,0x04],
+'?':[0x0E,0x11,0x01,0x02,0x04,0,0x04],'*':[0,0x04,0x15,0x0E,0x15,0x04,0],'+':[0,0x04,0x04,0x1F,0x04,0x04,0],
+'%':[0x18,0x19,0x02,0x04,0x08,0x13,0x03]
+};
+function norm(s){ s=String(s); if(s.normalize) s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); return s.toUpperCase().replace(/[·–—]/g,'-').replace(/[«»"“”]/g,"'").replace(/[¡¿]/g,''); }
+function textW(s,px){ return norm(s).length*6*px; }
+function drawText(c,s,x,y,px,col){
+  s=norm(s); c.fillStyle=col;
+  for(var i=0;i<s.length;i++){
+    var g=FONT[s.charAt(i)]||FONT[' '];
+    for(var r=0;r<7;r++){ var row=g[r]; if(!row) continue; for(var k=0;k<5;k++){ if(row&(16>>k)) c.fillRect(x+k*px,y+r*px,px,px); } }
+    x+=6*px;
+  }
+  return x;
+}
+var VCOL=[]; for(var vc=0;vc<16;vc++) VCOL.push('hsl('+(120-vc*8)+',100%,'+(42+vc)+'%)');
+
+/* =========================================================
+   AUDIO (Web Audio): bus de música → preamp → EQ 10 bandas → analizador → balance → volumen → compresor
+   ========================================================= */
+var A={ctx:null};
+var EQ_FREQS=[60,170,310,600,1000,3000,6000,12000,14000,16000];
+var SCALES={ minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], major:[0,2,4,5,7,9,11] };
+function audioInit(){
+  if(A.ctx) return;
+  var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  var c; try{ c=new AC(); }catch(e){ return; }
+  A.ctx=c;
+  A.input=c.createGain(); A.input.gain.value=0.7;
+  A.pre=c.createGain(); A.input.connect(A.pre);
+  var last=A.pre; A.bands=[];
+  for(var i=0;i<10;i++){ var f=c.createBiquadFilter(); f.type=i===0?'lowshelf':(i===9?'highshelf':'peaking'); f.frequency.value=EQ_FREQS[i]; f.Q.value=1.4; f.gain.value=0; last.connect(f); last=f; A.bands.push(f); }
+  A.analyser=c.createAnalyser(); A.analyser.fftSize=1024; A.analyser.smoothingTimeConstant=0.55;
+  last.connect(A.analyser);
+  A.pan=c.createStereoPanner?c.createStereoPanner():null;
+  A.vol=c.createGain();
+  A.comp=c.createDynamicsCompressor(); A.comp.threshold.value=-10; A.comp.ratio.value=4;
+  if(A.pan){ A.analyser.connect(A.pan); A.pan.connect(A.vol); } else A.analyser.connect(A.vol);
+  A.master=c.createGain(); A.master.connect(c.destination);   // volumen general (bandeja)
+  A.vol.connect(A.comp); A.comp.connect(A.master);
+  A.sfx=c.createGain(); A.sfx.gain.value=0.6; A.sfx.connect(A.master);
+  var len=c.sampleRate, b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);
+  for(var j=0;j<len;j++) d[j]=Math.random()*2-1;
+  A.noise=b;
+  A.freq=new Uint8Array(A.analyser.frequencyBinCount); A.wave=new Uint8Array(A.analyser.fftSize);
+  var hi=Math.min(A.analyser.frequencyBinCount-1,Math.round(16000/(c.sampleRate/2)*A.analyser.frequencyBinCount)), lo=2;
+  A.edges=[]; for(var e=0;e<=19;e++){ var v=Math.round(lo*Math.pow(hi/lo,e/19)); if(e>0&&v<=A.edges[e-1]) v=A.edges[e-1]+1; A.edges.push(v); }
+  applyVol(); applyEq(); applySysVol();
+}
+function audioRunning(){ return !!(A.ctx && A.ctx.state==='running'); }
+function tryResume(){ if(A.ctx && A.ctx.state!=='running'){ try{ var p=A.ctx.resume(); if(p&&p.catch) p.catch(function(){}); }catch(e){} } }
+function mtof(m){ return 440*Math.pow(2,(m-69)/12); }
+
+/* ---------- instrumentos ---------- */
+function kick(t,v){ var c=A.ctx,o=c.createOscillator(),g=c.createGain(); o.type='sine'; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(42,t+0.12); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+0.4); o.connect(g); g.connect(A.input); o.start(t); o.stop(t+0.42); }
+function noiseHit(t,type,freq,v,dec){ var c=A.ctx,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(); s.buffer=A.noise; s.loop=true; f.type=type; f.frequency.value=freq; g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dec); s.connect(f); f.connect(g); g.connect(A.input); s.start(t,Math.random()*0.5); s.stop(t+dec+0.02); }
+function toneHit(t,type,freq,dur,v){ var c=A.ctx,o=c.createOscillator(),g=c.createGain(); o.type=type; o.frequency.setValueAtTime(freq,t); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); g.connect(A.input); o.start(t); o.stop(t+dur+0.02); }
+function snare(t,v){ noiseHit(t,'bandpass',1800,v,0.18); toneHit(t,'triangle',185,0.09,v*0.5); }
+function hat(t,open,v){ noiseHit(t,'highpass',7000,v,open?0.22:0.045); }
+function synth(t,midi,dur,o){
+  var c=A.ctx,g=c.createGain(),f=c.createBiquadFilter();
+  f.type='lowpass'; f.Q.value=o.q||1; f.frequency.setValueAtTime(o.cutoff||2000,t);
+  if(o.env){ f.frequency.setValueAtTime(o.env,t); f.frequency.exponentialRampToValueAtTime(o.cutoff,t+Math.min(dur,0.25)); }
+  var a=o.attack||0.005, r=o.release||0.05, v=o.v||0.1;
+  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(v,t+a); g.gain.setValueAtTime(v,t+Math.max(a,dur-r)); g.gain.linearRampToValueAtTime(0.0001,t+dur+r);
+  var n=o.voices||1;
+  for(var i=0;i<n;i++){ var os=c.createOscillator(); os.type=o.type||'sawtooth'; os.frequency.setValueAtTime(mtof(midi),t); if(n>1) os.detune.value=(i-(n-1)/2)*(o.detune||10); os.connect(f); os.start(t); os.stop(t+dur+r+0.05); }
+  f.connect(g); g.connect(A.input);
+}
+function deg(tr,d){ var sc=SCALES[tr.scale]||SCALES.minor; var o=Math.floor(d/7), i=((d%7)+7)%7; return tr.root+sc[i]+12*o; }
+function chordAt(tr,bar){ var d=tr.prog[bar%tr.prog.length]; return [deg(tr,d),deg(tr,d+2),deg(tr,d+4)]; }
+function rng(seed){ var s=seed>>>0; return function(){ s=(Math.imul?Math.imul(s,1664525):s*1664525)+1013904223>>>0; return s/4294967296; }; }
+
+/* ---------- secuenciador de pistas sintetizadas ---------- */
+var SEQ={playing:false,track:0,step:0,next:0,spb:0.125,virtual:false,vlast:null};
+function scheduleStep(tr,step,t){
+  var spb=SEQ.spb, bar=Math.floor(step/16), s=step%16, total=tr.bars;
+  var ch=chordAt(tr,bar), R=rng(bar*977+s*131+tr.bpm*7);
+  var intro=bar<4, outro=bar>=total-2, brk=(bar>=12 && bar%16>=12 && bar<total-4);
+  var drums=!intro&&!outro&&!brk;
+  if(tr.style==='house'){
+    if(drums&&s%4===0) kick(t,0.9);
+    if(drums&&(s===4||s===12)) snare(t,0.32);
+    if(s%4===2) hat(t,false,intro?0.08:0.14);
+    if(drums&&s===14) hat(t,true,0.09);
+    if(!intro&&!outro&&s%4===2) synth(t,ch[0]-12,spb*1.7,{type:'sawtooth',cutoff:420,env:1600,q:7,v:0.16});
+    if(s===0) ch.forEach(function(n){ synth(t,n+12,spb*15.5,{type:'triangle',voices:2,detune:9,cutoff:1500,attack:0.25,release:0.5,v:0.045}); });
+    if(!intro&&!outro&&!brk&&(s===3||s===6||s===10||s===13)&&R()<0.75) synth(t,ch[Math.floor(R()*3)]+24,spb*1.2,{type:'square',cutoff:2600,v:0.045,release:0.08});
+  } else if(tr.style==='chip'){
+    var arp=[0,1,2,1], n=ch[arp[s%4]]+24+(Math.floor(s/4)%2?12:0);
+    if(!outro) synth(t,n,spb*0.85,{type:'square',cutoff:5000,v:intro?0.03:0.045,release:0.02});
+    if(!intro&&s%2===0) synth(t,ch[0]-12+((s/2)%2?12:0),spb*1.8,{type:'triangle',cutoff:3000,v:0.2,release:0.03});
+    if(drums&&(s===0||s===8||(s===10&&R()<0.5))) kick(t,0.8);
+    if(drums&&(s===4||s===12)) noiseHit(t,'highpass',1500,0.3,0.1);
+    if(drums&&s%2===1) hat(t,false,0.07);
+    if(brk&&s===0) synth(t,ch[0]+12,spb*16,{type:'square',cutoff:1800,v:0.04,attack:0.05,release:0.2});
+  } else if(tr.style==='chill'){
+    if(s===0){ ch.forEach(function(n){ synth(t,n,spb*16,{type:'sine',voices:2,detune:6,cutoff:1200,attack:0.6,release:0.8,v:0.07}); }); synth(t,ch[0]-12,spb*7,{type:'sine',cutoff:600,v:0.22,release:0.3}); }
+    if(s===10) synth(t,ch[0]-5,spb*5,{type:'sine',cutoff:600,v:0.16,release:0.3});
+    if(drums&&(s===0||s===10)) kick(t,0.55);
+    if(drums&&(s===4||s===12)) snare(t,0.18);
+    if(!intro&&s%2===0) hat(t,s%4===2&&R()<0.3,0.05);
+    if(!intro&&!outro&&(s===0||s===3||s===6||s===8||s===11||s===14)&&R()<0.55){ var dg=tr.prog[bar%tr.prog.length]+Math.floor(R()*5); synth(t,deg(tr,dg)+12,spb*(2+Math.floor(R()*3)),{type:'triangle',cutoff:1800,v:0.06,attack:0.02,release:0.35}); }
+  } else {
+    if(drums&&s%4===0) kick(t,0.95);
+    if(drums&&(s===4||s===12)) snare(t,0.28);
+    if(!intro&&s%4===2) hat(t,true,0.08);
+    if(!intro&&!outro&&s%4!==0) synth(t,ch[0]-12,spb*0.8,{type:'sawtooth',cutoff:600,env:2200,q:5,v:0.12});
+    var tp=[0,2,1,2,0,2,1,2,0,2,1,2,0,1,2,1];
+    if(!outro) synth(t,ch[tp[s]]+24,spb*0.7,{type:'sawtooth',voices:3,detune:14,cutoff:brk?1200:3200,v:intro?0.018:0.028,release:0.04});
+    if(s===0) ch.forEach(function(n){ synth(t,n+12,spb*16,{type:'sawtooth',voices:2,detune:12,cutoff:900,attack:0.4,release:0.6,v:0.03}); });
+  }
+}
+function seqTick(){
+  if(!SEQ.playing) return;
+  var tr=CONFIG.tracks[SEQ.track], total=tr.bars*16;
+  if(audioRunning()){
+    if(SEQ.virtual){ SEQ.virtual=false; SEQ.next=A.ctx.currentTime+0.05; }
+    while(SEQ.next<A.ctx.currentTime+0.15){
+      if(SEQ.step>=total){ onTrackEnd(); return; }
+      try{ scheduleStep(tr,SEQ.step,SEQ.next); }catch(e){}
+      SEQ.next+=SEQ.spb; SEQ.step++;
+    }
+  } else {
+    // sin audio (autoplay bloqueado): el tiempo avanza igual para que la demo siga viva
+    SEQ.virtual=true;
+    var t=performance.now()/1000; if(SEQ.vlast===null) SEQ.vlast=t;
+    while(t-SEQ.vlast>=SEQ.spb){ SEQ.vlast+=SEQ.spb; SEQ.step++; if(SEQ.step>=total){ onTrackEnd(); return; } }
+  }
+}
+
+/* ---------- efectos de sistema (sintetizados, originales) ---------- */
+function sfxTone(t,freq,dur,v,type){ var c=A.ctx,o=c.createOscillator(),g=c.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(freq,t); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(v,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); g.connect(A.sfx); o.start(t); o.stop(t+dur+0.05); return o; }
+function sfxStartup(){ if(!audioRunning()) return; var t=A.ctx.currentTime+0.05; [57,64,69,73,76,81].forEach(function(n,i){ sfxTone(t+i*0.16,mtof(n),2.8-i*0.25,0.06,'triangle'); }); sfxTone(t+0.8,mtof(45),2.6,0.09,'sine'); sfxTone(t+0.8,mtof(52),2.6,0.05,'sine'); }
+function sfxDing(){ if(!audioRunning()) return; var t=A.ctx.currentTime+0.02; sfxTone(t,880,0.6,0.12,'sine'); sfxTone(t+0.09,1318.5,0.8,0.1,'sine'); }
+function sfxBlip(){ if(!audioRunning()) return; var t=A.ctx.currentTime+0.02; sfxTone(t,1046.5,0.12,0.08,'triangle'); sfxTone(t+0.07,1568,0.16,0.07,'triangle'); }
+function sfxUhOh(){
+  if(!audioRunning()) return; var c=A.ctx,t=c.currentTime+0.03;
+  function syl(t0,dur,fa,fb,F1,F2){ var o=c.createOscillator(),g=c.createGain(),b1=c.createBiquadFilter(),b2=c.createBiquadFilter(),m=c.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(fa,t0); o.frequency.linearRampToValueAtTime(fb,t0+dur); g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.5,t0+0.03); g.gain.setValueAtTime(0.5,t0+dur-0.06); g.gain.linearRampToValueAtTime(0.0001,t0+dur); b1.type='bandpass'; b1.frequency.value=F1; b1.Q.value=6; b2.type='bandpass'; b2.frequency.value=F2; b2.Q.value=8; m.gain.value=0.6; o.connect(b1); o.connect(b2); b1.connect(g); b2.connect(m); m.connect(g); g.connect(A.sfx); o.start(t0); o.stop(t0+dur+0.02); }
+  syl(t,0.2,330,300,650,1150); syl(t+0.26,0.32,250,210,480,850);
+}
+function sfxModem(){
+  if(!audioRunning()) return; var c=A.ctx,t=c.currentTime+0.05,R=[697,770,852,941],C=[1209,1336,1477];
+  for(var i=0;i<7;i++){ sfxTone(t,R[(i*3+1)%4],0.09,0.05); sfxTone(t,C[(i*2)%3],0.09,0.05); t+=0.13; }
+  t+=0.3; sfxTone(t,2100,0.6,0.05); t+=0.7;
+  var s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(); s.buffer=A.noise; s.loop=true; f.type='bandpass'; f.Q.value=3; f.frequency.setValueAtTime(1200,t); f.frequency.linearRampToValueAtTime(2400,t+0.4); f.frequency.linearRampToValueAtTime(1600,t+0.9); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.12,t+0.05); g.gain.setValueAtTime(0.12,t+0.9); g.gain.linearRampToValueAtTime(0.0001,t+1.1); s.connect(f); f.connect(g); g.connect(A.sfx); s.start(t); s.stop(t+1.2);
+  var o=sfxTone(t,1650,1.0,0.03,'square'); o.frequency.linearRampToValueAtTime(980,t+0.5); o.frequency.setValueAtTime(2250,t+0.55);
+}
+
+/* =========================================================
+   REPRODUCTOR
+   ========================================================= */
+var PL={cur:0,sel:0,state:'stop',shuffle:false,repeat:true,open:false,eqOn:true};
+var EQV=[0,0,0,0,0,0,0,0,0,0], PRE=0;
+var VOL,BAL,SEEK,PRES,EQS=[];
+var PRESETS=[['PLANO',[0,0,0,0,0,0,0,0,0,0]],['CLUB',[0,0,4,6,6,6,4,0,0,0]],['TECHNO',[8,6,0,-6,-5,0,8,10,10,9]],['ROCK',[8,5,-5,-8,-3,4,9,11,11,11]],['POP',[-2,5,7,8,5,0,-2,-2,-2,-2]],['GRAVES',[10,10,10,5,1,-4,-8,-10,-11,-11]]];
+var PRESET_I=0;
+
+function applyVol(){ if(!A.ctx||!VOL) return; A.vol.gain.value=VOL.v*VOL.v; if(A.pan) A.pan.pan.value=(BAL.v-0.5)*2; }
+function applyEq(){ if(!A.ctx) return; for(var i=0;i<10;i++) A.bands[i].gain.value=PL.eqOn?EQV[i]:0; A.pre.gain.value=PL.eqOn?Math.pow(10,PRE/20):1; }
+function ensureEl(){
+  if(A.el) return; A.el=new Audio(); A.el.preload='auto';
+  A.el.addEventListener('ended',function(){ if(PL.state==='play') onTrackEnd(); });
+  try{ if(A.ctx){ A.elNode=A.ctx.createMediaElementSource(A.el); A.elNode.connect(A.input); } }catch(e){}
+}
+function trackDur(i){ var t=CONFIG.tracks[i]; if(t.src&&A.el&&PL.cur===i&&isFinite(A.el.duration)) return A.el.duration; return t.bars*16*(60/t.bpm/4); }
+function elapsed(){ var t=CONFIG.tracks[PL.cur]; if(t.src&&A.el) return A.el.currentTime||0; return SEQ.step*SEQ.spb; }
+function stopSound(){ SEQ.playing=false; if(A.el) A.el.pause(); }
+function play(i){
+  audioInit(); tryResume();
+  if(i===undefined||i===null){ if(PL.state==='pause'){ resume(); return; } i=PL.cur; }
+  stopSound();
+  PL.cur=i; PL.sel=i; PL.state='play';
+  var t=CONFIG.tracks[i];
+  if(t.src){ ensureEl(); A.el.src=t.src; try{ A.el.currentTime=0; }catch(e){} var p=A.el.play(); if(p&&p.catch) p.catch(function(){}); }
+  else { SEQ.track=i; SEQ.spb=60/t.bpm/4; SEQ.step=0; SEQ.next=A.ctx?A.ctx.currentTime+0.06:0; SEQ.vlast=null; SEQ.virtual=!audioRunning(); SEQ.playing=true; }
+  MARQ.dirty=true; MARQ.off=0; renderPlaylist();
+}
+function resume(){ PL.state='play'; var t=CONFIG.tracks[PL.cur]; if(t.src&&A.el){ var p=A.el.play(); if(p&&p.catch) p.catch(function(){}); } else { SEQ.playing=true; SEQ.next=A.ctx?A.ctx.currentTime+0.05:0; SEQ.vlast=null; } }
+function pause(){ if(PL.state==='play'){ PL.state='pause'; stopSound(); } else if(PL.state==='pause') resume(); }
+function stop(){ stopSound(); PL.state='stop'; SEQ.step=0; if(A.el){ try{ A.el.currentTime=0; }catch(e){} } renderPlaylist(); }
+function step(dir){
+  var n=CONFIG.tracks.length, i;
+  if(PL.shuffle&&dir>0) i=(PL.cur+1+Math.floor(Math.random()*(n-1)))%n; else i=(PL.cur+dir+n)%n;
+  if(PL.state==='stop'){ PL.cur=i; PL.sel=i; MARQ.dirty=true; renderPlaylist(); } else play(i);
+}
+function onTrackEnd(){ SEQ.playing=false; if(PL.cur===CONFIG.tracks.length-1&&!PL.repeat&&!PL.shuffle){ stop(); return; } step(1); }
+function seekTo(frac){
+  if(PL.state==='stop') return; var t=CONFIG.tracks[PL.cur];
+  if(t.src&&A.el){ if(isFinite(A.el.duration)) A.el.currentTime=frac*A.el.duration; }
+  else { SEQ.step=Math.floor(clamp(frac,0,0.999)*t.bars*16); SEQ.next=A.ctx?A.ctx.currentTime+0.05:0; SEQ.vlast=null; }
+}
+
+/* ---------- deslizadores ---------- */
+function hSlider(el,W,kw,init,onChange,onRelease){
+  var knob=qs('.knob',el), fill=qs('.fill',el), S={el:el,knob:knob,v:init,drag:false};
+  S.set=function(v,silent){ v=clamp(v,0,1); S.v=v; var x=Math.round(v*(W-kw)); knob.style.left=x+'px'; if(fill) fill.style.width=(x+kw/2)+'px'; if(!silent&&onChange) onChange(v); };
+  function fromE(e){ var r=el.getBoundingClientRect(), k=kw*SCALE; return (e.clientX-r.left-k/2)/(r.width-k); }
+  el.addEventListener('pointerdown',function(e){ S.drag=true; try{ el.setPointerCapture(e.pointerId); }catch(_){} S.set(fromE(e)); });
+  el.addEventListener('pointermove',function(e){ if(S.drag) S.set(fromE(e)); });
+  function end(){ if(S.drag){ S.drag=false; if(onRelease) onRelease(S.v); } }
+  el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
+  S.set(init,true); return S;
+}
+function vSlider(el,H,kh,init,onChange){
+  var knob=qs('.knob',el), lvl=qs('.lvl',el), S={el:el,knob:knob,v:init,drag:false};
+  S.set=function(v,silent){ v=clamp(v,0,1); S.v=v; var y=Math.round(v*(H-kh)); knob.style.top=y+'px'; lvl.style.top=(y+Math.round(kh/2))+'px'; if(!silent&&onChange) onChange(v); };
+  function fromE(e){ var r=el.getBoundingClientRect(), k=kh*SCALE; return (e.clientY-r.top-k/2)/(r.height-k); }
+  el.addEventListener('pointerdown',function(e){ S.drag=true; try{ el.setPointerCapture(e.pointerId); }catch(_){} S.set(fromE(e)); });
+  el.addEventListener('pointermove',function(e){ if(S.drag) S.set(fromE(e)); });
+  function end(){ S.drag=false; }
+  el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
+  S.set(init,true); return S;
+}
+function animateEq(target){
+  var from=EQS.map(function(s){ return s.v; }), to=target.map(function(db){ return (12-db)/24; }), t0=performance.now();
+  function f(t){ var k=Math.min(1,(t-t0)/450), e=k*k*(3-2*k); EQS.forEach(function(s,i){ s.set(from[i]+(to[i]-from[i])*e,true); EQV[i]=12-24*s.v; }); applyEq(); drawEqGraph(); if(k<1) requestAnimationFrame(f); }
+  requestAnimationFrame(f);
+}
+function nextPreset(){ PRESET_I=(PRESET_I+1)%PRESETS.length; overrideMarq('PRESET: '+PRESETS[PRESET_I][0]); animateEq(PRESETS[PRESET_I][1]); }
+
+/* ---------- pantallas LCD ---------- */
+var lcdCtx,marqCtx,infoCtx,eqgCtx,plCtx,lcdBg;
+var MARQ={dirty:true,off:0,img:null,w:0,ovr:null,ovrUntil:0};
+var VZ={mode:0,bars:[],peaks:[]}; for(var vi=0;vi<19;vi++){ VZ.bars.push(0); VZ.peaks.push(0); }
+function overrideMarq(s){ MARQ.ovr=s; MARQ.ovrUntil=now()+1300; }
+function buildMarq(){ var t=CONFIG.tracks[PL.cur], s=(PL.cur+1)+'. '+t.artist+' - '+t.title+' ('+fmt(trackDur(PL.cur))+')  ***  '; var c=document.createElement('canvas'); c.width=Math.max(1,textW(s,1)); c.height=7; drawText(c.getContext('2d'),s,0,0,1,'#00e000'); MARQ.img=c; MARQ.w=c.width; MARQ.dirty=false; }
+function drawMarq(dt){
+  var c=marqCtx; c.fillStyle='#000'; c.fillRect(0,0,155,11);
+  if(MARQ.ovr&&now()<MARQ.ovrUntil){ drawText(c,MARQ.ovr,2,2,1,'#00e000'); return; }
+  MARQ.ovr=null; if(MARQ.dirty) buildMarq();
+  if(MARQ.w<=151){ c.drawImage(MARQ.img,2,2); return; }
+  MARQ.off=(MARQ.off+Math.min(dt,100)*0.028)%MARQ.w; var x=-Math.floor(MARQ.off);
+  c.drawImage(MARQ.img,x,2); c.drawImage(MARQ.img,x+MARQ.w,2);
+}
+function getBands(t){
+  var out=[], i, real=false;
+  if(PL.state==='play'&&audioRunning()&&A.analyser){
+    A.analyser.getByteFrequencyData(A.freq); var sum=0;
+    for(i=0;i<19;i++){ var m=0; for(var b=A.edges[i];b<A.edges[i+1];b++) if(A.freq[b]>m) m=A.freq[b]; sum+=m; out.push(Math.pow(m/255,1.5)); }
+    real=sum>0;
+  }
+  if(!real){
+    out=[];
+    if(PL.state==='play'){
+      var tr=CONFIG.tracks[PL.cur], beat=(elapsed()*tr.bpm/60)%1, pulse=Math.exp(-beat*6);
+      for(i=0;i<19;i++) out.push(clamp(0.28+0.22*Math.sin(t/180+i*0.9)*Math.sin(t/410+i*0.3)+(i<7?pulse*0.6*(1-i/7):0)+Math.random()*0.15,0,1)*(1-i/38));
+    } else for(i=0;i<19;i++) out.push(0);
+  }
+  return out;
+}
+function drawViz(c,t){
+  var x0=8,y0=22,H=16,i,y;
+  if(VZ.mode===0){
+    var v=getBands(t);
+    for(i=0;i<19;i++){
+      VZ.bars[i]=Math.max(v[i],VZ.bars[i]*0.82);
+      var h=Math.round(VZ.bars[i]*H); VZ.peaks[i]=Math.max(VZ.peaks[i]-0.3,h);
+      for(y=0;y<h;y++){ c.fillStyle=VCOL[y]; c.fillRect(x0+i*4,y0+H-1-y,3,1); }
+      var p=Math.round(VZ.peaks[i]); if(p>0){ c.fillStyle='#c8c8c8'; c.fillRect(x0+i*4,y0+H-1-p,3,1); }
+    }
+  } else {
+    c.fillStyle='#00e000'; var prev=null, useReal=PL.state==='play'&&audioRunning();
+    if(useReal) A.analyser.getByteTimeDomainData(A.wave);
+    for(var x=0;x<76;x++){
+      var s;
+      if(useReal) s=(A.wave[x*6]-128)/128; else s=PL.state==='play'?Math.sin(t/90+x*0.35)*Math.sin(t/700+x*0.05)*0.8:0;
+      y=Math.round(y0+7-clamp(s,-1,1)*7);
+      var top=prev===null?y:Math.min(y,prev), hh=prev===null?1:Math.abs(y-prev)+1;
+      c.fillRect(x0+x,top,1,hh); prev=y;
+    }
+  }
+}
+function drawLCD(t){
+  var c=lcdCtx; c.drawImage(lcdBg,0,0);
+  if(PL.state==='play'){ c.fillStyle='#00e000'; for(var r=0;r<7;r++) c.fillRect(3,4+r,r<4?r+1:7-r,1); }
+  else if(PL.state==='pause'){ c.fillStyle='#e0a000'; c.fillRect(3,4,2,7); c.fillRect(6,4,2,7); }
+  else { c.fillStyle='#a03030'; c.fillRect(3,4,7,7); }
+  if(PL.state!=='stop'&&!(PL.state==='pause'&&Math.floor(t/500)%2===0)){ var e=elapsed(); drawText(c,pad2(e/60)+':'+pad2(e%60),20,3,2,'#00e000'); }
+  drawViz(c,t);
+}
+function drawInfo(){
+  var c=infoCtx, on=PL.state!=='stop'; c.fillStyle='#000'; c.fillRect(0,0,155,9);
+  if(on){ drawText(c,'128',2,1,1,'#00e000'); drawText(c,'44',52,1,1,'#00e000'); }
+  drawText(c,'KBPS',22,1,1,'#3c6e3c'); drawText(c,'KHZ',66,1,1,'#3c6e3c');
+  drawText(c,'MONO',92,1,1,'#2a4a2a'); drawText(c,'STEREO',119,1,1,on?'#00e000':'#2a4a2a');
+}
+function drawPlInfo(){
+  var c=plCtx, n=CONFIG.tracks.length, tot=0; for(var i=0;i<n;i++) tot+=trackDur(i);
+  c.fillStyle='#000'; c.fillRect(0,0,84,9);
+  drawText(c,(PL.cur+1)+'/'+n+' '+fmt(PL.state==='stop'?0:elapsed())+'/'+fmt(tot),2,1,1,'#00e000');
+}
+function drawEqGraph(){
+  var c=eqgCtx,W=113,H=19; c.fillStyle='#000'; c.fillRect(0,0,W,H); c.fillStyle='#2e2e3a'; for(var gx=0;gx<W;gx+=2) c.fillRect(gx,9,1,1);
+  var sp=(W-8)/9, prev=null;
+  for(var x=0;x<W;x++){
+    var fx=(x-4)/sp, i=clamp(Math.floor(fx),0,8), fr=clamp(fx-i,0,1), e=(1-Math.cos(fr*Math.PI))/2;
+    var ya=9-EQV[i]/12*8, yb=9-EQV[i+1]/12*8, y=clamp(Math.round(ya+(yb-ya)*e),1,H-2);
+    var top=prev===null?y:Math.min(y,prev), hh=prev===null?1:Math.abs(y-prev)+1;
+    c.fillStyle=VCOL[clamp(Math.round((H-1-y)/(H-1)*15),0,15)]; c.fillRect(x,top,1,hh); prev=y;
+  }
+}
+function renderPlaylist(){
+  var box=qs('#plist');
+  if(!box.children.length){
+    CONFIG.tracks.forEach(function(t,i){
+      var r=document.createElement('div'); r.className='prow'; r.innerHTML='<span class="n"></span><span class="d"></span>';
+      r.firstChild.textContent=(i+1)+'. '+t.artist+' - '+t.title; r.lastChild.textContent=fmt(trackDur(i));
+      r.addEventListener('click',function(e){ PL.sel=i; renderPlaylist(); if(e.isTrusted&&lastPointerType==='touch') play(i); });
+      r.addEventListener('dblclick',function(){ play(i); });
+      box.appendChild(r);
+    });
+  }
+  qsa('.prow',box).forEach(function(r,i){ r.classList.toggle('cur',i===PL.cur); r.classList.toggle('sel',i===PL.sel); });
+}
+
+/* =========================================================
+   ESCRITORIO Y VENTANAS
+   ========================================================= */
+var stage,desk,ghostEl,ctaEl,hintEl,SCALE=1,Z=100;
+function fit(){ var vw=window.innerWidth, vh=window.innerHeight; SCALE=Math.min(vw/640,vh/480); var l=Math.round((vw-640*SCALE)/2), t=Math.round((vh-480*SCALE)/2); stage.style.transform='translate('+l+'px,'+t+'px) scale('+SCALE+')'; }
+function centerOf(el){ var r=el.getBoundingClientRect(), s=stage.getBoundingClientRect(); return {x:(r.left+r.width/2-s.left)/SCALE, y:(r.top+r.height/2-s.top)/SCALE}; }
+function bumpZ(){
+  Z++;
+  if(Z>4000){ var all=qsa('#desk > .win, #desk > .skin').sort(function(a,b){ return (+a.style.zIndex||0)-(+b.style.zIndex||0); }); Z=100; all.forEach(function(w){ w.style.zIndex=++Z; }); Z++; }
+  return Z;
+}
+function focusWin(el){
+  var grp=el.getAttribute('data-group'), list=grp?qsa('[data-group="'+grp+'"]'):[el];
+  list.forEach(function(w){ if(w!==el) w.style.zIndex=bumpZ(); }); el.style.zIndex=bumpZ();
+  qsa('#desk > .win').forEach(function(w){ w.classList.toggle('inactive',list.indexOf(w)<0); });
+  qsa('.skin').forEach(function(w){ w.classList.toggle('act',list.indexOf(w)>=0); });
+  updateTasks(grp||el.id);
+}
+function makeDraggable(handle,win){
+  var sx,sy,ox,oy,id=null;
+  handle.addEventListener('pointerdown',function(e){ if(e.target.closest('.x,.sbx')) return; id=e.pointerId; try{ handle.setPointerCapture(id); }catch(_){} sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win); });
+  handle.addEventListener('pointermove',function(e){ if(id!==e.pointerId) return; win.style.left=Math.round(clamp(ox+(e.clientX-sx)/SCALE,40-win.offsetWidth,600))+'px'; win.style.top=Math.round(clamp(oy+(e.clientY-sy)/SCALE,0,430))+'px'; });
+  function end(e){ if(id===e.pointerId) id=null; }
+  handle.addEventListener('pointerup',end); handle.addEventListener('pointercancel',end);
+}
+
+/* ---------- barra de tareas ---------- */
+var TASKS={};
+function addTask(key,label,ico,wins){
+  if(TASKS[key]){ TASKS[key].min=false; TASKS[key].btn.lastChild.textContent=label; return; }
+  var b=document.createElement('button'); b.className='btn task'; b.innerHTML=ICONS[ico]+'<span></span>'; b.lastChild.textContent=label;
+  b.addEventListener('click',function(){ toggleTask(key); });
+  qs('#tasks').appendChild(b); TASKS[key]={btn:b,wins:wins,min:false};
+}
+function removeTask(key){ var t=TASKS[key]; if(!t) return; t.btn.parentNode.removeChild(t.btn); delete TASKS[key]; }
+function minimize(key){ var t=TASKS[key]; if(!t) return; t.min=true; t.wins.forEach(function(w){ w.style.display='none'; }); t.btn.classList.remove('on'); }
+function toggleTask(key){
+  var t=TASKS[key]; if(!t) return;
+  if(t.min){ t.min=false; t.wins.forEach(function(w){ if(w.getAttribute('data-hidden')!=='1') w.style.display='block'; }); focusWin(t.wins[0]); }
+  else if(t.btn.classList.contains('on')) minimize(key);
+  else focusWin(t.wins[0]);
+}
+function updateTasks(active){ for(var k in TASKS) TASKS[k].btn.classList.toggle('on',k===active&&!TASKS[k].min); }
+
+/* ---------- iconos del escritorio ---------- */
+var lastPointerType='mouse';
+function selectIcon(el){ qsa('.icon').forEach(function(i){ i.classList.toggle('sel',i===el); }); }
+function buildDesktop(){
+  var list=[['mypc','Mi PC'],['trash','Papelera de reciclaje'],['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['chat',CONFIG.names.chat],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla',82,6],['media','Reproductor multimedia',82,68],['inbox','Bandeja de entrada',82,130]];
+  list.forEach(function(d,i){
+    var def={id:d[0],label:d[1],ico:d[0],kind:'app',app:d[0],left:d[2]!==undefined?d[2]:4,top:d[3]!==undefined?d[3]:6+i*62};
+    ICON_DEFS.push(def); addIcon(def);
+  });
+  // clic derecho (o pulsación larga en pantalla táctil) sobre el escritorio → menú contextual
+  var lp=null;
+  desk.addEventListener('pointerdown',function(e){
+    if(e.target!==desk) return; selectIcon(null);
+    if(e.pointerType==='touch'){ var p=toStage(e); lp={x:e.clientX,y:e.clientY,t:setTimeout(function(){ lp=null; openDeskMenu(p.x,p.y); },600)}; }
+  });
+  desk.addEventListener('pointermove',function(e){ if(lp&&Math.abs(e.clientX-lp.x)+Math.abs(e.clientY-lp.y)>10){ clearTimeout(lp.t); lp=null; } });
+  desk.addEventListener('pointerup',function(){ if(lp){ clearTimeout(lp.t); lp=null; } });
+  desk.addEventListener('contextmenu',function(e){ if(e.target!==desk) return; var p=toStage(e); openDeskMenu(p.x,p.y); });
+  document.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+}
+var ICON_DEFS=[], DRAG=null;
+function toStage(e){ var r=stage.getBoundingClientRect(); return {x:(e.clientX-r.left)/SCALE, y:(e.clientY-r.top)/SCALE}; }
+function addIcon(def){
+  var el=document.createElement('div'); el.className='icon'; el.id='ic-'+def.id; el._def=def;
+  el.style.left=def.left+'px'; el.style.top=def.top+'px';
+  el.innerHTML=ICONS[def.ico]+'<span></span>'; el.lastChild.textContent=def.label;
+  wireIcon(el); desk.insertBefore(el,desk.firstChild); return el;
+}
+function openIcon(el){ var d=el._def; if(d.kind==='doc') openDoc(d.docId); else openApp(d.app); }
+function wireIcon(el){
+  var st=null;
+  el.addEventListener('pointerdown',function(e){ if(e.button===2||el.lastChild.classList.contains('ren')) return; st={id:e.pointerId,x:e.clientX,y:e.clientY,ox:el.offsetLeft,oy:el.offsetTop,drag:false}; try{ el.setPointerCapture(e.pointerId); }catch(_){} });
+  el.addEventListener('pointermove',function(e){
+    if(!st||st.id!==e.pointerId) return;
+    var dx=e.clientX-st.x, dy=e.clientY-st.y;
+    if(!st.drag&&Math.abs(dx)+Math.abs(dy)>6){ st.drag=true; startIconDrag(el); }
+    if(st.drag) moveIconDrag(el,st.ox+dx/SCALE,st.oy+dy/SCALE);
+  });
+  function up(e){ if(!st||st.id!==e.pointerId) return; var was=st.drag; st=null; if(was){ el._justDragged=true; setTimeout(function(){ el._justDragged=false; },60); endIconDrag(el); } }
+  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',function(e){ if(st&&st.drag) cancelIconDrag(); st=null; });
+  el.addEventListener('click',function(e){ if(el._justDragged) return; selectIcon(el); if(e.isTrusted&&lastPointerType==='touch'&&!el.lastChild.classList.contains('ren')) openIcon(el); });
+  el.addEventListener('dblclick',function(){ if(el._justDragged||el.lastChild.classList.contains('ren')) return; openIcon(el); });
+}
+function startIconDrag(el){ var c=el.cloneNode(true); c.removeAttribute('id'); c.classList.add('dragging'); desk.appendChild(c); DRAG={el:el,clone:c,x:el.offsetLeft,y:el.offsetTop,over:false}; selectIcon(el); closeDeskMenu(); }
+function moveIconDrag(el,x,y){
+  if(!DRAG) return;
+  x=clamp(x,0,640-72); y=clamp(y,0,452-48); DRAG.x=x; DRAG.y=y; DRAG.clone.style.left=Math.round(x)+'px'; DRAG.clone.style.top=Math.round(y)+'px';
+  var t=qs('#ic-trash'), cx=x+36, cy=y+20, over=!!t&&t!==el&&cx>=t.offsetLeft&&cx<=t.offsetLeft+72&&cy>=t.offsetTop&&cy<=t.offsetTop+50;
+  if(over!==DRAG.over){ DRAG.over=over; t.classList.toggle('drop',over); }
+}
+function cancelIconDrag(){ if(!DRAG) return; if(DRAG.clone.parentNode) DRAG.clone.parentNode.removeChild(DRAG.clone); var t=qs('#ic-trash'); if(t) t.classList.remove('drop'); DRAG=null; }
+function endIconDrag(el){
+  var d=DRAG; if(!d) return; cancelIconDrag();
+  if(d.over){ toTrash(el); return; }
+  el.style.left=Math.round(d.x)+'px'; el.style.top=Math.round(d.y)+'px';
+}
+function alignIcons(){ qsa('#desk > .icon').forEach(function(el){ el.style.left=(Math.round((el.offsetLeft-4)/78)*78+4)+'px'; el.style.top=(Math.round((el.offsetTop-6)/62)*62+6)+'px'; }); }
+
+/* ---------- menú contextual del escritorio ---------- */
+var DM={x:0,y:0};
+function openDeskMenu(x,y){
+  closeDeskMenu(); closeStart();
+  var m=qs('#dmenu'); m.style.display='block';
+  m.style.left=Math.round(Math.min(x,640-m.offsetWidth-2))+'px'; m.style.top=Math.round(Math.min(y,452-m.offsetHeight-2))+'px';
+  DM.x=x; DM.y=y;
+}
+function closeDeskMenu(){ qs('#dmenu').style.display='none'; qs('#dmenu2').style.display='none'; qsa('.mi2').forEach(function(m){ m.classList.remove('hl'); }); }
+function openNewMenu(){
+  var m=qs('#dmenu'), it=qs('#dm-new'), s=qs('#dmenu2'); it.classList.add('hl'); s.style.display='block';
+  var left=m.offsetLeft+m.offsetWidth-4; if(left+s.offsetWidth>640) left=m.offsetLeft-s.offsetWidth+4;
+  s.style.left=left+'px'; s.style.top=Math.min(m.offsetTop+it.offsetTop-3,452-s.offsetHeight-2)+'px';
+}
+function wireDeskMenu(){
+  qs('#dm-new').addEventListener('click',openNewMenu);
+  qs('#dm-new').addEventListener('mouseenter',openNewMenu);
+  qs('#dm-align').addEventListener('click',function(){ closeDeskMenu(); alignIcons(); });
+  qs('#dm-props').addEventListener('click',function(){ closeDeskMenu(); msgBox('Propiedades de Pantalla','Fondo: Admira 95 (verde azulado)\nProtector de pantalla: «Admira volando»\nResolución: 640 × 480 · 256 colores','info'); });
+  qs('#dm-txt').addEventListener('click',function(){ closeDeskMenu(); newTextDoc(DM.x,DM.y,MODE==='interactive'); });
+  qsa('#dmenu .mi2:not(.dis), #dmenu2 .mi2:not(.dis)').forEach(function(m){ m.addEventListener('mouseenter',function(){ qsa('.mi2',m.parentNode).forEach(function(x){ if(x!==m&&x.id!=='dm-new') x.classList.remove('hl'); }); m.classList.add('hl'); }); });
+  stage.addEventListener('pointerdown',function(e){ if(!e.target.closest('#dmenu,#dmenu2')) closeDeskMenu(); },true);
+}
+
+/* ---------- documentos de texto ---------- */
+var DOCS={}, docSeq=0, LASTDOC=null;
+function docNameUsed(n){ for(var k in DOCS) if(DOCS[k].name===n) return true; return TRASH.some(function(t){ return t.def.label===n; }); }
+function newTextDoc(x,y,rename){
+  var base='Nuevo documento de texto', name=base, n=1;
+  while(docNameUsed(name)){ n++; name=base+' ('+n+')'; }
+  var id='doc'+(++docSeq); DOCS[id]={id:id,name:name,text:''};
+  var el=addIcon({id:id,label:name,ico:'txt',kind:'doc',docId:id,left:Math.round(clamp(x-36,0,568)),top:Math.round(clamp(y-16,0,404))});
+  selectIcon(el); LASTDOC=el;
+  if(rename) startRename(el);
+  return el;
+}
+function startRename(el){
+  var sp=el.lastChild, old=sp.textContent;
+  sp.classList.add('ren'); sp.setAttribute('contenteditable','true'); sp.focus();
+  try{ var r=document.createRange(); r.selectNodeContents(sp); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){}
+  function done(cancel){
+    sp.removeEventListener('keydown',key); sp.removeEventListener('blur',blur);
+    var v=cancel?old:(sp.textContent.replace(/[\r\n\\\/:*?"<>|]/g,'').trim()||old);
+    if(v!==old&&docNameUsed(v)) v=old;
+    sp.removeAttribute('contenteditable'); sp.classList.remove('ren'); sp.textContent=v;
+    el._def.label=v; var d=DOCS[el._def.docId]; if(d) d.name=v;
+  }
+  function key(e){ if(e.key==='Enter'){ e.preventDefault(); sp.blur(); } else if(e.key==='Escape'){ e.preventDefault(); done(true); } }
+  function blur(){ done(false); }
+  sp.addEventListener('keydown',key); sp.addEventListener('blur',blur);
+}
+
+/* ---------- papelera de reciclaje ---------- */
+var TRASH=[], TRSEL=-1;
+function setTrashIcon(){
+  var full=TRASH.length>0, t=qs('#ic-trash');
+  if(t){ var svg=t.querySelector('svg'); if(svg) t.removeChild(svg); t.insertAdjacentHTML('afterbegin',ICONS[full?'trashFull':'trash']); }
+  qs('#trwIco').innerHTML=ICONS[full?'trashFull':'trash'];
+}
+function sfxCrumple(){
+  if(!audioRunning()) return; var c=A.ctx,t=c.currentTime+0.02;
+  for(var i=0;i<7;i++){ var s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(),tt=t+i*0.045+Math.random()*0.02; s.buffer=A.noise; f.type='bandpass'; f.frequency.value=1500+Math.random()*3000; f.Q.value=1.5; g.gain.setValueAtTime(0.0001,tt); g.gain.linearRampToValueAtTime(0.25,tt+0.005); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.06); s.connect(f); f.connect(g); g.connect(A.sfx); s.start(tt,Math.random()*0.5); s.stop(tt+0.08); }
+}
+function askBox(title,text,onYes){
+  var w=document.createElement('div'); w.className='win dlg'; w.style.width='340px';
+  w.innerHTML='<div class="tb"><span class="t"></span><span class="x">×</span></div><div class="body">'+ICONS.trashFull+'<div class="msg"></div></div><div class="acts"><button class="btn" data-yes>Sí</button> <button class="btn" data-no>No</button></div>';
+  qs('.t',w).textContent=title; qs('.msg',w).textContent=text; desk.appendChild(w);
+  w.style.left='150px'; w.style.top=Math.round((452-w.offsetHeight)/2)+'px';
+  function close(){ if(w.parentNode) w.parentNode.removeChild(w); }
+  qs('[data-yes]',w).addEventListener('click',function(){ close(); onYes(); });
+  qs('[data-no]',w).addEventListener('click',close); qs('.x',w).addEventListener('click',close);
+  makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); }); focusWin(w);
+  sfxDing();
+}
+function toTrash(el){
+  var d=el._def;
+  if(d.kind!=='doc'){ sfxDing(); msgBox('Papelera de reciclaje','No se puede eliminar «'+d.label+'»:\nes un elemento del sistema Admira 95.','warn'); return; }
+  askBox('Confirmar eliminación de archivo','¿Está seguro de que desea enviar «'+d.label+'» a la Papelera de reciclaje?',function(){ doTrash(el); });
+}
+function doTrash(el){
+  var d=el._def; if(NOTE.doc&&NOTE.doc.id===d.docId) closeNote();
+  d.left=el.offsetLeft; d.top=el.offsetTop; TRASH.push({def:d,when:new Date()});
+  if(el.parentNode) el.parentNode.removeChild(el);
+  setTrashIcon(); renderTrash(); sfxCrumple();
+}
+function renderTrash(){
+  var cols=[['Nombre',150],['Ubicación original',116],['Fecha de eliminación',112]], h=lvHeader(cols);
+  TRASH.forEach(function(it,i){ var w=it.when; h+=lvRow(i,cols,[esc(it.def.label),'C:\\WINDOWS\\Escritorio',pad2(w.getDate())+'/'+pad2(w.getMonth()+1)+'/1997 '+pad2(w.getHours())+':'+pad2(w.getMinutes())],i===TRSEL); });
+  qs('#trList').innerHTML=h; qs('#trSt').textContent=TRASH.length+' objeto(s)';
+  qs('#trRestore').disabled=TRSEL<0; qs('#trEmpty').disabled=!TRASH.length;
+}
+function openTrash(){ var w=qs('#trw'); w.style.display='block'; TRSEL=-1; addTask('trw','Papelera de reciclaje','trash',[w]); focusWin(w); renderTrash(); }
+function closeTrash(){ qs('#trw').style.display='none'; removeTask('trw'); }
+function wireTrash(){
+  qs('#trList').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; TRSEL=+r.getAttribute('data-i'); lvSelect(qs('#trList'),TRSEL); qs('#trRestore').disabled=false; });
+  qs('#trRestore').addEventListener('click',function(){ var it=TRASH[TRSEL]; if(!it) return; TRASH.splice(TRSEL,1); TRSEL=-1; addIcon(it.def); setTrashIcon(); renderTrash(); });
+  qs('#trEmpty').addEventListener('click',function(){
+    if(!TRASH.length) return;
+    askBox('Confirmar eliminación de varios archivos',TRASH.length===1?'¿Está seguro de que desea eliminar «'+TRASH[0].def.label+'»?':'¿Está seguro de que desea eliminar estos '+TRASH.length+' elementos?',function(){
+      TRASH.forEach(function(it){ delete DOCS[it.def.docId]; }); TRASH=[]; TRSEL=-1; setTrashIcon(); renderTrash(); sfxCrumple();
+    });
+  });
+  qs('[data-close="trw"]').addEventListener('click',closeTrash);
+  qs('[data-min="trw"]').addEventListener('click',function(){ minimize('trw'); });
+  renderTrash();
+}
+function resetIcons(){
+  qsa('#desk > .icon').forEach(function(el){ if(el._def&&el._def.kind==='doc') el.parentNode.removeChild(el); });
+  DOCS={}; TRASH=[]; TRSEL=-1; LASTDOC=null; cancelIconDrag(); setTrashIcon(); closeTrash(); closeDeskMenu();
+  ICON_DEFS.forEach(function(d){ var el=qs('#ic-'+d.id); if(el){ el.style.left=d.left+'px'; el.style.top=d.top+'px'; } });
+}
+async function ghostDragIcon(el,tx,ty,tk){
+  await ghostMove(el,tk); await wait(200,tk);
+  var sx=el.offsetLeft, sy=el.offsetTop, c0=centerOf(el), ox=c0.x-sx, oy=c0.y-sy;
+  startIconDrag(el);
+  await new Promise(function(res,rej){
+    var t0=performance.now();
+    function f(t){
+      if(tk!==RUN.token){ cancelIconDrag(); rej(ABORT); return; }
+      var k=Math.min(1,(t-t0)/1100), e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2, x=sx+(tx-sx)*e, y=sy+(ty-sy)*e;
+      moveIconDrag(el,x,y); G.x=x+ox; G.y=y+oy; placeGhost();
+      if(k<1) requestAnimationFrame(f); else res();
+    }
+    requestAnimationFrame(f);
+  });
+  await wait(150,tk); endIconDrag(el);
+}
+function openApp(id){
+  var N=CONFIG.names;
+  switch(id){
+    case 'amp': openAmp(MODE==='interactive'); break;
+    case 'readme': openNote(MODE==='interactive'); break;
+    case 'mypc': sfxDing(); msgBox('Mi PC','Procesador a 133 MHz · 16 MB de RAM\nDisco duro de 1,2 GB · Módem de 28.800 bps\n\n¡Lo último de lo último!','info'); break;
+    case 'trash': openTrash(); break;
+    case 'browser': openBrowser(); break;
+    case 'chat': openIcq(); break;
+    case 'p2p': openNap(); break;
+    case 'ssaver': ssStart(); break;
+    case 'media': openMedia(); break;
+    case 'inbox': openMail(true); break;
+  }
+}
+var DLGS={};
+function msgBox(title,text,ico){
+  if(DLGS[title]){ focusWin(DLGS[title]); return; }
+  var w=document.createElement('div'); w.className='win dlg'; w.style.width='310px';
+  w.innerHTML='<div class="tb"><span class="t"></span><span class="x">×</span></div><div class="body">'+ICONS[ico==='warn'?'warn':'info']+'<div class="msg"></div></div><div class="acts"><button class="btn">Aceptar</button></div>';
+  qs('.t',w).textContent=title; qs('.msg',w).textContent=text;
+  desk.appendChild(w);
+  var n=Object.keys(DLGS).length;
+  w.style.left=(165+n*16)+'px'; w.style.top=Math.round((452-w.offsetHeight)/2+n*16)+'px';
+  function close(){ if(w.parentNode) w.parentNode.removeChild(w); delete DLGS[title]; }
+  qs('.btn',w).addEventListener('click',close); qs('.x',w).addEventListener('click',close);
+  makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); });
+  DLGS[title]=w; focusWin(w);
+}
+function closeDialogs(){ Object.keys(DLGS).forEach(function(k){ var w=DLGS[k]; if(w.parentNode) w.parentNode.removeChild(w); delete DLGS[k]; }); }
+
+/* ---------- Bloc de notas ---------- */
+function welcomeText(){
+  var d=new Date(), who=CONFIG.visitor?', '+CONFIG.visitor:'';
+  return 'Bienvenido/a a Admira'+who+'.\n\nHoy es '+d.getDate()+' de '+MESES[d.getMonth()]+' de 1997.\nO eso cree este PC.\n\nBusca «admira» en '+CONFIG.names.p2p+' y escúchalo\nen '+CONFIG.names.player+'. Toca la pantalla cuando\nquieras: ¡el ratón es tuyo!\n\n-- Morfeo & Jensen · AdmiraNeXT';
+}
+var NOTE={doc:null};   // null = Léeme.txt (solo lectura); si no, un documento creado por la visita
+function saveNote(){ if(NOTE.doc) NOTE.doc.text=qs('#nt').innerText.replace(/\n$/,''); }
+function noteMode(editable){ var nt=qs('#nt'); if(editable) nt.setAttribute('contenteditable','true'); else nt.removeAttribute('contenteditable'); qs('#note .caret').style.display=editable?'none':''; }
+function openNote(full){
+  saveNote(); NOTE.doc=null; noteMode(false);
+  var w=qs('#note'); w.style.display='block'; qs('#note .t').textContent='Léeme.txt - Bloc de notas';
+  addTask('note','Léeme.txt - Bloc de notas','readme',[w]); focusWin(w);
+  qs('#nt').textContent=full?welcomeText():'';
+}
+function openDoc(id){
+  var d=DOCS[id]; if(!d) return; saveNote(); NOTE.doc=d;
+  var w=qs('#note'), nt=qs('#nt'); w.style.display='block'; qs('#note .t').textContent=d.name+' - Bloc de notas';
+  addTask('note',d.name+' - Bloc de notas','txt',[w]); focusWin(w);
+  nt.textContent=d.text||''; noteMode(true); setTimeout(function(){ try{ nt.focus(); }catch(e){} },0);
+}
+function closeNote(){ saveNote(); NOTE.doc=null; noteMode(false); qs('#note').style.display='none'; removeTask('note'); }
+
+/* ---------- Admister (homenaje P2P) ---------- */
+// t = índice de pista en CONFIG.tracks · m = factor de duración de la versión · k = palabras clave
+var NAP_DB=[
+  {f:'Jensen & Morfeo - AdmiraNeXT.mp3',t:3,m:1,br:192,user:'morfeo_95',con:'RDSI'},
+  {f:'admira.tv - Ambient Store Mix.mp3',t:0,m:1,br:128,user:'pantallas_bcn',con:'T1'},
+  {f:'Modem Love - 56k al corazon.mp3',t:2,m:1,br:128,user:'dj_rdsi',con:'RDSI'},
+  {f:'Bit Retail - Pantallas de neon.mp3',t:1,m:1,br:128,user:'retail_kid',con:'56K'},
+  {f:'Jensen & Morfeo - AdmiraNeXT (radio edit).mp3',t:3,m:0.8,br:112,user:'consejero_j',con:'28.8K'},
+  {f:'Bit Retail - Pantallas de neon (remix 1999).mp3',t:1,m:1.3,br:128,user:'escaparate99',con:'Cable'},
+  {f:'admira.tv - Ambient Store Mix (directo).mp3',t:0,m:1.7,br:160,user:'tienda_futuro',con:'14.4K'}
+];
+NAP_DB.forEach(function(r){ r.k='admira'; });
+var CON={'T1':{kb:48,dur:5,col:'#00c000'},'Cable':{kb:26,dur:7,col:'#00c000'},'RDSI':{kb:7.5,dur:10,col:'#d0c000'},'56K':{kb:4.6,dur:13,col:'#d0c000'},'28.8K':{kb:2.6,dur:18,col:'#e05000'},'14.4K':{kb:1.3,dur:26,col:'#d00000'}};
+var COLS_RES=[['Nombre de archivo',190],['Tamaño',54],['Bitrate',46],['Duración',50],['Usuario',92],['Conexión',62]];
+var COLS_X=[['Nombre de archivo',170],['Estado',86],['Progreso',110],['Velocidad',70],['Usuario',74]];
+var COLS_LIB=[['Nombre de archivo',260],['Tamaño',70],['Bitrate',70],['Duración',70]];
+var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:1204877,songs:3611002};
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function fmtMB(v){ return v.toFixed(1).replace('.',',')+' MB'; }
+function fmtNum(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+function fmtEta(s){ s=Math.max(0,Math.round(s)); var h=Math.floor(s/3600), m=Math.floor(s%3600/60); return h? h+' h '+pad2(m)+' min' : (m? m+' min '+pad2(s%60)+' s' : s+' s'); }
+function napDur(r){ return trackDur(r.t)*r.m; }
+function napSize(r){ return napDur(r)*r.br/8/1024; }
+function lvHeader(cols){ return '<div class="lvh">'+cols.map(function(c){ return '<div style="width:'+c[1]+'px">'+c[0]+'</div>'; }).join('')+'</div>'; }
+function lvRow(i,cols,cells,sel){ return '<div class="lvr'+(sel?' sel':'')+'" data-i="'+i+'">'+cells.map(function(c,k){ return '<div style="width:'+cols[k][1]+'px">'+c+'</div>'; }).join('')+'</div>'; }
+function lvSelect(box,i){ qsa('.lvr',box).forEach(function(r){ r.classList.toggle('sel',+r.getAttribute('data-i')===i); }); }
+
+function napRenderRes(){
+  var h=lvHeader(COLS_RES);
+  NAP.results.forEach(function(r,i){ h+=lvRow(i,COLS_RES,[esc(r.f),fmtMB(napSize(r)),r.br,fmt(napDur(r)),esc(r.user),'<span class="dot" style="background:'+CON[r.con].col+'"></span>'+r.con],i===NAP.sel); });
+  if(NAP.msg) h+='<div class="lvmsg">'+esc(NAP.msg)+'</div>';
+  qs('#napRes').innerHTML=h;
+  qs('#napDl').disabled=NAP.sel<0;
+  qs('#napCount').textContent=NAP.searching?'Buscando… '+NAP.results.length+' resultados':(NAP.results.length?'Resultados: '+NAP.results.length:'');
+}
+function napStatus(){
+  var act=NAP.xfers.filter(function(x){ return x.state!=='done'; }), s='Descargas: '+act.length;
+  if(act.length){ var x=act[0]; s+=' · quedan '+fmtEta(napSize(x.r)*1024*(1-x.p)/x.kb)+' (en 1999)'; }
+  qs('#napS2').textContent=s;
+}
+function napRenderX(){
+  var h=lvHeader(COLS_X);
+  NAP.xfers.forEach(function(x,i){ var done=x.state==='done'; h+=lvRow(i,COLS_X,[esc(x.r.f),done?'Completado':'Descargando','<span class="pbar"><i style="width:'+Math.round(x.p*100)+'%"></i></span>',done?'—':x.kb.toFixed(1).replace('.',',')+' KB/s',esc(x.r.user)],i===NAP.xsel); });
+  qs('#napX').innerHTML=h;
+  var cur=NAP.xfers[NAP.xsel]; qs('#napPlay').disabled=!(cur&&cur.state==='done');
+  napStatus();
+}
+function napRenderLib(){
+  var h=lvHeader(COLS_LIB);
+  CONFIG.tracks.forEach(function(t,i){ var r={t:i,m:1,br:128}; h+=lvRow(i,COLS_LIB,[esc(t.artist+' - '+t.title)+'.mp3',fmtMB(napSize(r)),'128',fmt(trackDur(i))],i===NAP.libSel); });
+  qs('#napLib').innerHTML=h; qs('#napLibPlay').disabled=NAP.libSel<0;
+}
+function napTab(name){
+  NAP.tab=name;
+  qsa('#nap .tab').forEach(function(t){ t.classList.toggle('on',t.getAttribute('data-tab')===name); });
+  qsa('#nap .panel').forEach(function(p){ p.classList.toggle('on',p.getAttribute('data-panel')===name); });
+  if(name==='xfer') napRenderX();
+}
+function napFocus(f){ qsa('#nap .fin').forEach(function(x){ x.classList.toggle('focus',x===f); }); NAP.field=f; }
+function napStats(){ if(!NAP.conn) return; NAP.users+=Math.floor(Math.random()*1300-500); NAP.songs+=Math.floor(Math.random()*4000-1000); qs('#napSt').innerHTML='Conectado<br>'+fmtNum(NAP.users)+' usuarios · '+fmtNum(NAP.songs)+' canciones'; }
+function napSearch(){
+  var id=++NAP.searchId; NAP.results=[]; NAP.sel=-1; NAP.msg='';
+  if(!NAP.conn){ NAP.searching=false; NAP.msg='Todavía no estás conectado. Espera un momento…'; napRenderRes(); return; }
+  var raw=(qs('#napArtist').textContent+' '+qs('#napTitle').textContent).replace(/\s+/g,' ').trim(), q=norm(raw);
+  if(!q){ NAP.searching=false; NAP.msg='Escribe un artista o un título. Prueba con «admira».'; napRenderRes(); return; }
+  var toks=q.split(' '), hits=NAP_DB.filter(function(r){ var s=norm(r.f+' '+r.user+' '+r.k); return toks.every(function(t){ return s.indexOf(t)>=0; }); });
+  NAP.searching=true; napRenderRes();
+  var i=0;
+  function nextHit(){
+    if(id!==NAP.searchId) return;
+    if(i>=hits.length){ NAP.searching=false; if(!hits.length) NAP.msg='No se ha encontrado nada para «'+raw+'». Prueba con «admira».'; napRenderRes(); return; }
+    NAP.results.push(hits[i++]); napRenderRes(); setTimeout(nextHit,180+Math.random()*300);
+  }
+  setTimeout(nextHit,600);
+}
+function napDownload(){
+  var r=NAP.results[NAP.sel]; if(!r) return;
+  var c=CON[r.con]; NAP.xfers.push({r:r,p:0,dur:c.dur,kb:c.kb,state:'dl'}); NAP.xsel=NAP.xfers.length-1; NAP.lastDone=false;
+  napTab('xfer');
+}
+function napTick(){
+  if(!NAP.open) return; var changed=false;
+  NAP.xfers.forEach(function(x,i){
+    if(x.state!=='dl') return;
+    x.p=Math.min(1,x.p+0.1/x.dur); x.kb=CON[x.r.con].kb*(0.75+Math.random()*0.5); changed=true;
+    if(x.p>=1){ x.state='done'; NAP.xsel=i; NAP.lastDone=true; sfxDing(); }
+  });
+  if(changed){ if(NAP.tab==='xfer') napRenderX(); else napStatus(); }
+}
+function napPlay(){ var x=NAP.xfers[NAP.xsel]; if(!x||x.state!=='done') return; openAmp(false); play(x.r.t); }
+function openNap(){
+  var w=qs('#nap'); w.style.display='block'; NAP.open=true;
+  addTask('nap','Admister v2.0 BETA 7','p2p',[w]); focusWin(w);
+  if(!NAP.conn){
+    qs('#napSt').textContent='Conectando con el servidor…'; qs('#napS3').textContent='Conectando…';
+    clearTimeout(NAP.connTimer); NAP.connTimer=setTimeout(function(){ NAP.conn=true; napStats(); qs('#napS3').textContent='En línea'; },1600);
+  }
+  if(MODE==='interactive'&&!qs('#napArtist').textContent) qs('#napArtist').textContent='admira';
+  napTab(NAP.tab); napRenderRes();
+}
+function closeNap(){
+  qs('#nap').style.display='none'; removeTask('nap'); clearTimeout(NAP.connTimer);
+  NAP.open=false; NAP.conn=false; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
+  qs('#napArtist').textContent=''; qs('#napTitle').textContent=''; qsa('#nap .fin').forEach(function(f){ f.classList.remove('focus'); });
+  qs('#napSt').textContent='Desconectado'; qs('#napS3').textContent='Desconectado';
+  napTab('search'); napRenderRes(); napRenderX(); napRenderLib();
+}
+function napKey(e){
+  if(!NAP.open||!NAP.field||qs('#nap').style.display==='none') return;
+  var ae=document.activeElement; if(ae&&(ae.isContentEditable||/^(INPUT|TEXTAREA)$/.test(ae.tagName))) return;   // se está escribiendo en otro sitio
+  if(e.key==='Enter'){ napSearch(); return; }
+  if(e.key==='Backspace'){ NAP.field.textContent=NAP.field.textContent.slice(0,-1); e.preventDefault(); return; }
+  if(e.key&&e.key.length===1&&!e.ctrlKey&&!e.altKey&&NAP.field.textContent.length<24) NAP.field.textContent+=e.key;
+}
+function wireNap(){
+  qsa('#nap .tab').forEach(function(t){ t.addEventListener('click',function(){ napTab(t.getAttribute('data-tab')); }); });
+  qsa('#nap .fin').forEach(function(f){ f.addEventListener('click',function(){ napFocus(f); }); });
+  qs('#napSearch').addEventListener('click',napSearch);
+  qs('#napClear').addEventListener('click',function(){ qs('#napArtist').textContent=''; qs('#napTitle').textContent=''; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; napRenderRes(); });
+  qs('#napRes').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.sel=+r.getAttribute('data-i'); lvSelect(qs('#napRes'),NAP.sel); qs('#napDl').disabled=false; });
+  qs('#napRes').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.sel=+r.getAttribute('data-i'); napDownload(); });
+  qs('#napDl').addEventListener('click',napDownload);
+  qs('#napX').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.xsel=+r.getAttribute('data-i'); lvSelect(qs('#napX'),NAP.xsel); var x=NAP.xfers[NAP.xsel]; qs('#napPlay').disabled=!(x&&x.state==='done'); });
+  qs('#napX').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.xsel=+r.getAttribute('data-i'); napPlay(); });
+  qs('#napPlay').addEventListener('click',napPlay);
+  qs('#napClean').addEventListener('click',function(){ NAP.xfers=NAP.xfers.filter(function(x){ return x.state!=='done'; }); NAP.xsel=-1; napRenderX(); });
+  qs('#napLib').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.libSel=+r.getAttribute('data-i'); lvSelect(qs('#napLib'),NAP.libSel); qs('#napLibPlay').disabled=false; });
+  qs('#napLib').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; openAmp(false); play(+r.getAttribute('data-i')); });
+  qs('#napLibPlay').addEventListener('click',function(){ if(NAP.libSel>=0){ openAmp(false); play(NAP.libSel); } });
+  qs('[data-close="nap"]').addEventListener('click',closeNap);
+  qs('[data-min="nap"]').addEventListener('click',function(){ minimize('nap'); });
+  window.addEventListener('keydown',napKey);
+  setInterval(napTick,100); setInterval(napStats,3000);
+  napRenderRes(); napRenderX(); napRenderLib();
+}
+
+/* ---------- ICQGram (homenaje mensajería) ---------- */
+var ICQ={open:false,who:null,chatId:0,busy:false,ended:false,pending:{},greeted:false,timer:null,sel:null};
+var ENV='<svg viewBox="0 0 14 10"><rect x=".5" y=".5" width="13" height="9" fill="#ffe14a" stroke="#000"/><path d="M.5.5l6.5 5 6.5-5" fill="none" stroke="#000"/></svg>';
+function bub(col){ return '<svg viewBox="0 0 14 14"><path d="M1.5 2.5h11v7h-6l-3 3v-3h-2z" fill="'+col+'" stroke="#000" shape-rendering="crispEdges"/></svg>'; }
+function contact(id){ var g=consejero(id); if(g) return g; for(var i=0;i<CONFIG.contacts.length;i++) if(CONFIG.contacts[i].id===id) return CONFIG.contacts[i]; return null; }
+
+/* ---------- ICQGram en línea: hilo real con los consejeros de admira.live ---------- */
+var ICQG={on:false,sent:0,known:{},waitingSince:0};
+var CONSEJO=[
+  {id:'c-jobs',persona:'jobs',name:'Steve Jobs'},{id:'c-wozniak',persona:'wozniak',name:'Steve Wozniak'},
+  {id:'c-disney',persona:'disney',name:'Walt Disney'},{id:'c-lucas',persona:'lucas',name:'George Lucas'},
+  {id:'c-musk',persona:'musk',name:'Elon Musk'},{id:'c-huang',persona:'huang',name:'Jensen Huang'}
+];
+function chc(){ return window.ChatHiloClient||null; }
+function consejero(id){ for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].id===id){ var c=CONSEJO[i]; return {id:c.id,persona:c.persona,name:c.name,status:'Consejo AdmiraNeXT · hilo real',on:true,real:true}; } return null; }
+function icqgLive(){ return ICQG.on&&MODE==='interactive'; }
+// Solo en admira.live: carga el cliente oficial del chat (sesión de Google, /api/chat/hilo y /api/chat/enviar).
+function icqgInit(){
+  if(!(CONFIG.icqgram&&CONFIG.icqgram.enabled&&/admira\.live$/.test(location.hostname))) return;
+  var s=document.createElement('script'); s.src='/assets/chat-hilo-client.js';
+  s.onload=function(){ ICQG.on=!!chc(); renderContacts(); };
+  document.head.appendChild(s);
+}
+function realInput(on){ qs('#icqReal').style.display=on?'block':'none'; qs('#icqInp').style.display=on?'none':''; qs('#icqReal').value=''; }
+function addTurn(cg,t){
+  var pre=CONFIG.icqgram.prefix, txt=String(t.texto||''), mine=t.rol==='carlos', name, cls; net(mine?'tx':'rx');
+  if(mine){ if(txt.indexOf(pre)===0){ txt=txt.slice(pre.length); name='Visita'; } else name='Carlos'; cls='me'; }
+  else { name=cg.name.split(' ').pop(); cls='them'; }
+  if(txt.length>700) txt=txt.slice(0,700)+'…';
+  var d=document.createElement('div'); d.className='im';
+  d.innerHTML='<b class="who '+cls+'"></b> <span class="ts"></span><div class="tx"></div>';
+  d.firstChild.textContent=name+':'; qs('.ts',d).textContent='('+(t.hora||hhmm())+')'; qs('.tx',d).textContent=txt;
+  var h=qs('#icqHist'); h.appendChild(d); h.scrollTop=h.scrollHeight;
+}
+function loginPrompt(cg){
+  setStatus('Inicia sesión en admira.live para hablar con '+cg.name);
+  qs('#icqHist').innerHTML='<div class="im"><div class="tx">Para hablar con el Consejo hay que iniciar sesión con Google en admira.live.</div><div id="icqLogin" style="margin:8px 0 0 8px"></div></div>';
+  try{ chc().cargarGoogle(qs('#icqLogin'),function(){ if(ICQ.who===cg.id) openRealChat(cg); }); }catch(e){}
+}
+function quickOpts(){
+  var box=qs('#icqOpts'); box.innerHTML='';
+  (CONFIG.icqgram.quick||[]).forEach(function(q){ var b=document.createElement('button'); b.className='btn'; b.textContent=q; b.addEventListener('click',function(){ sendReal(q); }); box.appendChild(b); });
+}
+function openRealChat(cg){
+  var w=qs('#icqc'), C=chc(); ICQ.chatId++; var id=ICQ.chatId;
+  ICQ.who=cg.id; ICQ.busy=false; ICQ.ended=true; delete ICQ.pending[cg.id]; renderContacts();
+  qs('#icqcT').textContent=cg.name+' - ICQGram';
+  qs('#icqcH').innerHTML=bub('#3cc83c')+'<b></b><span></span>'; qs('#icqcH b').textContent=cg.name; qs('#icqcH span').textContent=cg.status;
+  qs('#icqHist').innerHTML=''; qs('#icqOpts').innerHTML=''; realInput(true);
+  w.style.display='block'; addTask('icqc',cg.name+' - ICQGram','chat',[w]); focusWin(w);
+  if(!C.credencial()){ loginPrompt(cg); return; }
+  setStatus('Conectando con admira.live…'); ICQG.known={}; ICQG.waitingSince=0;
+  C.leerHilo(cg.persona,{limite:25}).then(function(r){
+    if(id!==ICQ.chatId) return;
+    if(r.status===401){ loginPrompt(cg); return; }
+    (r.turnos||[]).forEach(function(t){ ICQG.known[t.id]=1; addTurn(cg,t); });
+    setStatus('Hilo real con '+cg.name+' · escribe y pulsa Enviar'); quickOpts(); pollReal(cg,id);
+    try{ qs('#icqReal').focus(); }catch(e){}
+  }).catch(function(){ if(id===ICQ.chatId) setStatus('Sin conexión con admira.live'); });
+}
+function pollReal(cg,id){
+  var C=chc();
+  function run(){
+    if(id!==ICQ.chatId) return;
+    C.leerHilo(cg.persona,{limite:10}).then(function(r){
+      if(id!==ICQ.chatId) return;
+      (r.turnos||[]).filter(function(t){ return !ICQG.known[t.id]; }).forEach(function(t){
+        ICQG.known[t.id]=1; addTurn(cg,t);
+        if(t.rol!=='carlos'){ sfxUhOh(); ICQG.waitingSince=0; setStatus(cg.name+' ha respondido · '+(t.hora||hhmm())); }
+      });
+      tick();
+    }).catch(function(){ tick(); });
+  }
+  // cada 2 s durante 3 min tras enviar; después, cada 15 s mientras la conversación siga abierta
+  function tick(){ if(id!==ICQ.chatId) return; var fast=ICQG.waitingSince&&now()-ICQG.waitingSince<180000; clearTimeout(ICQG.pt); ICQG.pt=setTimeout(run,fast?2000:15000); }
+  ICQG.kick=function(){ if(id===ICQ.chatId){ clearTimeout(ICQG.pt); ICQG.pt=setTimeout(run,2000); } };
+  tick();
+}
+function sendReal(text){
+  var cg=consejero(ICQ.who), C=chc(), cfg=CONFIG.icqgram; if(!cg||!C) return;
+  text=String(text||'').replace(/\s+/g,' ').trim(); if(!text) return;
+  if(text.length>cfg.maxLen) text=text.slice(0,cfg.maxLen);
+  var wait=cfg.minGapSeconds*1000-(now()-ICQG.sent);
+  if(wait>0){ setStatus('Espera '+Math.ceil(wait/1000)+' s antes de enviar otro mensaje'); return; }
+  ICQG.sent=now(); var id=ICQ.chatId, msgId=C.nuevoId(); ICQG.known[msgId]=1;
+  addTurn(cg,{rol:'carlos',texto:cfg.prefix+text,hora:hhmm(),id:msgId}); qs('#icqReal').value=''; setStatus('Enviando…');
+  var sb=qs('#icqSend'); sb.classList.add('pressed'); setTimeout(function(){ sb.classList.remove('pressed'); },150);
+  C.enviarTurno(cg.persona,cfg.prefix+text,msgId).then(function(r){
+    if(id!==ICQ.chatId) return;
+    if(r.status===401){ loginPrompt(cg); return; }
+    if(r.turno&&r.turno.id) ICQG.known[r.turno.id]=1;
+    if(r.status>=200&&r.status<300){ ICQG.waitingSince=now(); sfxBlip(); if(ICQG.kick) ICQG.kick(); setStatus('Entregado'+(r.turno&&r.turno.encargo?' · encargo #'+r.turno.encargo:'')+' · '+cg.name.split(' ').pop()+' está escribiendo… (puede tardar unos minutos)'); }
+    else setStatus('No se pudo enviar ('+r.status+')');
+  }).catch(function(){ if(id===ICQ.chatId) setStatus('Sin conexión con admira.live'); });
+}
+// Gancho de prueba (sin efecto en producción): permite probar la interfaz con un cliente simulado.
+window.Vuelta95 = { icqgTest:function(stub){ window.ChatHiloClient=stub; ICQG.on=true; renderContacts(); } };
+function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+function hhmm(){ var d=new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+function renderContacts(){
+  function row(c){ return '<div class="crow'+(c.on?'':' off')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'">'+bub(c.on?'#3cc83c':'#e03030')+'<span>'+esc(c.name)+'</span><i class="env">'+ENV+'</i></div>'; }
+  var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; });
+  var on=live?CONSEJO.map(function(c){ return consejero(c.id); }):CONFIG.contacts.filter(function(c){ return c.on; });
+  qs('#clist').innerHTML='<div class="cgrp">'+(live?'Consejo AdmiraNeXT':'En línea')+' ('+on.length+')</div>'+on.map(row).join('')+'<div class="cgrp">Fuera de línea ('+off.length+')</div>'+off.map(row).join('');
+  qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
+}
+function openIcq(){
+  var w=qs('#icq'); w.style.display='block'; ICQ.open=true;
+  addTask('icq','ICQGram','chat',[w]); focusWin(w); renderContacts();
+  if(MODE==='interactive'&&!ICQ.greeted&&!icqgLive()){ ICQ.greeted=true; clearTimeout(ICQ.timer); ICQ.timer=setTimeout(function(){ if(ICQ.open) icqIncoming('jensen'); },1500); }
+}
+function icqIncoming(id){
+  ICQ.greeted=true;
+  if(!ICQ.open) openIcq();
+  if(ICQ.who===id&&qs('#icqc').style.display==='block'){ var s=CONFIG.chat[id]; if(s&&ICQ.ended){ ICQ.ended=false; runNode(s.start,false); } return; }
+  ICQ.pending[id]=true; renderContacts(); sfxUhOh();
+}
+function setStatus(s){ qs('#icqSt').textContent=s; }
+function addMsg(name,text,cls,auto){
+  net(cls==='me'?'tx':'rx');
+  var d=document.createElement('div'); d.className='im';
+  d.innerHTML='<b class="who '+cls+'"></b> <span class="ts">('+hhmm()+')</span><div class="tx"></div>';
+  d.firstChild.textContent=(auto?'Mensaje automático de ':'')+name+':'; qs('.tx',d).textContent=text;
+  var h=qs('#icqHist'); h.appendChild(d); h.scrollTop=h.scrollHeight;
+}
+function openChat(id){
+  var c=contact(id); if(!c) return;
+  if(c.real){ if(icqgLive()) openRealChat(c); return; }
+  realInput(false);
+  if(!c.on){ sfxDing(); msgBox('ICQGram',c.name+' no está conectado.\nTu mensaje se entregará cuando se conecte… allá por 1998.','info'); return; }
+  var had=!!ICQ.pending[id], w=qs('#icqc');
+  ICQ.chatId++; ICQ.who=id; ICQ.busy=false; ICQ.ended=false; delete ICQ.pending[id]; renderContacts();
+  qs('#icqcT').textContent=c.name+' - Conversación de ICQGram';
+  qs('#icqcH').innerHTML=bub('#3cc83c')+'<b></b><span></span>'; qs('#icqcH b').textContent=c.name; qs('#icqcH span').textContent=c.status||'';
+  qs('#icqHist').innerHTML=''; qs('#icqInp').textContent=''; qs('#icqOpts').innerHTML=''; setStatus('');
+  w.style.display='block'; addTask('icqc',c.name+' - ICQGram','chat',[w]); focusWin(w);
+  if(c.auto){ addMsg(c.name,c.auto,'them',true); setStatus('Respuesta automática'); ICQ.ended=true; return; }
+  var s=CONFIG.chat[id]; if(s) runNode(s.start,had);
+}
+function closeChat(){ ICQ.chatId++; ICQ.busy=false; ICQ.who=null; qs('#icqc').style.display='none'; removeTask('icqc'); }
+function closeIcq(){
+  closeChat(); clearTimeout(ICQ.timer);
+  ICQ.pending={}; ICQ.greeted=false; ICQ.sel=null; ICQ.open=false; ICQ.ended=false;
+  qs('#icq').style.display='none'; removeTask('icq'); renderContacts();
+}
+async function runNode(key,instant){
+  var id=ICQ.chatId, who=ICQ.who, c=contact(who), n=CONFIG.chat[who]&&CONFIG.chat[who].nodes[key];
+  if(!n) return;
+  ICQ.busy=true; qs('#icqOpts').innerHTML='';
+  for(var i=0;i<n.msgs.length;i++){
+    if(!(instant&&i===0)){
+      setStatus(c.name+' está escribiendo…');
+      await sleep(900+n.msgs[i].length*16); if(id!==ICQ.chatId) return;
+    }
+    addMsg(c.name,n.msgs[i],'them');
+    if(!(instant&&i===0)){ if(qs('#icqHist').children.length===1) sfxUhOh(); else sfxBlip(); }
+  }
+  ICQ.busy=false;
+  if(n.end){
+    ICQ.ended=true; setStatus('Fin de la conversación');
+    if(n.then){ clearTimeout(ICQ.timer); ICQ.timer=setTimeout(function(){ if(ICQ.open) icqIncoming(n.then); },2500); }
+    return;
+  }
+  setStatus('Elige una respuesta');
+  var box=qs('#icqOpts');
+  n.opts.forEach(function(o){ var b=document.createElement('button'); b.className='btn'; b.textContent=o[0]; b.addEventListener('click',function(){ choose(o); }); box.appendChild(b); });
+}
+async function choose(o){
+  if(ICQ.busy) return;
+  var id=ICQ.chatId, inp=qs('#icqInp'), sb=qs('#icqSend');
+  ICQ.busy=true; qs('#icqOpts').innerHTML=''; setStatus('Escribiendo…'); inp.textContent='';
+  for(var i=0;i<o[0].length;i++){ inp.textContent+=o[0].charAt(i); await sleep(28); if(id!==ICQ.chatId) return; }
+  await sleep(250); if(id!==ICQ.chatId) return;
+  sb.classList.add('pressed'); await sleep(150); sb.classList.remove('pressed');
+  inp.textContent=''; addMsg('Tú',o[0],'me'); ICQ.busy=false;
+  if(o[1].charAt(0)==='@'){ ICQ.ended=true; setStatus('Abriendo…'); await sleep(600); if(id!==ICQ.chatId) return; openApp(o[1].slice(1)); return; }
+  runNode(o[1],false);
+}
+function wireIcq(){
+  var list=qs('#clist');
+  list.addEventListener('click',function(e){ var r=e.target.closest('.crow'); if(!r) return; ICQ.sel=r.getAttribute('data-id'); qsa('.crow',list).forEach(function(x){ x.classList.toggle('sel',x===r); }); if(e.isTrusted&&lastPointerType==='touch') openChat(ICQ.sel); });
+  list.addEventListener('dblclick',function(e){ var r=e.target.closest('.crow'); if(r) openChat(r.getAttribute('data-id')); });
+  qs('#icqMain').addEventListener('click',function(){ sfxDing(); msgBox('ICQGram','Menú principal de ICQGram\n\nAñadir contactos, preferencias, cambiar estado…\n(Disponible en la versión 99b.)','info'); });
+  qs('#icqSend').addEventListener('click',function(){ if(consejero(ICQ.who)){ sendReal(qs('#icqReal').value); return; } var b=qs('#icqOpts .btn'); if(b) b.click(); });
+  qs('#icqReal').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendReal(qs('#icqReal').value); } });
+  qs('[data-close="icq"]').addEventListener('click',closeIcq);
+  qs('[data-min="icq"]').addEventListener('click',function(){ minimize('icq'); });
+  qs('[data-close="icqc"]').addEventListener('click',closeChat);
+  qs('[data-min="icqc"]').addEventListener('click',function(){ minimize('icqc'); });
+  qs('#trayIcq').addEventListener('click',function(){ if(TASKS.icq&&TASKS.icq.min) toggleTask('icq'); else openIcq(); });
+  renderContacts();
+}
+
+/* ---------- AdmiraScape (homenaje navegador) ---------- */
+var BR={open:false,online:false,dialing:false,dialId:0,loadId:0,loaded:false,page:null,hist:[],pos:-1,visits:427};
+var TICO={
+  back:'<svg viewBox="0 0 20 20"><path d="M3 10l7-7v4h7v6h-7v4z" fill="#3a9a3a" stroke="#000"/></svg>',
+  fwd:'<svg viewBox="0 0 20 20"><path d="M17 10l-7-7v4H3v6h7v4z" fill="#3a9a3a" stroke="#000"/></svg>',
+  home:'<svg viewBox="0 0 20 20"><path d="M2 10l8-7 8 7h-2v7h-4v-5H8v5H4v-7z" fill="#e8c070" stroke="#000"/><rect x="12" y="3.5" width="2" height="3.5" fill="#a33" stroke="#000" stroke-width=".5"/></svg>',
+  reload:'<svg viewBox="0 0 20 20"><path d="M15.5 6.5a6.5 6.5 0 1 0 1.3 5.5" fill="none" stroke="#2050c0" stroke-width="2.5"/><path d="M12 2.5h5.5V8z" fill="#2050c0"/></svg>',
+  img:'<svg viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" fill="#9fd3ff" stroke="#000"/><path d="M3 16l5-6 4 4 2-2 3 4z" fill="#3a8a3a"/><circle cx="14" cy="7" r="1.8" fill="#ffd800"/></svg>',
+  print:'<svg viewBox="0 0 20 20"><rect x="5.5" y="2.5" width="9" height="6" fill="#fff" stroke="#000"/><rect x="2.5" y="8.5" width="15" height="7" fill="#c0c0c0" stroke="#000"/><rect x="5.5" y="13.5" width="9" height="5" fill="#fff" stroke="#000"/></svg>',
+  find:'<svg viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5" fill="#bfe6ff" stroke="#000" stroke-width="2"/><path d="M12.5 12.5l5 5" stroke="#000" stroke-width="3"/></svg>',
+  stop:'<svg viewBox="0 0 20 20"><path d="M7 2h6l5 5v6l-5 5H7l-5-5V7z" fill="#e02020" stroke="#000"/><rect x="5" y="9" width="10" height="2" fill="#fff"/></svg>'
+};
+var WORKER='<svg viewBox="0 0 26 26"><circle cx="9" cy="5" r="3" fill="#ffd800" stroke="#000"/><path d="M9 8v8M9 10l-4 4M9 10l5 2M9 16l-3 7M9 16l3 7" stroke="#000" stroke-width="2" fill="none"/><path d="M14 12l6 8" stroke="#8b5a2b" stroke-width="2"/><path d="M18.5 18.5l4.5 3-2 2.5-3.5-3.5z" fill="#999" stroke="#000"/></svg>';
+var SHOP='<svg viewBox="0 0 150 96"><rect width="150" height="96" fill="#9fd3ff"/><rect y="72" width="150" height="24" fill="#c8a165"/><rect x="8" y="40" width="26" height="34" fill="#e05050" stroke="#333"/><rect x="118" y="34" width="24" height="40" fill="#5070e0" stroke="#333"/><rect x="40" y="8" width="70" height="52" rx="6" fill="#d8d0c0" stroke="#333" stroke-width="2"/><rect x="47" y="14" width="56" height="40" rx="4" fill="#102010"/><text x="75" y="31" font-family="Courier New,monospace" font-weight="bold" font-size="11" fill="#33ff33" text-anchor="middle">OFERTA</text><text x="75" y="46" font-family="Courier New,monospace" font-weight="bold" font-size="11" fill="#ffff00" text-anchor="middle">-50%</text><rect x="72" y="60" width="6" height="13" fill="#555"/><rect x="60" y="72" width="30" height="4" fill="#555"/></svg>';
+function odo(n){ var s=String(n); while(s.length<6) s='0'+s; return s.split('').map(function(c){ return '<span>'+c+'</span>'; }).join(''); }
+function back97(){ return '<p><a data-go="home">&lt;&lt; Volver al inicio</a></p>'; }
+var PAGES={
+  home:{url:'http://www.admira.tv/',title:'Bienvenidos a Admira',kb:48,era:97,html:function(){ return '<div class="p97">'+
+    '<div class="p97-title">¡Bienvenidos a <span>Admira</span>!</div>'+
+    '<div class="p97-marq"><span>*** Pantallas en las tiendas: ¡el futuro ya está aquí! *** Última actualización: 25/11/1997 *** Añádenos a tus Marcadores ***</span></div>'+
+    '<div class="p97-uc">'+WORKER+'<b>PÁGINA EN CONSTRUCCIÓN</b>'+WORKER+'</div>'+
+    '<div class="p97-cols"><div class="p97-menu">» <a data-go="quienes">Quiénes somos</a><br>» <a data-go="libro">Libro de visitas</a><br>» <a data-go="cool">Enlaces cool</a><br><span class="blink">»</span> <a data-go="futuro" class="new">¡NUEVO! Ver el futuro &gt;&gt;</a></div>'+
+    '<div class="p97-body"><div class="p97-img pi">'+SHOP+'</div><p>Admira lleva vídeos a las <b>pantallas de las tiendas</b>.</p><p>¿Pantallas... en una tienda? Sí. Créenos: esto va a ser <b class="blink">GRANDE</b>.</p></div></div>'+
+    '<hr class="p97-hr"><div class="p97-counter">Eres el visitante nº <span class="odo">'+odo(BR.visits)+'</span></div>'+
+    '<div class="p97-foot">Mejor visto con AdmiraScape Navigator 3.0 a 800×600 y 256 colores<br>© 1997 Admira · <a data-go="e404">Escribe al webmaster</a></div></div>'; }},
+  quienes:{url:'http://www.admira.tv/quienes.html',title:'Quiénes somos',kb:12,era:97,html:function(){ return '<div class="p97"><h2>Quiénes somos</h2>'+
+    '<p>Somos <b>Admira</b>. Ponemos vídeos en las pantallas de las tiendas.</p>'+
+    '<p>Nuestro plan para el año 2000: que las pantallas pongan <b>música</b>, cuenten los <b>turnos</b> de la cola y hasta... <i>respondan</i>.</p>'+
+    '<p>(Sí, ya sabemos que suena a ciencia ficción.)</p>'+back97()+'</div>'; }},
+  libro:{url:'http://www.admira.tv/libro.html',title:'Libro de visitas',kb:9,era:97,html:function(){ return '<div class="p97"><h2>Libro de visitas</h2>'+
+    '<div class="gb"><b>Jensen</b> (25/11/1997): ¡Gran página! Nos vemos en 2026. ;-)</div>'+
+    '<div class="gb"><b>Morfeo</b> (24/11/1997): ¿Alguien sabe cómo se pone el salvapantallas de las estrellas?</div>'+
+    '<div class="gb"><b>pantallas_bcn</b> (20/11/1997): Mi tienda tiene una tele en el escaparate. ¿Eso cuenta?</div>'+
+    '<div class="gb"><b>Mi primo del 56K</b> (18/11/1997): He tardado 20 minutos en cargar esta página. ¡Merecía la pena!</div>'+
+    '<p>¿Te animas? <a data-go="firma">Firmar el libro de visitas</a></p>'+back97()+'</div>'; }},
+  cool:{url:'http://www.admira.tv/enlaces.html',title:'Enlaces cool',kb:6,era:97,html:function(){ return '<div class="p97"><h2>Enlaces cool</h2><p>Lo mejor de la red, seleccionado a mano:</p>'+
+    '<ul><li><a data-go="e404">El hámster que baila</a> <b class="blink" style="color:#e00000">¡NUEVO!</b></li><li><a data-go="e404">Cómo hacer tu web en 10 pasos</a></li><li><a data-go="e404">Fotos de mi gato (12 MB)</a></li></ul>'+back97()+'</div>'; }},
+  e404:{url:'http://www.admira.tv/~cool/hamster.html',title:'404 Not Found',kb:1,era:97,html:function(){ return '<div class="p404"><h1>Not Found</h1><p>The requested URL /~cool/hamster.html was not found on this server.</p><hr><address>Apache/1.2.4 Server at www.admira.tv Port 80</address><p><a data-go="home" style="color:#0000ee;text-decoration:underline;cursor:pointer">&lt;&lt; Volver</a></p></div>'; }},
+  futuro:{url:'https://www.admira.tv/2026/',title:'AdmiraNeXT · 2026',kb:2400,era:26,html:function(){ var d=new Date(); return '<div class="p26">'+
+    '<div class="eyebrow rise">'+pad2(d.getDate())+' · '+pad2(d.getMonth()+1)+' · '+d.getFullYear()+'</div>'+
+    '<h1 class="rise d1">Bienvenido/a a <span>'+d.getFullYear()+'</span></h1>'+
+    (CONFIG.futureVideo?'<video class="rise d1" src="'+esc(CONFIG.futureVideo)+'" autoplay muted loop playsinline></video>':'')+
+    '<p class="rise d1">Todo lo que acabas de ver en un «PC de 1997» es un interactivo hecho con ainimation.studio que emite el player de admira.tv.</p>'+
+    '<div class="cards rise d2"><div class="card"><b>admira.tv</b><span>Contenido, música con licencia y turnos en un mismo canal.</span></div><div class="card"><b>ainimation.studio</b><span>Interactivos táctiles y vídeo con IA a partir de una idea.</span></div><div class="card"><b>AdmiraNeXT</b><span>Pantallas que entienden el momento, suenan y responden.</span></div></div>'+
+    '<div class="cta rise d3">¿Lo quieres en tu tienda? Pide una demo al equipo que tienes al lado.</div>'+
+    '<a data-go="home" class="back">← Volver a 1997</a></div>'; }}
+};
+function brStatus(s,k){ qs('#brSt').textContent=s; qs('#brProg').style.width=Math.round((k||0)*100)+'%'; }
+function brHost(u){ return u.replace(/^https?:\/\//,'').split('/')[0]; }
+function brButtons(){ qs('#brBack').classList.toggle('dis',BR.pos<=0); qs('#brFwd').classList.toggle('dis',BR.pos>=BR.hist.length-1); }
+function setReveal(list,k){ list.forEach(function(el){ var v='inset(0 0 '+Math.round((1-k)*100)+'% 0)'; el.style.clipPath=v; el.style.webkitClipPath=v; el.style.filter=k<1?'blur('+(2.5*(1-k)).toFixed(1)+'px)':''; }); }
+function brGo(key){ if(!BR.online||!PAGES[key]) return; BR.hist=BR.hist.slice(0,BR.pos+1); BR.hist.push(key); BR.pos=BR.hist.length-1; brLoad(key); }
+async function brLoad(key){
+  var id=++BR.loadId, p=PAGES[key], fast=p.era===26, host=brHost(p.url);
+  BR.loaded=false; BR.page=key; qs('#brUrl').textContent=p.url; qs('#brThrob').classList.add('on'); brButtons();
+  brStatus('Conectando con '+host+'…',0);
+  await sleep(fast?150:700); if(id!==BR.loadId) return;
+  brStatus('Host contactado. Esperando respuesta…',0);
+  await sleep(fast?150:600); if(id!==BR.loadId) return;
+  if(key==='home') BR.visits++;
+  qs('#brPage').innerHTML=p.html(); qs('#brView').scrollTop=0;
+  var imgs=qsa('#brPage .pi'); setReveal(imgs,0);
+  var dur=fast?600:3200, t0=performance.now();
+  for(;;){
+    var k=Math.min(1,(performance.now()-t0)/dur); setReveal(imgs,k);
+    brStatus(fast?'Transfiriendo datos… '+Math.round(k*100)+'% de 2,4 MB (fibra: 1 Gbit/s)':'Transfiriendo datos de '+host+'… '+Math.round(k*100)+'% de '+p.kb+' KB ('+(2+Math.random()*1.2).toFixed(1).replace('.',',')+' KB/s)',k);
+    if(k>=1) break;
+    await sleep(fast?60:150); if(id!==BR.loadId) return;
+  }
+  brStatus(fast?'Documento: Terminado (en 0,02 s)':'Documento: Terminado',0);
+  qs('#brThrob').classList.remove('on'); qs('#brT').textContent='AdmiraScape - ['+p.title+']'; BR.loaded=true;
+}
+function brStop(){ if(BR.loaded||!BR.page) return; BR.loadId++; qs('#brThrob').classList.remove('on'); brStatus('Transferencia interrumpida',0); BR.loaded=true; }
+async function dialUp(){
+  var id=++BR.dialId, d=qs('#dun'), st=qs('#dunSt');
+  BR.dialing=true; d.style.display='block'; focusWin(d); sfxModem();
+  st.textContent='Marcando…'; brStatus('Marcando a AdmiraNeXT Online…',0);
+  await sleep(1400); if(id!==BR.dialId) return;
+  st.textContent='Negociando la conexión…'; await sleep(1300); if(id!==BR.dialId) return;
+  st.textContent='Verificando usuario y contraseña…'; await sleep(900); if(id!==BR.dialId) return;
+  st.textContent='Conectado a 28.800 bps'; await sleep(700); if(id!==BR.dialId) return;
+  d.style.display='none'; BR.dialing=false; BR.online=true;
+  if(BR.open){ focusWin(qs('#brw')); brGo('home'); }
+}
+function cancelDial(){ BR.dialId++; BR.dialing=false; qs('#dun').style.display='none'; brStatus('No se ha podido conectar. Pulsa Inicio para volver a intentarlo.',0); }
+function openBrowser(){
+  var w=qs('#brw'); w.style.display='block'; BR.open=true;
+  addTask('brw','AdmiraScape','browser',[w]); focusWin(w);
+  if(BR.online){ if(!BR.page) brGo('home'); } else if(!BR.dialing) dialUp();
+}
+function closeBrowser(){
+  BR.loadId++; BR.dialId++; BR.dialing=false; BR.online=false; BR.open=false; BR.loaded=false; BR.page=null; BR.hist=[]; BR.pos=-1;
+  qs('#brw').style.display='none'; qs('#dun').style.display='none'; removeTask('brw');
+  qs('#brPage').innerHTML=''; qs('#brUrl').textContent=''; qs('#brT').textContent='AdmiraScape'; qs('#brThrob').classList.remove('on'); brStatus('Sin conexión',0); brButtons();
+}
+function wireBrowser(){
+  qsa('#brw [data-tico]').forEach(function(b){ b.insertAdjacentHTML('afterbegin',TICO[b.getAttribute('data-tico')]); });
+  qs('#brView').addEventListener('click',function(e){
+    var a=e.target.closest('[data-go]'); if(!a) return; e.preventDefault();
+    var g=a.getAttribute('data-go');
+    if(g==='firma'){ sfxDing(); msgBox('Libro de visitas','¡Gracias por firmar!\nTu mensaje se publicará cuando el webmaster\nvuelva de vacaciones… en 1998.','info'); return; }
+    brGo(g);
+  });
+  qs('#brBack').addEventListener('click',function(){ if(BR.pos>0){ BR.pos--; brLoad(BR.hist[BR.pos]); } });
+  qs('#brFwd').addEventListener('click',function(){ if(BR.pos<BR.hist.length-1){ BR.pos++; brLoad(BR.hist[BR.pos]); } });
+  qs('#brHome').addEventListener('click',function(){ if(BR.online) brGo('home'); else if(!BR.dialing) dialUp(); });
+  qs('#brReload').addEventListener('click',function(){ if(BR.page) brLoad(BR.page); });
+  qs('#brStop').addEventListener('click',brStop);
+  qs('#brImg').addEventListener('click',function(){ msgBox('Imágenes','Las imágenes ya se están cargando…\nmuy… muy… despacio.','info'); });
+  qs('#brPrint').addEventListener('click',function(){ msgBox('Imprimir','Enviando a la impresora matricial…\n(El ruido va incluido.)','info'); });
+  function find(){ msgBox('Buscar en la red','Todavía no hay ningún buscador bueno.\nVuelve dentro de un año.','info'); }
+  qs('#brFind').addEventListener('click',find);
+  qsa('#brw [data-dgo]').forEach(function(b){ b.addEventListener('click',function(){ var g=b.getAttribute('data-dgo'); if(g==='@find') find(); else if(g==='@soft') msgBox('Software','AdmiraScape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); else brGo(g); }); });
+  qs('[data-close="brw"]').addEventListener('click',closeBrowser);
+  qs('[data-min="brw"]').addEventListener('click',function(){ minimize('brw'); });
+  qs('#dunCancel').addEventListener('click',cancelDial); qs('#dunX').addEventListener('click',cancelDial);
+  brButtons();
+}
+
+/* ---------- Reproductor multimedia: admira.tv disfrazado (#win95 desde admira.studio) ---------- */
+var MP={open:false,playing:false,live:false,timer:null,timer2:null,rot:null,t0:0,idx:0,cur:''};
+// mp_tags.js (lo escribe el lanzador Admira95 cada 5 min) dice qué hashtags tienen piezas: window.MP_TAGS=[...]
+function mpFresh(){ return !!(window.MP_TAGS&&window.MP_TAGS_AT&&now()-window.MP_TAGS_AT<20*60*1000); }
+function mpTagList(){
+  var all=CONFIG.mediaPlayer.tags||['win95'];
+  if(mpFresh()){ var f=all.filter(function(t){ return window.MP_TAGS.indexOf(t)>=0; }); if(f.length) return f; }
+  return all;
+}
+function mpHasContent(){ return mpFresh()?window.MP_TAGS.length>0:!!CONFIG.mediaPlayer.inDemo; }
+function mpTag(){ return '#'+(MP.cur||mpTagList()[0]); }
+function mpUrl(tag){
+  var m=CONFIG.mediaPlayer; if(!m.channelUrl) return '';
+  try{ var u=new URL(m.channelUrl); u.searchParams.set('tag',tag||mpTagList()[0]); u.searchParams.set('muted',SYSVOL.muted?'1':'0'); return u.toString(); }
+  catch(e){ return m.channelUrl; }
+}
+function mpLoadTags(){ if(location.protocol!=='file:') return; var s=document.createElement('script'); s.src='mp_tags.js?t='+now(); s.onload=s.onerror=function(){ if(s.parentNode) s.parentNode.removeChild(s); }; document.head.appendChild(s); }
+function mpStatus(s){ qs('#mpSt').textContent=s; }
+function mpLive(on){ MP.live=on; var l=qs('#mpLive'); l.classList.toggle('on',on); l.lastChild.textContent=on?'EN DIRECTO':'SIN SEÑAL'; }
+function mpCard(msg){ var fr=qs('#mpFrame'); fr.style.display='none'; qs('#mpCard').style.display='flex'; qs('#mpMsg').textContent=msg; }
+function mpTune(msg){
+  var tags=mpTagList(), n=tags.length, fr=qs('#mpFrame');
+  MP.cur=tags[MP.idx%n]; var url=mpUrl(MP.cur);
+  qs('#mpT').textContent='Reproductor multimedia - admira.tv '+mpTag(); qs('#mpTag').textContent=mpTag();
+  clearTimeout(MP.timer2); mpLive(false);
+  if(!url){ fr.removeAttribute('src'); mpCard('Esperando contenidos de admira.studio…'); mpStatus('Sin conectar: falta la pantalla de admira.tv'); return; }
+  mpCard(msg||'Sintonizando el canal…'); fr.setAttribute('src',url); mpStatus('Conectando con admira.tv… '+mpTag());
+  MP.timer2=setTimeout(function(){
+    if(!MP.playing) return; qs('#mpCard').style.display='none'; fr.style.display='block';
+    mpStatus('Canal '+CONFIG.mediaPlayer.screen+' · '+mpTag()+(n>1?' ('+((MP.idx%n)+1)+' de '+n+')':'')+' · desde admira.studio');
+  },2500);
+}
+function mpPlay(){
+  MP.playing=true; MP.t0=now(); mpTune();
+  clearInterval(MP.rot);
+  MP.rot=setInterval(function(){
+    if(!MP.playing||mpTagList().length<2) return;
+    MP.idx++; MP.t0=now(); var l=mpTagList(); mpTune('Cambiando a #'+l[MP.idx%l.length]+'…');
+  },(CONFIG.mediaPlayer.rotateSeconds||60)*1000);
+}
+function mpStop(msg){ MP.playing=false; clearTimeout(MP.timer); clearTimeout(MP.timer2); clearInterval(MP.rot); qs('#mpFrame').removeAttribute('src'); mpCard(msg||'Detenido'); mpLive(false); mpStatus(msg||'Detenido'); }
+function mpSync(){ if(!MP.playing||!MP.cur) return; var u=mpUrl(MP.cur), fr=qs('#mpFrame'); if(u&&fr.getAttribute('src')!==u) fr.setAttribute('src',u); }
+function openMedia(){
+  var w=qs('#mpw'); w.style.display='block'; MP.open=true;
+  addTask('mpw','Reproductor multimedia','media',[w]); focusWin(w);
+  if(PL.state==='play') pause();   // la música de AdmirAmp deja paso al canal
+  if(!MP.playing) mpPlay();
+}
+function closeMedia(){ mpStop(); MP.open=false; qs('#mpw').style.display='none'; removeTask('mpw'); }
+function mpThumb(){ if(!MP.open) return; var R=CONFIG.mediaPlayer.rotateSeconds||60, k=MP.playing?((now()-MP.t0)/1000%R)/R:0; qs('#mpThumb').style.left=Math.round(k*(qs('.mptrk').offsetWidth-11))+'px'; }
+function wireMedia(){
+  qs('#mpT').textContent='Reproductor multimedia - admira.tv '+mpTag(); qs('#mpTag').textContent=mpTag();
+  var g={mpPlay:TP.bPlay,mpPause:TP.bPause,mpStop:TP.bStop,mpEject:TP.bEject};
+  Object.keys(g).forEach(function(id){ qs('#'+id).innerHTML='<svg viewBox="0 0 9 9"><path d="'+g[id]+'"/></svg>'; });
+  qs('#mpPlay').addEventListener('click',function(){ if(!MP.playing) mpPlay(); });
+  qs('#mpPause').addEventListener('click',function(){ if(MP.playing) mpStop('En pausa'); });
+  qs('#mpStop').addEventListener('click',function(){ mpStop('Detenido'); });
+  qs('#mpEject').addEventListener('click',function(){ sfxDing(); msgBox('Reproductor multimedia','No hay ninguna cinta que expulsar.\nLos contenidos llegan desde admira.studio\ncon el hashtag '+mpTag()+'.','info'); });
+  qs('[data-close="mpw"]').addEventListener('click',closeMedia);
+  qs('[data-min="mpw"]').addEventListener('click',function(){ minimize('mpw'); });
+  // el canal de admira.tv avisa a la página que lo contiene (postMessage) cuando está emitiendo
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.source!=='admira-tv-canal') return;
+    if(!/^https:\/\/(www\.)?admira\.tv$/.test(e.origin)) return;
+    if(MP.playing&&!MP.live){ mpLive(true); mpStatus('En directo desde admira.tv · '+mpTag()+' (admira.studio)'); }
+  });
+  setInterval(mpThumb,250);
+  mpLoadTags(); setInterval(mpLoadTags,60000);
+}
+
+/* ---------- Bandeja de entrada + salamandra USB ---------- */
+var MAIL_BASE=[
+  {from:'Jensen',subj:'Bienvenido/a a «Vuelta al 95»',when:'09:12',body:'Hola:\n\nAsí eran las pantallas en 1995… y en este mismo PC puedes ver lo que hacen hoy.\nPregunta al equipo por AdmiraNeXT.\n\n— Jensen, consejero AdmiraNeXT'},
+  {from:'admira.tv',subj:'Tu pieza #win95 ya está en antena',when:'08:47',body:'La playlist #win95 tiene contenido nuevo.\nÁbrelo en el Reproductor multimedia del escritorio.\n\n— Canal admira.tv'},
+  {from:'Morfeo',subj:'¿Has visto la salamandra?',when:'Ayer',body:'Cada vez que llega un correo, la salamandra USB mueve los ojos.\nTecnología punta de 1999. No la mojes.\n\n— Morfeo'},
+  {from:'Mi primo del 56K',subj:'FW: FW: FW: RE: chiste.txt',when:'Ayer',body:'>>>> No te lo vas a creer… (el adjunto pesa 2 MB, déjalo bajando esta noche)'}
+];
+var MAIL_NEW=[
+  {from:'Jensen',subj:'¡Tiene correo nuevo!',body:'¿Has visto cómo se mueve la salamandra?\nEso es una notificación… de 1999. Hoy las pantallas de tu tienda avisan solas.\n\n— Jensen'},
+  {from:'admira.studio',subj:'Nuevo contenido #win95',body:'Acaba de publicarse una pieza con #win95.\nSaldrá en el Reproductor multimedia de este PC.'},
+  {from:'Morfeo',subj:'Re: la salamandra',body:'Si se le mueven los ojos, es que te ha llegado correo. Así de fácil era el futuro.\n\n— Morfeo'},
+  {from:'AdmiraNeXT',subj:'Invitación: demo en tu tienda',body:'¿Quieres ver AdmiraNeXT en tus pantallas?\nPídeselo al equipo que tienes al lado.'}
+];
+var MAILS=[], MSEL=0, mailSeq=0, mailLast=0;
+function mailReset(){ MAILS=MAIL_BASE.map(function(m,i){ return {from:m.from,subj:m.subj,when:m.when,body:m.body,unread:i===0}; }); MSEL=0; mailSeq=0; qs('#trayMail').classList.remove('on'); }
+function renderMail(){
+  var cols=[['De',110],['Asunto',198],['Recibido',52]], h=lvHeader(cols);
+  MAILS.forEach(function(m,i){ h+=lvRow(i,cols,[esc(m.from),esc(m.subj),esc(m.when)],i===MSEL).replace('class="lvr','class="lvr'+(m.unread?' unread':'')); });
+  qs('#mlList').innerHTML=h;
+  var m=MAILS[MSEL], p=qs('#mlPrev');
+  if(m){ p.innerHTML='<div class="mh"></div><div class="mb"></div>'; qs('.mh',p).textContent='De: '+m.from+'\nAsunto: '+m.subj; qs('.mb',p).textContent=m.body; }
+  var unread=MAILS.filter(function(x){ return x.unread; }).length;
+  qs('#mlSt').textContent=MAILS.length+' mensajes, '+unread+' sin leer';
+  qs('#mfIn').lastChild.textContent='Bandeja de entrada'+(unread?' ('+unread+')':'');
+}
+function sfxMail(){ if(!audioRunning()) return; var t=A.ctx.currentTime+0.02; sfxTone(t,mtof(76),0.5,0.1,'triangle'); sfxTone(t+0.16,mtof(72),0.6,0.1,'triangle'); sfxTone(t+0.32,mtof(79),0.9,0.09,'triangle'); }
+// Mueve los ojos de la salamandra (puente local del lanzador Admira95). Solo con visitas reales, nunca en la demo.
+function salamandra(){
+  var s=CONFIG.salamandra; if(!s||!s.url||location.protocol!=='file:') return;   // solo en el PC de la oficina (quiosco)
+  try{
+    fetch(s.url,{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+      if(j&&j.ojos) qs('#mlSt').textContent+=' · ¡la salamandra te ha visto!';
+    }).catch(function(){});
+  }catch(e){}
+}
+function newMail(){
+  var cd=(CONFIG.salamandra&&CONFIG.salamandra.cooldownSeconds||15)*1000;
+  if(now()-mailLast<cd){ qs('#mlSt').textContent='No hay mensajes nuevos en mail.admira.tv.'; return; }
+  mailLast=now(); qs('#mlSt').textContent='Conectando con mail.admira.tv…';
+  setTimeout(function(){
+    var n=MAIL_NEW[mailSeq++%MAIL_NEW.length], d=new Date();
+    MAILS.unshift({from:n.from,subj:n.subj,body:n.body,when:pad2(d.getHours())+':'+pad2(d.getMinutes()),unread:true}); MSEL=0;
+    renderMail(); qs('#trayMail').classList.add('on'); sfxMail(); net('rx');
+    qs('#mlSt').textContent='Ha recibido 1 mensaje nuevo';
+    if(MODE==='interactive') salamandra();
+  },1200);
+}
+function openMail(check){
+  var w=qs('#mail'); w.style.display='block';
+  addTask('mail','Bandeja de entrada','inbox',[w]); focusWin(w); renderMail();
+  if(check) newMail();
+}
+function closeMail(){ qs('#mail').style.display='none'; removeTask('mail'); }
+function wireMail(){
+  qs('#mlList').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; MSEL=+r.getAttribute('data-i'); if(MAILS[MSEL]) MAILS[MSEL].unread=false; if(!MAILS.some(function(m){ return m.unread; })) qs('#trayMail').classList.remove('on'); renderMail(); });
+  qs('#mlSend').addEventListener('click',newMail);
+  qs('#mlNew').addEventListener('click',function(){ sfxDing(); msgBox('Nuevo mensaje','El módem está ocupado bajando el adjunto de tu primo.\nInténtalo más tarde (en 1998).','info'); });
+  qs('#mlReply').addEventListener('click',function(){ sfxDing(); msgBox('Responder','Para responder a '+(MAILS[MSEL]?MAILS[MSEL].from:'nadie')+', pásate por el stand de AdmiraNeXT. ;-)','info'); });
+  qs('#trayMail').addEventListener('click',function(){ openMail(false); });
+  qs('[data-close="mail"]').addEventListener('click',closeMail);
+  qs('[data-min="mail"]').addEventListener('click',function(){ minimize('mail'); });
+  mailReset();
+}
+
+/* ---------- icono de red de la bandeja (las dos pantallas se encienden al pasar datos) ---------- */
+var NET={tx:0,rx:0};
+function net(dir){ NET[dir]=now(); }
+function netConnected(){ return BR.online||BR.dialing||NAP.conn||MP.playing||(ICQ.open&&ICQG.on); }
+function wireNet(){
+  var el=qs('#trayNet');
+  setInterval(function(){
+    var t=now(), on=netConnected()||t-NET.tx<1500||t-NET.rx<1500;
+    if(MP.playing&&Math.random()<0.5) net('rx');            // el canal de admira.tv va llegando
+    if(BR.dialing) net(Math.random()<0.5?'tx':'rx');         // el módem marcando y negociando
+    if(BR.page&&!BR.loaded) net('rx');                       // AdmiraScape cargando la página
+    if(NAP.searching&&Math.random()<0.6) net(Math.random()<0.3?'tx':'rx');
+    NAP.xfers.forEach(function(x){ if(x.state==='dl'){ net('rx'); if(Math.random()<0.2) net('tx'); } });
+    el.classList.toggle('on',on); el.classList.toggle('tx',t-NET.tx<250); el.classList.toggle('rx',t-NET.rx<250);
+    el.title=BR.online?'Conectado a AdmiraNeXT Online a 28.800 bps':'Conexión de red';
+  },120);
+}
+
+/* ---------- volumen general (icono del altavoz de la bandeja) ---------- */
+var SYSVOL={v:0.8,muted:false};
+try{ var savedVol=JSON.parse(localStorage.getItem('vuelta95.vol')||'null'); if(savedVol){ SYSVOL.v=clamp(+savedVol.v||0,0,1); SYSVOL.muted=!!savedVol.muted; } }catch(e){}
+function applySysVol(){
+  if(A.master) A.master.gain.value=SYSVOL.muted?0:Math.min(1.25,SYSVOL.v*SYSVOL.v/0.64);
+  qs('#traySpk').classList.toggle('muted',SYSVOL.muted); qs('#vmute').classList.toggle('on',SYSVOL.muted);
+  try{ localStorage.setItem('vuelta95.vol',JSON.stringify(SYSVOL)); }catch(e){}
+  mpSync();   // el canal de admira.tv se recarga silenciado / con sonido
+}
+function buildVolPop(){
+  var trk=qs('#vtrk'), knob=qs('.knob',trk), H=86, KH=11, drag=false;
+  for(var i=0;i<=10;i++){ var t=document.createElement('div'); t.className='tick'; t.style.top=Math.round(KH/2+i*(H-KH)/10)+'px'; trk.appendChild(t); }
+  qs('#traySpk').insertAdjacentHTML('beforeend','<i class="mute"></i>');
+  function place(){ knob.style.top=Math.round((1-SYSVOL.v)*(H-KH))+'px'; }
+  function fromE(e){ var r=trk.getBoundingClientRect(), k=KH*SCALE; return 1-clamp((e.clientY-r.top-k/2)/(r.height-k),0,1); }
+  trk.addEventListener('pointerdown',function(e){ drag=true; try{ trk.setPointerCapture(e.pointerId); }catch(_){} SYSVOL.v=fromE(e); place(); applySysVol(); });
+  trk.addEventListener('pointermove',function(e){ if(!drag) return; SYSVOL.v=fromE(e); place(); applySysVol(); });
+  function end(){ if(drag){ drag=false; sfxDing(); } }   // el «ding» de comprobación al soltar, como en el 95
+  trk.addEventListener('pointerup',end); trk.addEventListener('pointercancel',end);
+  qs('#vmuteL').addEventListener('click',function(){ SYSVOL.muted=!SYSVOL.muted; applySysVol(); });
+  qs('#traySpk').addEventListener('click',function(){ place(); qs('#volpop').classList.toggle('open'); });
+  stage.addEventListener('pointerdown',function(e){ if(!e.target.closest('#volpop,#traySpk')) qs('#volpop').classList.remove('open'); },true);
+  place(); applySysVol();
+}
+
+/* ---------- protector de pantalla «Admira volando» (homenaje) ---------- */
+var SS={on:false,since:0,flags:[],stars:[],sprite:null,last:0,ctx:null};
+function ssSprite(){
+  var c=document.createElement('canvas'); c.width=80; c.height=64; var g=c.getContext('2d');
+  var gr=g.createLinearGradient(8,6,76,60); gr.addColorStop(0,'#ff6a00'); gr.addColorStop(1,'#ffc400');
+  g.lineJoin='round'; g.beginPath(); g.moveTo(10,12); g.bezierCurveTo(26,2,50,20,72,8); g.lineTo(72,50); g.bezierCurveTo(50,62,26,44,10,56); g.closePath();
+  g.fillStyle=gr; g.fill(); g.lineWidth=3; g.strokeStyle='#141414'; g.stroke();
+  g.strokeStyle='#fff'; g.lineWidth=6; g.lineCap='round'; g.beginPath(); g.moveTo(30,46); g.lineTo(41,18); g.lineTo(52,44); g.moveTo(34,36); g.lineTo(48,35); g.stroke();
+  SS.sprite=c;
+}
+function ssReset(o,far){ o.x=(Math.random()*2-1)*1.2; o.y=(Math.random()*2-1)*0.9; o.z=far?1+Math.random()*0.25:0.25+Math.random()*0.9; o.r=(Math.random()*2-1)*0.25; o.ph=Math.random()*6.28; }
+function ssStart(){
+  if(SS.on) return; if(!SS.sprite) ssSprite();
+  SS.on=true; SS.since=now(); SS.ctx=qs('#ssaver').getContext('2d'); SS.flags=[]; SS.stars=[];
+  for(var i=0;i<12;i++){ var o={}; ssReset(o,false); SS.flags.push(o); }
+  for(var j=0;j<90;j++){ var s={}; ssReset(s,false); SS.stars.push(s); }
+  qs('#volpop').classList.remove('open'); closeStart();
+  qs('#ssaver').style.display='block'; SS.last=performance.now(); requestAnimationFrame(ssFrame);
+}
+function ssStop(){ SS.on=false; qs('#ssaver').style.display='none'; }
+function ssFrame(t){
+  if(!SS.on) return;
+  var c=SS.ctx, dt=Math.min(0.05,(t-SS.last)/1000), cx=320, cy=240, f=130; SS.last=t;
+  c.globalAlpha=1; c.fillStyle='#000'; c.fillRect(0,0,640,480); c.fillStyle='#fff';
+  SS.stars.forEach(function(s){
+    s.z-=dt*0.35; if(s.z<0.05) ssReset(s,true);
+    var x=cx+s.x/s.z*f, y=cy+s.y/s.z*f; if(x<0||x>640||y<0||y>480){ ssReset(s,true); return; }
+    c.globalAlpha=clamp(1.2-s.z,0,1); c.fillRect(x,y,s.z<0.3?2:1,s.z<0.3?2:1);
+  });
+  SS.flags.sort(function(a,b){ return b.z-a.z; });
+  SS.flags.forEach(function(o){
+    o.z-=dt*0.18; o.ph+=dt*3; if(o.z<0.08) ssReset(o,true);
+    var k=0.9/o.z, x=cx+o.x/o.z*f, y=cy+o.y/o.z*f, w=40*k, h=32*k;
+    if(x<-w||x>640+w||y<-h||y>480+h){ ssReset(o,true); return; }
+    c.save(); c.translate(x,y); c.rotate(o.r+Math.sin(o.ph)*0.06); c.globalAlpha=clamp((1.25-o.z)*1.4,0,1); c.drawImage(SS.sprite,-w/2,-h/2,w,h); c.restore();
+  });
+  c.globalAlpha=1; requestAnimationFrame(ssFrame);
+}
+
+/* ---------- AdmirAmp: abrir / cerrar ---------- */
+function openAmp(autoplay){
+  var wins=[qs('#amp'),qs('#eqw'),qs('#plw')];
+  wins.forEach(function(w){ if(w.getAttribute('data-hidden')!=='1') w.style.display='block'; });
+  PL.open=true; addTask('amp',CONFIG.names.player,'amp',wins); focusWin(qs('#amp'));
+  audioInit(); if(autoplay&&PL.state!=='play') play();
+}
+function closeAmp(){ stop(); ['#amp','#eqw','#plw'].forEach(function(s){ qs(s).style.display='none'; }); PL.open=false; removeTask('amp'); }
+function toggleSub(id,togId){
+  var w=qs(id), hidden=w.getAttribute('data-hidden')==='1';
+  if(hidden){ w.removeAttribute('data-hidden'); w.style.display='block'; focusWin(w); } else { w.setAttribute('data-hidden','1'); w.style.display='none'; }
+  qs(togId).classList.toggle('on',hidden);
+}
+
+/* ---------- menú Inicio ---------- */
+function closeStart(){ qs('#smenu').classList.remove('open'); qs('#sub').style.display='none'; qs('#start').classList.remove('on'); qsa('.mi').forEach(function(m){ m.classList.remove('hl'); }); }
+function buildStart(){
+  qs('#start').addEventListener('click',function(){ var m=qs('#smenu'); if(m.classList.contains('open')) closeStart(); else { m.classList.add('open'); qs('#start').classList.add('on'); } });
+  var sub=qs('#sub');
+  [['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['chat',CONFIG.names.chat],['p2p',CONFIG.names.p2p],['media','Reproductor multimedia'],['inbox','Bandeja de entrada']].forEach(function(p){
+    var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app',p[0]); it.innerHTML='<span data-ico="'+p[0]+'">'+ICONS[p[0]]+'</span><span></span>'; it.lastChild.textContent=p[1];
+    it.addEventListener('click',function(){ closeStart(); openApp(p[0]); }); sub.appendChild(it);
+  });
+  qs('#mi-programs').addEventListener('click',function(){ var m=qs('#smenu'), it=qs('#mi-programs'); sub.style.display='block'; sub.style.left=(m.offsetLeft+m.offsetWidth-3)+'px'; sub.style.top=(m.offsetTop+it.offsetTop-3)+'px'; it.classList.add('hl'); });
+  var simple={
+    'mi-docs':function(){ openApp('readme'); },
+    'mi-settings':function(){ msgBox('Configuración','Pantalla: 640 × 480 · 256 colores\nProtector de pantalla: «Admira volando» (espera: '+CONFIG.screensaverSeconds+' s)\n(Lo más moderno del mercado.)','info'); },
+    'mi-find':function(){ msgBox('Buscar','Buscando «el futuro»…\nEncontrado en C:\\ADMIRA\\NEXT\\','info'); },
+    'mi-help':function(){ msgBox('Ayuda de Admira 95','¿Dudas de estrategia? Pregunta a Jensen.\n¿Todo lo demás? Pregunta a Morfeo.','info'); },
+    'mi-run':function(){ msgBox('Ejecutar','C:\\ADMIRA\\NEXT.EXE\n\nNo se puede ejecutar: aún estamos en 1997.','warn'); },
+    'mi-shutdown':function(){ if(MODE==='interactive'){ var tk=RUN.token; shutdownSeq(tk).then(function(){ if(RUN.token===tk) resetDesktop(); }).catch(function(){}); } }
+  };
+  Object.keys(simple).forEach(function(id){ qs('#'+id).addEventListener('click',function(){ closeStart(); simple[id](); }); });
+  stage.addEventListener('pointerdown',function(e){ if(!e.target.closest('#smenu,#sub,#start')) closeStart(); },true);
+}
+
+/* =========================================================
+   MODO DEMO (usuario fantasma) ↔ MODO INTERACTIVO
+   ========================================================= */
+var MODE='attract', RUN={token:0}, ABORT={abort:true}, lastInput=now(), started=false;
+var G={x:420,y:300};
+function placeGhost(){ ghostEl.style.transform='translate('+Math.round(G.x)+'px,'+Math.round(G.y)+'px)'; }
+function wait(ms,tk){ return new Promise(function(res,rej){ setTimeout(function(){ if(tk!==undefined&&tk!==RUN.token) rej(ABORT); else res(); },ms); }); }
+function ghostMove(target,tk,ms){
+  return new Promise(function(res,rej){
+    if(!target){ rej(new Error('sin destino')); return; }
+    var p=target.x!==undefined?target:centerOf(target), sx=G.x, sy=G.y, dx=p.x-sx, dy=p.y-sy, dist=Math.sqrt(dx*dx+dy*dy);
+    var dur=ms||Math.min(1100,280+dist*2.2), cx=sx+dx*0.5-dy*0.15, cy=sy+dy*0.5+dx*0.15, t0=performance.now();
+    function f(t){
+      if(tk!==RUN.token){ rej(ABORT); return; }
+      var k=Math.min(1,(t-t0)/dur), e=k<0.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2, u=1-e;
+      G.x=u*u*sx+2*u*e*cx+e*e*p.x; G.y=u*u*sy+2*u*e*cy+e*e*p.y; placeGhost();
+      if(k<1) requestAnimationFrame(f); else res();
+    }
+    requestAnimationFrame(f);
+  });
+}
+function fire(el,type){ el.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,view:window})); }
+async function ghostClick(el,tk){ await ghostMove(el,tk); await wait(120,tk); el.classList.add('pressed'); await wait(110,tk); el.classList.remove('pressed'); fire(el,'click'); await wait(150,tk); }
+async function ghostDbl(el,tk){ await ghostMove(el,tk); await wait(150,tk); fire(el,'click'); await wait(90,tk); fire(el,'click'); fire(el,'dblclick'); await wait(200,tk); }
+async function ghostDrag(S,target,tk){
+  await ghostMove(S.knob,tk); await wait(100,tk);
+  var from=S.v, t0=performance.now();
+  await new Promise(function(res,rej){
+    function f(t){ if(tk!==RUN.token){ rej(ABORT); return; } var k=Math.min(1,(t-t0)/650), e=k*k*(3-2*k); S.set(from+(target-from)*e); var c=centerOf(S.knob); G.x=c.x; G.y=c.y; placeGhost(); if(k<1) requestAnimationFrame(f); else res(); }
+    requestAnimationFrame(f);
+  });
+  await wait(200,tk);
+}
+function scrollView(el,tk){
+  return new Promise(function(res,rej){
+    var from=el.scrollTop, to=Math.max(0,el.scrollHeight-el.clientHeight), t0=performance.now();
+    function f(t){ if(tk!==RUN.token){ rej(ABORT); return; } var k=Math.min(1,(t-t0)/1500), e=k*k*(3-2*k); el.scrollTop=from+(to-from)*e; if(k<1) requestAnimationFrame(f); else res(); }
+    requestAnimationFrame(f);
+  });
+}
+async function ghostType(el,text,tk){ for(var i=0;i<text.length;i++){ el.textContent+=text.charAt(i); await wait(90+Math.random()*90,tk); } }
+async function waitUntil(fn,tk,max){ var t0=now(); while(!fn()&&now()-t0<max) await wait(200,tk); }
+async function typeNote(text,tk){ var nt=qs('#nt'); nt.textContent=''; for(var i=0;i<text.length;i++){ var ch=text.charAt(i); nt.textContent+=ch; await wait(ch==='\n'?200:(ch===' '?45:22+Math.random()*40),tk); } }
+async function bootSeq(tk){ var b=qs('#boot'); b.style.display='block'; sfxStartup(); await wait(3800,tk); b.style.display='none'; }
+async function shutdownSeq(tk){
+  closeStart(); var shade=qs('#shade'), shut=qs('#shut');
+  shade.style.display='block'; await wait(900,tk);
+  closeAmp(); closeNote(); closeNap(); closeIcq(); closeBrowser(); closeMedia(); closeTrash(); closeMail(); closeDialogs();
+  ghostEl.style.visibility='hidden';
+  qs('.wait',shut).style.display='block'; qs('.l1',shut).style.display='none'; shut.classList.remove('more'); shut.style.display='block';
+  await wait(1600,tk);
+  qs('.wait',shut).style.display='none'; qs('.l1',shut).style.display='block';
+  await wait(1800,tk); shut.classList.add('more');
+  await wait(4500,tk);
+  shut.style.display='none'; shut.classList.remove('more'); shade.style.display='none'; ghostEl.style.visibility='';
+}
+async function attractLoop(tk,withBoot){
+  G.x=420; G.y=300; placeGhost();
+  if(withBoot) await bootSeq(tk);
+  for(;;){
+    await wait(1200,tk);
+    // 0 · Protector de pantalla: el PC espera… hasta que «alguien» mueve el ratón
+    ghostEl.style.visibility='hidden'; ssStart(); await wait(10000,tk);
+    ssStop(); ghostEl.style.visibility=''; await ghostMove({x:G.x+70,y:G.y-40},tk,350); await wait(900,tk);
+    // 0b · Como en el 95 real: clic derecho → Nuevo → Documento de texto… y a la papelera
+    var dpos={x:340,y:345};
+    await ghostMove(dpos,tk); await wait(300,tk);
+    openDeskMenu(dpos.x,dpos.y); await wait(700,tk);
+    await ghostClick(qs('#dm-new'),tk); await wait(400,tk);
+    await ghostClick(qs('#dm-txt'),tk); await wait(1300,tk);
+    if(LASTDOC){
+      var tr=qs('#ic-trash'); await ghostDragIcon(LASTDOC,tr.offsetLeft,tr.offsetTop,tk); await wait(700,tk);
+      var yes=qs('#desk .dlg [data-yes]'); if(yes) await ghostClick(yes,tk);
+      await wait(1500,tk);
+    }
+    // 1 · Léeme.txt: el «usuario del 95» escribe la bienvenida
+    await ghostDbl(qs('#ic-readme'),tk); await wait(500,tk);
+    await typeNote(welcomeText(),tk); await wait(2600,tk);
+    await ghostClick(qs('#note .x[data-close]'),tk); await wait(400,tk);
+    // 2 · Admister: conectar, buscar «admira», descargar del usuario con T1
+    await ghostDbl(qs('#ic-p2p'),tk);
+    await waitUntil(function(){ return NAP.conn; },tk,4000); await wait(500,tk);
+    await ghostClick(qs('#napArtist'),tk); await ghostType(qs('#napArtist'),'admira',tk); await wait(300,tk);
+    await ghostClick(qs('#napSearch'),tk);
+    await waitUntil(function(){ return !NAP.searching; },tk,6000); await wait(1200,tk);
+    var best=qsa('#napRes .lvr').filter(function(r){ return NAP.results[+r.getAttribute('data-i')].user==='morfeo_95'; })[0];
+    await ghostClick(best,tk); await wait(500,tk);
+    await ghostClick(qs('#napDl'),tk);
+    await waitUntil(function(){ return NAP.lastDone; },tk,15000); await wait(1200,tk);
+    // 3 · Lo descargado suena en AdmirAmp
+    await ghostClick(qs('#napPlay'),tk); await wait(4500,tk);
+    await ghostDrag(EQS[0],0.12,tk); await wait(1000,tk);
+    await ghostClick(qs('#eqPre'),tk); await wait(2200,tk);
+    await ghostClick(qs('#lcd'),tk); await wait(2600,tk); await ghostClick(qs('#lcd'),tk); await wait(1200,tk);
+    // 4 · ICQGram: ¡uh-oh! Jensen escribe desde 2026 (con la música sonando)
+    icqIncoming('jensen'); await wait(2200,tk);
+    await ghostDbl(qs('#clist .crow[data-id="jensen"]'),tk);
+    var picks=[0,1,0,0,0];
+    for(var k=0;k<picks.length;k++){
+      await waitUntil(function(){ return ICQ.ended||(!ICQ.busy&&qsa('#icqOpts .btn').length>0); },tk,10000);
+      if(ICQ.ended) break;
+      await wait(1900,tk);
+      var ob=qsa('#icqOpts .btn'); await ghostClick(ob[picks[k]]||ob[0],tk);
+    }
+    // 5 · AdmiraScape (lo abre el enlace de Jensen): módem, web de 1997 y salto a 2026
+    await waitUntil(function(){ return BR.loaded&&BR.page==='home'; },tk,15000); await wait(3500,tk);
+    await ghostClick(qs('#brPage a[data-go="futuro"]'),tk);
+    await waitUntil(function(){ return BR.loaded&&BR.page==='futuro'; },tk,10000); await wait(3500,tk);
+    await ghostMove(qs('#brView'),tk); await scrollView(qs('#brView'),tk); await wait(4000,tk);
+    // 5b · Reproductor multimedia: el canal de admira.tv con lo que llega de admira.studio (#win95)
+    if(CONFIG.mediaPlayer.channelUrl&&mpHasContent()){
+      await ghostClick(qs('#start'),tk); await wait(500,tk);
+      await ghostClick(qs('#mi-programs'),tk); await wait(500,tk);
+      await ghostClick(qs('#sub .mi[data-app="media"]'),tk); await wait(9000,tk);
+    }
+    // 6 · Apagar el sistema
+    await ghostClick(qs('#start'),tk); await wait(600,tk);
+    var it=qs('#mi-shutdown'); await ghostMove(it,tk); it.classList.add('hl'); await wait(500,tk);
+    await ghostClick(it,tk);
+    await shutdownSeq(tk);
+    resetDesktop();
+    await bootSeq(tk);   // y vuelve a arrancar (con su pantalla de carga)
+  }
+}
+function resetDesktop(){
+  closeStart(); closeAmp(); closeNote(); closeNap(); closeIcq(); closeBrowser(); closeMedia(); closeMail(); mailReset(); closeDialogs(); resetIcons(); selectIcon(null);
+  qs('#mail').style.left='70px'; qs('#mail').style.top='46px';
+  qs('#mpw').style.left='140px'; qs('#mpw').style.top='28px';
+  qs('#brw').style.left='40px'; qs('#brw').style.top='10px'; qs('#dun').style.left='180px'; qs('#dun').style.top='150px';
+  qs('#icq').style.left='462px'; qs('#icq').style.top='18px'; qs('#icqc').style.left='140px'; qs('#icqc').style.top='96px';
+  qs('#nap').style.left='88px'; qs('#nap').style.top='24px';
+  EQV=[0,0,0,0,0,0,0,0,0,0]; PRE=0; PRESET_I=0; EQS.forEach(function(s){ s.set(0.5,true); }); PRES.set(0.5,true);
+  PL.eqOn=true; qs('#eqOn').classList.add('on'); applyEq(); drawEqGraph();
+  VOL.set(0.8,true); BAL.set(0.5,true); applyVol();
+  PL.cur=0; PL.sel=0; PL.shuffle=false; PL.repeat=true; VZ.mode=0; MARQ.dirty=true;
+  qs('#tShuf').classList.remove('on'); qs('#tRep').classList.add('on');
+  ['#eqw','#plw'].forEach(function(s){ qs(s).removeAttribute('data-hidden'); }); qs('#tEQ').classList.add('on'); qs('#tPL').classList.add('on');
+  qs('#amp').style.left='182px'; qs('#amp').style.top='16px'; qs('#eqw').style.left='182px'; qs('#eqw').style.top='132px'; qs('#plw').style.left='182px'; qs('#plw').style.top='248px'; qs('#note').style.left='150px'; qs('#note').style.top='50px';
+  qs('#shut').style.display='none'; qs('#shade').style.display='none'; qs('#boot').style.display='none';
+  renderPlaylist();
+}
+function startAttract(withBoot){
+  MODE='attract'; RUN.token++; var tk=RUN.token;
+  document.body.classList.add('attract');
+  ghostEl.style.display='block'; ghostEl.style.visibility=''; ctaEl.style.display='block'; hintEl.style.display='none';
+  attractLoop(tk,withBoot).catch(function(e){
+    if(e===ABORT) return;
+    try{ console.error('[Vuelta95]',e); }catch(_){}
+    setTimeout(function(){ if(RUN.token===tk&&MODE==='attract'){ resetDesktop(); startAttract(false); } },1500);
+  });
+}
+function takeOver(){
+  MODE='interactive'; RUN.token++;
+  document.body.classList.remove('attract');
+  ssStop(); closeDeskMenu(); cancelIconDrag(); ghostEl.style.display='none'; ghostEl.style.visibility=''; ctaEl.style.display='none';
+  if(ICQ.open&&ICQG.on){ closeChat(); renderContacts(); }   // ICQGram pasa de la demo a los consejeros reales
+  qs('#boot').style.display='none';
+  if(qs('#shut').style.display==='block'||qs('#shade').style.display==='block'){ qs('#shut').style.display='none'; qs('#shut').classList.remove('more'); qs('#shade').style.display='none'; }
+  closeStart();
+  if(qs('#note').style.display==='block') qs('#nt').textContent=welcomeText();
+  hintEl.textContent='¡Ahora mandas tú! Doble clic (o un toque) en los iconos del escritorio. Si nadie toca nada en '+CONFIG.idleSeconds+' s, vuelve la demo.';
+  hintEl.style.display='block'; clearTimeout(takeOver.t); takeOver.t=setTimeout(function(){ hintEl.style.display='none'; },7000);
+}
+function backToDemo(){ hintEl.style.display='none'; resetDesktop(); startAttract(false); }
+
+/* ---------- detección de visitas ---------- */
+var lastMove=null;
+function onInput(e){
+  if(!e.isTrusted) return;
+  if(e.type==='pointerdown'||e.type==='touchstart'){ lastPointerType=e.pointerType||'touch'; tryResume(); }
+  if(e.type==='keydown') tryResume();
+  if(e.type==='pointermove'){
+    if(e.pointerType==='touch') return;
+    var p={x:e.clientX,y:e.clientY};
+    if(!lastMove){ lastMove=p; return; }
+    var d=Math.abs(p.x-lastMove.x)+Math.abs(p.y-lastMove.y);
+    if(d<4) return;
+    if(MODE==='attract'&&d<30) return;
+    lastMove=p;
+  }
+  lastInput=now();
+  if(SS.on&&MODE==='interactive'&&now()-SS.since>800) ssStop();   // el protector se quita al mover o tocar
+  if(MODE==='attract'&&started) takeOver();
+}
+
+/* =========================================================
+   ARRANQUE
+   ========================================================= */
+function init(){
+  stage=qs('#stage'); desk=qs('#desk'); ghostEl=qs('#ghost'); ctaEl=qs('#cta'); hintEl=qs('#hint');
+  fit(); window.addEventListener('resize',fit);
+  qsa('[data-ico]').forEach(function(el){ if(!el.firstChild) el.innerHTML=ICONS[el.getAttribute('data-ico')]||''; });
+  Object.keys(TP).forEach(function(id){ qs('#'+id).innerHTML='<svg viewBox="0 0 9 9"><path d="'+TP[id]+'"/></svg>'; });
+  qs('#ampName').textContent=norm(CONFIG.names.player);
+  // pantalla de carga y fondo: homenaje propio, o imagen propia si se configura
+  if(CONFIG.bootImage){ qs('#boot .clouds').style.display='none'; qs('#boot .art').style.display='none'; var bi=new Image(); bi.src=CONFIG.bootImage; qs('#boot').insertBefore(bi,qs('#boot .bar')); }
+  else qs('#boot .art').innerHTML=logoSVG('#ffffff','#ffffff','agBoot');
+  if(CONFIG.wallpaperImage){ var wi=new Image(); wi.src=CONFIG.wallpaperImage; qs('#wall').innerHTML=''; qs('#wall').appendChild(wi); }
+  else qs('#wall .art').innerHTML=logoSVG('#ffffff','#d8f4f4','agWall');
+  buildDesktop(); buildStart();
+
+  // ventanas
+  qsa('#desk > .win, #desk > .skin').forEach(function(w){ w.addEventListener('pointerdown',function(){ focusWin(w); }); var h=qs('.tb,.atb',w); if(h) makeDraggable(h,w); });
+  qs('[data-close="note"]').addEventListener('click',closeNote);
+  qs('[data-min="note"]').addEventListener('click',function(){ minimize('note'); });
+  qs('#ampClose').addEventListener('click',closeAmp);
+  qs('#ampMin').addEventListener('click',function(){ minimize('amp'); });
+  qs('[data-close="eqw"]').addEventListener('click',function(){ toggleSub('#eqw','#tEQ'); });
+  qs('[data-close="plw"]').addEventListener('click',function(){ toggleSub('#plw','#tPL'); });
+
+  // reproductor
+  lcdCtx=qs('#lcd').getContext('2d'); marqCtx=qs('#marq').getContext('2d'); infoCtx=qs('#info').getContext('2d'); eqgCtx=qs('#eqg').getContext('2d'); plCtx=qs('#plinfo').getContext('2d');
+  lcdBg=document.createElement('canvas'); lcdBg.width=93; lcdBg.height=42;
+  var bg=lcdBg.getContext('2d'); bg.fillStyle='#000'; bg.fillRect(0,0,93,42); bg.fillStyle='#161a16'; for(var y=22;y<38;y+=2) for(var x=8;x<84;x+=2) bg.fillRect(x,y,1,1);
+  VOL=hSlider(qs('#vol'),68,12,0.8,function(v){ applyVol(); overrideMarq('VOLUMEN: '+Math.round(v*100)+'%'); });
+  BAL=hSlider(qs('#bal'),38,12,0.5,function(v){ if(Math.abs(v-0.5)<0.07){ BAL.set(0.5,true); v=0.5; } applyVol(); var p=(v-0.5)*2; overrideMarq('BALANCE: '+(p===0?'CENTRO':Math.round(Math.abs(p)*100)+'% '+(p<0?'IZQUIERDA':'DERECHA'))); });
+  SEEK=hSlider(qs('#seek'),251,28,0,function(v){ if(PL.state!=='stop') overrideMarq('IR A: '+fmt(v*trackDur(PL.cur))+'/'+fmt(trackDur(PL.cur))); },function(v){ seekTo(v); });
+  var eqw=qs('#eqw'), LBL=['60','170','310','600','1K','3K','6K','12K','14K','16K'];
+  function mkV(x,label,cb){ var d=document.createElement('div'); d.className='vs'; d.style.left=x+'px'; d.style.top='38px'; d.innerHTML='<div class="trk"></div><div class="lvl"></div><div class="knob"></div>'; eqw.appendChild(d); var l=document.createElement('div'); l.className='eql'; l.style.left=(x-4)+'px'; l.style.top='100px'; l.textContent=label; eqw.appendChild(l); return vSlider(d,58,9,0.5,cb); }
+  PRES=mkV(16,'PRE',function(v){ PRE=12-24*v; applyEq(); overrideMarq('PREAMP: '+fmtDb(PRE)); });
+  LBL.forEach(function(lb,i){ EQS.push(mkV(66+i*19,lb,function(v){ EQV[i]=12-24*v; applyEq(); drawEqGraph(); overrideMarq('EQ '+lb+'HZ: '+fmtDb(EQV[i])); })); });
+  qs('#bPrev').addEventListener('click',function(){ step(-1); });
+  qs('#bPlay').addEventListener('click',function(){ play(PL.state==='stop'&&PL.sel!==PL.cur?PL.sel:undefined); });
+  qs('#bPause').addEventListener('click',pause);
+  qs('#bStop').addEventListener('click',stop);
+  qs('#bNext').addEventListener('click',function(){ step(1); });
+  qs('#bEject').addEventListener('click',function(){ msgBox('Abrir archivo','Inserta el disquete de admira.tv en la unidad A:\n(Las pistas del catálogo llegan pronto.)','info'); });
+  qs('#lcd').addEventListener('click',function(){ VZ.mode=1-VZ.mode; });
+  qs('#tEQ').addEventListener('click',function(){ toggleSub('#eqw','#tEQ'); });
+  qs('#tPL').addEventListener('click',function(){ toggleSub('#plw','#tPL'); });
+  qs('#tShuf').addEventListener('click',function(){ PL.shuffle=!PL.shuffle; this.classList.toggle('on',PL.shuffle); overrideMarq('MEZCLA: '+(PL.shuffle?'SI':'NO')); });
+  qs('#tRep').addEventListener('click',function(){ PL.repeat=!PL.repeat; this.classList.toggle('on',PL.repeat); overrideMarq('REPETIR: '+(PL.repeat?'SI':'NO')); });
+  qs('#eqOn').addEventListener('click',function(){ PL.eqOn=!PL.eqOn; this.classList.toggle('on',PL.eqOn); applyEq(); });
+  qs('#eqAuto').addEventListener('click',function(){ this.classList.toggle('on'); });
+  qs('#eqPre').addEventListener('click',nextPreset);
+  renderPlaylist(); drawEqGraph();
+  wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireNet(); icqgInit();
+
+  // reloj
+  function clock(){ var d=new Date(); qs('#clock').textContent=pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+  clock(); setInterval(clock,10000);
+
+  // bucles
+  var lastT=0;
+  function frame(t){ var dt=lastT?t-lastT:16; lastT=t; if(PL.open){ drawLCD(t); drawMarq(dt); drawInfo(); drawPlInfo(); if(!SEEK.drag){ var on=PL.state!=='stop'; qs('#seek').classList.toggle('on',on); if(on) SEEK.set(elapsed()/trackDur(PL.cur),true); } } requestAnimationFrame(frame); }
+  requestAnimationFrame(frame);
+  setInterval(seqTick,25);
+  setInterval(function(){
+    if(MODE!=='interactive') return;
+    var idle=now()-lastInput;
+    if(idle>CONFIG.idleSeconds*1000) backToDemo();
+    else if(!SS.on&&idle>CONFIG.screensaverSeconds*1000) ssStart();
+  },1000);
+
+  ['pointerdown','pointermove','keydown','wheel','touchstart'].forEach(function(t){ window.addEventListener(t,onInput,{capture:true,passive:true}); });
+}
+function start(){ if(started) return; started=true; audioInit(); tryResume(); startAttract(true); }
+
+// Si hay iconos originales en la carpeta (CONFIG.iconFiles), sustituyen a los homenajes antes de montar el escritorio.
+function preloadIcons(done){
+  var f=CONFIG.iconFiles||{}, keys=Object.keys(f).filter(function(k){ return f[k]; }), left=keys.length, fin=false;
+  function end(){ if(!fin){ fin=true; done(); } }
+  if(!left){ end(); return; }
+  keys.forEach(function(k){
+    var im=new Image();
+    im.onload=function(){ ICONS[k]='<svg viewBox="0 0 32 32"><image href="'+esc(f[k])+'" x="0" y="0" width="32" height="32" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated"/></svg>'; if(--left===0) end(); };
+    im.onerror=function(){ if(--left===0) end(); };
+    im.src=f[k];
+  });
+  setTimeout(end,2000);
+}
+window.addEventListener('load',function(){ preloadIcons(boot); });
+function boot(){
+  init();
+  // Integración con el player de Admira (si existe admira_api_content.js)
+  var api=null;
+  try{ if(typeof window.admira_api_content==='function'){ api=new window.admira_api_content(); api.onStart=function(){ start(); }; } }catch(e){ api=null; }
+  setTimeout(start,api?4000:300); // red de seguridad: si onStart no llega, arranca igualmente
+}
+})();
+</script>
+</body>
+</html>

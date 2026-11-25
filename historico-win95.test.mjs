@@ -194,3 +194,40 @@ test("el escritorio incluye Para las Leyendas.txt precargado en el código", () 
 function leyendasSeedBody() {
   return src("windows95/para-las-leyendas.txt").replace(/\s+$/, "");
 }
+
+test("el menú Inicio imita Windows 95 y la A de Admira es la nube, con estrellas en Navigator", () => {
+  const html = src("windows95/index.html");
+  assert.match(html, /Windows <b>95<\/b>/);
+  assert.doesNotMatch(html, /<div class="side"><span><b>Admira<\/b>95<\/span>/);
+  assert.match(html, /data-ico="startProg"/);
+  assert.match(html, /data-ico="startDocs"/);
+  assert.match(html, /data-ico="startSettings"/);
+  assert.match(html, /data-ico="startFind"/);
+  assert.match(html, /data-ico="startHelp"/);
+  assert.match(html, /data-ico="startRun"/);
+  assert.match(html, /data-ico="startShutdown"/);
+  assert.match(html, /icons\/admira-nube-16\.png/);
+  assert.match(html, /icons\/admira-nube-22\.png/);
+  assert.match(html, /id="brThrob"/);
+  assert.match(html, /@keyframes meteor/);
+  assert.match(html, /animation:meteor/);
+  assert.doesNotMatch(html, /<div class="tA">A<\/div>/);
+  assert.doesNotMatch(html, /logo:SV\('0 0 16 16','<rect[^']*fill="#ff6a00"/);
+  const files = [
+    "windows95/icons/admira-nube.png",
+    "windows95/icons/admira-nube-16.png",
+    "windows95/icons/admira-nube-22.png",
+    "windows95/icons/start-programs.png",
+    "windows95/icons/start-docs.png",
+    "windows95/icons/start-settings.png",
+    "windows95/icons/start-find.png",
+    "windows95/icons/start-help.png",
+    "windows95/icons/start-run.png",
+    "windows95/icons/start-shutdown.png",
+  ];
+  for (const f of files) {
+    const buf = readFileSync(join(raiz, f));
+    assert.ok(buf.length > 50, f);
+    assert.equal(buf.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", f + " no es PNG");
+  }
+});

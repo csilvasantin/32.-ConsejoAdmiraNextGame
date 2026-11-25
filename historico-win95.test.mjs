@@ -78,3 +78,30 @@ test("el marco del CRT se puede ocultar: Monitor ON/OFF, tecla M y ?crt=", () =>
   const html = src("windows95/index.html");
   assert.match(html, /admira-win95-crt/);
 });
+
+test("el Bloc de notas es un textarea editable con menús de los 90", () => {
+  const html = src("windows95/index.html");
+  assert.match(html, /<textarea id="nt"/);
+  assert.match(html, /wrap="soft"/);
+  assert.match(html, /data-note-menu="archivo"/);
+  assert.match(html, /data-note-menu="edicion"/);
+  assert.match(html, /data-note-menu="buscar"/);
+  assert.match(html, /Nuevo/);
+  assert.match(html, /Abrir\.\.\./);
+  assert.match(html, /Guardar/);
+  assert.match(html, /Deshacer/);
+  assert.match(html, /Cortar/);
+  assert.match(html, /Copiar/);
+  assert.match(html, /Pegar/);
+  assert.match(html, /Seleccionar todo/);
+  assert.match(html, /Hora\/Fecha/);
+  assert.match(html, /Buscar siguiente/);
+  assert.match(html, /admira-win95-notepad/);
+  assert.match(html, /NOTE\.dirty/);
+  assert.match(html, /function noteGuardar/);
+  assert.match(html, /Lucida Console/);
+  const js = src("assets/win95-crt.js");
+  assert.match(js, /tag === "textarea"/);
+  assert.match(js, /isContentEditable/);
+  assert.match(js, /e\.key === "m"/);
+});

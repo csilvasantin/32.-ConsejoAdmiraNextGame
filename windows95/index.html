@@ -163,6 +163,12 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #nap .nap-player .btn{min-width:26px;width:26px;height:22px;margin-right:4px;padding:0}
 #napAudTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px;font:11px "MS Sans Serif",Tahoma,sans-serif}
 #napAudio{display:none}
+#nap .menubar span{cursor:default}
+#nap .menubar span.open,#nap .menubar span.hl{background:#000080;color:#fff}
+#nap-menu{z-index:9000;min-width:200px}
+#nap-menu .mi2.disabled{color:#808080;pointer-events:none}
+#napLib .lvr{height:18px;line-height:18px}
+#napLib .nap-del{min-width:64px;width:auto;height:16px;margin:0;padding:0 4px;font-size:11px}
 .panel.on{display:block}
 .fin{display:inline-block;height:21px;vertical-align:middle;padding:3px 4px;background:#fff;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .fin.focus::after{content:'';display:inline-block;width:1px;height:12px;background:#000;vertical-align:-2px;animation:blink 1s steps(1) infinite}
@@ -1504,7 +1510,7 @@ Fin del documento. Está en Miscelánea, solo lectura.
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
       <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 Transfer</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
-      <div class="menubar"><span><u>A</u>rchivo</span><span>A<u>c</u>ciones</span><span>A<u>y</u>uda</span></div>
+      <div class="menubar" id="nap-menubar"><span data-nap-menu="archivo"><u>A</u>rchivo</span><span data-nap-menu="acciones">A<u>c</u>ciones</span><span data-nap-menu="ayuda">A<u>y</u>uda</span></div>
       <div class="hdr"><span data-ico="p2p"></span><div class="brand">Nap<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
       <div class="tabs"><div class="tab" data-tab="home">Inicio</div><div class="tab on" data-tab="search">Buscar</div><div class="tab" data-tab="lib">Biblioteca</div><div class="tab" data-tab="xfer">Transferencias</div></div>
       <div class="panel home" data-panel="home">
@@ -1534,6 +1540,8 @@ Fin del documento. Está en Miscelánea, solo lectura.
         <audio id="napAudio" preload="none"></audio>
       </div>
       <div class="sbar"><div id="napS1" style="flex:none;width:220px">admira.studio</div><div id="napS2">Descargas: 0</div><div id="napS3" style="flex:none;width:96px">Desconectado</div></div>
+      <input type="file" id="napFile" accept="video/*,audio/*,image/*" hidden>
+      <div id="nap-menu" class="win cmenu note-menu" hidden></div>
     </div>
     <!-- AdmiraScape (homenaje navegador) -->
     <div id="brw" class="win nobk" style="left:40px;top:10px;width:560px;height:430px;display:none">
@@ -4365,8 +4373,8 @@ var CON={'T1':{kb:48,dur:5,col:'#00c000'},'Cable':{kb:26,dur:7,col:'#00c000'},'R
 var NAP_CONS=Object.keys(CON);
 var COLS_RES=[['Nombre de archivo',190],['Tamaño',54],['Bitrate',46],['Duración',50],['Usuario',92],['Conexión',62]];
 var COLS_X=[['Nombre de archivo',170],['Estado',86],['Progreso',110],['Velocidad',70],['Usuario',74]];
-var COLS_LIB=[['Nombre de archivo',260],['Tamaño',70],['Tipo',70],['Duración',70]];
-var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:0,songs:0,canciones:null,videos:null,haveSplit:false,library:[],aud:null};
+var COLS_LIB=[['Nombre de archivo',200],['Tamaño',54],['Tipo',50],['Duración',54],['Eliminar',72]];
+var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:0,songs:0,canciones:null,videos:null,haveSplit:false,library:[],aud:null,sessionLocal:[],probeQ:[],probing:false};
 
 var DL_STORE='admira-win95-descargas';
 function napEsVideo(r){ var t=String(r&&(r.tipo||r.type)||'').toLowerCase(); if(t==='video') return true; if(t==='audio'||t==='music') return false; return /\.(mp4|webm|mkv|mov)(\?|$)/i.test(String(r&&r.url||'')); }
@@ -4480,21 +4488,82 @@ function napRenderX(){
   napStatus();
 }
 function napBiblioteca(){
-  var list=descargasDe('').slice(), i;
-  list.sort(function(a,b){ return (Number(b.at)||0)-(Number(a.at)||0); });
-  NAP.library=list;
-  return list;
+  var list=(NAP.sessionLocal||[]).concat(descargasDe('').slice()), i, seen={}, out=[], rec, k;
+  for(i=0;i<list.length;i++){
+    rec=list[i]; if(!rec) continue;
+    k=rec.id||rec.stockId||rec.url; if(!k||seen[k]) continue; seen[k]=1; out.push(rec);
+  }
+  out.sort(function(a,b){ return (Number(b.at)||0)-(Number(a.at)||0); });
+  NAP.library=out;
+  return out;
 }
 function napLibNombre(rec){
   if(!rec) return 'archivo';
   if(rec.name) return rec.name;
   return napFileOf({titulo:rec.titulo,artista:rec.artista,url:rec.url,tipo:rec.tipo,id:rec.id||rec.stockId});
 }
+function napPatchDescarga(id, patch){
+  if(!id||!patch) return;
+  var list=loadDescargas(), i, k, it, changed=false;
+  for(i=0;i<list.length;i++){
+    if(list[i].id===id||list[i].stockId===id){ list[i]=Object.assign({},list[i],patch); changed=true; }
+  }
+  if(changed) saveDescargas(list);
+  for(k in FS){
+    it=FS[k];
+    if(it&&it.kind==='media'&&(it.stockId===id||it.id==='media-'+id)){
+      if(patch.duracion) it.duration=patch.duracion;
+    }
+  }
+  if(changed) saveNoteDocs();
+}
+function napFillDuration(rec){
+  if(!rec||!rec.url||rec._probed) return;
+  if(Number(rec.duracion)>0) return;
+  NAP.probeQ=NAP.probeQ||[];
+  NAP.probeQ.push(rec);
+  napDrainProbe();
+}
+function napDrainProbe(){
+  if(NAP.probing) return;
+  var rec, url;
+  while(NAP.probeQ&&NAP.probeQ.length){
+    rec=NAP.probeQ.shift();
+    if(!rec||rec._probed||Number(rec.duracion)>0) continue;
+    url=rec.url; if(!url) continue;
+    NAP.probing=true; rec._probed=true;
+    (function(rec,url){
+      var el=document.createElement(napEsVideo(rec)?'video':'audio');
+      el.preload='metadata';
+      var done=function(ok){
+        el.removeEventListener('loadedmetadata', onMeta);
+        el.removeEventListener('error', onErr);
+        var d=el.duration;
+        try{ el.removeAttribute('src'); el.load(); }catch(e){}
+        if(ok&&isFinite(d)&&d>0){
+          rec.duracion=Math.round(d);
+          if(!rec.local) napPatchDescarga(rec.id||rec.stockId, {duracion:rec.duracion});
+          if(NAP.open&&NAP.tab==='lib') napRenderLib();
+        }
+        NAP.probing=false;
+        setTimeout(napDrainProbe, 40);
+      };
+      var onMeta=function(){ done(true); };
+      var onErr=function(){ done(false); };
+      el.addEventListener('loadedmetadata', onMeta);
+      el.addEventListener('error', onErr);
+      el.src=url;
+      setTimeout(function(){ if(NAP.probing&&rec._probed&&!(Number(rec.duracion)>0)) done(false); }, 8000);
+    })(rec,url);
+    return;
+  }
+}
 function napRenderLib(){
-  var list=napBiblioteca(), h=lvHeader(COLS_LIB), i, rec, tam, dur, tipo;
+  var list=napBiblioteca(), h=lvHeader(COLS_LIB), i, rec, tam, dur, tipo, del;
+  var play=qs('#napLibPlay');
   if(!list.length){
     qs('#napLib').innerHTML=h+'<div class="lvmsg">No hay descargas todavía. Busca en admira.studio y pulsa Descargar; lo completado aparece aquí y se recuerda en este PC.</div>';
-    qs('#napLibPlay').disabled=true;
+    if(play) play.disabled=true;
     return;
   }
   for(i=0;i<list.length;i++){
@@ -4502,9 +4571,11 @@ function napRenderLib(){
     tam=Number(rec.size)>0?fmtMB(rec.size/1024/1024):'—';
     dur=Number(rec.duracion)>0?fmt(rec.duracion):'—';
     tipo=napEsVideo(rec)?'vídeo':'audio';
-    h+=lvRow(i,COLS_LIB,[esc(napLibNombre(rec)),tam,tipo,dur],i===NAP.libSel);
+    del='<button type="button" class="btn nap-del" data-del="'+i+'">Eliminar</button>';
+    h+=lvRow(i,COLS_LIB,[esc(napLibNombre(rec)),tam,tipo,dur,del],i===NAP.libSel);
+    if(!(Number(rec.duracion)>0)) napFillDuration(rec);
   }
-  qs('#napLib').innerHTML=h; qs('#napLibPlay').disabled=NAP.libSel<0;
+  qs('#napLib').innerHTML=h; if(play) play.disabled=NAP.libSel<0;
 }
 function napStopAudio(){
   var a=qs('#napAudio');
@@ -4523,6 +4594,17 @@ function napPlayAudio(rec){
   var label=(rec.artista?rec.artista+' - ':'')+(rec.titulo||rec.name||'audio');
   qs('#napAudTitle').textContent=label;
   qs('#napAudPlay').textContent='⏸';
+  if(!(Number(rec.duracion)>0)){
+    var grab=function(){
+      a.removeEventListener('loadedmetadata', grab);
+      if(isFinite(a.duration)&&a.duration>0){
+        rec.duracion=Math.round(a.duration);
+        if(!rec.local) napPatchDescarga(rec.id||rec.stockId, {duracion:rec.duracion});
+        if(NAP.open&&NAP.tab==='lib') napRenderLib();
+      }
+    };
+    a.addEventListener('loadedmetadata', grab);
+  }
 }
 function napToggleAudio(){
   var a=qs('#napAudio');
@@ -4540,6 +4622,135 @@ function napPlayLib(i){
     return;
   }
   napPlayAudio(rec);
+}
+function napClave(rec){ return rec?String(rec.id||rec.stockId||rec.url||''):''; }
+function napQuitarFsLocal(id){
+  var k, it, el;
+  if(!id) return;
+  for(k in FS){
+    it=FS[k];
+    if(it&&it.kind==='media'&&(it.stockId===id||it.id==='media-'+id||String(it.id)===String(id))){
+      el=qs('#ic-'+it.id);
+      if(el&&el.parentNode) el.parentNode.removeChild(el);
+      if(it.parent&&FWIN[it.parent]){ /* se repinta abajo */ }
+      delete FS[it.id];
+    }
+  }
+  TRASH=TRASH.filter(function(t){ var d=t&&t.def; return !(d&&d.kind==='media'&&(d.stockId===id||d.id==='media-'+id)); });
+  if(DL_ID&&FWIN[DL_ID]) renderFolder(DL_ID);
+  if(typeof setTrashIcon==='function') setTrashIcon();
+  if(typeof renderTrash==='function') renderTrash();
+  saveNoteDocs();
+}
+function napBorrarLocal(rec){
+  if(!rec) return;
+  var id=rec.id||rec.stockId, url=rec.url, i, t;
+  if(rec.local||(url&&url.slice(0,5)==='blob:')){
+    NAP.sessionLocal=(NAP.sessionLocal||[]).filter(function(x){ return napClave(x)!==napClave(rec); });
+    if(url&&url.slice(0,5)==='blob:') try{ URL.revokeObjectURL(url); }catch(e){}
+  } else {
+    saveDescargas(loadDescargas().filter(function(x){ return x.id!==id&&x.stockId!==id; }));
+    napQuitarFsLocal(id);
+  }
+  NAP.xfers=(NAP.xfers||[]).filter(function(x){ return !(x&&x.r&&(x.r.id===id||x.r.url===url)); });
+  if(CONFIG.tracks&&CONFIG.tracks.length){
+    CONFIG.tracks=CONFIG.tracks.filter(function(tr){ return !((id&&tr.stockId===id)||(url&&tr.src===url)); });
+  }
+  if(NAP.aud&&napClave(NAP.aud)===napClave(rec)) napStopAudio();
+  if(typeof mpMergeDownloads==='function'){
+    var cur=MP.playlist&&MP.playlist[MP.piece], same=cur&&((id&&mpPiezaClave(cur)===String(id))||(url&&cur.url===url));
+    mpMergeDownloads();
+    if(same){
+      if(MP.playing&&mpPlaylist().length){ if(MP.piece>=mpPlaylist().length) MP.piece=0; mpTune(); }
+      else if(typeof mpStop==='function') mpStop('Detenido');
+    }
+    if(MP.open) mpUpdatePos();
+  }
+  if(PL.open&&typeof refreshWinamp==='function') void refreshWinamp();
+  if(NAP.libSel>=(NAP.library&&NAP.library.length?NAP.library.length:0)) NAP.libSel=-1;
+  napRenderLib(); napRenderX();
+}
+function napPedirEliminar(i){
+  var list=NAP.library&&NAP.library.length?NAP.library:napBiblioteca();
+  i=+i; if(i<0||i>=list.length) return;
+  var rec=list[i]; NAP.libSel=i; napRenderLib();
+  askBox('Eliminar archivo','¿Eliminar del disco?\nQuedará la copia en el servidor.',function(){ napBorrarLocal(rec); });
+}
+function napEliminarSeleccionado(){
+  if(NAP.libSel<0){ msgBox('Eliminar archivo','Seleccione un archivo de la Biblioteca.','warn'); return; }
+  napPedirEliminar(NAP.libSel);
+}
+function closeNapMenu(){
+  var m=qs('#nap-menu'); if(m){ m.hidden=true; m.innerHTML=''; }
+  qsa('#nap-menubar span').forEach(function(s){ s.classList.remove('open','hl'); });
+}
+function openNapMenu(kind,btn){
+  var m=qs('#nap-menu'), win=qs('#nap'); if(!m||!win||!btn) return;
+  var menus={
+    archivo:[
+      {l:'Abrir...',acc:'Ctrl+O',fn:napAbrirLocal},
+      {l:'Eliminar seleccionado',fn:napEliminarSeleccionado},
+      {sep:1},
+      {l:'Salir',fn:closeNap}
+    ],
+    acciones:[
+      {l:'Eliminar seleccionado',fn:napEliminarSeleccionado}
+    ],
+    ayuda:[
+      {l:'Acerca de Napster...',fn:function(){ msgBox('Napster v2.0 Transfer','Catálogo de admira.studio. Las descargas quedan en este PC; eliminar no borra el servidor.','info'); }}
+    ]
+  };
+  var items=menus[kind]; if(!items) return;
+  m.innerHTML='';
+  items.forEach(function(it){
+    if(it.sep){ var s=document.createElement('div'); s.className='msep'; m.appendChild(s); return; }
+    var row=document.createElement('div'); row.className='mi2'+(it.disabled?' disabled':'');
+    row.appendChild(document.createTextNode(it.l));
+    if(it.acc){ var a=document.createElement('i'); a.className='acc'; a.textContent=it.acc; row.appendChild(a); }
+    if(!it.disabled){
+      row.addEventListener('mouseenter',function(){ qsa('.mi2',m).forEach(function(r){ r.classList.toggle('hl',r===row); }); });
+      row.addEventListener('click',function(){ var fn=it.fn; closeNapMenu(); if(fn) fn(); });
+    }
+    m.appendChild(row);
+  });
+  qsa('#nap-menubar span').forEach(function(s){ s.classList.toggle('open',s===btn); s.classList.toggle('hl',s===btn); });
+  m.style.left=btn.offsetLeft+'px';
+  m.style.top=(btn.offsetTop+btn.offsetHeight)+'px';
+  m.hidden=false;
+}
+function napWireMenu(){
+  var bar=qs('#nap-menubar'); if(!bar||bar._wired) return; bar._wired=true;
+  bar.addEventListener('click',function(e){
+    var btn=e.target.closest('[data-nap-menu]'); if(!btn) return;
+    e.stopPropagation();
+    if(btn.classList.contains('open')) closeNapMenu();
+    else openNapMenu(btn.getAttribute('data-nap-menu'),btn);
+  });
+  bar.addEventListener('pointerover',function(e){
+    var open=qs('#nap-menubar span.open'); if(!open) return;
+    var btn=e.target.closest('[data-nap-menu]'); if(!btn||btn===open) return;
+    openNapMenu(btn.getAttribute('data-nap-menu'),btn);
+  });
+}
+function napAbrirLocal(){
+  var inp=qs('#napFile'); if(inp) inp.click();
+}
+function napOpenLocalFile(f){
+  if(!f) return;
+  var url=URL.createObjectURL(f);
+  var tipo=/^image\//.test(f.type)?'imagen':(/^audio\//.test(f.type)?'audio':'video');
+  var rec={id:'local-'+Date.now(),titulo:f.name||'Archivo local',tipo:tipo,url:url,tag:'local',local:true,name:f.name||'Archivo local',artista:'',duracion:0,size:f.size||0,at:Date.now()};
+  NAP.sessionLocal=NAP.sessionLocal||[];
+  NAP.sessionLocal.push(rec);
+  if(!NAP.open) openNap();
+  napRenderLib();
+  napFillDuration(rec);
+  if(tipo==='audio'){ napPlayAudio(rec); }
+  else {
+    /* vídeo (o imagen) al Admira Media Player, como archivo local: no altera el i/x oficial */
+    if(typeof mpOpenLocalFile==='function') mpOpenLocalFile(f);
+    else if(typeof openMediaFile==='function') openMediaFile({stockId:rec.id,url:url,tag:'local',tipo:tipo,name:rec.name});
+  }
 }
 function napTab(name){
   NAP.tab=name;
@@ -4682,6 +4893,7 @@ function openNap(){
   napTab(NAP.tab); napRenderRes(); napRenderLib();
 }
 function closeNap(){
+  closeNapMenu();
   napStopAudio();
   qs('#nap').style.display='none'; removeTask('nap'); clearTimeout(NAP.connTimer);
   NAP.open=false; NAP.conn=false; NAP.songs=0; NAP.canciones=null; NAP.videos=null; NAP.haveSplit=false; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
@@ -4708,7 +4920,19 @@ function wireNap(){
   qs('#napX').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.xsel=+r.getAttribute('data-i'); napPlay(); });
   qs('#napPlay').addEventListener('click',napPlay);
   qs('#napClean').addEventListener('click',function(){ NAP.xfers=NAP.xfers.filter(function(x){ return x.state!=='done'; }); NAP.xsel=-1; napRenderX(); });
-  qs('#napLib').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.libSel=+r.getAttribute('data-i'); lvSelect(qs('#napLib'),NAP.libSel); qs('#napLibPlay').disabled=false; });
+  napWireMenu();
+  qs('#napFile').addEventListener('change',function(){ var f=this.files&&this.files[0]; this.value=''; if(f) napOpenLocalFile(f); });
+  document.addEventListener('mousedown',function(e){
+    var m=qs('#nap-menu'), bar=qs('#nap-menubar');
+    if(!m||m.hidden) return;
+    if(m.contains(e.target)||(bar&&bar.contains(e.target))) return;
+    closeNapMenu();
+  },true);
+  qs('#napLib').addEventListener('click',function(e){
+    var del=e.target.closest('.nap-del');
+    if(del){ e.preventDefault(); e.stopPropagation(); napPedirEliminar(+del.getAttribute('data-del')); return; }
+    var r=e.target.closest('.lvr'); if(!r) return; NAP.libSel=+r.getAttribute('data-i'); lvSelect(qs('#napLib'),NAP.libSel); qs('#napLibPlay').disabled=false;
+  });
   qs('#napLib').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; napPlayLib(+r.getAttribute('data-i')); });
   qs('#napLibPlay').addEventListener('click',function(){ if(NAP.libSel>=0) napPlayLib(NAP.libSel); });
   qs('#napAudPlay').addEventListener('click',function(e){ e.stopPropagation(); napToggleAudio(); });

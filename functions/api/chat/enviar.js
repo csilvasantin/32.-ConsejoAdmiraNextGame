@@ -2,7 +2,8 @@
  * POST /api/chat/enviar — Carlos escribe al consejero desde admira.live (GrokBotBox, 09-10-2026).
  * { persona?: "jobs", texto, msg_id }  · auth: ID token de Google de Carlos o token de máquina de la caja.
  * 1) guarda el turno (rol carlos, origen live, msg_id) en el hilo; 2) lo entrega como encargo
- * [chat-coetaneos] al bot-inbox (bot.yokup.com), que despierta la rutina del consejero por su webhook.
+ * [chat-coetaneos] al bot-inbox (bot.yokup.com); 3) despierta la rutina del consejero por el
+ * webhook que registró con consejero_webhook_registrar (POST /consejero/despertar en mcp.admira.live).
  * Idempotente por msg_id: un msg_id ya entregado no se reenvía nunca.
  */
 import { normalizarPersona, normalizarTurno, anadirTurno, tokenMaquina, emailGoogle, claveHilo, textoEncargo, BOT_INBOX, PERSONA_INBOX, mensajeLimpio, limpiarTextoVisita, identidadDeEmail, MAX_TEXTO_WIN95, MIN_GAP_WIN95_MS } from "../../../chat-hilo-lib.mjs";
@@ -92,6 +93,26 @@ export async function onRequestPost({ request, env, fetchImpl }) {
   } catch (e) {
     // Ambiguo: el bot-inbox pudo aceptarlo. No se reintenta: queda «sin confirmar».
     entrega = "sin_confirmar"; detalle = "sin respuesta del bot-inbox";
+  }
+  if (entrega === "entregado" && encargo) {
+    try {
+      const base = String((env && env.MCP_BASE) || "https://mcp.admira.live").replace(/\/$/, "");
+      const wr = await doFetch(base + "/consejero/despertar", {
+        method: "POST", redirect: "manual", signal: AbortSignal.timeout(8000),
+        headers: { "content-type": "application/json", accept: "application/json", authorization: "Bearer " + llave },
+        body: JSON.stringify({
+          persona: PERSONA_INBOX[persona], encargo, de: identidad.corto, resumen: turno.texto,
+          canal: canal || "chat", id: turno.id, tipo: "chat",
+          url: "https://www.admira.live/api/chat/hilo?persona=" + encodeURIComponent(persona),
+        }),
+      });
+      const wd = await wr.json().catch(() => null);
+      if (wd && wd.despertado) detalle = detalle || ("despertar webhook " + (wd.codigo || 200));
+      else if (wd && wd.resultado) detalle = (detalle ? detalle + " · " : "") + "despertar: " + wd.resultado;
+      else detalle = (detalle ? detalle + " · " : "") + "despertar " + wr.status;
+    } catch (e) {
+      detalle = (detalle ? detalle + " · " : "") + "despertar sin confirmar";
+    }
   }
   await guardar(env, persona, (d2) => {
     const t = d2.turnos.find((x) => x.id === turno.id);

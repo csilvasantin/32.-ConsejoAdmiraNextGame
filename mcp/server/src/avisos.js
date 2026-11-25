@@ -6,7 +6,10 @@
  * y el destinatario lo ve en su revisión de cada 15 min. Si el destinatario registra un
  * webhook (consejero_webhook_registrar), además se le hace un POST en el instante:
  *   { tipo:'consejero_mensaje', id, de, para, resumen, responde_a, hora, url }
- * Nunca el cuerpo completo: solo un resumen corto + id; se lee con consejero_bandeja.
+ * El mismo registro vale para encargos y para el chat/ICQGram de admira.live
+ * (tipo:'encargo' o 'chat', con el número de encargo): POST /consejero/despertar.
+ * Nunca el cuerpo completo: solo un resumen corto + id; se lee con consejero_bandeja
+ * o telegram_bandeja.
  *
  * - Registro en KV (ADMIRA_LIVE_DESDE) con prefijo propio `consejero-webhook:v1:<Silla>`.
  * - El secreto opcional se guarda y se manda en una cabecera; al leer nunca se devuelve.
@@ -132,7 +135,7 @@ export function crearAvisos(env = {}, deps = {}) {
     const ctl = typeof AbortController === 'function' ? new AbortController() : null;
     const temporizador = ctl ? setTimeout(() => ctl.abort(), timeout) : null;
     try {
-      const headers = { 'content-type': 'application/json', 'user-agent': 'admira-live-avisos/1.0', 'x-admira-aviso': 'consejero_mensaje' };
+      const headers = { 'content-type': 'application/json', 'user-agent': 'admira-live-avisos/1.0', 'x-admira-aviso': String(carga && carga.tipo || 'consejero_mensaje') };
       if (reg.secreto) headers[reg.cabecera || CABECERA_DEF] = reg.secreto;
       const r = await fetcher(reg.url, { method: 'POST', headers, body: JSON.stringify(carga), redirect: 'manual', signal: ctl ? ctl.signal : undefined });
       return { ok: r.status >= 200 && r.status < 300, codigo: r.status, ms: Date.now() - t0 };
@@ -152,12 +155,21 @@ export function crearAvisos(env = {}, deps = {}) {
       if (!reg) return { ok: false, omitido: 'sin webhook' };
       let url;
       try { url = validarUrl(reg.url); } catch (e) { return { ok: false, omitido: e.message }; }
+      const tipo = m.tipo === 'encargo' || m.tipo === 'chat' ? m.tipo : 'consejero_mensaje';
       const carga = {
-        tipo: 'consejero_mensaje', id: m.id, de: m.de, de_tipo: m.de_tipo || 'consejero', para: silla, para_tipo: m.para_tipo || 'consejero',
-        resumen: resumen(m.texto), responde_a: m.responde_a || null, hora: m.hora,
-        url: `${sitio}/consejero.html?con=${encodeURIComponent(silla)}#${encodeURIComponent(m.id)}`,
-        leer: 'consejero_bandeja (MCP admira-live) con tu clave',
+        tipo, id: m.id, de: m.de, de_tipo: m.de_tipo || (tipo === 'consejero_mensaje' ? 'consejero' : 'visitante'),
+        para: silla, para_tipo: m.para_tipo || 'consejero',
+        resumen: resumen(m.texto || m.resumen), responde_a: m.responde_a || null, hora: m.hora,
+        url: m.url || `${sitio}/consejero.html?con=${encodeURIComponent(silla)}${m.id ? '#' + encodeURIComponent(m.id) : ''}`,
+        leer: tipo === 'consejero_mensaje' ? 'consejero_bandeja (MCP admira-live) con tu clave' : 'telegram_bandeja / encargo_estado; contesta en el hilo',
       };
+      if (m.encargo) carga.encargo = m.encargo;
+      if (m.canal) carga.canal = m.canal;
+      if (tipo !== 'consejero_mensaje') {
+        carga.instruccion = m.instruccion || 'Te ha llegado un encargo o un mensaje de chat de admira.live: lee la bandeja y contesta.';
+        carga.source = 'admira.live';
+        carga.evento = tipo;
+      }
       let res = await intentar({ ...reg, url }, carga);
       let intentos = 1;
       if (!res.ok && !(res.codigo >= 400 && res.codigo < 500 && res.codigo !== 408 && res.codigo !== 429)) {

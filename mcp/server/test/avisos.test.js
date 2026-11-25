@@ -132,3 +132,52 @@ test('/consejero/mensajes: abierto sin secreto, cerrado con CONSEJERO_MENSAJES_T
   assert.equal((await manejar(r(), env)).status, 401);
   assert.equal((await manejar(r('m'.repeat(32)), env)).status, 200);
 });
+
+test('encargo o chat: el mismo webhook recibe tipo, canal y número de encargo', async () => {
+  const kv = kvMemoria();
+  const llamadas = [];
+  const av = crearAvisos({ ADMIRA_LIVE_DESDE: kv, SITIO: 'https://www.admira.live' }, { fetchWebhook: async (u, i) => { llamadas.push({ u, i }); return { status: 204 }; } });
+  await av.registrar({ url: 'https://hooks.example.com/huang' }, yo('Huang'));
+  const r = await av.avisar({ tipo: 'chat', id: 'live-w-test', de: 'Carlos', para: 'Huang', texto: 'Hola desde ICQGram', encargo: 7712, canal: 'win95', hora: '2026-11-25T18:03:00.000Z' });
+  assert.equal(r.ok, true);
+  assert.equal(r.codigo, 204);
+  assert.equal(llamadas.length, 1);
+  const c = JSON.parse(llamadas[0].i.body);
+  assert.equal(c.tipo, 'chat');
+  assert.equal(c.encargo, 7712);
+  assert.equal(c.canal, 'win95');
+  assert.equal(c.de, 'Carlos');
+  assert.equal(c.para, 'Huang');
+  assert.ok(!JSON.stringify(c).includes('supersecreto'));
+  assert.equal(llamadas[0].i.headers['x-admira-aviso'], 'chat');
+});
+
+test('POST /consejero/despertar usa el webhook registrado y exige la PANEL_KEY', async () => {
+  const kv = kvMemoria();
+  const llamadas = [];
+  const env = { ADMIRA_LIVE_DESDE: kv, ADMIRA_TELEGRAM_PANEL_KEY: 'panel-key-despertar', SITIO: 'https://www.admira.live' };
+  const deps = { fetchWebhook: async (u, i) => { llamadas.push({ u, i }); return { status: 200 }; } };
+  await crearAvisos(env, deps).registrar({ url: 'https://hooks.example.com/huang', secreto: 'Bearer secreto-de-prueba', cabecera: 'authorization' }, yo('Huang'));
+  const post = (headers, body) => new Request('https://mcp.admira.live/consejero/despertar', { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  assert.equal((await manejar(post({}, { persona: 'Huang', encargo: 7713 }), env, deps)).status, 401);
+  assert.equal((await manejar(post({ authorization: 'Bearer no' }, { persona: 'Huang', encargo: 7713 }), env, deps)).status, 401);
+  const r = await manejar(post({ authorization: 'Bearer panel-key-despertar' }, { persona: 'Jensen', encargo: 7713, de: 'Carlos', resumen: 'mensaje de prueba ICQGram', canal: 'win95', tipo: 'chat' }), env, deps);
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  assert.equal(d.despertado, true);
+  assert.equal(d.via, 'webhook-propio');
+  assert.equal(d.para, 'Huang');
+  assert.equal(d.codigo, 200);
+  assert.equal(llamadas.length, 1);
+  const c = JSON.parse(llamadas[0].i.body);
+  assert.equal(c.tipo, 'chat');
+  assert.equal(c.encargo, 7713);
+  assert.equal(c.canal, 'win95');
+  assert.equal(llamadas[0].i.headers.authorization, 'Bearer secreto-de-prueba');
+  const sin = await manejar(post({ authorization: 'Bearer panel-key-despertar' }, { persona: 'Jobs', encargo: 1, resumen: 'sin registro' }), env, deps);
+  const sd = await sin.json();
+  assert.equal(sin.status, 200);
+  assert.equal(sd.despertado, false);
+  assert.match(String(sd.resultado), /sin webhook/);
+});

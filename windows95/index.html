@@ -239,6 +239,17 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .brdir{height:22px;padding:1px 4px 0;white-space:nowrap}
 .brdir .btn{min-width:0;height:19px;padding:0 6px;margin-right:3px;font-size:10px}
 .brview{position:absolute;left:3px;right:3px;top:131px;bottom:26px;overflow-x:hidden;overflow-y:auto;background:#fff;touch-action:pan-y;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.brview.live{overflow:hidden}
+#brPage.live{height:100%;padding:0;margin:0;background:#0d0f12}
+#brPage .p26-consejo{height:100%;display:flex;flex-direction:column;min-height:0}
+#brLive{flex:1;width:100%;border:0;background:#0d0f12;min-height:240px}
+#brPage .p26-consejo-fallback{flex:1;overflow:auto;background:#0d0f12;color:#e8ecf1;font:13px/1.45 Tahoma,sans-serif;padding:10px 12px}
+#brPage .p26-consejo-fallback h1{margin:0 0 8px;font-size:16px;color:#fff}
+#brPage .p26-consejo-fallback .turno{margin:8px 0;max-width:92%}
+#brPage .p26-consejo-fallback .turno.carlos{margin-left:auto}
+#brPage .p26-consejo-fallback .burbuja{padding:7px 10px;border-radius:10px;background:#232a33;white-space:pre-wrap;word-wrap:break-word}
+#brPage .p26-consejo-fallback .turno.carlos .burbuja{background:#1f6feb;color:#fff}
+#brPage .p26-consejo-fallback .meta{font-size:10px;color:#8b96a5;margin:2px 4px 0}
 .brview::-webkit-scrollbar{width:14px}
 .brview::-webkit-scrollbar-track{background-color:#fff;background-image:linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%),linear-gradient(45deg,#c0c0c0 25%,transparent 25%,transparent 75%,#c0c0c0 75%);background-size:2px 2px;background-position:0 0,1px 1px}
 .brview::-webkit-scrollbar-thumb{background:#c0c0c0;box-shadow:inset -1px -1px #000,inset 1px 1px #fff,inset -2px -2px #808080}
@@ -501,7 +512,7 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
         <div class="throb" id="brThrob"><div class="tA">A</div><i></i><i></i><i></i></div>
       </div>
       <div class="brloc">Dirección: <span class="fin" id="brUrl"></span></div>
-      <div class="brdir"><button class="btn" data-dgo="home">Novedades</button><button class="btn" data-dgo="cool">Lo más cool</button><button class="btn" data-dgo="@find">Buscar en la red</button><button class="btn" data-dgo="libro">Personas</button><button class="btn" data-dgo="@soft">Software</button></div>
+      <div class="brdir"><button class="btn" data-dgo="novedades">Novedades</button><button class="btn" data-dgo="cool">Lo más cool</button><button class="btn" data-dgo="@find">Buscar en la red</button><button class="btn" data-dgo="libro">Personas</button><button class="btn" data-dgo="@soft">Software</button></div>
       <div class="brview" id="brView"><div class="page" id="brPage"></div></div>
       <div class="brstat"><div class="key"><svg viewBox="0 0 14 14"><circle cx="4.5" cy="7" r="3" fill="#ffd800" stroke="#000"/><path d="M7.5 7h5M10 7v3M12 7v2" stroke="#000" stroke-width="1.5"/></svg></div><div id="brSt">Sin conexión</div><div class="brprog"><i id="brProg"></i></div></div>
     </div>
@@ -2293,7 +2304,7 @@ function quickOpts(){
 }
 function openRealChat(cg){
   var w=qs('#icqc'), C=chc(); ICQ.chatId++; var id=ICQ.chatId;
-  ICQ.who=cg.id; ICQ.busy=false; ICQ.ended=true; delete ICQ.pending[cg.id]; renderContacts();
+  ICQ.who=cg.id; ICQ.busy=false; ICQ.ended=true; delete ICQ.pending[cg.id]; recordarConsejero(cg); renderContacts();
   qs('#icqcT').textContent=cg.name+' - ICQGram';
   qs('#icqcH').innerHTML=bub('#3cc83c')+'<b></b><span></span>'; qs('#icqcH b').textContent=cg.name; qs('#icqcH span').textContent=cg.status;
   qs('#icqHist').innerHTML=''; qs('#icqOpts').innerHTML=''; realInput(true);
@@ -2514,6 +2525,74 @@ var PAGES={
     '<a data-go="home" class="back">← Volver a 1997</a></div>'; }}
 };
 function brStatus(s,k){ qs('#brSt').textContent=s; qs('#brProg').style.width=Math.round((k||0)*100)+'%'; }
+
+var LAST_CONSEJERO_KEY='vuelta95.lastConsejero';
+function recordarConsejero(cg){
+  if(!cg||!cg.persona) return;
+  try{ localStorage.setItem(LAST_CONSEJERO_KEY, JSON.stringify({id:cg.id,persona:cg.persona,name:cg.name,at:Date.now()})); }catch(e){}
+}
+function consejeroPorPersona(persona){
+  for(var i=0;i<CONSEJO.length;i++) if(CONSEJO[i].persona===persona) return CONSEJO[i];
+  return {id:'c-'+(persona||'huang'),persona:persona||'huang',name:(persona||'huang')};
+}
+function ultimaPersonaLocal(){
+  try{
+    var s=JSON.parse(localStorage.getItem(LAST_CONSEJERO_KEY)||'null');
+    if(s&&s.persona) return s.persona;
+  }catch(e){}
+  if(ICQ.who){ var c=consejero(ICQ.who); if(c&&c.persona) return c.persona; }
+  return (CONSEJO[0]&&CONSEJO[CONSEJO.length-1]&&CONSEJO[CONSEJO.length-1].persona)||'huang';
+}
+function cabecerasHilo(){
+  var C=chc(), h={};
+  try{ if(C&&C.credencial&&C.credencial()) h.Authorization='Bearer '+C.credencial(); }catch(e){}
+  return h;
+}
+async function resolverUltimaPersona(){
+  try{
+    var r=await fetch('/api/chat/ultimo',{cache:'no-store',credentials:'same-origin',headers:cabecerasHilo()});
+    var d=await r.json();
+    if(d&&d.ok&&d.persona) return d.persona;
+  }catch(e){}
+  return ultimaPersonaLocal();
+}
+function brMarcoConsejo(p){
+  return '<div class="p26-consejo"><iframe id="brLive" title="Consejo AdmiraNeXT" src="/chat/'+esc(p.persona)+'/?marco=netscape"></iframe></div>';
+}
+function brPintarConsejo(p){
+  var box=qs('#brPage'), C=chc();
+  if(!box) return;
+  var nombre=esc(p.nombre||p.persona);
+  function fallo(msg){ box.innerHTML='<div class="p26-consejo-fallback"><h1>Consejo AdmiraNeXT</h1><p>'+esc(msg)+'</p></div>'; }
+  if(!C||!C.leerHilo){ fallo('Entra en admira.live para ver la conversación.'); return; }
+  C.leerHilo(p.persona,{limite:80}).then(function(r){
+    if(r.status===401){ fallo('Entra con tu cuenta de Google de admira.live para ver el hilo.'); return; }
+    var html='<div class="p26-consejo-fallback"><h1>Consejo · '+nombre+'</h1>';
+    var turnos=r.turnos||[];
+    if(!turnos.length) html+='<p>Aún no hay mensajes en este hilo.</p>';
+    turnos.forEach(function(tu){
+      var mio=tu.rol==='carlos'||tu.autor==='caja';
+      var quien=esc(mio?(tu.autor_nombre||'Carlos'):(p.nombre||p.persona));
+      var hora=esc(tu.hora||'');
+      html+='<div class="turno '+(mio?'carlos':'persona')+'"><div class="burbuja">'+esc(tu.texto||'')+'</div><div class="meta">'+quien+(hora?' · '+hora:'')+'</div></div>';
+    });
+    html+='</div>';
+    box.innerHTML=html;
+    box.classList.add('live');
+    var v=qs('#brView'); if(v) v.scrollTop=v.scrollHeight;
+  }).catch(function(){ fallo('Sin conexión con admira.live.'); });
+}
+async function brNovedades(){
+  if(!BR.online) return;
+  var persona=await resolverUltimaPersona();
+  var c=consejeroPorPersona(persona);
+  recordarConsejero(c);
+  var url='https://www.admira.live/chat/'+encodeURIComponent(c.persona)+'/';
+  var key='live-'+c.persona;
+  PAGES[key]={url:url,title:'Consejo · '+c.name,kb:180,era:26,live:true,persona:c.persona,nombre:c.name,html:function(){ return brMarcoConsejo(this); }};
+  brGo(key);
+}
+
 function brHost(u){ return u.replace(/^https?:\/\//,'').split('/')[0]; }
 function brButtons(){ qs('#brBack').classList.toggle('dis',BR.pos<=0); qs('#brFwd').classList.toggle('dis',BR.pos>=BR.hist.length-1); }
 function setReveal(list,k){ list.forEach(function(el){ var v='inset(0 0 '+Math.round((1-k)*100)+'% 0)'; el.style.clipPath=v; el.style.webkitClipPath=v; el.style.filter=k<1?'blur('+(2.5*(1-k)).toFixed(1)+'px)':''; }); }
@@ -2526,7 +2605,8 @@ async function brLoad(key){
   brStatus('Host contactado. Esperando respuesta…',0);
   await sleep(fast?150:600); if(id!==BR.loadId) return;
   if(key==='home') BR.visits++;
-  qs('#brPage').innerHTML=p.html(); qs('#brView').scrollTop=0;
+  qs('#brPage').classList.toggle('live',!!p.live); qs('#brView').classList.toggle('live',!!p.live); qs('#brPage').innerHTML=p.html(); qs('#brView').scrollTop=0;
+  if(p.live){ var fr=qs('#brLive'); if(fr){ fr.addEventListener('load',function onL(){ try{ if(!fr.contentDocument) brPintarConsejo(p); }catch(e){ brPintarConsejo(p); } }); fr.addEventListener('error',function(){ brPintarConsejo(p); }); } }
   var imgs=qsa('#brPage .pi'); setReveal(imgs,0);
   var dur=fast?600:3200, t0=performance.now();
   for(;;){
@@ -2578,7 +2658,7 @@ function wireBrowser(){
   qs('#brPrint').addEventListener('click',function(){ msgBox('Imprimir','Enviando a la impresora matricial…\n(El ruido va incluido.)','info'); });
   function find(){ msgBox('Buscar en la red','Todavía no hay ningún buscador bueno.\nVuelve dentro de un año.','info'); }
   qs('#brFind').addEventListener('click',find);
-  qsa('#brw [data-dgo]').forEach(function(b){ b.addEventListener('click',function(){ var g=b.getAttribute('data-dgo'); if(g==='@find') find(); else if(g==='@soft') msgBox('Software','Netscape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); else brGo(g); }); });
+  qsa('#brw [data-dgo]').forEach(function(b){ b.addEventListener('click',function(){ var g=b.getAttribute('data-dgo'); if(g==='@find') find(); else if(g==='novedades') brNovedades(); else if(g==='@soft') msgBox('Software','Netscape Navigator 4.0 beta (18 MB)\nTiempo estimado de descarga: 1 h 52 min.','info'); else brGo(g); }); });
   qs('[data-close="brw"]').addEventListener('click',closeBrowser);
   qs('[data-min="brw"]').addEventListener('click',function(){ minimize('brw'); });
   qs('#dunCancel').addEventListener('click',cancelDial); qs('#dunX').addEventListener('click',cancelDial);

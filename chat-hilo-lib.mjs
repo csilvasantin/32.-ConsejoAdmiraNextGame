@@ -356,3 +356,38 @@ export function mensajeLimpio(persona, turno, autorEmail) {
     ts: turno.ts, hora: horaMadrid(turno.ts), zona: "Europe/Madrid", texto: turno.texto, msg_id: turno.id,
   };
 }
+
+/**
+ * El consejero con el que habló por última vez este usuario.
+ * Solo cuenta un hilo si hay al menos un turno suyo; luego gana el de
+ * mensaje más reciente (de él o del consejero). No devuelve textos.
+ */
+export function turnoEsDeUsuario(t, quien) {
+  const a = String((t && t.autor) || "").toLowerCase().trim();
+  const q = String(quien || "").toLowerCase().trim();
+  if (!q) return false;
+  if (q === "caja" || q === "maquina") {
+    if (a === "caja" || a === "maquina") return true;
+    if (EMAILS_DEFECTO.includes(a)) return true;
+    return (t && t.rol) === "carlos" && (!a || a === "caja");
+  }
+  return a === q;
+}
+
+export function ultimoConsejero(hilos, quien) {
+  let best = null;
+  for (const h of hilos || []) {
+    const persona = h && h.persona;
+    const turnos = (h && h.turnos) || [];
+    if (!persona || !turnos.some((t) => turnoEsDeUsuario(t, quien))) continue;
+    let last = 0;
+    for (const t of turnos) {
+      const n = Date.parse((t && (t.ts || t.recibido)) || 0);
+      if (Number.isFinite(n) && n >= last) last = n;
+    }
+    if (!best || last > best.ts || (last === best.ts && String(persona) > String(best.persona))) {
+      best = { persona, ts: last };
+    }
+  }
+  return best;
+}

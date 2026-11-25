@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizarTurno, anadirTurno, salud, emailGoogle, MAX_TURNOS, GOOGLE_CLIENT_ID } from "./chat-hilo-lib.mjs";
+import { normalizarTurno, anadirTurno, salud, emailGoogle, MAX_TURNOS, GOOGLE_CLIENT_ID, ultimoConsejero } from "./chat-hilo-lib.mjs";
+import * as ultimoApi from "./functions/api/chat/ultimo.js";
 import * as hilo from "./functions/api/chat/hilo.js";
 import * as saludApi from "./functions/api/chat/salud.js";
 
@@ -315,4 +316,51 @@ test("cliente compartido: turnosDeVisita — la home solo enseña lo enviado en 
   assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, t0).map((t) => t.id), ["live-1", "resp"]);
   assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, NaN), []);
   assert.deepEqual(C.turnosDeVisita([null, { id: "r", rol: "persona", ts: "x" }], {}, t0), []);
+});
+
+test("ultimoConsejero elige el hilo del usuario con el mensaje más reciente y no filtra por texto", () => {
+  const hilos = [
+    { persona: "jobs", turnos: [{ autor: "csilvasantin@gmail.com", ts: "2026-11-25T17:00:00.000Z", texto: "secreto-jobs" }] },
+    { persona: "huang", turnos: [
+      { autor: "csilvasantin@gmail.com", ts: "2026-11-25T18:00:00.000Z", texto: "hola Jensen" },
+      { autor: "huang", rol: "huang", ts: "2026-11-25T18:10:00.000Z", texto: "respuesta privada" },
+    ] },
+    { persona: "musk", turnos: [{ autor: "otro@admira.com", ts: "2026-11-25T19:00:00.000Z", texto: "no es mío" }] },
+  ];
+  const u = ultimoConsejero(hilos, "csilvasantin@gmail.com");
+  assert.equal(u.persona, "huang");
+  assert.equal(u.ts, Date.parse("2026-11-25T18:10:00.000Z"));
+  const caja = ultimoConsejero([
+    { persona: "huang", turnos: [{ autor: "caja", rol: "carlos", ts: "2026-11-25T18:51:34.000Z" }] },
+    { persona: "jobs", turnos: [{ autor: "otro@admira.com", ts: "2026-11-25T20:00:00.000Z" }] },
+  ], "caja");
+  assert.equal(caja.persona, "huang");
+  const cajaMail = ultimoConsejero([
+    { persona: "huang", turnos: [{ autor: "csilvasantin@gmail.com", rol: "carlos", ts: "2026-11-25T18:00:00.000Z" }] },
+    { persona: "jobs", turnos: [{ autor: "otro@admira.com", ts: "2026-11-25T20:00:00.000Z" }] },
+  ], "caja");
+  assert.equal(cajaMail.persona, "huang");
+  assert.equal(ultimoConsejero(hilos, "nadie@admira.com"), null);
+});
+
+test("GET /api/chat/ultimo exige sesión y no devuelve textos", async () => {
+  const e = env();
+  await e.RECORTE_KV.put("chat:hilo:v1:jobs", JSON.stringify({ persona: "jobs", turnos: [{ id: "a", autor: "csilvasantin@gmail.com", rol: "carlos", ts: "2026-11-25T17:00:00.000Z", texto: "no salir" }] }));
+  await e.RECORTE_KV.put("chat:hilo:v1:huang", JSON.stringify({ persona: "huang", turnos: [
+    { id: "b", autor: "csilvasantin@gmail.com", rol: "carlos", ts: "2026-11-25T18:00:00.000Z", texto: "tampoco" },
+    { id: "c", autor: "huang", rol: "huang", ts: "2026-11-25T18:20:00.000Z", texto: "secreto del consejero" },
+  ] }));
+  const req = (headers = {}) => new Request("https://www.admira.live/api/chat/ultimo", { headers });
+  const no = await ultimoApi.onRequestGet({ request: req(), env: e, fetchImpl: async () => new Response("{}", { status: 400 }) });
+  assert.equal(no.status, 401);
+  const r = await ultimoApi.onRequestGet({ request: req({ "X-Council-Token": TOKEN }), env: e });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  assert.equal(d.persona, "huang");
+  assert.equal(d.nombre, "Jensen Huang");
+  assert.equal(d.texto, undefined);
+  assert.ok(!JSON.stringify(d).includes("secreto"));
+  assert.ok(!JSON.stringify(d).includes("tampoco"));
+  assert.ok(!JSON.stringify(d).includes("no salir"));
 });

@@ -32,3 +32,16 @@ test('Lasseter e Ive: silla propia con MCP_KEY_LASSETER / MCP_KEY_IVE', async ()
   assert.equal(sillaCanonica('Olivetti'), null);
   assert.equal(sillaCanonica('admira.live'), null);
 });
+test('Murati: silla propia con MCP_KEY_MURATI; Trinity no es alias de la silla', async () => {
+  const { sillaCanonica } = await import('../src/sillas.js');
+  const M = 'm'.repeat(40);
+  const env = { MCP_KEY_MURATI: M };
+  assert.equal(identidadPorClave(M, env).persona, 'Murati');
+  assert.equal(identidadPorClave(M, env).agent, 'MuratiGrokBot');
+  assert.equal(identidadPorClave(M, env).tipo, 'consejero');
+  assert.deepEqual(sillasConClave(env), ['Murati']);
+  assert.equal(sillaCanonica('Murati'), 'Murati');
+  assert.equal(sillaCanonica('Mira'), 'Murati');
+  assert.equal(sillaCanonica('Mira Murati'), 'Murati');
+  assert.equal(sillaCanonica('Trinity'), null, 'Trinity es el deepagent, no la silla');
+});

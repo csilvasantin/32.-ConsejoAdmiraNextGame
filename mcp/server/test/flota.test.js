@@ -95,14 +95,16 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.deepEqual(v.agentes.map((a) => a.persona), ['Morfeo', 'Oraculo', 'Smith']);
   assert.deepEqual(v.agentes.find((a) => a.persona === 'Smith').maquinas.map((m) => m.maquina), ['MacMini', 'MacBookPro16']);
   assert.ok(v.sin_senal.includes('Neo') && v.sin_senal.includes('Trinity'));
-  assert.equal(v.consejeros.length, 9);
-  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot'], ['Huang', 'CTO', 'GrokBot'], ['Lasseter', 'CCO', 'GrokBot'], ['Ive', 'CDO', 'GrokBot'], ['Y', 'CTO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk, Huang e Y sin Mac');
+  assert.equal(v.consejeros.length, 10);
+  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot'], ['Huang', 'CTO', 'GrokBot'], ['Murati', 'COO', 'GrokBot'], ['Lasseter', 'CCO', 'GrokBot'], ['Ive', 'CDO', 'GrokBot'], ['Y', 'CTO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk, Huang, Murati e Y sin Mac');
   assert.deepEqual(v.consejeros.find((c) => c.persona === 'Musk').deepagent, 'Merovingio');
   assert.equal(v.consejeros.find((c) => c.persona === 'Musk').deepagent_maquina, 'MacMini');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent, 'Cypher');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_maquina, 'GrokBotBox');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_runtime, 'DeepAgents');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_model, 'nvidia/nemotron-3-ultra-550b-a55b');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Murati').deepagent, 'Trinity');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Murati').deepagent_maquina, 'GrokBotBox');
   assert.ok(v.sin_senal.includes('Merovingio'), 'Merovingio es agente de la flota: sin latido sale en sin_senal');
   assert.ok(v.sin_senal.includes('Cypher'), 'Cypher es agente de la flota: sin latido sale en sin_senal');
   assert.ok(!v.agentes.some((a) => a.persona === 'Lucas'));

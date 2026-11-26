@@ -16,7 +16,7 @@
  * r23: conocidos:[{agente, maquina, modelo, cuentaId, plan, email}] (consumos-perfiles.mjs) para los desplegables.
  * r20: proyectoAhora = el que más quema AHORA (max tokHora; si todos a 0, max tokHoy) — el dial de proyecto lo sigue en auto.
  */
-import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora, madrid, KEY_DIAS, anotarDia, yokupPorDia, periodosTokens, diasPeriodo } from "../../../consumos-velocidad-lib.mjs";
+import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora, madrid, KEY_DIAS, anotarDia, yokupPorDia, periodosTokens, diasPeriodo, tokHoyMonotono } from "../../../consumos-velocidad-lib.mjs";
 import { mezclar, appsGrokBot, grokbotPulso, superficiesDePulso, limitesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
 import { volcarSiPendiente } from "../../../consejo-consumo-lib.mjs";
@@ -89,13 +89,16 @@ export async function calcular({ env, fetchImpl }) {
     yk = calcularVelocidad({ snaps: unir(deYokup, propias, ahora), hoy, ahora });
   }
   const m = mezclar(yk, docs, ahora);
-  // Libro diario: el tokHoy de la flota (máximo del día), como mucho una escritura cada 5 min.
+  // Libro diario: máximo monótono de tokHoy de la flota en el día de Madrid (r255: se aplica también
+  // a la respuesta, para que /api/consumos/velocidad nunca devuelva un total inferior al ya visto hoy).
   let libro = null;
   try { libro = libroRaw ? JSON.parse(libroRaw) : null; } catch (e) {}
-  const tokHoyFlota = m.sinDatos ? null : Number(m.tokHoy);
+  const dia = madrid(ahora).dia;
+  const maxKv = libro && libro[dia] && Number.isFinite(Number(libro[dia].tok)) ? Number(libro[dia].tok) : null;
+  const tokHoyFlota = m.sinDatos && maxKv == null ? null : tokHoyMonotono(m.sinDatos ? null : m.tokHoy, maxKv);
   if (store && Number.isFinite(tokHoyFlota)) {
-    const dia = madrid(ahora).dia, prev = libro && libro[dia];
-    if (!prev || (tokHoyFlota > prev.tok && ahora - (prev.ts || 0) >= 5 * 60 * 1000)) {
+    const prev = libro && libro[dia];
+    if (!prev || tokHoyFlota > prev.tok) {
       libro = anotarDia(libro, dia, tokHoyFlota, ahora);
       try { await store.put(KEY_DIAS, JSON.stringify(libro)); } catch (e) {}
     }
@@ -110,8 +113,8 @@ export async function calcular({ env, fetchImpl }) {
   }
   const periodos = { ...periodosTokens({ tokHoy: Number.isFinite(tokHoyFlota) ? tokHoyFlota : null, libro, yokup: dMes ? yokupPorDia(dMes) : null,
     yokupDesde: dMes ? (() => { const x = new Date(diasPeriodo(ahora).hoy + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() - 61); return x.toISOString().slice(0, 10); })() : null, ahora }),
-    fuentes: { hoy: "tokHoy en vivo (pulso + Cursor + Yokup)", pasado: "libro diario KV " + KEY_DIAS + " (máximo tokHoy de cada día); si falta, " + FUENTE_MES + " sin caché" }, yokupMes: dMes ? "ok" : "sin respuesta" };
+    fuentes: { hoy: "máximo monótono del día (tokHoy en vivo pulso + Cursor + Yokup, no inferior al libro KV " + KEY_DIAS + ")", pasado: "libro diario KV " + KEY_DIAS + " (máximo tokHoy de cada día); si falta, " + FUENTE_MES + " sin caché" }, yokupMes: dMes ? "ok" : "sin respuesta" };
   const base = { grokbotApps: appsGrokBot(docs, ahora), grokbotPulso: grokbotPulso(docs, ahora), superficies: superficiesDePulso(docs, ahora), limites: limitesDePulso(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
   if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", periodos, ...base };
-  return { ok: true, ...m, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), periodos, ...base };
+  return { ok: true, ...m, tokHoy: tokHoyFlota, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), periodos, ...base };
 }

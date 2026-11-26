@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { incremento, calcularVelocidad, velocidadEn, pico24h, podar, tocaGuardar, serieAInstantaneas, unir, escala, formatoTok, partesDeHoy, madrid } from "./consumos-velocidad-lib.mjs";
+import { incremento, calcularVelocidad, velocidadEn, pico24h, podar, tocaGuardar, serieAInstantaneas, unir, escala, formatoTok, partesDeHoy, madrid, KEY_DIAS, tokHoyMonotono } from "./consumos-velocidad-lib.mjs";
 import { onRequestGet, KEY } from "./functions/api/consumos/velocidad.js";
 
 const M = 60000, H = 60 * M;
@@ -116,6 +116,28 @@ test("endpoint: guarda instantánea en KV (como mucho cada 5 min) y responde la 
   for (const k of ["tokHora", "ventanaMin", "metodo", "porAgente", "pico24h", "generado"]) assert.ok(k in d1, k);
   assert.equal(d1.porAgente[0].agente, "Oraculo · Codex");
   assert.equal(d1.porAgente[0].tokHoy, 26.1e6);
+});
+
+
+test("tokHoyMonotono: nunca devuelve menos que el máximo del día ya guardado", () => {
+  assert.equal(tokHoyMonotono(100, 80), 100);
+  assert.equal(tokHoyMonotono(80, 100), 100);
+  assert.equal(tokHoyMonotono(null, 100), 100);
+  assert.equal(tokHoyMonotono(50, null), 50);
+  assert.equal(tokHoyMonotono(null, null), null);
+  assert.equal(tokHoyMonotono(-1, 10), 10);
+});
+
+test("endpoint: tokHoy no baja si el libro diario ya tiene un máximo mayor", async () => {
+  const kv = kvMem();
+  const hoyDia = madrid(Date.now()).dia;
+  kv.m.set(KEY_DIAS, JSON.stringify({ [hoyDia]: { tok: 30e6, ts: Date.now() - 1000 } }));
+  const fuente = { ok: true, partes: [{ owner: "OraculoMacMini", machine: "MacMini", dia: hoyDia, datos: { persona: "Oraculo", runtime: "Codex", total: 26.1e6 } }], serie: {} };
+  const fetchImpl = async () => new Response(JSON.stringify(fuente), { status: 200 });
+  const d = await (await onRequestGet({ request: req(), env: { RECORTE_KV: kv }, fetchImpl })).json();
+  assert.equal(d.ok, true);
+  assert.equal(d.tokHoy, 30e6);
+  assert.equal(JSON.parse(kv.m.get(KEY_DIAS))[hoyDia].tok, 30e6);
 });
 
 test("/consumos sirve el velocímetro y sondea cada 10 s (tiempo real)", () => {

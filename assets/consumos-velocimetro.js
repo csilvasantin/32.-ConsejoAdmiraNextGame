@@ -156,32 +156,34 @@
     if (real > mostrado) v = Math.max(v, (real - mostrado) / ALCANCE_S);      // el real va por delante: alcanzarlo en ~30 s
     return Math.max(v, minimo);
   }
-  /* r254 (Carlos, 26-11: misma cifra en todos los equipos, y el día arranca siempre en 1 millón).
-   * El reloj de «tokens hoy» ya no acumula en el navegador ni guarda un techo en localStorage (consumos.odo.v1):
-   * dos pantallas con distinto historial o abiertas en distinto momento ven la misma cifra en el mismo instante.
-   * Valor = base del día + medido de la API + ritmo × segundos desde «generado» (acotado).
-   * «Todos los proyectos» arranca el día (00:00 Madrid) en BASE_DIA_TOKENS (1 M). Un proyecto concreto no suma esa base.
-   * Si la API se retrasa, el estimado no corre más de MAX_ESTIMADO_S. A medianoche de Madrid vuelve a la base.
-   * odoSiguiente se queda para el odómetro digital (periodos cerrados, ritmo 0). Reloj de pared (no frames). */
+  /* r255 (Carlos, 26-11: «estan fluctuando… pone 6,09 y a veces 6,08 eso no puede ser»).
+   * r254 dejó la cifra sincronizada entre equipos, pero sumaba un estimado especulativo
+   * (ritmo × segundos desde «generado»). Cada 10 s llega un «generado» nuevo, el estimado vuelve a 0
+   * y, si el medido no ha subido tanto, la cifra CAE (diente de sierra). Inadmisible: es la suma del día.
+   * Valor = base del día + medido de la API. Sin sobrepaso. Nunca baja dentro del mismo día.
+   * Red de seguridad de la sesión (en memoria, SIN localStorage): si una respuesta vieja de caché trae
+   * un medido menor, se ignora la regresión. Dos navegadores con los mismos datos del servidor clavan
+   * la misma cifra. «Todos los proyectos» arranca el día (00:00 Madrid) en BASE_DIA_TOKENS (1 M).
+   * odoSiguiente se queda para el odómetro digital (periodos cerrados, ritmo 0). */
   var LS_ODO = 'consumos.odo.v1';
   var BASE_DIA_TOKENS = 1000000;
-  var MAX_ESTIMADO_S = 60;
   /** Marca de tiempo del servidor (generado); si falta, el instante en que llegó la respuesta. */
   function tsDatos(d, recibido) {
     var g = d && d.generado ? Date.parse(d.generado) : NaN;
     if (Number.isFinite(g)) return g;
     return recibido || Date.now();
   }
-  /** Cifra viva de tokens hoy, pura y determinista: misma entrada (medido, ritmo, ts del servidor, ahora, base) → misma salida. */
-  function tokensHoyVivo(real, ritmoTokH, tsRef, ahora, base, diaRef) {
+  /** Cifra de tokens hoy, pura y monótona: base + medido (sin estimado). techoSesion evita regresiones de caché. */
+  function tokensHoyVivo(real, _ritmoIgnorado, tsRef, ahora, base, diaRef, techoSesion) {
     if (real == null || !isFinite(Number(real))) return null;
     var t = Number(ahora) || Date.now();
     var diaAhora = relojMadrid(t).dia;
     var dia = diaRef || (Number.isFinite(Number(tsRef)) && tsRef ? relojMadrid(Number(tsRef)).dia : diaAhora);
     if (dia && diaAhora !== dia) return Math.max(0, Number(base) || 0);
-    var dt = 0;
-    if (Number.isFinite(Number(tsRef)) && tsRef) dt = Math.max(0, Math.min(MAX_ESTIMADO_S, (t - Number(tsRef)) / 1000));
-    return Math.max(0, Number(base) || 0) + Number(real) + Math.max(0, Number(ritmoTokH) || 0) / 3600 * dt;
+    var v = Math.max(0, Number(base) || 0) + Number(real);
+    var techo = Number(techoSesion);
+    if (Number.isFinite(techo) && techo > v) return techo;
+    return v;
   }
   /** Siguiente valor del odómetro digital: monótono; salta al real si va por delante. Puro (testeable). */
   function odoSiguiente(mostrado, real, ritmoTokH, dt) {
@@ -526,24 +528,26 @@
     if (que) que.innerHTML = esc(txtRitmo(sin ? 'sinvivo' : est, this.ultimoEvento, this.suelo)) + (tokHoy > 0 ? ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour') : '') +
       ' · ' + T('refresco cada ', 'refresh every ') + Math.round(POLL / 1000) + ' s';
   };
-  /* r230 / r254: Reloj 2 = TOKENS HOY. Aguja y cifra = base del día (1 M si es «Todos los proyectos») + medido de la
-   * API + estimado sincronizado desde «generado». Sin techo local ni acumulación por pestaña. Un proyecto concreto no
-   * suma la base de 1 M: solo su medido + el estimado. El odómetro del reloj 2 enseña SIEMPRE el total de ayer (todos). */
-  function Acumulado() { this.real = null; this.ritmo = 0; this.tsRef = 0; this.base = 0; this.clave = ''; this.diaRef = ''; }
-  Acumulado.prototype.pon = function (n, ritmoTokH, clave, tsRef, base) {
+  /* r230 / r255: Reloj 2 = TOKENS HOY. Aguja y cifra = base del día (1 M si es «Todos los proyectos») + medido
+   * de la API. Sin estimado especulativo (no puede bajar al refrescar). Sin techo en localStorage. Un proyecto
+   * concreto no suma la base de 1 M. El odómetro del reloj 2 enseña SIEMPRE el total de ayer (todos). */
+  function Acumulado() { this.real = null; this.techo = null; this.tsRef = 0; this.base = 0; this.clave = ''; this.diaRef = ''; }
+  Acumulado.prototype.pon = function (n, _ritmoTokH, clave, tsRef, base) {
     if (n == null || !isFinite(n)) { this.real = null; return; }
     this.real = Number(n);
-    this.ritmo = Math.max(0, Number(ritmoTokH) || 0);
     this.clave = clave || '';
     this.tsRef = Number(tsRef) || 0;
     this.base = Math.max(0, Number(base) || 0);
-    this.diaRef = this.tsRef ? relojMadrid(this.tsRef).dia : '';
+    var dia = this.tsRef ? relojMadrid(this.tsRef).dia : relojMadrid(Date.now()).dia;
+    if (dia !== this.diaRef) { this.diaRef = dia; this.techo = null; }
+    var v = tokensHoyVivo(this.real, 0, this.tsRef, this.tsRef || Date.now(), this.base, this.diaRef);
+    if (v != null && (this.techo == null || v > this.techo)) this.techo = v;
   };
   Acumulado.prototype.valor = function (ahora) {
     if (this.real == null) return null;
-    return tokensHoyVivo(this.real, this.ritmo, this.tsRef, ahora || Date.now(), this.base, this.diaRef);
+    return tokensHoyVivo(this.real, 0, this.tsRef, ahora || Date.now(), this.base, this.diaRef, this.techo);
   };
-  if (root.ConsumosOdometro) { root.ConsumosOdometro.Acumulado = Acumulado; root.ConsumosOdometro.tokensHoyVivo = tokensHoyVivo; root.ConsumosOdometro.tsDatos = tsDatos; root.ConsumosOdometro.BASE_DIA_TOKENS = BASE_DIA_TOKENS; root.ConsumosOdometro.MAX_ESTIMADO_S = MAX_ESTIMADO_S; }
+  if (root.ConsumosOdometro) { root.ConsumosOdometro.Acumulado = Acumulado; root.ConsumosOdometro.tokensHoyVivo = tokensHoyVivo; root.ConsumosOdometro.tsDatos = tsDatos; root.ConsumosOdometro.BASE_DIA_TOKENS = BASE_DIA_TOKENS; }
   /** Escala del reloj de tokens hoy: 1,25 × el acumulado, mínimo 1 M (millones). */
   function escalaHoy(v) { return escala((Number(v) || 0) * 1.25 / 1.5, 1e6); }
   /* r231 (Carlos, 21-11 21:25: «en los relojes digitales pondremos el total de tokens del dia de ayer en el de la
@@ -670,7 +674,7 @@
     if (que) que.innerHTML = o.texto || '';
     this.arranca();
   };
-  root.ConsumosVelocimetroAguja = { amplitud: amplitud, temblor: temblor, odoSiguiente: odoSiguiente, tokensHoyVivo: tokensHoyVivo, tsDatos: tsDatos, BASE_DIA_TOKENS: BASE_DIA_TOKENS, MAX_ESTIMADO_S: MAX_ESTIMADO_S, POLL_MS: POLL };
+  root.ConsumosVelocimetroAguja = { amplitud: amplitud, temblor: temblor, odoSiguiente: odoSiguiente, tokensHoyVivo: tokensHoyVivo, tsDatos: tsDatos, BASE_DIA_TOKENS: BASE_DIA_TOKENS, POLL_MS: POLL };
 
   var LS_PROY = 'consumos.vel.proyecto', LS_AG = 'consumos.vel.agente', AUTO = '__auto__', TODOS = '__todos__';
   function lsGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) || '' : ''; } catch (e) { return ''; } }
@@ -1048,7 +1052,7 @@
       if (metP) metP.textContent = T('Pulsa la mitad izquierda o derecha del reloj para cambiar de periodo', 'Click the left or right half to change period');
       return;
     }
-    // Total de hoy de todos los proyectos (+ estimado en curso al ritmo del total): aguja con «Todos».
+    // Total de hoy de todos los proyectos (base 1 M + medido, sin estimado): aguja con «Todos».
     var rT = ritmoTotal(d || {}, sin, true);
     estado.d2.suelo = rT.suelo; estado.d2.ultimoEvento = rT.ultimoEvento;
     var odoN = sin ? null : rT.tokHoy, odoRitmo = rT.tokHora || 0;
@@ -1059,12 +1063,11 @@
     if (nombre === TODOS || !nombre) {
       estado.d2.clave = 'todos';
       if (!estado.acT) estado.acT = new Acumulado();
-      estado.acT.pon(odoN, odoRitmo, 'vg2:todos', tsRef, BASE_DIA_TOKENS); // r254: base 1 M + medido + estimado desde «generado»
+      estado.acT.pon(odoN, 0, 'vg2:todos', tsRef, BASE_DIA_TOKENS); // r255: base 1 M + medido; sin estimado especulativo
       estado.d2.pintaHoy({
-        sin: sin || odoN == null, base: (odoN == null ? null : BASE_DIA_TOKENS + odoN), ritmo: odoRitmo,
+        sin: sin || odoN == null, base: (odoN == null ? null : BASE_DIA_TOKENS + odoN), ritmo: 0,
         valor: function () { return estado.acT.valor(); },
-        texto: esc(T('tokens consumidos hoy por todos los proyectos (Madrid)', 'tokens used today by all projects (Madrid)')) + ' · ' + T('arranca el día en ', 'day starts at ') + '<b>' + fmtM(BASE_DIA_TOKENS) + '</b> + ' + T('medido ', 'measured ') + '<b>' + fmtM(odoN) + '</b>' +
-          (odoRitmo > 0 ? ' · ' + T('sube en vivo a ~', 'rising live at ~') + fmt(odoRitmo) + ' ' + T('tokens/hora (estimado en curso, misma cifra en todos los equipos)', 'tokens/hour (running estimate, same figure on every device)') : '') + refresco
+        texto: esc(T('tokens consumidos hoy por todos los proyectos (Madrid)', 'tokens used today by all projects (Madrid)')) + ' · ' + T('arranca el día en ', 'day starts at ') + '<b>' + fmtM(BASE_DIA_TOKENS) + '</b> + ' + T('medido ', 'measured ') + '<b>' + fmtM(odoN) + '</b> · ' + T('misma cifra en todos los equipos', 'same figure on every device') + refresco
       });
       if (met) met.innerHTML = sin ? T('Sin dato en vivo', 'No live data') : nHoy + T(' proyectos con tokens hoy', ' projects with tokens today');
       return;
@@ -1075,13 +1078,13 @@
     var rPr = resp('p:' + nombre, { tokHora: sin || !p ? null : p.tokHora, ultimaHora: sin || !p ? null : p.tokUltimaHora, tokHoy: sin || !p ? null : p.tokHoy, trabajando: false, ultimoEvento: ultimoUso(agsP) });
     var ritmoP = rPr.tokHora || 0, hoyP = sin ? null : (p ? p.tokHoy : (lista.length ? 0 : null));
     if (!estado.acP) estado.acP = new Acumulado();
-    estado.acP.pon(hoyP, ritmoP, 'vg2v:p:' + nombre, tsRef, 0); // r254: sin base de 1 M; mismo reloj sincronizado
+    estado.acP.pon(hoyP, 0, 'vg2v:p:' + nombre, tsRef, 0); // r255: sin base de 1 M; solo medido, monótono
     estado.d2.clave = 'p:' + nombre;
     estado.d2.pintaHoy({
-      sin: sin || hoyP == null, base: hoyP, ritmo: ritmoP,
+      sin: sin || hoyP == null, base: hoyP, ritmo: 0,
       valor: function () { return estado.acP.valor(); },
-      texto: esc(T('tokens consumidos hoy por ', 'tokens used today by ') + nomP(nombre) + T(' (Madrid)', ' (Madrid)')) + ' · ' + T('medido ', 'measured ') + '<b>' + fmtM(hoyP) + '</b> · ' +
-        (ritmoP > 0 ? T('ritmo medido ', 'measured rate ') + fmt(ritmoP) + ' ' + T('tokens/hora (estimado en curso, misma cifra en todos los equipos)', 'tokens/hour (running estimate, same figure on every device)') : T('sin consumo en la última hora', 'no usage in the last hour')) +
+      texto: esc(T('tokens consumidos hoy por ', 'tokens used today by ') + nomP(nombre) + T(' (Madrid)', ' (Madrid)')) + ' · ' + T('medido ', 'measured ') + '<b>' + fmtM(hoyP) + '</b> · ' + T('misma cifra en todos los equipos', 'same figure on every device') +
+        (ritmoP > 0 ? ' · ' + T('ritmo medido ', 'measured rate ') + fmt(ritmoP) + ' ' + T('tokens/hora', 'tokens/hour') : ' · ' + T('sin consumo en la última hora', 'no usage in the last hour')) +
         refresco
     });
     if (met) met.innerHTML = p && p.maquinas && p.maquinas.length ? esc(p.maquinas.join(', ')) + (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : (eleccion(d).auto ? T('auto: el que más gasta ahora', 'auto: top spender right now') : '');

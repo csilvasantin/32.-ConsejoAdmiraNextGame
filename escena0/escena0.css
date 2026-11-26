@@ -1,7 +1,7 @@
 :root { --oro:#c9a227; --oro2:#ffd75e; --papel:#f3e6c4; --bg:#050505; --madera:#140e06; }
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; background:var(--bg); color:var(--papel); font: 15px/1.35 system-ui,-apple-system,Segoe UI,sans-serif; overflow:hidden; }
-body.kiosk-idle { cursor: none; }
+/* Carlos 26-nov-2026 (t428u): el cursor no se oculta nunca; al mover el ratón tiene que verse, también en cartelería. */
 #stage { position:fixed; inset:0; background:#000; }
 #mesa-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; background:#000; }
 #globo {

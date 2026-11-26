@@ -1,10 +1,9 @@
-/* Sala de voz — pantallas gigantes de la sala Terminator. Sin puntero, sin popups. */
+/* Sala de voz — pantallas gigantes de la sala Terminator. Sin popups. El cursor permanece visible (t428u). */
 :root { color-scheme: dark; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
   height: 100%;
   overflow: hidden;
-  cursor: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -12,7 +11,7 @@ body { font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
 #elige, #sala { width: 100%; height: 100%; }
 #elige {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.2rem; background: #0d0f12; color: #e8ecf1; cursor: none;
+  gap: 1.2rem; background: #0d0f12; color: #e8ecf1;
 }
 #elige[hidden], #sala[hidden] { display: none !important; }
 #elige h1 { font-size: clamp(28px, 4vw, 64px); letter-spacing: .04em; }
@@ -20,7 +19,7 @@ body { font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
 #elige a {
   display: inline-block; margin: .4rem; padding: .7rem 1.6rem;
   font-size: clamp(18px, 2vw, 32px); text-decoration: none;
-  border: 2px solid currentColor; color: inherit; cursor: none;
+  border: 2px solid currentColor; color: inherit; cursor: pointer;
 }
 #elige a:first-of-type { color: #3a2a14; background: #d4cdb6; border-color: #8c8474; }
 #elige a:last-of-type { color: #aaeeff; background: rgba(10, 60, 130, .4); border-color: #7cd8ff; }
@@ -191,7 +190,6 @@ body.coetaneos #estado { color: #7cd8ff; }
    En espera, solo el consejero; el lado derecho queda vacío. Sin marco grueso. */
 html.pantalla,
 html.pantalla body {
-  cursor: none;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -252,7 +250,6 @@ html.gate-locked.pantalla #espera {
   justify-content: center;
   padding: 3vh 2vw;
   box-sizing: border-box;
-  cursor: none;
   background: transparent;
 }
 html.pantalla #espera[hidden] { display: none !important; }
@@ -298,7 +295,6 @@ html.pantalla #kOv {
   z-index: 6;
   font: 600 3vw/1.45 system-ui, sans-serif;
   text-align: left;
-  cursor: none;
   pointer-events: none;
   visibility: visible;
 }
@@ -322,7 +318,6 @@ html.pantalla #kOv span.d {
   font: 600 1.3vw/1.2 system-ui, sans-serif;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  cursor: none;
   pointer-events: none;
   white-space: nowrap;
 }

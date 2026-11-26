@@ -149,7 +149,20 @@ test("Miscelánea: ElonMusk es subcarpeta de consejero con la misión del día",
   assert.doesNotMatch(html, /id="elon-mision-seed"/);
 });
 
-test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak, ElonMusk y misión en la barra)", () => {
+test("Miscelánea: JensenHuang es subcarpeta de consejero con la misión del día", () => {
+  assert.match(html, /id:'fld-jensenhuang'/);
+  assert.match(html, /name:'JensenHuang'/);
+  assert.match(html, /mission:'ModoDemoAdmiraNeXT'/);
+  assert.match(html, /id:'doc-jensen-mision-20261126'/);
+  assert.match(html, /name:'2026-11-26\.txt'/);
+  assert.match(html, /folder:'fld-jensenhuang'/);
+  assert.match(html, /id="mision-jensen-20261126-seed"/);
+  assert.match(html, /Modo demo AdmiraNeXT en la zona Terminator/);
+  assert.match(html, /MBACrema/);
+  assert.match(html, /function isMiscSysDoc\(d\)/);
+});
+
+test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak, ElonMusk, JensenHuang y misión en la barra)", () => {
   assert.match(html, /var MISC_SUBFOLDERS=/);
   assert.match(html, /var MISC_SUBDOCS=/);
   assert.match(html, /function ensureMiscSysFolder\(/);
@@ -165,13 +178,19 @@ test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak, ElonMusk y
   assert.match(html, /id:'fld-elonmusk'/);
   assert.match(html, /name:'ElonMusk'/);
   assert.match(html, /mission:'XperienceWin95'/);
+  assert.match(html, /id:'fld-jensenhuang'/);
+  assert.match(html, /name:'JensenHuang'/);
+  assert.match(html, /mission:'ModoDemoAdmiraNeXT'/);
   assert.match(html, /id:'doc-woz-mision-20261126'/);
   assert.match(html, /id:'doc-elon-mision-20261126'/);
+  assert.match(html, /id:'doc-jensen-mision-20261126'/);
   assert.match(html, /name:'2026-11-26\.txt'/);
   assert.match(html, /folder:'fld-stevewozniak'/);
   assert.match(html, /folder:'fld-elonmusk'/);
+  assert.match(html, /folder:'fld-jensenhuang'/);
   assert.match(html, /id="mision-woz-20261126-seed"/);
   assert.match(html, /id="mision-elon-20261126-seed"/);
+  assert.match(html, /id="mision-jensen-20261126-seed"/);
   assert.match(html, /Win95 Xperience en admira\.live/);
   assert.match(html, /Napster v2\.0 Transfer/);
   assert.match(html, /qs\('\.t',w\)\.textContent=miscFolderTitle\(it\)/);

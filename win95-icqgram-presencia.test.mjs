@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { presencia, senalLatido, despertar, cupoDesdeLecturas, ultimaLecturaCupo, CUPO_MEDIDOR, CUPO_FRESCO_H, intervencionesHoy, inicioDiaMadrid } from "./win95-presencia-lib.mjs";
+import { presencia, senalLatido, despertar, cupoDesdeLecturas, ultimaLecturaCupo, cupoEtiqueta, textoEdadCupo, CUPO_MEDIDOR, CUPO_FRESCO_H, CUPO_AVISO_H, intervencionesHoy, inicioDiaMadrid } from "./win95-presencia-lib.mjs";
 import { construir } from "./functions/api/win95/presencia.js";
 import { claveHilo } from "./chat-hilo-lib.mjs";
 
@@ -85,7 +85,10 @@ test("ICQGram: Fuera de línea = consejeros sin señal + los 3 de la demo; conta
   assert.match(html, /off=todos\.filter\(function\(c\)\{ return !c\.on; \}\)\.concat\(off\); html=grp\('Leyendas',de\('leyendas'\),'leyendas'\)\+grp\('Actuales',de\('actuales'\),'actuales'\)/);
   assert.match(html, /function cupoCab\(k\)/);
   assert.match(html, /cu\.txt\?' '\+cu\.txt:''/);
-  assert.match(html, /txt:'\('\+Math\.round\(q\)\+' %\)'/, "entre paréntesis, lo que queda");
+  assert.match(html, /txt='\('\+Math\.round\(u\)\+' % usado\)'/, "entre paréntesis, el % usado, no lo que queda");
+  assert.match(html, /sin dato fresco/, "si no hay cifra vigente se dice claro");
+  assert.doesNotMatch(html, /txt:'\('\+Math\.round\(q\)\+' %\)'/);
+  assert.doesNotMatch(html, /txt='\('\+Math\.round\(q\)\+' %\)'/);
   assert.doesNotMatch(html, /txt:'— %'|class="cbar"|\.cbar/);
   assert.match(html, /c\.hoy>0\)\?' \('\+c\.hoy\+'\)'/);
   assert.match(html, /function hechasConsejero\(/);
@@ -140,6 +143,8 @@ test("cupo: una lectura fresca (< 2 h) sí se enseña; si el reset ya pasó, no"
   assert.equal(c.leyendas.motivo, null);
   assert.equal(c.leyendas.fuente, "auto");
   assert.equal(c.actuales.pct, 12);
+  assert.equal(cupoEtiqueta(c.actuales).txt, "(12 % usado)");
+  assert.equal(cupoEtiqueta(c.leyendas).txt, "(86 % usado)");
   const trasReset = cupoDesdeLecturas([
     { ts: "2026-11-25T22:21:00.000Z", grupo: "coetaneos", agente: "Grok Bot semanal", pct: 86, fuente: "auto", reset: "2026-11-25T18:46:00.000Z" },
   ], ahora);
@@ -211,8 +216,45 @@ test("presencia: hoy sale en cada consejero; el texto de la misión no se filtra
   assert.equal(mu.hoy, 0);
 });
 
-test("cupo: una lectura de 8 h (00:15 → 08:15) sigue valiendo y muestra lo que queda", () => {
+test("cupo: una lectura de 8 h (00:15 → 08:15) sigue valiendo; la etiqueta enseña el % usado y la edad", () => {
   const c = cupoDesdeLecturas([{ ts: "2026-11-25T23:15:16.322Z", grupo: "leyendas", agente: "Grok Bot semanal", pct: 89, fuente: "auto", reset: "2026-11-26T20:58:00.000Z" }], Date.parse("2026-11-26T07:15:00Z"));
   assert.equal(c.leyendas.pct, 89);
   assert.equal(c.leyendas.restante, 11);
+  assert.equal(c.leyendas.edadH, 8);
+  assert.equal(c.leyendas.edadTexto, "hace 8 h");
+  const e = cupoEtiqueta(c.leyendas);
+  assert.equal(e.txt, "(89 % usado · hace 8 h)");
+  assert.match(e.title, /usado 89 %/);
+  assert.match(e.title, /queda 11 %/);
+});
+
+test("cupoEtiqueta: % usado redondeado, igual que la app; sin dato / sin dato fresco, nunca lo que queda como cifra principal", () => {
+  assert.equal(CUPO_AVISO_H, 2);
+  const fresco = cupoEtiqueta({ pct: 15.3, restante: 84.7, medidor: CUPO_MEDIDOR, fuente: "manual", edadH: 0.1, edadTexto: "hace 6 min", reset: "2026-12-02T18:46:00.000Z" });
+  assert.equal(fresco.txt, "(15 % usado)");
+  assert.match(fresco.title, /usado 15,3 %/);
+  assert.match(fresco.title, /queda 84,7 %/);
+  assert.match(fresco.title, /hace 6 min/);
+  assert.match(fresco.title, /manual/);
+  const aviso = cupoEtiqueta({ pct: 12, restante: 88, edadH: 2.5, edadTexto: "hace 2,5 h", fuente: "auto" });
+  assert.equal(aviso.txt, "(12 % usado · hace 2,5 h)");
+  const viejo = cupoEtiqueta({ pct: null, anterior: 96.1, edadH: 14, edadTexto: "hace 14 h", ts: "2026-11-25T11:09:42.354Z", motivo: "sin datos" });
+  assert.equal(viejo.txt, "(sin dato fresco)");
+  assert.match(viejo.title, /usado 96,1 %/);
+  assert.equal(cupoEtiqueta({ pct: null, motivo: "sin datos" }).txt, "(sin dato)");
+  assert.equal(cupoEtiqueta(null).txt, "(sin dato)");
+  assert.equal(textoEdadCupo(0.5), "hace 30 min");
+  assert.equal(textoEdadCupo(14), "hace 14 h");
+});
+
+test("cupo: tras el reset o con más de 13 h, pct es null y la etiqueta no enseña el número como actual", () => {
+  const ahora = Date.parse("2026-11-26T01:30:00Z");
+  const c = cupoDesdeLecturas([
+    { ts: "2026-11-25T11:09:42.354Z", grupo: "leyendas", agente: "Grok Bot semanal", pct: 71, fuente: "auto", reset: "2026-11-26T20:58:00.000Z" },
+  ], ahora);
+  assert.equal(c.leyendas.pct, null);
+  assert.equal(c.leyendas.motivo, "sin datos");
+  assert.equal(c.leyendas.anterior, 71);
+  assert.equal(cupoEtiqueta(c.leyendas).txt, "(sin dato fresco)");
+  assert.equal(/csilva@|gmail/.test(JSON.stringify(c)), false);
 });

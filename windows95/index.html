@@ -5193,16 +5193,16 @@ function cupoCuando(ts){
 function cupoCab(k){
   var c=PRES.datos&&PRES.datos.cuentas&&PRES.datos.cuentas[k]&&PRES.datos.cuentas[k].cupo;
   if(!c||c.pct===null||c.pct===undefined||!isFinite(Number(c.pct))) return {txt:'', title:''};
-  var p=Math.round(Number(c.pct));
-  var tit=(c.medidor||'Grok Bot semanal')+(c.ts?' · '+cupoCuando(c.ts):'')+(c.fuente?' · '+c.fuente:'');
-  return {txt:p+' %', title:tit};
+  var u=Number(c.pct), q=(c.restante!==undefined&&c.restante!==null&&isFinite(Number(c.restante)))?Number(c.restante):Math.max(0,100-u);
+  var tit=(c.medidor||'Grok Bot semanal')+' · queda '+Math.round(q)+' % · usado '+Math.round(u)+' %'+(c.ts?' · lectura '+cupoCuando(c.ts):'')+(c.reset?' · renueva '+cupoCuando(c.reset):'')+(c.fuente?' · '+c.fuente:'');
+  return {txt:'('+Math.round(q)+' %)', title:tit};
 }
 function renderContacts(){
   function row(c){ var tt=c.real?' title="'+esc(c.status)+'"':''; var n=(c.hoy>0)?' ('+c.hoy+')':''; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'"'+tt+'>'+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+'</span><i class="env">'+ENV+'</i></div>'; }
   var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
-  // Por cuenta: «Leyendas · 86 %» si hay lectura de cupo de menos de 2 h; si no, solo el nombre, sin porcentaje. Al lado de cada consejero, las intervenciones de hoy (Madrid); si son 0, no se pone nada. «Fuera de línea» = cuentas caídas + los 3 de la demo.
+  // Por cuenta: «Leyendas (11 %)» = cupo Grok Bot que QUEDA por consumir, si hay lectura vigente (< 13 h y antes del reset); si no, solo el nombre, sin porcentaje. Al lado de cada consejero, las intervenciones de hoy (Madrid); si son 0, no se pone nada. «Fuera de línea» = cuentas caídas + los 3 de la demo.
   var grp=function(t,l,k){ var h='<div class="cgrp">'+t+' ('+l.length+')</div>';
-    if(k){ var cu=cupoCab(k); h='<div class="cgrp"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'>'+t+(cu.txt?' · '+cu.txt:'')+'</div>'; }
+    if(k){ var cu=cupoCab(k); h='<div class="cgrp"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'>'+t+(cu.txt?' '+cu.txt:'')+'</div>'; }
     return h+l.map(row).join(''); }, html;
   if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }), de=function(k){ return todos.filter(function(c){ return c.on&&c.cuenta===k; }); };
     off=todos.filter(function(c){ return !c.on; }).concat(off); html=grp('Leyendas',de('leyendas'),'leyendas')+grp('Actuales',de('actuales'),'actuales'); }

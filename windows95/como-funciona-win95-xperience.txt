@@ -87,7 +87,7 @@ Admira Director: /api/win95/ajuste (esquema en win95-ajuste-lib.mjs).
 Otras piezas del escritorio:
   · Mi PC — ficha de época (133 MHz, etc.), sin datos reales.
   · Bloc de notas — editable, con menús y archivos del escritorio.
-  · Bandeja de entrada — correo de demostración (admira.tv / studio).
+  · Bandeja de entrada — finalizaciones de misiones de los DeepAgents (De: el agente, Para: su consejero, CC: Carlos Silva); el sobre parpadea junto al icono de red si hay correo sin leer.
 
 ------------------------------------------------------------------------
 3. ICQGRAM

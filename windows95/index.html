@@ -5911,6 +5911,7 @@ function detalleMisiones(c, mis){
   return '<div class="cdet" data-id="'+c.id+'">'+out.join('')+'</div>';
 }
 function cupoCab(k){
+  if(k!=='leyendas'&&k!=='actuales') return {txt:'', title:''};
   var c=PRES.datos&&PRES.datos.cuentas&&PRES.datos.cuentas[k]&&PRES.datos.cuentas[k].cupo;
   if(!c) return {txt:'(sin dato)', title:'Grok Bot semanal · sin dato'};
   var med=c.medidor||'Grok Bot semanal';

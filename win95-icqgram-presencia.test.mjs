@@ -87,6 +87,7 @@ test("ICQGram: Fuera de línea = consejeros sin señal + los 3 de la demo; conta
   assert.match(html, /cu\.txt\?' '\+cu\.txt:''/);
   assert.match(html, /txt='\('\+Math\.round\(u\)\+' % usado\)'/, "entre paréntesis, el % usado, no lo que queda");
   assert.match(html, /sin dato fresco/, "si no hay cifra vigente se dice claro");
+  assert.match(html, /k!=='leyendas'&&k!=='actuales'/, "el cupo solo sale en Leyendas y Actuales, no en DeepAgents");
   assert.doesNotMatch(html, /txt:'\('\+Math\.round\(q\)\+' %\)'/);
   assert.doesNotMatch(html, /txt='\('\+Math\.round\(q\)\+' %\)'/);
   assert.doesNotMatch(html, /txt:'— %'|class="cbar"|\.cbar/);

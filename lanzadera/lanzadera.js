@@ -4,7 +4,7 @@ import {
   planDeLanzamiento,
   etiquetaMision,
   formatHoraInicio,
-} from '/lanzadera-lib.mjs?v=20261126-zonas';
+} from '/lanzadera-lib.mjs?v=20261126-enrutado';
 
 const $ = (id) => document.getElementById(id);
 
@@ -35,8 +35,9 @@ function pintarPlan(plan) {
     }
     pasos.push(plan.noRobarFoco);
   } else {
-    pasos.push(T('MacBook Air Rosa, pantalla externa de la derecha: ', 'MacBook Air Rosa, right-hand external screen: ') + plan.rosa.url);
-    pasos.push(T('MacBook Air Plata, enfrente: ', 'MacBook Air Plata, opposite: ') + plan.plata.url);
+    pasos.push(T('MacBook Air Rosa, Philips 86BDL3650Q: ', 'MacBook Air Rosa, Philips 86BDL3650Q: ') + plan.rosa.url);
+    pasos.push(T('MacBook Air Crema, PC Monitor de arriba: ', 'MacBook Air Crema, upper PC Monitor: ') + plan.crema.url);
+    if (plan.reset) pasos.push(T('Reset: página negra, sin apagar nada y con el cursor visible.', 'Reset: black page, nothing is turned off and the cursor stays visible.'));
   }
   pasos.push(plan.cursor);
   const ol = $('plan-pasos');
@@ -68,8 +69,8 @@ function pintarPlan(plan) {
         if (visto.size >= 3) break;
       }
     } else {
-      add(plan.rosa.url, 'Leyendas · abrir', 'Legends · open');
-      add(plan.plata.url, 'Consumos', 'Usage');
+      add(plan.rosa.url, plan.reset ? 'Rosa · negro' : 'Leyendas · abrir', plan.reset ? 'Rosa · black' : 'Legends · open');
+      add(plan.crema.url, plan.reset ? 'Crema · negro' : 'Consumos', plan.reset ? 'Crema · black' : 'Usage');
     }
   }
   for (const btn of document.querySelectorAll('.demo-card')) {

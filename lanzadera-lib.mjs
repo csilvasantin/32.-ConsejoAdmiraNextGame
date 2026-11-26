@@ -4,8 +4,10 @@
  *
  * Dos zonas:
  *   1. Sala de reuniones de Terminator — Demo AdmiraNeXT.com y Demo
- *      PortAventuraNeXT.com: las Leyendas en la TCL del MacBook Air Rosa
- *      y el consumo en el MacBook Air Plata.
+ *      PortAventuraNeXT.com: las Leyendas en la Philips 86BDL3650Q del
+ *      MacBook Air Rosa y el consumo en el «PC Monitor» del MacBook Air
+ *      Crema. El Plata queda fuera mientras no esté conectado. «Sala en
+ *      negro» pone esas pantallas en una página negra, sin apagar nada.
  *   2. Zona interactiva de Terminator (calle Planeta) — «Demo AdmiraNeXT»
  *      (player interactivo de admira.tv controlado desde AdmiraDesk) y
  *      «Modo demo PortAventuraNeXT».
@@ -24,18 +26,29 @@ export const URL_DEMO_PAN = 'https://www.admiranext.com/demo/PortAventuraNeXT/';
 export const URL_DEMO_PAN_PLAYER = 'https://www.admiranext.com/demo/player';
 
 /** Destinos de flota. Los machineId salen de ListMachines (26-nov-2026). */
+export const URL_SALA_NEGRO = 'https://www.admira.live/lanzadera/negro.html';
+
 export const MAQUINA_ROSA = Object.freeze({
   etiqueta: 'MacBookAirRosa',
   machineId: 'bc1275fb-b0a7-427b-a644-b0c11a2176f8',
-  papel: 'Consejo de las Leyendas en la pantalla externa (TCL a la derecha del portátil, 1920×1080, display 3 en x=1713).',
-  display: Object.freeze({ index: 3, x: 1713, y: 0, w: 1920, h: 1080 }),
+  papel: 'Consejo de las Leyendas en la pantalla externa Philips 86BDL3650Q (único externo, a la derecha del portátil). Se identifica por nombre, no por posición.',
+  display: Object.freeze({ nombre: '86BDL3650Q' }),
+});
+
+export const MAQUINA_CREMA = Object.freeze({
+  etiqueta: 'MacBookAirCrema',
+  machineId: 'c2f6f787-09fe-4d2b-a890-068ca4a426d0',
+  papel: 'Panel de Consumos en la pantalla extendida grande de arriba (EDID «PC Monitor», 4K). Se identifica por nombre, no por posición.',
+  display: Object.freeze({ nombre: 'PC Monitor' }),
 });
 
 export const MAQUINA_PLATA = Object.freeze({
   etiqueta: 'MacBookAirPlata',
   machineId: 'f52231d0-b9c0-44d2-8cde-c8646cfb27f6',
   alterno: 'acc7080f-9993-4d21-a285-bd549c2db0f2',
-  papel: 'Página de consumo, enfrente del Rosa.',
+  papel: 'Queda fuera de la lanzadera mientras no esté conectado.',
+  excluida: true,
+  motivoExclusion: 'Sin conexión en ListMachines; queda fuera hasta que vuelva a conectarse. No se sustituye por otra máquina.',
 });
 
 /**
@@ -108,6 +121,16 @@ export const DEMOS = Object.freeze({
       URL_DEMO_PAN_PLAYER,
     ]),
   }),
+  negro: Object.freeze({
+    id: 'negro',
+    zona: 'sala',
+    titulo: 'Sala en negro',
+    tituloEn: 'Room in black',
+    reset: true,
+    urlLeyendas: URL_SALA_NEGRO,
+    urlConsumos: URL_SALA_NEGRO,
+    fuentes: Object.freeze([URL_SALA_NEGRO]),
+  }),
 });
 
 function norm(v) {
@@ -123,6 +146,11 @@ function idDeResto(resto) {
   if (!s) return null;
   const compact = s.replace(/\s+/g, '');
 
+  if (/^(negro|salaennegro|salanegro)$/.test(compact)
+      || /sala\s+(en\s+)?negro/.test(s)
+      || /^(reset(?:sala)?|ponersalaennegro)$/.test(compact)) {
+    return 'negro';
+  }
   if (/modo\s*(demo\s*)?(de\s*)?portaventura/.test(s)
       || /portaventura(?:next)?(?:\.com)?\s*interactivo/.test(s)
       || /interactivo\s*(de\s*)?portaventura/.test(s)
@@ -158,6 +186,10 @@ export function parseComandoDemo(texto) {
 
   if (/^(lanzadera|launcher|lanzadera de presentaciones|presentaciones)$/.test(s)) {
     return { tipo: 'lanzadera', demo: null };
+  }
+
+  if (/^(sala(?:\s+en)?\s+negro|reset(?:\s+(?:de\s+la\s+|de\s+)?sala)?|poner(?:\s+la)?\s+sala\s+en\s+negro)$/.test(s)) {
+    return { tipo: 'demo', demo: DEMOS.negro };
   }
 
   if (/(?:^|\s)(?:(?:lanza|lanzar|abre|abrir|elige|elegir|selecciona|selecciono|seleccionar|pon|poner|quiero|muestra|mostrar|arranca|arrancar|inicia|iniciar)\s+)?(?:el\s+)?modo demo(?:\s+de)?\s+portaventura/.test(s)
@@ -235,13 +267,66 @@ export function planDeLanzamiento(demo, inicio) {
   }
   return {
     ...base,
+    reset: !!d.reset,
+    verificarConCaptura: true,
     rosa: {
       ...MAQUINA_ROSA,
       url: d.urlLeyendas,
     },
-    plata: {
-      ...MAQUINA_PLATA,
+    crema: {
+      ...MAQUINA_CREMA,
       url: d.urlConsumos,
     },
   };
+}
+
+function textoDisplay(d) {
+  return [d && d.nombre, d && d.name, d && d.localizedName, d && d.edid, d && d.productName]
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
+/**
+ * Localiza una pantalla por machineId + nombre EDID. Nunca cae a otra
+ * pantalla ni a un índice de posición.
+ */
+export function localizarDisplay(inventario, destino) {
+  const nombre = destino && destino.display && destino.display.nombre;
+  if (!nombre) return { error: 'El destino no tiene pantalla identificada por nombre.' };
+  const maquinas = Array.isArray(inventario) ? inventario : [];
+  const ids = [destino.machineId, destino.alterno].filter(Boolean);
+  const m = maquinas.find((x) => ids.includes(x.machineId));
+  if (!m) {
+    return { error: 'No está conectado el ' + (destino.etiqueta || 'equipo') + '.' };
+  }
+  const clave = String(nombre).toLowerCase();
+  const d = (m.displays || []).find((x) => textoDisplay(x).includes(clave));
+  if (!d) {
+    return { error: 'No está conectada la pantalla ' + nombre + ' del ' + (destino.etiqueta || 'equipo') + '. No se abre en otra pantalla.' };
+  }
+  return { display: d, machineId: m.machineId };
+}
+
+export function validarPlanContraInventario(plan, inventario) {
+  if (!plan) return { ok: false, errores: ['No hay plan.'] };
+  const destinos = [];
+  if (plan.rosa) destinos.push(['rosa', plan.rosa]);
+  if (plan.crema) destinos.push(['crema', plan.crema]);
+  const errores = [];
+  const localizados = {};
+  for (const [k, dest] of destinos) {
+    const r = localizarDisplay(inventario, dest);
+    if (r.error) errores.push(r.error);
+    else localizados[k] = r;
+  }
+  return { ok: errores.length === 0, errores, localizados };
+}
+
+/** Solo se marca la demo en marcha cuando hay captura de cada pantalla destino. */
+export function puedeMarcarEnMarcha(plan, verificacion) {
+  if (!plan) return false;
+  const needed = [];
+  if (plan.rosa) needed.push('rosa');
+  if (plan.crema) needed.push('crema');
+  const pantallas = (verificacion && verificacion.pantallas) || [];
+  return needed.every((k) => pantallas.some((p) => p.destino === k && p.ok === true));
 }

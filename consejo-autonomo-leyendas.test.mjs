@@ -13,6 +13,7 @@ import {
   URL_ESCENA0,
   formatHoraInicio,
   etiquetaMision,
+  etiquetaBarraLeyendas,
   parseAutonomoUrl,
   personasDelGuion,
   resolverTema,
@@ -76,7 +77,7 @@ test('formatHoraInicio rotula la misión en Europe/Madrid', () => {
   assert.match(s, /12:41/);
   assert.match(s, /Europe\/Madrid/);
   assert.match(etiquetaMision(s, 'es'), /^Misión iniciada: /);
-  assert.equal(resolverTema('').id, 'pan');
+  assert.equal(resolverTema('').id, 'admiranext');
   assert.equal(resolverTema('PortAventuraNeXT').id, 'pan');
   assert.ok(MAPA_PORTAVENTURA.includes('idea-ip-portaventura.webp'));
   assert.ok(TIMEOUT_BACKEND_MS <= 8000);
@@ -90,7 +91,7 @@ test('la home y Escena 0 están cableados al modo autónomo', () => {
   const escenaHtml = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
   const demo = readFileSync(new URL('./assets/consejo-demo.js', import.meta.url), 'utf8');
   const auto = readFileSync(new URL('./assets/consejo-autonomo.js', import.meta.url), 'utf8');
-  assert.match(home, /assets\/consejo-autonomo\.js\?v=20261126-lanzadera/);
+  assert.match(home, /assets\/consejo-autonomo\.js\?v=20261126-enrutado/);
   assert.match(auto, /parseAutonomoUrl/);
   assert.match(auto, /speechSynthesis/);
   assert.match(auto, /IdeaMesa/);
@@ -171,4 +172,22 @@ test('parseAutonomoUrl reconoce ?autonomo=leyendas&tema=admiranext y no usa el g
   assert.match(all, /admira\.shop/);
   assert.match(all, /admira\.live/);
   assert.doesNotMatch(all, /PortAventuraNeXT/);
+});
+
+test('la marca de la caja inferior es siempre AdmiraNeXT, también con tema=pan', () => {
+  assert.equal(etiquetaBarraLeyendas(), 'Leyendas autónomas · AdmiraNeXT');
+  assert.equal(etiquetaBarraLeyendas(parseAutonomoUrl('?autonomo=leyendas&tema=pan')), 'Leyendas autónomas · AdmiraNeXT');
+  assert.equal(etiquetaBarraLeyendas(parseAutonomoUrl('?autonomo=leyendas&tema=admiranext')), 'Leyendas autónomas · AdmiraNeXT');
+  assert.equal(parseAutonomoUrl('?autonomo=leyendas').temaId, 'admiranext');
+  const auto = readFileSync(new URL('./assets/consejo-autonomo.js', import.meta.url), 'utf8');
+  assert.match(auto, /etiquetaBarraLeyendas/);
+  assert.doesNotMatch(auto, /Leyendas autónomas · PortAventuraNeXT/);
+  assert.match(auto, /autonomo-leyendas-opciones/);
+  assert.match(auto, /Quitar a Carlos de la mesa/);
+  assert.match(auto, /Hablar en inglés/);
+  assert.match(auto, /autonomo-leyendas-pausa/);
+  assert.match(auto, /function pausar/);
+  const escenaJs = readFileSync(new URL('./escena0/escena0.js', import.meta.url), 'utf8');
+  assert.match(escenaJs, /Leyendas autónomas · AdmiraNeXT/);
+  assert.doesNotMatch(escenaJs, /modoAutonomo\.titulo \|\| 'PortAventuraNeXT'/);
 });

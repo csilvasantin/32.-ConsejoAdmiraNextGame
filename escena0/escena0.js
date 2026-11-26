@@ -4,7 +4,7 @@ import {
   marcarPresente, publicState, reservar, decir, siguienteSpeaker,
   quitarPresente, TEMAS_PRESET, LS_IDIOMA, LS_TEMA, parseIdioma, sufijoIdioma, prefijoIdioma,
   IDEAS_PRESET, LS_IDEA, resolverIdea, comandoMostrarIdea,
-} from '/escena0-lib.mjs?v=20261126-lanzadera';
+} from '/escena0-lib.mjs?v=20261126-enrutado';
 import {
   parseGuion, parseCabecera, CABECERA_POS, textoTurno, bolsasGuion, promptGuion, mesaDeGuion, msLectura, anclaGuion,
   parseLang, lineasTurno, ROTULOS_EN, anchoGlobo, cajaGlobo, LOGO_DEMO,
@@ -12,7 +12,7 @@ import {
 import {
   parseAutonomoUrl, siguienteTurno as siguienteTurnoAutonomo, resolverTurno as resolverTurnoAutonomo,
   formatHoraInicio, etiquetaMision, textoTurno as textoTurnoAutonomo, TIMEOUT_BACKEND_MS,
-} from '/consejo-autonomo-leyendas.mjs?v=20261126-lanzadera';
+} from '/consejo-autonomo-leyendas.mjs?v=20261126-enrutado';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -1423,8 +1423,8 @@ function hablarNativoAutonomo(persona, texto, opts) {
 
 function montarAutonomoLeyendas() {
   document.body.classList.add('autonomo-leyendas');
-  document.title = 'Leyendas autónomas · ' + (modoAutonomo.titulo || 'PortAventuraNeXT');
-  $('gesto-mesa').textContent = 'Leyendas · ' + (modoAutonomo.titulo || 'PortAventuraNeXT') + ' · un clic para que hablen solas';
+  document.title = 'Leyendas autónomas · AdmiraNeXT';
+  $('gesto-mesa').textContent = 'Leyendas autónomas · AdmiraNeXT · un clic para que hablen solas';
   const gh = document.querySelector('#gesto .hint');
   if (gh) gh.textContent = T('Los navegadores piden un clic para la voz. Al pulsar, el mapa se pone en el centro y las Leyendas conversan solas hasta un resumen.', 'Browsers need a click for voice. After you press, the map goes in the centre and the Legends talk on their own until a summary.');
   const gb = $('btn-gesto');
@@ -1460,7 +1460,7 @@ function empezarAutonomoLeyendas() {
 
   // Síncrono, dentro del clic: desbloqueo + primera línea del guion. Sin await.
   desbloquearAudioEnClic();
-  setIdea((modoAutonomo && modoAutonomo.ideaId) || (ideaVal && ideaVal !== 'off' ? ideaVal : 'ip-portaventura'), { noGuardar: true });
+  setIdea((modoAutonomo && modoAutonomo.ideaId) || (ideaVal && ideaVal !== 'off' ? ideaVal : 'cuatro-patas'), { noGuardar: true });
   mostrarGlobo(t0.persona, texto0, false);
   const hablaPrimero = hablar(t0.persona, texto0);
 
@@ -1482,8 +1482,9 @@ async function seguirAutonomoLeyendas(guionA, hablaPrimero, hora, primero) {
   const dichos = [primero];
   const ask = async (turno) => {
     const hist = dichos.map((d) => d.persona + ': ' + d.texto).join('\n');
+    const tema = (modoAutonomo && (modoAutonomo.titulo || modoAutonomo.tema)) || 'AdmiraNeXT';
     const prompt = prefijoIdioma(idioma) + 'Eres ' + turno.persona + ' en la mesa de Leyendas del Consejo AdmiraNeXT. '
-      + 'Habláis sobre PortAventuraNeXT, «El parque que se cuenta solo». 1 o 2 frases, en tu estilo, sin presentarte. '
+      + 'Habláis sobre ' + tema + '. 1 o 2 frases, en tu estilo, sin presentarte. '
       + (turno.esResumen ? 'Cierra con un resumen breve.\n' : '')
       + (hist ? 'Hasta ahora:\n' + hist + '\n' : '')
       + 'Idea del guion: ' + (idioma === 'en' ? (turno.textoEn || turno.texto) : turno.texto)

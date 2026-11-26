@@ -3,14 +3,19 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   DEMOS,
+  MAQUINA_CREMA,
   MAQUINA_PLATA,
   MAQUINA_ROSA,
   URL_LANZADERA,
   URL_PUBLICA_LANZADERA,
+  URL_SALA_NEGRO,
   demoPorId,
+  localizarDisplay,
   parseComandoDemo,
   planDeLanzamiento,
+  puedeMarcarEnMarcha,
   urlLanzaderaDemo,
+  validarPlanContraInventario,
 } from './lanzadera-lib.mjs';
 import { parseAutonomoUrl } from './consejo-autonomo-leyendas.mjs';
 
@@ -51,6 +56,10 @@ test('tiene las dos zonas, voz y hora de misión', () => {
   assert.match(js, /SpeechRecognition|webkitSpeechRecognition/);
   assert.match(js, /etiquetaMision/);
   assert.match(js, /planDeLanzamiento/);
+  assert.match(html, /id="demo-negro"/);
+  assert.match(html, /Sala en negro/);
+  assert.match(html, /86BDL3650Q/);
+  assert.match(html, /PC Monitor/);
 });
 
 test('el cursor no se oculta en la lanzadera', () => {
@@ -81,14 +90,17 @@ test('parseComandoDemo reconoce voz, selección y CLI', () => {
   assert.equal(demoPorId('pan-interactivo'), DEMOS['pan-interactivo']);
 });
 
-test('el plan apunta al Rosa (TCL derecha) y al Plata (consumos)', () => {
+test('el plan apunta a la Philips del Rosa y al PC Monitor del Crema, no al Plata', () => {
   const plan = planDeLanzamiento('admiranext', new Date('2026-11-26T10:17:00.000Z'));
   assert.equal(plan.rosa.machineId, MAQUINA_ROSA.machineId);
-  assert.equal(plan.rosa.display.index, 3);
-  assert.equal(plan.rosa.display.x, 1713);
+  assert.equal(plan.rosa.display.nombre, '86BDL3650Q');
+  assert.equal(plan.rosa.display.index, undefined);
   assert.equal(plan.rosa.url, 'https://www.admira.live/?autonomo=leyendas&tema=admiranext');
-  assert.equal(plan.plata.machineId, MAQUINA_PLATA.machineId);
-  assert.equal(plan.plata.url, 'https://www.admira.live/consumos');
+  assert.equal(plan.crema.machineId, MAQUINA_CREMA.machineId);
+  assert.equal(plan.crema.display.nombre, 'PC Monitor');
+  assert.equal(plan.crema.url, 'https://www.admira.live/consumos');
+  assert.equal(plan.plata, undefined);
+  assert.equal(MAQUINA_PLATA.excluida, true);
   assert.match(plan.etiqueta, /Misión iniciada:/);
   assert.match(plan.etiqueta, /11:17/);
   assert.match(plan.cursor, /cursor no se oculta nunca/i);
@@ -133,4 +145,40 @@ test('el modo demo PortAventuraNeXT usa la presentación oficial y el player de 
   assert.equal(plan.control.url, 'https://www.admiranext.com/demo/PortAventuraNeXT/');
   assert.ok(plan.players.every((p) => p.url === 'https://www.admiranext.com/demo/player'));
   assert.equal(urlLanzaderaDemo('pan-interactivo'), '/lanzadera/?demo=pan-interactivo');
+});
+
+test('sala en negro no intercepta el catálogo /demo y pone una página negra', () => {
+  assert.equal(parseComandoDemo('sala en negro').demo.id, 'negro');
+  assert.equal(parseComandoDemo('/sala negro').demo.id, 'negro');
+  assert.equal(parseComandoDemo('/demo negro').demo.id, 'negro');
+  assert.equal(parseComandoDemo('/demo').tipo, 'lanzadera');
+  assert.equal(parseComandoDemo('/demo').demo, null);
+  const plan = planDeLanzamiento('negro', new Date('2026-11-26T12:00:00.000Z'));
+  assert.equal(plan.reset, true);
+  assert.equal(plan.rosa.url, URL_SALA_NEGRO);
+  assert.equal(plan.crema.url, URL_SALA_NEGRO);
+  const negro = readFileSync(new URL('./lanzadera/negro.html', import.meta.url), 'utf8');
+  assert.match(negro, /cursor:\s*auto/);
+  assert.doesNotMatch(negro, /cursor\s*:\s*none/);
+});
+
+test('si falta el monitor nombrado, hay error y no se cae a otra pantalla', () => {
+  const plan = planDeLanzamiento('admiranext', new Date('2026-11-26T10:17:00.000Z'));
+  const inventario = [
+    { machineId: MAQUINA_ROSA.machineId, displays: [{ nombre: 'Color LCD' }] },
+    { machineId: MAQUINA_CREMA.machineId, displays: [{ nombre: 'PC Monitor', edid: 'PC Monitor' }] },
+  ];
+  const mal = validarPlanContraInventario(plan, inventario);
+  assert.equal(mal.ok, false);
+  assert.match(mal.errores.join(' '), /86BDL3650Q/);
+  assert.doesNotMatch(mal.errores.join(' '), /Color LCD/);
+  const okInv = [
+    { machineId: MAQUINA_ROSA.machineId, displays: [{ nombre: 'PHILIPS 86BDL3650Q', edid: '86BDL3650Q' }] },
+    { machineId: MAQUINA_CREMA.machineId, displays: [{ nombre: 'PC Monitor' }] },
+  ];
+  const bien = validarPlanContraInventario(plan, okInv);
+  assert.equal(bien.ok, true);
+  assert.equal(localizarDisplay(okInv, plan.rosa).display.nombre, 'PHILIPS 86BDL3650Q');
+  assert.equal(puedeMarcarEnMarcha(plan, { pantallas: [{ destino: 'rosa', ok: true }] }), false);
+  assert.equal(puedeMarcarEnMarcha(plan, { pantallas: [{ destino: 'rosa', ok: true }, { destino: 'crema', ok: true }] }), true);
 });

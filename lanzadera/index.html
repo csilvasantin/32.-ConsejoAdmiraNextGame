@@ -9,8 +9,8 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
-  <link rel="stylesheet" href="/yk-frame.css?v=20261126-zonas">
-  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261126-zonas">
+  <link rel="stylesheet" href="/yk-frame.css?v=20261126-enrutado">
+  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261126-enrutado">
 </head>
 <body data-yk-title="LANZADERA" data-yk-zone="app">
   <a class="skip-link" href="#contenido">Ir a la lanzadera</a>
@@ -18,7 +18,7 @@
   <aside data-yk-slot="left">
     <p class="slot-kicker" data-en="Voice and selection">Voz y selección</p>
     <button type="button" id="btn-voz" class="voz-btn" aria-pressed="false">🎙️ Escuchar</button>
-    <p class="slot-copy" id="voz-estado" data-en="Sala: say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». Interactive zone: «player interactivo», «AdmiraDesk» or «modo demo PortAventuraNeXT». Expert: /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura.">Sala: di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». Zona interactiva: «player interactivo», «AdmiraDesk» o «modo demo PortAventuraNeXT». Experto: /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura.</p>
+    <p class="slot-copy" id="voz-estado" data-en="Sala: say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». «Sala en negro» blacks out the screens. Interactive zone: «player interactivo», «AdmiraDesk» or «modo demo PortAventuraNeXT». Expert: /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro.">Sala: di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». «Sala en negro» deja las pantallas negras. Zona interactiva: «player interactivo», «AdmiraDesk» o «modo demo PortAventuraNeXT». Experto: /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro.</p>
     <p class="slot-copy" data-en="The cursor is never hidden: when the mouse moves, it has to come back, including in digital signage.">El cursor no se oculta nunca: si mueves el ratón, tiene que reaparecer, también en cartelería.</p>
   </aside>
 
@@ -26,8 +26,9 @@
     <p class="slot-kicker" data-en="Where it opens">Dónde se abre</p>
     <p class="slot-copy"><strong data-en="Meeting room">Sala de reuniones</strong></p>
     <ul class="destinos">
-      <li><strong>MacBook Air Rosa</strong> — pantalla externa a la derecha (TCL, 1920×1080). Consejo de las Leyendas.</li>
-      <li><strong>MacBook Air Plata</strong> — enfrente. <a href="https://www.admira.live/consumos">/consumos</a>.</li>
+      <li><strong>MacBook Air Rosa</strong> — pantalla externa Philips 86BDL3650Q. Consejo de las Leyendas.</li>
+      <li><strong>MacBook Air Crema</strong> — pantalla extendida de arriba («PC Monitor»). <a href="https://www.admira.live/consumos">/consumos</a>.</li>
+      <li><strong>MacBook Air Plata</strong> — fuera mientras no esté conectado.</li>
     </ul>
     <p class="slot-copy"><strong data-en="Interactive zone">Zona interactiva</strong></p>
     <ul class="destinos">
@@ -48,7 +49,7 @@
 
     <section class="zona" id="zona-sala" aria-labelledby="zona-sala-titulo">
       <h2 id="zona-sala-titulo">Zona 1 · Sala de reuniones de Terminator</h2>
-      <p class="zona-lead" data-en="The Legends present it on Rosa’s external screen; usage appears on the Plata opposite.">Las Leyendas lo presentan en la pantalla externa del Rosa; el consumo sale en el Plata, enfrente.</p>
+      <p class="zona-lead" data-en="The Legends present it on Rosa’s Philips 86BDL3650Q; usage appears on the Crema’s upper PC Monitor.">Las Leyendas lo presentan en la Philips 86BDL3650Q del Rosa; el consumo sale en el PC Monitor de arriba del Crema.</p>
       <div class="lanza-grid" role="group" aria-label="Demos de la sala de reuniones de Terminator">
         <button type="button" class="demo-card" id="demo-admiranext" data-demo="admiranext">
           <span class="demo-kicker">01</span>
@@ -59,6 +60,11 @@
           <span class="demo-kicker">02</span>
           <span class="demo-title">Demo PortAventuraNeXT.com</span>
           <span class="demo-copy" data-en="«The park that tells itself», with the map in the centre of the table.">«El parque que se cuenta solo», con el mapa en el centro de la mesa.</span>
+        </button>
+        <button type="button" class="demo-card demo-reset" id="demo-negro" data-demo="negro">
+          <span class="demo-kicker">●</span>
+          <span class="demo-title">Sala en negro</span>
+          <span class="demo-copy" data-en="Puts the room screens on a fullscreen black page. Nothing is turned off and the cursor stays visible.">Pone las pantallas de la sala en una página negra a pantalla completa. No apaga nada y el cursor sigue visible.</span>
         </button>
       </div>
     </section>
@@ -91,7 +97,7 @@
     </section>
   </main>
 
-  <script type="module" src="/lanzadera/lanzadera.js?v=20261126-zonas"></script>
-  <script src="/yk-frame.js?v=20261126-zonas"></script>
+  <script type="module" src="/lanzadera/lanzadera.js?v=20261126-enrutado"></script>
+  <script src="/yk-frame.js?v=20261126-enrutado"></script>
 </body>
 </html>

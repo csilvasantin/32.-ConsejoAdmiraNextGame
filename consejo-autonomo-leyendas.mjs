@@ -101,13 +101,15 @@ function normTema(v) {
 
 export function resolverTema(v) {
   const s = normTema(v);
-  if (/^(admiranext|admira next|admiranext com)$/.test(s)) {
+  // Por defecto, y si no hay tema, siempre AdmiraNeXT. El tema pan sigue
+  // disponible si se pide explícitamente; el rótulo de marca no cambia.
+  if (!s || /^(admiranext|admira next|admiranext com)$/.test(s)) {
     return { ...TEMA_ADMIRANEXT, guion: GUION_AUTONOMO_LEYENDAS_ADMIRANEXT, ideaId: TEMA_ADMIRANEXT.ideaId };
   }
-  if (!s || /^(pan|portaventura|portaventuranext|el parque que se cuenta solo)$/.test(s)) {
+  if (/^(pan|portaventura|portaventuranext|el parque que se cuenta solo)$/.test(s)) {
     return { ...TEMA_PAN, guion: GUION_AUTONOMO_LEYENDAS_PAN, ideaId: 'ip-portaventura' };
   }
-  return { id: 'custom', titulo: String(v).trim(), tema: String(v).trim(), guion: GUION_AUTONOMO_LEYENDAS_PAN, ideaId: 'ip-portaventura' };
+  return { id: 'custom', titulo: String(v).trim(), tema: String(v).trim(), guion: GUION_AUTONOMO_LEYENDAS_ADMIRANEXT, ideaId: TEMA_ADMIRANEXT.ideaId };
 }
 
 export function parseAutonomoUrl(q) {
@@ -118,7 +120,7 @@ export function parseAutonomoUrl(q) {
     mesa = parseMesa(getParam(q, 'mesa') || getParam(q, 'gen') || getParam(q, 'generation')) || 'leyendas';
   }
   if (!mesa) return null;
-  const tema = resolverTema(getParam(q, 'tema') || 'pan');
+  const tema = resolverTema(getParam(q, 'tema') || 'admiranext');
   return {
     activo: true,
     mesa,
@@ -210,4 +212,16 @@ export function personasDelGuion(guion) {
     if (t && t.persona && !seen.includes(t.persona)) seen.push(t.persona);
   }
   return seen;
+}
+
+/** Rótulo de marca de la caja inferior: siempre AdmiraNeXT, nunca otro proyecto. */
+export const MARCA_BARRA_LEYENDAS = 'Leyendas autónomas · AdmiraNeXT';
+
+export function etiquetaBarraLeyendas(_modo) {
+  return MARCA_BARRA_LEYENDAS;
+}
+
+export function urlPublicaBarraLeyendas(modo) {
+  if (modo && modo.temaId === 'pan') return URL_PUBLICA_HOME;
+  return URL_PUBLICA_HOME_ADMIRANEXT;
 }

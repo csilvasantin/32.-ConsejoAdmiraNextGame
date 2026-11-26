@@ -229,6 +229,16 @@ export function anotarDia(libro, dia, tok, ahora) {
   return out;
 }
 
+/** r255: tokHoy publicado = max(calculado ahora, máximo del día ya guardado en el libro). Nunca baja. */
+export function tokHoyMonotono(calculado, maxGuardado) {
+  const ok = (x) => x != null && x !== "" && Number.isFinite(Number(x)) && Number(x) >= 0;
+  const okC = ok(calculado), okM = ok(maxGuardado);
+  if (!okC && !okM) return null;
+  if (!okC) return Math.round(Number(maxGuardado));
+  if (!okM) return Math.round(Number(calculado));
+  return Math.round(Math.max(Number(calculado), Number(maxGuardado)));
+}
+
 /** Partes de Yokup → { dia: tokens sin caché } (por owner y día el máximo, y luego la suma de owners). */
 export function yokupPorDia(d) {
   const por = {};

@@ -101,7 +101,6 @@ let ocupado = false;
 let activeApiUrl = null;
 let demoIdx = {};
 let lastSeenId = null;
-let hideCursorT = 0;
 let ticking = false;
 
 function estado(t) { const el = $('estado'); if (el) el.textContent = t || ''; }
@@ -1030,13 +1029,8 @@ function activarMesa() {
 }
 
 function idleCursor() {
-  const wake = () => {
-    document.body.classList.remove('kiosk-idle');
-    clearTimeout(hideCursorT);
-    hideCursorT = setTimeout(() => document.body.classList.add('kiosk-idle'), 4000);
-  };
-  ['mousemove', 'keydown', 'pointerdown'].forEach((ev) => document.addEventListener(ev, wake));
-  wake();
+  // Carlos 26-nov-2026 (t428u): no ocultar el cursor. Tiene que verse al mover el ratón, también en cartelería.
+  document.body.classList.remove('kiosk-idle');
 }
 
 function instalarControles() {

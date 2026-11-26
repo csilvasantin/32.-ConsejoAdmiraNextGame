@@ -219,7 +219,9 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #icq .qhdr i{margin-left:auto;font-style:normal;font-size:9px;color:#707070}
 .clist{position:absolute;left:3px;right:3px;top:56px;bottom:52px;overflow:hidden;padding:3px 2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .cgrp{padding:3px 4px 2px;font-weight:bold;color:#000080;white-space:nowrap}
-.crow{display:flex;align-items:center;height:18px;padding:0 4px 0 10px;white-space:nowrap}
+.crow{display:flex;align-items:center;height:18px;padding:0 4px 0 10px;white-space:nowrap;overflow:hidden}
+.crow > span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.crow .mis{font-weight:normal}
 .crow svg{flex:none;width:14px;height:14px;margin-right:5px}
 .crow.off{color:#808080}
 .crow.unk span{font-style:italic}
@@ -533,7 +535,10 @@ html.mp-fs-on,html.mp-fs-on body{overflow:hidden!important}
 .icon .lnk-arr{position:absolute;left:0;top:16px;width:16px;height:16px;pointer-events:none;display:block}
 .icon .lnk-arr svg,.icon .lnk-arr img{width:16px;height:16px;margin:0;display:block;image-rendering:pixelated;shape-rendering:crispEdges;-ms-interpolation-mode:nearest-neighbor}
 .foldbody.drop,.foldwin.drop .foldbody{outline:1px dotted #ffff00;background:#808080}
-.foldwin .foldbody{position:absolute;left:3px;right:3px;top:43px;bottom:22px;background:#c0c0c0;overflow:auto;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.foldwin .foldbar{position:absolute;left:3px;right:3px;top:43px;height:22px;display:flex;align-items:center;gap:4px;padding:0 3px;background:#c0c0c0;box-shadow:inset 1px 1px #fff,inset -1px -1px #808080}
+.foldwin .foldbar .btn{height:18px;padding:0 6px;flex:none}
+.foldwin .foldbar .foldpath{flex:1;min-width:0;height:16px;padding:1px 4px 0;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foldwin .foldbody{position:absolute;left:3px;right:3px;top:65px;bottom:22px;background:#c0c0c0;overflow:auto;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .foldwin .foldbody .icon{color:#000}
 .foldwin .foldbody .icon span{color:#000}
 .foldwin .foldbody .icon.sel span{background:#000080;color:#fff;border-color:#ffff00}
@@ -1588,6 +1593,7 @@ Hoy trabajo en:
 Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
 ========================================================================
 </script>
+    <script type="application/json" id="misiones-fallback-seed">{"ok":true,"generado":1795685100000,"generado_madrid":"26-11-2026 10:25","aviso":"","fuente":"admira.live","carpetas":[{"id":"fld-deep-neo","padre":"misiones","persona":"Neo","nombre":"Neo - #7621 Screen sync AdmiraNeXT01–05","principal":{"encargo":7621,"estado":"in_progress","estado_es":"en curso","titulo":"Screen sync AdmiraNeXT01–05","maquina":"macstudio"},"ficheros":[{"id":"doc-mision-neo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Neo\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7621 (#7621.11.19)\nTítulo: Screen sync AdmiraNeXT01–05\nEstado: en curso\nMáquina: macstudio\nÚltimo latido: sin verificar\n\nResumen:\nRetoma de #7612 (Screen sync AdmiraNeXT01–05), sesión nueva. Los cinco PCs están listos; falta que Carlos pulse SINCRO en admiranext.com/demo.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795073400000},{"id":"doc-encargos-neo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Neo\n26-11-2026 10:25 hora de Madrid\n\n• #7687 · pendiente · StreamDeck\n  Máquina: macstudio · 24-11-2026 11:13\n• #7632 · bloqueado · Modo Demo del player en las ultrawide…\n  Máquina: macstudio · 20-11-2026 11:56\n• #7621 · en curso · Screen sync AdmiraNeXT01–05\n  Máquina: macstudio · 19-11-2026 08:30\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795073400000}]},{"id":"fld-deep-trinity","padre":"misiones","persona":"Trinity","nombre":"Trinity - #7736 Webhook Huang y espejo #7536","principal":{"encargo":7736,"estado":"pending","estado_es":"pendiente","titulo":"Webhook Huang y espejo #7536","maquina":"macbookairrosa"},"ficheros":[{"id":"doc-mision-trinity","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Trinity\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7736 (#7736.11.26)\nTítulo: Webhook Huang y espejo #7536\nEstado: pendiente\nMáquina: macbookairrosa\nÚltimo latido: sin verificar\n\nResumen:\nTitular: Retoma control mañana 26-nov — Reparar el 401 del webhook de Huang y cerrar el espejo #7536\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795680000000},{"id":"doc-encargos-trinity","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Trinity\n26-11-2026 10:25 hora de Madrid\n\n• #7736 · pendiente · Webhook Huang y espejo #7536\n  Máquina: macbookairrosa · 26-11-2026 09:00\n• #7693 · bloqueado · Prueba viva de los 6 webhooks principales y cruce…\n  Máquina: macbookpronegro14 · 25-11-2026 10:14\n• #7692 · pendiente · Webhook Huang y espejo #7536\n  Máquina: macbookairrosa · 25-11-2026 10:13\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795680000000}]},{"id":"fld-deep-morfeo","padre":"misiones","persona":"Morfeo","nombre":"Morfeo - #7706 Vuelta al 95, partir de main","principal":{"encargo":7706,"estado":"pending","estado_es":"pendiente","titulo":"Vuelta al 95, partir de main","maquina":"win95"},"ficheros":[{"id":"doc-mision-morfeo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Morfeo\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7706 (#7706.11.25)\nTítulo: Vuelta al 95, partir de main\nEstado: pendiente\nMáquina: win95\nÚltimo latido: sin verificar\n\nResumen:\n«Vuelta al 95» (admira.live/windows95). Parte siempre de main y no subas tu HTML antiguo.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795626180000},{"id":"doc-encargos-morfeo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Morfeo\n26-11-2026 10:25 hora de Madrid\n\n• #7706 · pendiente · Vuelta al 95, partir de main\n  Máquina: win95 · 25-11-2026 18:03\n• #7704 · pendiente · Vuelta al 95\n  Máquina: win95 · 25-11-2026 14:52\n• #7701 · pendiente · Vuelta al 95\n  Máquina: win95 · 25-11-2026 14:05\n• #7695 · pendiente · Demo /sala-voz Jobs↔Elon en las dos pantallas\n  Máquina: macmini · 25-11-2026 10:14\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795626180000}]},{"id":"fld-deep-oraculo","padre":"misiones","persona":"Oraculo","nombre":"Oráculo - #7677 Ojos Remotos (bloqueado)","principal":{"encargo":7677,"estado":"blocked","estado_es":"bloqueado","titulo":"Ojos Remotos (bloqueado)","maquina":"admiranext04"},"ficheros":[{"id":"doc-mision-oraculo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Oráculo\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7677 (#7677.11.23)\nTítulo: Ojos Remotos (bloqueado)\nEstado: bloqueado\nMáquina: admiranext04\nÚltimo latido: sin verificar\n\nResumen:\nSeguimiento de Ojos Remotos en AdmiraNeXT04: hace falta acceso de lectura a admira-vault. Los equipos 01, 02, 03 y 05 siguen sin fuente.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795423620000},{"id":"doc-encargos-oraculo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Oráculo\n26-11-2026 10:25 hora de Madrid\n\n• #7677 · bloqueado · Ojos Remotos (bloqueado)\n  Máquina: admiranext04 · 23-11-2026 09:47\n• #7676 · bloqueado · Ojos Remotos (bloqueado)\n  Máquina: admiranext04 · 23-11-2026 09:37\n• #7624 · bloqueado · En AdmiraNeXT03, la pantalla de detrás de la pared…\n  Máquina: admiranext03 · 19-11-2026 12:31\n• #7606 · bloqueado · Dejar sshd en marcha en AdmiraNeXT03 y…\n  Máquina: admiranext03 · 16-11-2026 12:08\n• #7605 · bloqueado · Captura y relanzar el player del show en…\n  Máquina: admiranext04 · 16-11-2026 12:03\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795423620000}]},{"id":"fld-stevejobs","padre":"miscelanea","persona":"Jobs","nombre":"SteveJobs","principal":{"encargo":null,"estado":"in_progress","estado_es":"en curso","titulo":"Win95 Xperience y control de DeepAgents en admira.live","maquina":"GrokBotBox"},"ficheros":[{"id":"doc-mision-stevejobs","nombre":"Misión del día.txt","texto":"MISIÓN DE STEVE JOBS\n26-11-2026 10:25 hora de Madrid\n\nSteve Jobs está dedicado hoy a:\n«Win95 Xperience y control de DeepAgents en admira.live».\n\nFoco de hoy (26-11-2026):\n— Arranque por defecto de la Xperience (distribución de iconos e ICQGram).\n— Subcarpetas (crear, abrir y subir un nivel) en Miscelánea y en Misiones.\n— Control de los DeepAgents (Neo, Trinity, Morfeo y Oráculo) en la carpeta Misiones del escritorio.\n— Frescura de cupos en ICQGram.\n\nNota de solo lectura. Sin secretos.","mtime":1795685100000}]}]}</script>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
       <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 Transfer</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
@@ -1685,7 +1691,7 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
       <div id="mp-menu" class="win cmenu note-menu" hidden></div>
     </div>
     <!-- ICQGram: lista de contactos -->
-    <div id="icq" class="win" style="left:462px;top:118px;width:170px;height:330px;display:none">
+    <div id="icq" class="win" style="left:236px;top:118px;width:320px;height:330px;display:none">
       <div class="tb"><span data-ico="chat"></span><span class="t">ICQGram</span><span class="x" data-min="icq">_</span><span class="x" data-max="icq" title="Maximizar">□</span><span class="x gap" data-close="icq">×</span></div>
       <div class="qhdr"><span data-ico="chat"></span><b>ICQ<span>Gram</span></b><i>Nº 25111997</i></div>
       <div class="clist" id="clist"></div>
@@ -2027,6 +2033,8 @@ function qs(s,r){ return (r||document).querySelector(s); }
 function qsa(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
 function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 var DESK_W=640, DESK_H=452, DESK_TOP_MAX=430;
+var DESK_LAYOUT_VER=4, DESK_RIGHT_COL=564;
+var DESK_POS={mypc:{left:4,top:6},browser:{left:4,top:68},'fld-descargas':{left:4,top:130},'fld-misc':{left:4,top:192},'fld-misiones':{left:82,top:192},p2p:{left:4,top:254},amp:{left:4,top:316},media:{left:4,top:378},readme:{left:82,top:6},'doc-leyendas':{left:160,top:6},inbox:{left:564,top:6},ssaver:{left:564,top:192},trash:{left:564,top:378}};
 function deskWinMaxLeft(w){ return Math.max(0, DESK_W-Math.max(0,w||0)); }
 function clampWinLeft(left,w){ return clamp(left,0,deskWinMaxLeft(w)); }
 function clampWinHoriz(el){
@@ -2610,12 +2618,12 @@ function saveDeskLayout(){
     if(width<40||height<40) return;
     wins[el.id]={left:left,top:top,width:width,height:height};
   });
-  try{ localStorage.setItem(deskStoreKey(), JSON.stringify({v:2,at:Date.now(),icons:map,windows:wins})); }catch(e){}
+  try{ localStorage.setItem(deskStoreKey(), JSON.stringify({v:DESK_LAYOUT_VER,at:Date.now(),icons:map,windows:wins})); }catch(e){}
 }
 function applyIconLayout(){
   var data=null;
   try{ data=JSON.parse(localStorage.getItem(deskStoreKey())||'null'); }catch(e){ data=null; }
-  if(!data||!data.icons) return false;
+  if(!data||data.v!==DESK_LAYOUT_VER||!data.icons) return false;
   var any=false;
   Object.keys(data.icons).forEach(function(id){
     var p=data.icons[id], el=qs('#ic-'+id);
@@ -2631,7 +2639,7 @@ function applyIconLayout(){
 function applyWinLayout(){
   var data=null;
   try{ data=JSON.parse(localStorage.getItem(deskStoreKey())||'null'); }catch(e){ data=null; }
-  if(!data||!data.windows) return false;
+  if(!data||data.v!==DESK_LAYOUT_VER||!data.windows) return false;
   var any=false;
   Object.keys(data.windows).forEach(function(id){
     var el=qs('#'+id), p=data.windows[id]; if(!el||!p) return;
@@ -2696,14 +2704,16 @@ function updateTasks(active){ for(var k in TASKS) TASKS[k].btn.classList.toggle(
 var lastPointerType='mouse';
 function selectIcon(el){ qsa('.icon').forEach(function(i){ i.classList.toggle('sel',i===el); }); }
 function buildDesktop(){
-  var list=[['mypc','Mi PC'],['trash','Papelera de reciclaje'],['readme','Léeme.txt'],['amp',CONFIG.names.player],['browser',CONFIG.names.browser],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla',82,6],['media',CONFIG.names.media,82,68],['inbox','Bandeja de entrada',82,130]];
-  list.forEach(function(d,i){
-    var def={id:d[0],label:d[1],ico:d[0],kind:'app',app:d[0],left:d[2]!==undefined?d[2]:4,top:d[3]!==undefined?d[3]:6+i*62};
+  var list=[['mypc','Mi PC'],['browser',CONFIG.names.browser],['amp',CONFIG.names.player],['p2p',CONFIG.names.p2p],['ssaver','Protector de pantalla'],['media',CONFIG.names.media],['inbox','Bandeja de entrada'],['trash','Papelera de reciclaje'],['readme','Léeme.txt']];
+  list.forEach(function(d){
+    var p=DESK_POS[d[0]]||{left:4,top:6};
+    var def={id:d[0],label:d[1],ico:d[0],kind:'app',app:d[0],left:p.left,top:p.top};
     ICON_DEFS.push(def); addIcon(def);
   });
   applyIconLayout();
   restoreNoteDocs();
   loadComms(false);
+  loadMisiones(false);
   // clic derecho (o pulsación larga en pantalla táctil) sobre el escritorio → menú contextual
   var lp=null;
   desk.addEventListener('pointerdown',function(e){
@@ -2878,6 +2888,7 @@ function newTextDoc(x,y,rename,parent){
   return el;
 }
 function startRename(el){
+  if(el&&el._def&&isDeepSys(el._def)) return;
   var sp=el.lastChild, old=sp.textContent;
   sp.classList.add('ren'); sp.setAttribute('contenteditable','true'); sp.focus();
   try{ var r=document.createRange(); r.selectNodeContents(sp); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){}
@@ -3038,11 +3049,12 @@ function openShortcut(d){
 }
 function openFolder(id){
   var it=FS[id]; if(!it||it.kind!=='folder') return;
-  if(id===MISC_ID) loadComms(true);
+  if(id===MISC_ID){ loadComms(true); loadMisiones(true); }
+  if(id===MISIONES_ID||isDeepSysId(id)) loadMisiones(true);
   if(FWIN[id]&&FWIN[id].parentNode){ FWIN[id].style.display='block'; addTask('fw-'+id,it.name,'folder',[FWIN[id]]); focusWin(FWIN[id]); renderFolder(id); return; }
   var w=document.createElement('div'); w.className='win foldwin'; w.id='fw-'+id;
   w.style.cssText='left:90px;top:36px;width:380px;height:260px';
-  w.innerHTML='<div class="tb"><span class="fico"></span><span class="t"></span><span class="x" data-min="fw-'+id+'">_</span><span class="x" data-max="fw-'+id+'" title="Maximizar">□</span><span class="x gap" data-close="fw-'+id+'">×</span></div><div class="menubar"><span data-fmenu="archivo"><u>A</u>rchivo</span><span data-fmenu="edicion"><u>E</u>dición</span><span data-fmenu="ver"><u>V</u>er</span><span data-fmenu="ayuda">Ay<u>u</u>da</span></div><div class="foldbody"></div><div class="sbar1 foldst">0 objeto(s)</div>';
+  w.innerHTML='<div class="tb"><span class="fico"></span><span class="t"></span><span class="x" data-min="fw-'+id+'">_</span><span class="x" data-max="fw-'+id+'" title="Maximizar">□</span><span class="x gap" data-close="fw-'+id+'">×</span></div><div class="menubar"><span data-fmenu="archivo"><u>A</u>rchivo</span><span data-fmenu="edicion"><u>E</u>dición</span><span data-fmenu="ver"><u>V</u>er</span><span data-fmenu="ayuda">Ay<u>u</u>da</span></div><div class="foldbar"><button class="btn" type="button" data-up title="Subir un nivel">Subir un nivel</button><div class="foldpath"></div></div><div class="foldbody"></div><div class="sbar1 foldst">0 objeto(s)</div>';
   qs('.fico',w).innerHTML=ICONS.folderOpen||ICONS.folder;
   qs('.t',w).textContent=it.name;
   desk.appendChild(w);
@@ -3052,6 +3064,8 @@ function openFolder(id){
   qs('[data-min="fw-'+id+'"]',w).addEventListener('click',function(){ minimize('fw-'+id); });
   qs('[data-max="fw-'+id+'"]',w).addEventListener('click',function(){ winToggleMax(w); });
   makeDraggable(qs('.tb',w),w); attachResize(w);
+  w._fid=id;
+  qs('[data-up]',w).addEventListener('click',function(e){ e.stopPropagation(); var cur=FS[w._fid||id], par=cur&&fsParent(cur); if(par&&FS[par]&&FS[par].kind==='folder') openFolder(par); });
   w.addEventListener('pointerdown',function(){ focusWin(w); });
   var body=qs('.foldbody',w);
   body.addEventListener('pointerdown',function(e){ if(e.target===body) selectIcon(null); });
@@ -3077,6 +3091,9 @@ function renderFolder(id){
   var w=FWIN[id]; if(!w) return;
   var it=FS[id], body=qs('.foldbody',w); if(!it||!body) return;
   qs('.t',w).textContent=it.name;
+  w._fid=id;
+  var pathEl=qs('.foldpath',w); if(pathEl){ pathEl.textContent=folderPathLabel(id); pathEl.title=folderPathLabel(id); }
+  var upBtn=qs('[data-up]',w); if(upBtn) upBtn.disabled=!fsParent(it);
   if(TASKS['fw-'+id]) TASKS['fw-'+id].btn.lastChild.textContent=it.name;
   var v=folderView(id), sel=selectedIcon(), selId=sel&&sel._def?sel._def.id:null, sTop=body.scrollTop;
   body.className='foldbody v-'+v.mode;
@@ -3113,6 +3130,9 @@ function renderFolder(id){
   if(id===MISC_ID){
     var nr=0; for(var r in REMOTE){ if(REMOTE[r].parent===id&&!HIDDEN[r]&&!inTrash(r)) nr++; }
     extra=COMMS.loading?' · actualizando comunicaciones…':COMMS.error?' · comunicaciones: '+COMMS.error:(COMMS.at?' · '+nr+' comunicación(es) del Consejo, '+horaHM(COMMS.at):'');
+  }
+  if(id===MISIONES_ID){
+    extra=MISIONES.loading?' · actualizando misiones…':(MISIONES.at?' · DeepAgents, '+horaHM(MISIONES.at):'');
   }
   var total=kids.length, bytes=0; kids.forEach(function(k){ var m=itemMeta(k); if(m.size) bytes+=m.size; });
   qs('.foldst',w).textContent=total+' objeto(s)'+(bytes?' · '+fmtSize(bytes):'')+extra;
@@ -3363,7 +3383,8 @@ function wireFsKeys(){
   document.addEventListener('keydown',function(e){
     if(e.target&&(e.target.closest&&(e.target.closest('input,textarea,[contenteditable],#nt,.ren')))) return;
     var el=selectedIcon();
-    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote&&!isMiscSysDoc(el._def)){ e.preventDefault(); startRename(el); return; }
+    if(e.key==='Enter'&&el&&el._def){ e.preventDefault(); openIcon(el); return; }
+    if(e.key==='F2'&&el&&!isSystemDef(el._def)&&!el._def.remote&&!isMiscSysDoc(el._def)&&!isDeepSys(el._def)){ e.preventDefault(); startRename(el); return; }
     if(e.key==='Delete'&&el&&canTrashDef(el._def)){ e.preventDefault(); deleteItem(el); return; }
     if(e.key==='Delete'&&!el&&qs('#trw').style.display==='block'&&TRSEL>=0){ e.preventDefault(); trashPurgeAsk(TRSEL); return; }
     var ctrl=e.ctrlKey||e.metaKey;
@@ -3377,11 +3398,11 @@ function wireFsKeys(){
 /* ---------- Explorador 95 (Carlos, 25-11-2026 21:00): Miscelánea con las comunicaciones del Consejo,
    Ver (Iconos grandes / pequeños / Lista / Detalles), Organizar iconos, arrastrar cualquier icono y
    botón derecho clásico. Persistencia en localStorage (admira-win95-notepad y admira-win95-vistas). */
-var HIDDEN={}, APPST={}, REMOTE={}, MISC_ID=null, DL_ID=null, COMMS={at:0,loading:false,error:'',aviso:''}, FVIEW=null, BOOT_MS=Date.now();
-var FVIEW_KEY='admira-win95-vistas', COMMS_URL='/api/win95/comunicaciones';
+var HIDDEN={}, APPST={}, REMOTE={}, MISC_ID=null, MISIONES_ID=null, DL_ID=null, COMMS={at:0,loading:false,error:'',aviso:''}, FVIEW=null, BOOT_MS=Date.now();
+var FVIEW_KEY='admira-win95-vistas-v2', COMMS_URL='/api/win95/comunicaciones', MISIONES_URL='/api/win95/misiones';
 function isFixedDef(d){ return !!d&&d.kind==='app'&&(d.id==='mypc'||d.id==='trash'); }
-function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||isMiscSysDoc(d)||d.id==='fld-misc'); }
-function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote&&!isMiscSysDoc(d); }
+function isProtectedDef(d){ return !!d&&(d.kind==='app'||!!d.remote||isLeyendasDoc(d)||isMiscSysDoc(d)||isDeepSys(d)||d.id==='fld-misc'||d.id==='fld-misiones'); }
+function canMoveDef(d){ return !!d&&!isFixedDef(d)&&!d.remote&&!isMiscSysDoc(d)&&!isDeepSys(d); }
 function canTrashDef(d){ return !!d&&!isFixedDef(d); }
 function appDef(id){ for(var i=0;i<ICON_DEFS.length;i++) if(ICON_DEFS[i].id===id) return ICON_DEFS[i]; return null; }
 function inTrash(id){ return TRASH.some(function(t){ return t.def&&(t.def.id===id||t.def.docId===id); }); }
@@ -3399,13 +3420,170 @@ function applyAppState(){
   });
 }
 /** La carpeta Miscelánea: la del usuario si ya existe (con o sin tilde); si no, se crea en el escritorio. */
+
+function savedLayoutOk(){
+  try{ var data=JSON.parse(localStorage.getItem(deskStoreKey())||'null'); return !!(data&&data.v===DESK_LAYOUT_VER&&data.icons); }catch(e){ return false; }
+}
+function applyDefaultDeskPos(){
+  Object.keys(DESK_POS).forEach(function(id){
+    var p=DESK_POS[id], def=appDef(id)||FS[id], el=qs('#ic-'+id);
+    if(def){ def.left=p.left; def.top=p.top; }
+    if(el&&el.parentNode===desk){ el.style.left=p.left+'px'; el.style.top=p.top+'px'; }
+  });
+}
+function applyDefaultDeskIfNeeded(){ if(!savedLayoutOk()) applyDefaultDeskPos(); }
+function folderPathIds(id){
+  var out=[], p=id, guard=0;
+  while(p&&FS[p]&&guard++<24){ out.unshift(p); p=fsParent(FS[p]); }
+  return out;
+}
+function folderPathLabel(id){
+  var parts=['C:\\WINDOWS\\Escritorio'];
+  folderPathIds(id).forEach(function(i){ if(FS[i]&&FS[i].parent!=='__virtual__') parts.push(FS[i].name||FS[i].label||''); });
+  return parts.filter(Boolean).join('\\');
+}
+var DEEP_FOLDER_IDS=['fld-deep-neo','fld-deep-trinity','fld-deep-morfeo','fld-deep-oraculo','fld-stevejobs'];
+var DEEP_DOC_IDS=['doc-mision-neo','doc-encargos-neo','doc-mision-trinity','doc-encargos-trinity','doc-mision-morfeo','doc-encargos-morfeo','doc-mision-oraculo','doc-encargos-oraculo','doc-mision-stevejobs'];
+function isDeepSysId(id){ return !!id&&(DEEP_FOLDER_IDS.indexOf(id)>=0||DEEP_DOC_IDS.indexOf(id)>=0); }
+function isDeepSys(d){ return !!(d&&(isDeepSysId(d.id)||isDeepSysId(d.docId))); }
+function ensureMiscTree(){
+  ensureLeyendasDoc();
+  ensureMiscFolder();
+  ensureDescargasFolder();
+  ensureMisionesFolder();
+  ensureEstiloDoc();
+  ensureDeepAgents();
+  ensureSteveJobs();
+  applyDefaultDeskIfNeeded();
+}
+function misionesFallback(){
+  try{ var el=qs('#misiones-fallback-seed'); return el?JSON.parse(el.textContent):null; }catch(e){ return null; }
+}
+function padreDeCarpeta(c){
+  if(!c) return null;
+  if(c.padre==='misiones'||(c.id&&c.id.indexOf('fld-deep-')===0)) return MISIONES_ID||null;
+  return MISC_ID||null;
+}
+function applyMisionesData(data){
+  if(!data||!Array.isArray(data.carpetas)) return;
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISIONES_ID) ensureMisionesFolder();
+  var touched={};
+  data.carpetas.forEach(function(c, idx){
+    if(!c||!c.id) return;
+    if(inTrash(c.id)||HIDDEN[c.id]) return;
+    var parent=padreDeCarpeta(c); if(!parent) return;
+    var it=FS[c.id];
+    if(!it){
+      it=registerItem({id:c.id,kind:'folder',name:c.nombre||c.id,label:c.nombre||c.id,ico:'folder',parent:parent,left:8,top:8+idx*20,mtime:Date.now(),deepSys:true});
+    } else {
+      it.name=c.nombre||it.name; it.label=c.nombre||it.label; it.parent=parent;
+    }
+    touched[c.id]=1;
+    (c.ficheros||[]).forEach(function(f, fi){
+      if(!f||!f.id) return;
+      if(inTrash(f.id)||HIDDEN[f.id]) return;
+      var doc=FS[f.id]||DOCS[f.id];
+      if(!doc){
+        doc=registerItem({id:f.id,kind:'doc',name:f.nombre,label:f.nombre,text:f.texto||'',parent:c.id,ico:'txt',left:8,top:8+fi*20,docId:f.id,mtime:+f.mtime||Date.now(),deepSys:true});
+      } else {
+        doc.name=f.nombre||doc.name; doc.label=f.nombre||doc.label; doc.text=f.texto||''; doc.parent=c.id; if(f.mtime) doc.mtime=+f.mtime;
+      }
+      touched[f.id]=1;
+    });
+  });
+  if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
+  if(MISIONES_ID&&FWIN[MISIONES_ID]) renderFolder(MISIONES_ID);
+  DEEP_FOLDER_IDS.forEach(function(id){ if(FWIN[id]) renderFolder(id); });
+  try{ if(typeof renderContacts==='function') renderContacts(); }catch(e){}
+  saveNoteDocs();
+}
+function ensureDeepAgents(){
+  if(!MISIONES_ID) ensureMisionesFolder();
+  if(!MISC_ID) ensureMiscFolder();
+  applyMisionesData(misionesFallback());
+}
+function ensureSteveJobs(){
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISC_ID) return;
+  if(inTrash('fld-stevejobs')||HIDDEN['fld-stevejobs']) return;
+  if(!FS['fld-stevejobs']) applyMisionesData(misionesFallback());
+}
+var MISIONES={at:0,loading:false,error:''};
+function loadMisiones(force){
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISIONES_ID) ensureMisionesFolder();
+  if(typeof fetch!=='function'){ applyMisionesData(misionesFallback()); return; }
+  if(MISIONES.loading) return;
+  if(!force&&MISIONES.at&&now()-MISIONES.at<15000) return;
+  MISIONES.loading=true;
+  fetch(MISIONES_URL,{cache:'no-store',credentials:'same-origin',headers:{accept:'application/json'}})
+    .then(function(r){ if(r.status===401) return null; return r.ok?r.json():null; })
+    .then(function(d){ MISIONES.loading=false; MISIONES.at=now(); if(d&&d.ok&&Array.isArray(d.carpetas)) applyMisionesData(d); else applyMisionesData(misionesFallback()); })
+    .catch(function(){ MISIONES.loading=false; MISIONES.at=now(); applyMisionesData(misionesFallback()); });
+}
+function plainKeyConsejero(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function clavesCarpetaConsejero(c){
+  var name=String((c&&c.name)||''), keys=[], parts=name.replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ ]+/g,'').trim().split(/\s+/).filter(Boolean);
+  if(parts.length){ keys.push(parts.join(''), parts.join(' ')); }
+  if(c&&c.persona){ var p=String(c.persona); keys.push(p, p.charAt(0).toUpperCase()+p.slice(1)); }
+  return keys;
+}
+function coincideCarpetaConsejero(folderName, c){
+  var base=String(folderName||'').split(/\s+[-–—]\s+/)[0], b=plainKeyConsejero(base);
+  if(!b) return false;
+  return clavesCarpetaConsejero(c).some(function(k){ return plainKeyConsejero(k)===b; });
+}
+function misionDeclaradaEnTexto(texto){
+  var t=String(texto||''), q=t.match(/[«“"]([^»”"]{6,120})[»”"]/);
+  if(q) return q[1].trim();
+  var tit=t.match(/^Título:\s*(.+)$/m); if(tit) return tit[1].trim();
+  var d=t.match(/dedicado hoy a:\s*\n?\s*[«"]?([^\n»"]+)/i); if(d) return d[1].trim();
+  return '';
+}
+function misionCompacta(s){
+  return String(s||'').replace(/\s+en admira\.live\s*$/i,'').replace(/\s+de\s+(DeepAgents)/i,' $1').replace(/\s+/g,' ').trim();
+}
+function misionConsejeroEnMiscelanea(c){
+  if(!c||!MISC_ID) return null;
+  var k, it, m='', docs, i, rest;
+  for(k in FS){
+    it=FS[k];
+    if(!it||it.kind!=='folder'||it.parent!==MISC_ID) continue;
+    if(!coincideCarpetaConsejero(it.name||it.label, c)) continue;
+    docs=folderChildren(it.id).filter(function(d){ return d.kind==='doc'; });
+    var pref=docs.filter(function(d){ return /misi[oó]n del d[ií]a/i.test(d.name||d.label||''); });
+    var list=pref.concat(docs);
+    for(i=0;i<list.length;i++){ m=misionDeclaradaEnTexto(list[i].text||''); if(m) break; }
+    if(!m){ rest=String(it.name||it.label||'').split(/\s+[-–—]\s+/).slice(1).join(' - ').trim(); m=rest||''; }
+    if(!m) return null;
+    var corto=misionCompacta(m);
+    if(!corto) return null;
+    return {corto:corto, largo:m, carpeta:it.name||it.label};
+  }
+  return null;
+}
+function ensureMyPcFolder(){
+  if(FS['fld-mypc']) return FS['fld-mypc'];
+  var root=registerItem({id:'fld-mypc',kind:'folder',name:'Mi PC',label:'Mi PC',ico:'mypc',parent:'__virtual__',left:8,top:8,mtime:Date.now()});
+  var kids=[
+    {id:'doc-mypc-a',name:'Disco de 3½ (A:)',text:'La unidad no está lista.\nInserte un disco en la unidad A: y pulse Aceptar.'},
+    {id:'doc-mypc-c',name:'Disco (C:)',text:'Disco (C:) · 1,2 GB\nSistema de archivos: FAT32\nEspacio libre: 348 MB\n\nProcesador a 133 MHz · 16 MB de RAM\nMódem de 28.800 bps\n\n¡Lo último de lo último!'},
+    {id:'doc-mypc-panel',name:'Panel de control',text:'Panel de control de Admira 95.\nPantalla, teclado, ratón y módem (de momento, decorado).'},
+    {id:'doc-mypc-impr',name:'Impresoras',text:'No hay impresoras instaladas.'}
+  ];
+  kids.forEach(function(k,i){ registerItem({id:k.id,kind:'doc',name:k.name,label:k.name,text:k.text,parent:'fld-mypc',ico:'txt',left:8,top:8+i*20,docId:k.id,mtime:Date.now()}); });
+  return root;
+}
+function openMyPc(){ ensureMyPcFolder(); openFolder('fld-mypc'); }
+
 function ensureMiscFolder(){
   var found=null;
   for(var k in FS){ var it=FS[k]; if(it&&it.kind==='folder'&&plainName(it.name)==='miscelanea'&&(!found||(!it.parent&&found.parent))) found=it; }
   if(!found){
     var trashed=TRASH.some(function(t){ return t.def&&t.def.kind==='folder'&&plainName(t.def.label||t.def.name)==='miscelanea'; });
     if(trashed||HIDDEN['fld-misc']){ MISC_ID=null; return null; }
-    found=registerItem({id:'fld-misc',kind:'folder',name:'Miscelánea',label:'Miscelánea',ico:'folder',parent:null,left:160,top:68,mtime:Date.now()});
+    found=registerItem({id:'fld-misc',kind:'folder',name:'Miscelánea',label:'Miscelánea',ico:'folder',parent:null,left:DESK_POS['fld-misc'].left,top:DESK_POS['fld-misc'].top,mtime:Date.now()});
     if(!qs('#ic-fld-misc')) addIcon(found, desk);
     saveNoteDocs();
   }
@@ -3420,11 +3598,25 @@ function ensureDescargasFolder(){
   if(!found){
     var trashed=TRASH.some(function(t){ return t.def&&t.def.kind==='folder'&&plainName(t.def.label||t.def.name)==='descargas'; });
     if(trashed||HIDDEN['fld-descargas']){ DL_ID=null; return null; }
-    found=registerItem({id:'fld-descargas',kind:'folder',name:'Descargas',label:'Descargas',ico:'folder',parent:null,left:160,top:130,mtime:Date.now()});
+    found=registerItem({id:'fld-descargas',kind:'folder',name:'Descargas',label:'Descargas',ico:'folder',parent:null,left:DESK_POS['fld-descargas'].left,top:DESK_POS['fld-descargas'].top,mtime:Date.now()});
     if(!qs('#ic-fld-descargas')) addIcon(found, desk);
     saveNoteDocs();
   }
   DL_ID=found.id;
+  return found;
+}
+
+function ensureMisionesFolder(){
+  var found=null;
+  for(var k in FS){ var it=FS[k]; if(it&&it.kind==='folder'&&plainName(it.name)==='misiones'&&(!found||(!it.parent&&found.parent))) found=it; }
+  if(!found){
+    var trashed=TRASH.some(function(t){ return t.def&&t.def.kind==='folder'&&plainName(t.def.label||t.def.name)==='misiones'; });
+    if(trashed||HIDDEN['fld-misiones']){ MISIONES_ID=null; return null; }
+    found=registerItem({id:'fld-misiones',kind:'folder',name:'Misiones',label:'Misiones',ico:'folder',parent:null,left:DESK_POS['fld-misiones'].left,top:DESK_POS['fld-misiones'].top,mtime:Date.now()});
+    if(!qs('#ic-fld-misiones')) addIcon(found, desk);
+    saveNoteDocs();
+  }
+  MISIONES_ID=found.id;
   return found;
 }
 
@@ -3484,8 +3676,9 @@ function horaHM(ms){ var w=new Date(ms); return pad2(w.getHours())+':'+pad2(w.ge
 function loadViews(){ if(FVIEW) return FVIEW; try{ FVIEW=JSON.parse(localStorage.getItem(FVIEW_KEY)||'null')||{}; }catch(e){ FVIEW={}; } if(typeof FVIEW!=='object'||!FVIEW) FVIEW={}; return FVIEW; }
 var VIEW_MODES=['large','small','list','details'], SORT_KEYS=['name','type','size','date'];
 function folderView(id){
+  var isDesk=!id||id==='desk';
   var v=loadViews()[id||'desk']||{};
-  return {mode:VIEW_MODES.indexOf(v.mode)>=0?v.mode:'large',sort:SORT_KEYS.indexOf(v.sort)>=0?v.sort:'name',dir:v.dir===-1?-1:1,cols:colWidths(v.cols)};
+  return {mode:VIEW_MODES.indexOf(v.mode)>=0?v.mode:(isDesk?'large':'details'),sort:SORT_KEYS.indexOf(v.sort)>=0?v.sort:'name',dir:v.dir===-1?-1:1,cols:colWidths(v.cols)};
 }
 /* Columnas de Detalles (Carlos t1389u): Nombre | Tamaño | Modificado | Tipo; anchos por carpeta,
    ajustables arrastrando el separador derecho de cada cabecera (pointer events: ratón y táctil). */
@@ -3574,7 +3767,7 @@ function viewMenuItems(parent){
     {l:'Organizar iconos',sub:function(){ return arrangeMenuItems(parent); }},
     {l:'Alinear iconos',fn:function(){ closeDeskMenu(); if(parent) arrangeBy(parent, folderView(parent).sort); else alignIcons(); }},
     {sep:1},
-    {l:'Actualizar',fn:function(){ closeDeskMenu(); if(parent){ if(parent===MISC_ID) loadComms(true); renderFolder(parent); } }}];
+    {l:'Actualizar',fn:function(){ closeDeskMenu(); if(parent){ if(parent===MISC_ID||parent===MISIONES_ID||isDeepSysId(parent)){ loadComms(parent===MISC_ID); loadMisiones(true); } renderFolder(parent); } }}];
 }
 function arrangeMenuItems(parent){
   var v=folderView(parent);
@@ -3615,11 +3808,12 @@ function wireFolderMenubar(w, id){
       var p=menuAnchor(sp), k=sp.getAttribute('data-fmenu'), sel=selectedIcon(), mine=sel&&sel.parentNode===qs('.foldbody',w)?sel:null, d=mine&&mine._def, items;
       DM.parent=id; DM.x=40; DM.y=40;
       if(k==='archivo') items=[
+        {l:'Nueva carpeta',fn:function(){ newFolder(40,40,MODE==='interactive',id); }},
         {l:'Nuevo',sub:function(){ return [{l:'Carpeta',fn:function(){ newFolder(40,40,MODE==='interactive',id); }},{l:'Documento de texto',fn:function(){ newTextDoc(40,40,MODE==='interactive',id); }}]; }},
         {sep:1},
         {l:'Abrir',dis:!d,fn:function(){ openIcon(mine); }},
         {l:'Eliminar',dis:!d||!canTrashDef(d),fn:function(){ deleteItem(mine); }},
-        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote||isMiscSysDoc(d),fn:function(){ startRename(mine); }},
+        {l:'Cambiar nombre',dis:!d||isSystemDef(d)||!!d.remote||isMiscSysDoc(d)||isDeepSys(d),fn:function(){ startRename(mine); }},
         {l:'Propiedades',fn:function(){ itemProps(d||FS[id]); }},
         {sep:1},
         {l:'Cerrar',fn:function(){ var x=qs('[data-close="fw-'+id+'"]',w); if(x) x.click(); }}];
@@ -3712,7 +3906,7 @@ function trashRestore(i){
     registerItem(d); if(d.kind==='doc') DOCS[d.docId||d.id]=d;
     if(parent){ if(FWIN[parent]) renderFolder(parent); }
     else if(!qs('#ic-'+d.id)) addIcon(d, desk);
-    if(d.kind==='folder'){ ensureMiscFolder(); ensureDescargasFolder(); if(d.id===MISC_ID) loadComms(true); }
+    if(d.kind==='folder'){ ensureMiscTree(); if(d.id===MISC_ID||d.id===MISIONES_ID||isDeepSysId(d.id)){ loadComms(d.id===MISC_ID); loadMisiones(true); } }
   }
   setTrashIcon(); renderTrash(); saveNoteDocs();
 }
@@ -3726,10 +3920,11 @@ function purgeDef(def){
       if(ch.kind==='app'||ch.remote){ HIDDEN[ch.id]=1; if(ch.kind==='app') APPST[ch.id]={parent:null}; return; }
       delTree(ch.id);
     });
-    if(id===LEYENDAS_SEED_ID||isMiscSysId(id)||id==='fld-misc') HIDDEN[id]=1;
+    if(id===LEYENDAS_SEED_ID||isMiscSysId(id)||id==='fld-misc'||id==='fld-misiones') HIDDEN[id]=1;
     delete DOCS[id]; delete FS[id];
   })(def.docId||def.id);
   if(def.id===MISC_ID){ MISC_ID=null; }
+  if(def.id===MISIONES_ID){ MISIONES_ID=null; }
   if(def.id===DL_ID){ DL_ID=null; }
 }
 function trashPurgeAsk(i){
@@ -3756,7 +3951,7 @@ function restoreHidden(){
   var ids=Object.keys(HIDDEN); if(!ids.length) return;
   HIDDEN={};
   ids.forEach(function(id){ if(APPST[id]) APPST[id]={parent:null}; });
-  applyAppState(); ensureLeyendasDoc(); ensureMiscFolder(); ensureDescargasFolder(); ensureEstiloDoc(); syncDescargasFiles(); loadComms(true);
+  applyAppState(); ensureMiscTree(); syncDescargasFiles(); loadComms(true); loadMisiones(true);
   if(MISC_ID&&FWIN[MISC_ID]) renderFolder(MISC_ID);
   renderTrash(); saveNoteDocs();
   msgBox('Papelera de reciclaje','Se han restaurado '+ids.length+' elemento(s) del sistema.','info');
@@ -3825,6 +4020,7 @@ function resetIcons(){
   applyIconLayout();
   restoreNoteDocs();
   loadComms(true);
+  loadMisiones(true);
 }
 async function ghostDragIcon(el,tx,ty,tk){
   await ghostMove(el,tk); await wait(200,tk);
@@ -3847,7 +4043,7 @@ function openApp(id){
   switch(id){
     case 'amp': openAmp(false); break;
     case 'readme': openNote(MODE==='interactive'); break;
-    case 'mypc': sfxDing(); msgBox('Mi PC','Procesador a 133 MHz · 16 MB de RAM\nDisco duro de 1,2 GB · Módem de 28.800 bps\n\n¡Lo último de lo último!','info'); break;
+    case 'mypc': openMyPc(); break;
     case 'trash': openTrash(); break;
     case 'browser': openBrowser(); break;
     case 'chat': openIcq(); break;
@@ -3945,7 +4141,7 @@ function serializeItem(d){
 function saveNoteDocs(){
   var st=loadNoteStore(), items=[];
   st.v=2; st.leeme=(NOTE.leeme!=null)?NOTE.leeme:st.leeme; st.seq=Math.max(docSeq,itemSeq);
-  for(var k in FS){ if(FS[k]) items.push(serializeItem(FS[k])); }
+  for(var k in FS){ if(FS[k]&&FS[k].parent!=='__virtual__'&&k!=='fld-mypc'&&String(FS[k].parent||'')!=='fld-mypc') items.push(serializeItem(FS[k])); }
   // compat docs sueltos
   for(var k2 in DOCS){ if(DOCS[k2]&&!FS[k2]&&!DOCS[k2].remote&&!inTrash(k2)) items.push(serializeItem(DOCS[k2])); }
   st.hidden=HIDDEN; st.apps=APPST;
@@ -3985,10 +4181,7 @@ function restoreNoteDocs(){
   });
   setTrashIcon();
   applyAppState();
-  ensureLeyendasDoc();
-  ensureMiscFolder();
-  ensureDescargasFolder();
-  ensureEstiloDoc();
+  ensureMiscTree();
   syncDescargasFiles();
 }
 
@@ -4167,7 +4360,7 @@ function applyLeyendasNoteMode(d){
   sizeNoteFor(d);
   var remote=!!(d&&d.remote);
   var estilo=isEstiloDoc(d), sys=isMiscSysDoc(d);
-  var ro=remote||sys||(isLeyendasDoc(d)&&!d.leyendasLocal);
+  var ro=remote||sys||isDeepSys(d)||(isLeyendasDoc(d)&&!d.leyendasLocal);
   noteMode(!ro);
   showLeyendasRo(ro, remote, estilo, sys&&!estilo);
 }
@@ -5566,7 +5759,7 @@ function cupoCab(k){
   return {txt:'('+Math.round(q)+' %)', title:tit};
 }
 function renderContacts(){
-  function row(c){ var tt=c.real?' title="'+esc(c.status)+'"':''; var n=(c.hoy>0)?' ('+c.hoy+')':''; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'"'+tt+'>'+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+'</span><i class="env">'+ENV+'</i></div>'; }
+  function row(c){ var mis=misionConsejeroEnMiscelanea(c); var n=(c.hoy>0)?' ('+c.hoy+')':''; var misH=mis?' <span class="mis">· '+esc(mis.corto)+'</span>':''; var bits=[]; if(c.real&&c.status) bits.push(c.status); if(mis) bits.push(mis.largo||mis.corto); var tt=bits.length?' title="'+esc(bits.join(' · '))+'"':''; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'"'+tt+'>'+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+misH+'</span><i class="env">'+ENV+'</i></div>'; }
   var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
   // Por cuenta: «Leyendas (11 %)» = cupo Grok Bot que QUEDA por consumir, si hay lectura vigente (< 13 h y antes del reset); si no, solo el nombre, sin porcentaje. Al lado de cada consejero, las intervenciones de hoy (Madrid); si son 0, no se pone nada. «Fuera de línea» = cuentas caídas + los 3 de la demo.
   var grp=function(t,l,k){ var h='<div class="cgrp">'+t+' ('+l.length+')</div>';
@@ -5579,9 +5772,9 @@ function renderContacts(){
   qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
 }
 function dockIcq(){
-  var w=qs('#icq'), dw=desk.clientWidth||640, dh=desk.clientHeight||452;
-  var ww=w.offsetWidth||170, hh=w.offsetHeight||330;
-  w.style.left=Math.max(4, dw-ww-8)+'px';
+  var w=qs('#icq'), dh=desk.clientHeight||452;
+  var ww=w.offsetWidth||320, hh=w.offsetHeight||330;
+  w.style.left=Math.max(4, DESK_RIGHT_COL-ww-8)+'px';
   w.style.top=Math.max(4, dh-hh-4)+'px';
 }
 function openIcq(){
@@ -7332,8 +7525,8 @@ function takeOver(){
   document.body.classList.remove('attract');
   ssStop(); closeDeskMenu(); cancelIconDrag(); ghostEl.style.display='none'; ghostEl.style.visibility=''; ctaEl.style.display='none';
   if(ICQ.open&&ICQG.on){ closeChat(); renderContacts(); }   // ICQGram pasa de la demo a los consejeros reales
-  applyWinLayout();
   openIcq();
+  applyWinLayout();
   qs('#boot').style.display='none';
   if(qs('#shut').style.display==='block'||qs('#shade').style.display==='block'){ qs('#shut').style.display='none'; qs('#shut').classList.remove('more'); qs('#shade').style.display='none'; }
   closeStart();

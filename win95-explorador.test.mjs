@@ -73,7 +73,7 @@ test("Explorador 95: Ver con Iconos grandes, pequeños, Lista y Detalles; cabece
   assert.match(html, /setPointerCapture/);
   assert.match(html, /setFolderView\(id,\{sort:c\[0\],dir:cv\.sort===c\[0\]\?-cv\.dir:1\}\)/, "clic en cabecera: asc/desc");
   for (const k of ["por nombre", "por tipo", "por tamaño", "por fecha"]) assert.ok(html.includes("'" + k + "'"), k);
-  assert.match(html, /FVIEW_KEY='admira-win95-vistas'/);
+  assert.match(html, /FVIEW_KEY='admira-win95-vistas-v2'/);
 });
 
 test("Explorador 95: Léeme.txt y las aplicaciones se arrastran a carpetas; solo Mi PC y la Papelera son fijos", () => {
@@ -99,8 +99,8 @@ test("Papelera 95: botón derecho, Restaurar, Eliminar con confirmación y Vacia
 test("Miscelánea: comunicaciones del Consejo de solo lectura, se refrescan al abrir la carpeta", () => {
   assert.match(html, /COMMS_URL='\/api\/win95\/comunicaciones'/);
   assert.match(html, /credentials:'same-origin'/);
-  assert.match(html, /if\(id===MISC_ID\) loadComms\(true\);/);
-  assert.match(html, /var ro=remote\|\|sys\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /if\(id===MISC_ID\)\{ loadComms\(true\); loadMisiones\(true\); \}/);
+  assert.match(html, /var ro=remote\|\|sys\|\|isDeepSys\(d\)\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
   assert.match(html, /plainName\(it\.name\)==='miscelanea'/);
   assert.match(html, /<script src="\/auth-gate\.js"><\/script>/);
 });
@@ -112,8 +112,8 @@ test("Miscelánea: Estilo comunicaciones ICQGram.txt es un fichero de sistema de
   assert.match(html, /function isEstiloDoc\(d\)/);
   assert.match(html, /parent:spec\.parent\|\|MISC_ID/);
   assert.match(html, /x\.parent=MISC_ID/);
-  assert.match(html, /function canMoveDef\(d\)\{ return !!d&&!isFixedDef\(d\)&&!d\.remote&&!isMiscSysDoc\(d\); \}/);
-  assert.match(html, /var ro=remote\|\|sys\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
+  assert.match(html, /function canMoveDef\(d\)\{ return !!d&&!isFixedDef\(d\)&&!d\.remote&&!isMiscSysDoc\(d\)&&!isDeepSys\(d\); \}/);
+  assert.match(html, /var ro=remote\|\|sys\|\|isDeepSys\(d\)\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
   assert.match(html, /id===LEYENDAS_SEED_ID\|\|isMiscSysId\(id\)\|\|id==='fld-misc'/);
   assert.match(html, /norma de Carlos \(estilo ICQGram\)/);
 });
@@ -157,6 +157,8 @@ test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak y misión d
   assert.match(html, /Win95 Xperience en admira\.live/);
   assert.match(html, /Napster v2\.0 Transfer/);
   assert.match(html, /for\(var s=0;s<MISC_SUBFOLDERS\.length;s\+\+\) if\(MISC_SUBFOLDERS\[s\]\.id===id\) return true/);
-  assert.doesNotMatch(html, /fld-stevejobs/i);
-  assert.doesNotMatch(html, /id:'fld-stevejobs'/);
+  // SteveJobs vive en la hidratación de misiones (padre: miscelanea), no en MISC_SUBFOLDERS.
+  assert.doesNotMatch(html, /MISC_SUBFOLDERS=\[[^;]*fld-stevejobs/);
+  assert.match(html, /function ensureSteveJobs\(/);
+  assert.match(html, /['"]fld-stevejobs['"]/);
 });

@@ -169,6 +169,18 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #nap-menu .mi2.disabled{color:#808080;pointer-events:none}
 #napLib .lvr{height:18px;line-height:18px}
 #napLib .nap-del{min-width:64px;width:auto;height:16px;margin:0;padding:0 4px;font-size:11px}
+#napLib .nap-add{min-width:58px;width:auto;height:16px;margin:0 0 0 2px;padding:0 4px;font-size:11px}
+#nap input.fin{font:11px Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;color:#000;border:0;outline:none;cursor:text;-webkit-user-select:text;user-select:text;caret-color:#000}
+#nap input.fin.focus::after{content:none;display:none}
+#nap .nap-pl-bar{margin:0 0 6px;display:flex;align-items:center;gap:6px}
+#napPlSel{height:21px;max-width:220px;font:11px Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;background:#fff;border:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#napHome .lvr{cursor:grab;height:18px}
+#napHome .lvr.dragging{opacity:.55;cursor:grabbing}
+#napHome .lvr.drop-before{box-shadow:inset 0 2px 0 #000080}
+#napHome .lvr.drop-after{box-shadow:inset 0 -2px 0 #000080}
+#napHome .nap-x{min-width:18px;width:18px;height:16px;margin:0;padding:0;line-height:14px;font-size:12px}
+#nap-pl-menu{z-index:80}
+
 .panel.on{display:block}
 .fin{display:inline-block;height:21px;vertical-align:middle;padding:3px 4px;background:#fff;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 .fin.focus::after{content:'';display:inline-block;width:1px;height:12px;background:#000;vertical-align:-2px;animation:blink 1s steps(1) infinite}
@@ -1514,13 +1526,11 @@ Fin del documento. Está en Miscelánea, solo lectura.
       <div class="hdr"><span data-ico="p2p"></span><div class="brand">Nap<span>ster</span></div><div class="st" id="napSt">Desconectado</div></div>
       <div class="tabs"><div class="tab" data-tab="home">Inicio</div><div class="tab on" data-tab="search">Buscar</div><div class="tab" data-tab="lib">Biblioteca</div><div class="tab" data-tab="xfer">Transferencias</div></div>
       <div class="panel home" data-panel="home">
-        <h3>Bienvenido/a a Napster</h3>
-        <p>La mayor comunidad musical del planeta (de 1999).</p>
-        <div class="box"><b>NOTICIAS</b><br>· AdmiraNeXT anuncia pantallas que escuchan a la tienda.<br>· «Jensen &amp; Morfeo» arrasa con su nuevo single, «AdmiraNeXT».</div>
-        <div class="box"><b>CONSEJO DEL DÍA</b> (por Jensen)<br>«Comparte tu música… pero con licencia: para tiendas, el catálogo de admira.tv.»</div>
+        <div class="nap-pl-bar">Playlist: <select id="napPlSel" class="fin" title="Playlist"></select></div>
+        <div class="lv" id="napHome" style="height:154px"></div>
       </div>
       <div class="panel on" data-panel="search">
-        <div>Artista: <span class="fin" id="napArtist" style="width:150px"></span> &nbsp;Título: <span class="fin" id="napTitle" style="width:108px"></span> &nbsp;<button class="btn" id="napSearch">Buscar</button><button class="btn" id="napClear" style="min-width:58px;margin-left:4px">Borrar</button></div>
+        <div>Artista: <input class="fin" id="napArtist" type="text" maxlength="64" autocomplete="off" spellcheck="false" style="width:150px" aria-label="Artista"> &nbsp;Título: <input class="fin" id="napTitle" type="text" maxlength="64" autocomplete="off" spellcheck="false" style="width:108px" aria-label="Título"> &nbsp;<button class="btn" id="napSearch">Buscar</button><button class="btn" id="napClear" style="min-width:58px;margin-left:4px">Borrar</button></div>
         <div class="lv" id="napRes" style="height:118px;margin-top:8px"></div>
         <div class="prow2"><button class="btn" id="napDl" disabled>Descargar</button><span id="napCount"></span></div>
       </div>
@@ -1542,6 +1552,7 @@ Fin del documento. Está en Miscelánea, solo lectura.
       <div class="sbar"><div id="napS1" style="flex:none;width:220px">admira.studio</div><div id="napS2">Descargas: 0</div><div id="napS3" style="flex:none;width:96px">Desconectado</div></div>
       <input type="file" id="napFile" accept="video/*,audio/*,image/*" hidden>
       <div id="nap-menu" class="win cmenu note-menu" hidden></div>
+    <div id="nap-pl-menu" class="win cmenu note-menu" hidden></div>
     </div>
     <!-- AdmiraScape (homenaje navegador) -->
     <div id="brw" class="win nobk" style="left:40px;top:10px;width:560px;height:430px;display:none">
@@ -1946,6 +1957,15 @@ function directorReiniciar(){ setTimeout(function(){ location.reload(); },150); 
 function qs(s,r){ return (r||document).querySelector(s); }
 function qsa(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
 function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+var DESK_W=640, DESK_H=452, DESK_TOP_MAX=430;
+function deskWinMaxLeft(w){ return Math.max(0, DESK_W-Math.max(0,w||0)); }
+function clampWinLeft(left,w){ return clamp(left,0,deskWinMaxLeft(w)); }
+function clampWinHoriz(el){
+  if(!el||el.classList.contains('max')||el.classList.contains('fs')) return;
+  var w=el.offsetWidth||parseInt(el.style.width,10)||0;
+  if(w>DESK_W){ el.style.width=DESK_W+'px'; w=DESK_W; }
+  el.style.left=Math.round(clampWinLeft(el.offsetLeft,w))+'px';
+}
 function now(){ return Date.now(); }
 function pad2(n){ n=Math.floor(n); return (n<10?'0':'')+n; }
 function fmt(sec){ sec=Math.max(0,Math.floor(sec||0)); return Math.floor(sec/60)+':'+pad2(sec%60); }
@@ -2355,11 +2375,12 @@ function focusWin(el){
   qsa('#desk > .win').forEach(function(w){ w.classList.toggle('inactive',list.indexOf(w)<0); });
   qsa('.skin').forEach(function(w){ w.classList.toggle('act',list.indexOf(w)>=0); });
   updateTasks(grp||el.id);
+  list.forEach(clampWinHoriz);
 }
 function makeDraggable(handle,win){
   var sx,sy,ox,oy,id=null;
   handle.addEventListener('pointerdown',function(e){ if(e.target.closest('.x,.sbx')) return; if(win.classList.contains('max')){ focusWin(win); return; } id=e.pointerId; try{ handle.setPointerCapture(id); }catch(_){} sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win); });
-  handle.addEventListener('pointermove',function(e){ if(id!==e.pointerId) return; win.style.left=Math.round(clamp(ox+(e.clientX-sx)/SCALE,40-win.offsetWidth,600))+'px'; win.style.top=Math.round(clamp(oy+(e.clientY-sy)/SCALE,0,430))+'px'; });
+  handle.addEventListener('pointermove',function(e){ if(id!==e.pointerId) return; win.style.left=Math.round(clampWinLeft(ox+(e.clientX-sx)/SCALE,win.offsetWidth))+'px'; win.style.top=Math.round(clamp(oy+(e.clientY-sy)/SCALE,0,DESK_TOP_MAX))+'px'; });
   function end(e){ if(id===e.pointerId){ id=null; if(MODE==='interactive'&&typeof saveDeskLayout==='function') saveDeskLayout(); } }
   handle.addEventListener('pointerup',end); handle.addEventListener('pointercancel',end);
 }
@@ -2375,6 +2396,7 @@ function winRestore(el){
   el.classList.remove('max');
   var r=el._winRect;
   if(r){ el.style.left=r.left; el.style.top=r.top; el.style.width=r.width; el.style.height=r.height; }
+  clampWinHoriz(el);
   var b=winMaxBtn(el); if(b) b.textContent='□';
 }
 function winMaximize(el){
@@ -2468,8 +2490,11 @@ function attachResize(win){
     if(s.indexOf('n')>=0){ h=z.h-dy; t=z.t+dy; }
     if(w<min.w){ if(s.indexOf('w')>=0) l=l-(min.w-w); w=min.w; }
     if(h<min.h){ if(s.indexOf('n')>=0) t=t-(min.h-h); h=min.h; }
-    l=Math.round(clamp(l,40-w,600)); t=Math.round(clamp(t,0,430));
-    w=Math.round(Math.min(w,640-Math.max(l,0))); h=Math.round(Math.min(h,452-Math.max(t,0)));
+    w=Math.round(Math.max(w,min.w)); h=Math.round(Math.max(h,min.h));
+    if(s.indexOf('w')>=0){ l=Math.round(clamp(l,0,z.l+z.w-min.w)); w=Math.round(z.l+z.w-l); }
+    else { l=Math.round(clamp(l,0,deskWinMaxLeft(min.w))); }
+    t=Math.round(clamp(t,0,DESK_TOP_MAX));
+    w=Math.round(Math.min(Math.max(w,min.w),DESK_W-l)); h=Math.round(Math.min(h,DESK_H-Math.max(t,0)));
     win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px';
   }
   function end(e){
@@ -2542,8 +2567,9 @@ function applyWinLayout(){
   Object.keys(data.windows).forEach(function(id){
     var el=qs('#'+id), p=data.windows[id]; if(!el||!p) return;
     var min=winMin(el);
-    var w=Math.round(clamp(+p.width,min.w,640)), h=Math.round(clamp(+p.height,min.h,452));
-    var left=Math.round(clamp(+p.left,40-w,600)), top=Math.round(clamp(+p.top,0,430));
+    var w=Math.round(clamp(+p.width,min.w,DESK_W)), h=Math.round(clamp(+p.height,min.h,DESK_H));
+    var left=Math.round(clampWinLeft(+p.left,w)), top=Math.round(clamp(+p.top,0,DESK_TOP_MAX));
+    if(left+w>DESK_W) w=DESK_W-left;
     el.style.left=left+'px'; el.style.top=top+'px'; el.style.width=w+'px'; el.style.height=h+'px';
     any=true;
   });
@@ -4373,11 +4399,215 @@ var CON={'T1':{kb:48,dur:5,col:'#00c000'},'Cable':{kb:26,dur:7,col:'#00c000'},'R
 var NAP_CONS=Object.keys(CON);
 var COLS_RES=[['Nombre de archivo',190],['Tamaño',54],['Bitrate',46],['Duración',50],['Usuario',92],['Conexión',62]];
 var COLS_X=[['Nombre de archivo',170],['Estado',86],['Progreso',110],['Velocidad',70],['Usuario',74]];
-var COLS_LIB=[['Nombre de archivo',200],['Tamaño',54],['Tipo',50],['Duración',54],['Eliminar',72]];
+var COLS_LIB=[['Nombre de archivo',168],['Tamaño',50],['Tipo',50],['Duración',50],['Eliminar',72],['Añadir',58]];
+var COLS_HOME=[['#',24],['Nombre',280],['Tipo',70],['',28]];
+var PL_STORE='admira-win95-playlists';
 var NAP={open:false,conn:false,tab:'search',field:null,results:[],sel:-1,msg:'',searching:false,searchId:0,xfers:[],xsel:-1,lastDone:false,libSel:-1,connTimer:null,users:0,songs:0,canciones:null,videos:null,haveSplit:false,library:[],aud:null,sessionLocal:[],probeQ:[],probing:false};
 
 var DL_STORE='admira-win95-descargas';
 function napEsVideo(r){ var t=String(r&&(r.tipo||r.type)||'').toLowerCase(); if(t==='video') return true; if(t==='audio'||t==='music') return false; return /\.(mp4|webm|mkv|mov)(\?|$)/i.test(String(r&&r.url||'')); }
+
+function napEsInteractivo(r){
+  var t=String(r&&(r.tipo||r.type||r.kind)||'').toLowerCase();
+  if(t==='interactive'||t==='interactivo'||t==='html'||t==='widget'||t==='ainimation') return true;
+  var u=String(r&&r.url||'');
+  return /\.(html|htm)(\?|$)/i.test(u);
+}
+function napTipo(r){
+  if(napEsInteractivo(r)) return 'interactivo';
+  if(napEsVideo(r)) return 'vídeo';
+  return 'audio';
+}
+function napFieldVal(el){ return el?String(('value' in el)?el.value:el.textContent||''):''; }
+function napSetField(el,v){ if(!el) return; if('value' in el) el.value=v; else el.textContent=v; }
+function plNombre(id){
+  var n={win95:'Win95',genero95:'genero95',WindowsMediaPlayer:'#WindowsMediaPlayer',AdmiraMediaPlayer:'#AdmiraMediaPlayer'};
+  return n[id]||id;
+}
+function plIds(){ return (CONFIG.mediaPlayer&&CONFIG.mediaPlayer.tags)||['win95','genero95','WindowsMediaPlayer','AdmiraMediaPlayer']; }
+function plClave(p){ return p?String(p.id||p.stockId||p.url||''):''; }
+function plLoad(){
+  try{ var st=JSON.parse(localStorage.getItem(PL_STORE)||'null'); if(st&&typeof st==='object') return {v:1,selected:st.selected||'win95',overlays:st.overlays&&typeof st.overlays==='object'?st.overlays:{}}; }
+  catch(e){}
+  return {v:1,selected:'win95',overlays:{}};
+}
+function plSave(st){ try{ localStorage.setItem(PL_STORE, JSON.stringify(st)); }catch(e){} }
+function plSelected(){ return plLoad().selected||'win95'; }
+function plSelect(id){ var st=plLoad(); st.selected=id||'win95'; plSave(st); plSyncViews(); }
+function plOverlay(st,tag){
+  var ov=(st.overlays&&st.overlays[tag])||{};
+  return {order:Array.isArray(ov.order)?ov.order.slice():[],removed:Array.isArray(ov.removed)?ov.removed.slice():[],added:Array.isArray(ov.added)?ov.added.slice():[]};
+}
+function plOficiales(tag){
+  var want=mpNormTag(tag), out=[], seen={}, cache=(typeof MP!=='undefined'&&MP.tagsCache)||[], i,t,j,p,k;
+  for(i=0;i<cache.length;i++){
+    t=cache[i]; if(!t||mpNormTag(t.tag)!==want||!t.piezas) continue;
+    for(j=0;j<t.piezas.length;j++){
+      p=t.piezas[j]; if(!p) continue; k=plClave(p); if(!k||seen[k]) continue; seen[k]=1;
+      out.push({id:p.id,titulo:p.titulo,tipo:p.tipo,duracion:p.duracion,url:p.url,tag:t.tag||tag,official:true});
+    }
+  }
+  return out;
+}
+function plResolve(tag){
+  var st=plLoad(), id=tag||st.selected||'win95', ov=plOverlay(st,id), removed={}, seen={}, out=[], i,k,p;
+  for(i=0;i<(ov.removed||[]).length;i++) removed[ov.removed[i]]=1;
+  function push(p){ k=plClave(p); if(!k||seen[k]||removed[k]) return; seen[k]=1; out.push(p); }
+  plOficiales(id).forEach(push);
+  (ov.added||[]).forEach(push);
+  if(ov.order&&ov.order.length){
+    var idx={}; ov.order.forEach(function(idk,n){ if(idx[idk]==null) idx[idk]=n; });
+    out.sort(function(a,b){ var ia=idx[plClave(a)], ib=idx[plClave(b)]; if(ia==null&&ib==null) return 0; if(ia==null) return 1; if(ib==null) return -1; return ia-ib; });
+  }
+  return out;
+}
+function plAnadir(tag, rec){
+  if(!rec) return;
+  var st=plLoad(), id=tag||st.selected||'win95', ov=plOverlay(st,id), k=plClave(rec);
+  if(!k) return;
+  ov.removed=ov.removed.filter(function(x){ return x!==k; });
+  st.overlays=st.overlays||{}; st.overlays[id]=ov; plSave(st);
+  if(!plResolve(id).some(function(p){ return plClave(p)===k; })){
+    ov.added.push({id:rec.id||rec.stockId,stockId:rec.stockId,titulo:rec.titulo||rec.name||rec.id,tipo:rec.tipo||rec.type,duracion:rec.duracion||0,url:rec.url,tag:id,fromLib:true});
+    st.overlays[id]=ov; plSave(st);
+  }
+  ov.order=plResolve(id).map(plClave);
+  st.overlays[id]=ov; plSave(st); plSyncViews();
+}
+function plQuitar(tag, recOrKey){
+  var st=plLoad(), id=tag||st.selected||'win95', ov=plOverlay(st,id), k=typeof recOrKey==='string'?recOrKey:plClave(recOrKey);
+  if(!k) return;
+  ov.added=ov.added.filter(function(p){ return plClave(p)!==k; });
+  if(plOficiales(id).some(function(p){ return plClave(p)===k; }) && ov.removed.indexOf(k)<0) ov.removed.push(k);
+  ov.order=ov.order.filter(function(x){ return x!==k; });
+  st.overlays=st.overlays||{}; st.overlays[id]=ov; plSave(st);
+  if(typeof MP!=='undefined'&&MP.open){
+    var list=plResolve(id), cur=MP.playlist&&MP.playlist[MP.piece], still=cur&&list.some(function(p){ return plClave(p)===plClave(cur); });
+    if(MP.playing&&!still){ if(list.length){ if(MP.piece>=list.length) MP.piece=0; if(typeof mpTune==='function') mpTune(); } else if(typeof mpStop==='function') mpStop(); }
+  }
+  plSyncViews();
+}
+function plReordenar(tag, fromIdx, toIdx){
+  var id=tag||plSelected(), list=plResolve(id);
+  if(fromIdx<0||toIdx<0||fromIdx>=list.length||toIdx>=list.length||fromIdx===toIdx) return;
+  var item=list.splice(fromIdx,1)[0]; list.splice(toIdx,0,item);
+  var st=plLoad(), ov=plOverlay(st,id); ov.order=list.map(plClave);
+  st.overlays=st.overlays||{}; st.overlays[id]=ov; plSave(st);
+  if(typeof MP!=='undefined'&&MP.piece===fromIdx) MP.piece=toIdx;
+  else if(typeof MP!=='undefined'){
+    if(fromIdx<MP.piece&&toIdx>=MP.piece) MP.piece--;
+    else if(fromIdx>MP.piece&&toIdx<=MP.piece) MP.piece++;
+  }
+  plSyncViews();
+}
+function plSyncViews(){
+  if(typeof napRenderHome==='function'&&NAP&&NAP.open&&NAP.tab==='home') napRenderHome();
+  if(typeof mpPaintList==='function') mpPaintList();
+  if(typeof mpUpdatePos==='function') mpUpdatePos();
+}
+function napFillPlSel(){
+  var sel=qs('#napPlSel'); if(!sel) return;
+  var cur=plSelected(), ids=plIds(), i,id,opt,has=false;
+  sel.innerHTML='';
+  for(i=0;i<ids.length;i++){
+    id=ids[i]; opt=document.createElement('option'); opt.value=id; opt.textContent=plNombre(id);
+    if(id===cur){ opt.selected=true; has=true; }
+    sel.appendChild(opt);
+  }
+  if(!has&&sel.options.length){ sel.selectedIndex=0; plSelect(sel.value); }
+}
+function napRenderHome(){
+  var box=qs('#napHome'); if(!box) return;
+  napFillPlSel();
+  var tag=plSelected(), list=plResolve(tag), h=lvHeader(COLS_HOME), i,p,tipo,xbtn;
+  if(!list.length){
+    box.innerHTML=h+'<div class="lvmsg">Esta playlist está vacía. En Biblioteca pulsa Añadir, o espera a que cargue el catálogo de admira.studio.</div>';
+    return;
+  }
+  for(i=0;i<list.length;i++){
+    p=list[i]; tipo=napTipo(p);
+    xbtn='<button type="button" class="btn nap-x" data-x="'+i+'" title="Quitar de esta playlist">×</button>';
+    h+=lvRow(i,COLS_HOME,[String(i+1),esc(p.titulo||p.name||('Pieza '+(i+1))),tipo,xbtn],typeof MP!=='undefined'&&!MP.localPlaying&&i===MP.piece);
+  }
+  box.innerHTML=h;
+  napWireHomeDrag();
+}
+function napWireHomeDrag(){
+  var box=qs('#napHome'); if(!box||box._plDrag) return;
+  box._plDrag=true;
+  var dragI=-1, overI=-1, startY=0;
+  box.addEventListener('pointerdown',function(e){
+    if(e.target.closest('.nap-x')) return;
+    var r=e.target.closest('.lvr'); if(!r||!box.contains(r)) return;
+    dragI=+r.getAttribute('data-i'); startY=e.clientY; overI=dragI;
+    r.classList.add('dragging');
+    try{ r.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  box.addEventListener('pointermove',function(e){
+    if(dragI<0) return;
+    var rows=[].slice.call(box.querySelectorAll('.lvr')), i,r,mid,y=e.clientY;
+    overI=dragI;
+    for(i=0;i<rows.length;i++){
+      r=rows[i]; r.classList.remove('drop-before','drop-after');
+      var b=r.getBoundingClientRect(); mid=(b.top+b.bottom)/2;
+      if(y<mid){ overI=i; r.classList.add('drop-before'); break; }
+      overI=i; if(i===rows.length-1) r.classList.add('drop-after');
+    }
+    if(overI>dragI && rows[overI]&&rows[overI].classList.contains('drop-before')){
+      /* soltar antes de una fila posterior equivale a insertar en esa posición */
+    }
+  });
+  function end(e){
+    if(dragI<0) return;
+    var rows=[].slice.call(box.querySelectorAll('.lvr'));
+    rows.forEach(function(r){ r.classList.remove('dragging','drop-before','drop-after'); });
+    var to=overI;
+    if(to>dragI && box.querySelector('.drop-after')==null){ /* drop-before on later row: to stays */ }
+    if(to>=0&&to!==dragI) plReordenar(plSelected(), dragI, to);
+    else napRenderHome();
+    dragI=-1; overI=-1;
+  }
+  box.addEventListener('pointerup',end);
+  box.addEventListener('pointercancel',end);
+  box.addEventListener('click',function(e){
+    var x=e.target.closest('.nap-x');
+    if(x){ e.preventDefault(); e.stopPropagation(); plQuitar(plSelected(), plResolve(plSelected())[+x.getAttribute('data-x')]); return; }
+    var r=e.target.closest('.lvr'); if(!r) return;
+    var i=+r.getAttribute('data-i');
+    if(typeof mpGoTo==='function'&&MP&&MP.open){ try{ mpGoTo(i); }catch(err){} }
+  });
+  box.addEventListener('dblclick',function(e){
+    var r=e.target.closest('.lvr'); if(!r||e.target.closest('.nap-x')) return;
+    var list=plResolve(plSelected()), rec=list[+r.getAttribute('data-i')];
+    if(!rec) return;
+    if(typeof openMp==='function'&&!MP.open){ try{ openMp(); }catch(err){} }
+    if(typeof mpGoTo==='function') try{ mpGoTo(+r.getAttribute('data-i')); }catch(err){}
+    else if(rec.url&&typeof mpPlayDownload==='function') mpPlayDownload(rec);
+  });
+}
+function closeNapPlMenu(){ var m=qs('#nap-pl-menu'); if(m){ m.hidden=true; m.innerHTML=''; } }
+function napPedirAnadir(i){
+  var list=NAP.library&&NAP.library.length?NAP.library:napBiblioteca();
+  i=+i; if(i<0||i>=list.length) return;
+  var rec=list[i]; NAP.libSel=i; napRenderLib();
+  var m=qs('#nap-pl-menu'), btn=qs('#napLib .nap-add[data-add="'+i+'"]'), ids=plIds(), k;
+  if(!m) return;
+  closeNapMenu();
+  m.innerHTML='';
+  ids.forEach(function(id){
+    var row=document.createElement('div'); row.className='mi2';
+    var en=plResolve(id).some(function(p){ return plClave(p)===plClave(rec); });
+    row.textContent=plNombre(id)+(en?' ✓':'');
+    row.addEventListener('click',function(){ closeNapPlMenu(); plAnadir(id, rec); });
+    m.appendChild(row);
+  });
+  m.hidden=false;
+  var wr=qs('#nap').getBoundingClientRect(), br=btn?btn.getBoundingClientRect():wr, deskR=desk.getBoundingClientRect();
+  var left=(br.left-deskR.left)/SCALE, top=(br.bottom-deskR.top)/SCALE;
+  m.style.left=Math.round(clampWinLeft(left, m.offsetWidth||160))+'px';
+  m.style.top=Math.round(clamp(top,0,DESK_TOP_MAX))+'px';
+}
+
 function napTagOf(r){ return napEsVideo(r)?'AdmiraMediaPlayer':'winamp'; }
 function napExtOf(r){ if(!napEsVideo(r)) return 'mp3'; var m=String(r&&r.url||'').match(/\.(mp4|webm|mkv|mov)(\?|$)/i); return m?m[1].toLowerCase():'mp4'; }
 function napFileOf(r){ var a=String(r&&r.artista||'').trim(), tit=String(r&&(r.titulo||r.id)||'archivo').trim()||'archivo'; return (a?a+' - '+tit:tit).replace(/[\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim()+'.'+napExtOf(r); }
@@ -4559,7 +4789,7 @@ function napDrainProbe(){
   }
 }
 function napRenderLib(){
-  var list=napBiblioteca(), h=lvHeader(COLS_LIB), i, rec, tam, dur, tipo, del;
+  var list=napBiblioteca(), h=lvHeader(COLS_LIB), i, rec, tam, dur, tipo, del, add;
   var play=qs('#napLibPlay');
   if(!list.length){
     qs('#napLib').innerHTML=h+'<div class="lvmsg">No hay descargas todavía. Busca en admira.studio y pulsa Descargar; lo completado aparece aquí y se recuerda en este PC.</div>';
@@ -4570,9 +4800,10 @@ function napRenderLib(){
     rec=list[i];
     tam=Number(rec.size)>0?fmtMB(rec.size/1024/1024):'—';
     dur=Number(rec.duracion)>0?fmt(rec.duracion):'—';
-    tipo=napEsVideo(rec)?'vídeo':'audio';
+    tipo=napTipo(rec);
     del='<button type="button" class="btn nap-del" data-del="'+i+'">Eliminar</button>';
-    h+=lvRow(i,COLS_LIB,[esc(napLibNombre(rec)),tam,tipo,dur,del],i===NAP.libSel);
+    add='<button type="button" class="btn nap-add" data-add="'+i+'">Añadir</button>';
+    h+=lvRow(i,COLS_LIB,[esc(napLibNombre(rec)),tam,tipo,dur,del,add],i===NAP.libSel);
     if(!(Number(rec.duracion)>0)) napFillDuration(rec);
   }
   qs('#napLib').innerHTML=h; if(play) play.disabled=NAP.libSel<0;
@@ -4758,6 +4989,10 @@ function napTab(name){
   qsa('#nap .panel').forEach(function(p){ p.classList.toggle('on',p.getAttribute('data-panel')===name); });
   if(name==='xfer') napRenderX();
   if(name==='lib') napRenderLib();
+  if(name==='home'){
+    if(typeof mpLoadTags==='function') mpLoadTags(function(){ napRenderHome(); });
+    else napRenderHome();
+  }
 }
 function napFocus(f){ qsa('#nap .fin').forEach(function(x){ x.classList.toggle('focus',x===f); }); NAP.field=f; }
 function napCatalogoTexto(){
@@ -4797,8 +5032,8 @@ function napConnect(){
 function napSearch(){
   var id=++NAP.searchId; NAP.results=[]; NAP.sel=-1; NAP.msg='';
   if(!NAP.conn){ NAP.searching=false; NAP.msg='Todavía no estás conectado. Espera un momento…'; napRenderRes(); return; }
-  var artista=qs('#napArtist').textContent.replace(/\s+/g,' ').trim();
-  var titulo=qs('#napTitle').textContent.replace(/\s+/g,' ').trim();
+  var artista=napFieldVal(qs('#napArtist')).replace(/\s+/g,' ').trim();
+  var titulo=napFieldVal(qs('#napTitle')).replace(/\s+/g,' ').trim();
   var raw=(artista+' '+titulo).replace(/\s+/g,' ').trim();
   if(!raw){ NAP.searching=false; NAP.msg='Escribe un artista o un título. Prueba con «80» o «admira».'; napRenderRes(); return; }
   NAP.searching=true; napRenderRes();
@@ -4889,30 +5124,39 @@ function openNap(){
   addTask('nap','Napster v2.0 Transfer','p2p',[w]); focusWin(w);
   if(!NAP.conn){ napConnect(); }
   else napStats();
-  if(MODE==='interactive'&&!qs('#napArtist').textContent) qs('#napArtist').textContent='admira';
-  napTab(NAP.tab); napRenderRes(); napRenderLib();
+  napSetField(qs('#napArtist'),''); napSetField(qs('#napTitle'),'');
+  NAP.field=null; qsa('#nap .fin').forEach(function(f){ f.classList.remove('focus'); });
+  napTab('search'); napRenderRes(); napRenderLib();
 }
 function closeNap(){
   closeNapMenu();
   napStopAudio();
   qs('#nap').style.display='none'; removeTask('nap'); clearTimeout(NAP.connTimer);
   NAP.open=false; NAP.conn=false; NAP.songs=0; NAP.canciones=null; NAP.videos=null; NAP.haveSplit=false; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; NAP.xfers=[]; NAP.xsel=-1; NAP.lastDone=false; NAP.libSel=-1; NAP.field=null;
-  qs('#napArtist').textContent=''; qs('#napTitle').textContent=''; qsa('#nap .fin').forEach(function(f){ f.classList.remove('focus'); });
+  napSetField(qs('#napArtist'),''); napSetField(qs('#napTitle'),''); qsa('#nap .fin').forEach(function(f){ f.classList.remove('focus'); });
   qs('#napSt').textContent='Desconectado'; qs('#napS3').textContent='Desconectado';
   napTab('search'); napRenderRes(); napRenderX(); napRenderLib();
 }
 function napKey(e){
-  if(!NAP.open||!NAP.field||qs('#nap').style.display==='none') return;
-  var ae=document.activeElement; if(ae&&(ae.isContentEditable||/^(INPUT|TEXTAREA)$/.test(ae.tagName))) return;   // se está escribiendo en otro sitio
-  if(e.key==='Enter'){ napSearch(); return; }
-  if(e.key==='Backspace'){ NAP.field.textContent=NAP.field.textContent.slice(0,-1); e.preventDefault(); return; }
-  if(e.key&&e.key.length===1&&!e.ctrlKey&&!e.altKey&&NAP.field.textContent.length<24) NAP.field.textContent+=e.key;
+  if(!NAP.open||qs('#nap').style.display==='none') return;
+  var ae=document.activeElement;
+  if(ae&&(ae.id==='napArtist'||ae.id==='napTitle')){
+    if(e.key==='Enter'){ e.preventDefault(); napSearch(); }
+    return;
+  }
+  if(ae&&(ae.isContentEditable||/^(INPUT|TEXTAREA)$/.test(ae.tagName))) return;
 }
 function wireNap(){
   qsa('#nap .tab').forEach(function(t){ t.addEventListener('click',function(){ napTab(t.getAttribute('data-tab')); }); });
-  qsa('#nap .fin').forEach(function(f){ f.addEventListener('click',function(){ napFocus(f); }); });
+  qsa('#napArtist, #napTitle').forEach(function(f){
+    f.addEventListener('focus',function(){ napFocus(f); });
+    f.addEventListener('mousedown',function(e){ e.stopPropagation(); napFocus(f); });
+    f.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); napSearch(); } });
+  });
   qs('#napSearch').addEventListener('click',napSearch);
-  qs('#napClear').addEventListener('click',function(){ qs('#napArtist').textContent=''; qs('#napTitle').textContent=''; NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; napRenderRes(); });
+  qs('#napClear').addEventListener('click',function(){ napSetField(qs('#napArtist'),''); napSetField(qs('#napTitle'),''); NAP.searchId++; NAP.searching=false; NAP.results=[]; NAP.sel=-1; NAP.msg=''; napRenderRes(); });
+  var plSel=qs('#napPlSel');
+  if(plSel) plSel.addEventListener('change',function(){ plSelect(plSel.value); });
   qs('#napRes').addEventListener('click',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.sel=+r.getAttribute('data-i'); lvSelect(qs('#napRes'),NAP.sel); qs('#napDl').disabled=false; });
   qs('#napRes').addEventListener('dblclick',function(e){ var r=e.target.closest('.lvr'); if(!r) return; NAP.sel=+r.getAttribute('data-i'); if(NAP.importar) napImportarResult(); else napDownload(); });
   qs('#napDl').addEventListener('click',function(){ if(NAP.importar) napImportarResult(); else napDownload(); });
@@ -4924,11 +5168,13 @@ function wireNap(){
   qs('#napFile').addEventListener('change',function(){ var f=this.files&&this.files[0]; this.value=''; if(f) napOpenLocalFile(f); });
   document.addEventListener('mousedown',function(e){
     var m=qs('#nap-menu'), bar=qs('#nap-menubar');
-    if(!m||m.hidden) return;
-    if(m.contains(e.target)||(bar&&bar.contains(e.target))) return;
-    closeNapMenu();
+    if(m&&!m.hidden&&!(m.contains(e.target)||(bar&&bar.contains(e.target)))) closeNapMenu();
+    var pm=qs('#nap-pl-menu');
+    if(pm&&!pm.hidden&&!pm.contains(e.target)&&!(e.target.closest&&e.target.closest('.nap-add'))) closeNapPlMenu();
   },true);
   qs('#napLib').addEventListener('click',function(e){
+    var add=e.target.closest('.nap-add');
+    if(add){ e.preventDefault(); e.stopPropagation(); napPedirAnadir(+add.getAttribute('data-add')); return; }
     var del=e.target.closest('.nap-del');
     if(del){ e.preventDefault(); e.stopPropagation(); napPedirEliminar(+del.getAttribute('data-del')); return; }
     var r=e.target.closest('.lvr'); if(!r) return; NAP.libSel=+r.getAttribute('data-i'); lvSelect(qs('#napLib'),NAP.libSel); qs('#napLibPlay').disabled=false;
@@ -5789,47 +6035,20 @@ function mpIsMediaTag(tag){
   return t==='win95'||t==='genero95'||t==='windowsmediaplayer'||t==='admiramediaplayer';
 }
 function mpMergeDownloads(){
-  var list=descargasDe('AdmiraMediaPlayer'), i, rec, seen={}, out=[], k, p;
-  for(i=0;i<list.length;i++){
-    rec=list[i]; k=rec.id||rec.stockId||rec.url; if(!k||seen[k]) continue; seen[k]=1;
-    out.push({id:rec.id||rec.stockId,titulo:rec.titulo||rec.name||rec.id,tipo:rec.tipo||'video',duracion:rec.duracion||0,url:rec.url,tag:'AdmiraMediaPlayer'});
-  }
-  if(MP.playlist){
-    for(i=0;i<MP.playlist.length;i++){
-      p=MP.playlist[i]; if(!p||!mpIsMediaTag(p.tag||'')) continue;
-      k=mpPiezaClave(p); if(!k||seen[k]) continue; seen[k]=1; out.push(p);
-    }
-  }
-  MP.playlist=out;
-  if(out.length) MP.known=true;
+  /* Ya no se anteponen solas las descargasDe('AdmiraMediaPlayer') a la playlist oficial.
+     El usuario las añade desde Biblioteca → Añadir. Se mantiene la función para no romper llamadas. */
+  var list=typeof plResolve==='function'?plResolve(typeof plSelected==='function'?plSelected():'win95'):(MP.playlist||[]);
+  if(list.length) MP.known=true;
   if(MP.open) mpUpdatePos();
-  return out;
+  if(typeof plSyncViews==='function') plSyncViews();
+  return list;
 }
 function mpPlaylist(){
-  var seen={}, out=[], cache=MP.tagsCache||[], i, t, j, p, k, list;
-  list=descargasDe('AdmiraMediaPlayer');
-  for(i=0;i<list.length;i++){
-    p=list[i]; k=p.id||p.stockId||p.url; if(!k||seen[k]) continue; seen[k]=1;
-    out.push({id:p.id||p.stockId,titulo:p.titulo||p.name||p.id,tipo:p.tipo||'video',duracion:p.duracion||0,url:p.url,tag:'AdmiraMediaPlayer'});
-  }
-  if(MP.playlist&&MP.playlist.length){
-    for(i=0;i<MP.playlist.length;i++){
-      p=MP.playlist[i]; if(!p||!mpIsMediaTag(p.tag||'')) continue;
-      k=mpPiezaClave(p); if(!k||seen[k]) continue; seen[k]=1;
-      out.push({id:p.id,titulo:p.titulo,tipo:p.tipo,duracion:p.duracion,url:p.url,tag:p.tag||'AdmiraMediaPlayer'});
-    }
-    return out;
-  }
-  for(i=0;i<cache.length;i++){
-    t=cache[i]; if(!t||!mpIsMediaTag(t.tag)||!t.piezas) continue;
-    for(j=0;j<t.piezas.length;j++){
-      p=t.piezas[j]; if(!p) continue;
-      k=mpPiezaClave(p); if(!k||seen[k]) continue;
-      seen[k]=1;
-      out.push({id:p.id,titulo:p.titulo,tipo:p.tipo,duracion:p.duracion,url:p.url,tag:'AdmiraMediaPlayer'});
-    }
-  }
-  return out;
+  /* La lista de reproducción activa es la playlist seleccionada en Napster (por defecto Win95),
+     con el overlay local (orden, altas y bajas). descargasDe('AdmiraMediaPlayer') sigue existiendo
+     para la Biblioteca; se añaden a una playlist con el botón Añadir, no se inyectan solas. */
+  if(typeof plResolve==='function') return plResolve(typeof plSelected==='function'?plSelected():'win95');
+  return MP.playlist&&MP.playlist.length?MP.playlist.slice():[];
 }
 function mpPosText(){
   if(MP.localPlaying) return 'local';
@@ -6875,7 +7094,7 @@ function scrollView(el,tk){
     requestAnimationFrame(f);
   });
 }
-async function ghostType(el,text,tk){ for(var i=0;i<text.length;i++){ el.textContent+=text.charAt(i); await wait(90+Math.random()*90,tk); } }
+async function ghostType(el,text,tk){ for(var i=0;i<text.length;i++){ if(el&&'value' in el&&/^(INPUT|TEXTAREA)$/.test(el.tagName)) el.value+=text.charAt(i); else el.textContent+=text.charAt(i); await wait(90+Math.random()*90,tk); } }
 async function waitUntil(fn,tk,max){ var t0=now(); while(!fn()&&now()-t0<max) await wait(200,tk); }
 async function typeNote(text,tk){ var nt=qs('#nt'); nt.value=''; for(var i=0;i<text.length;i++){ var ch=text.charAt(i); nt.value+=ch; nt.scrollTop=nt.scrollHeight; await wait(ch==='\n'?200:(ch===' '?45:22+Math.random()*40),tk); } NOTE.saved=nt.value; NOTE.dirty=false; refreshNoteTitle(); }
 async function bootSeq(tk){ var b=qs('#boot'); b.style.display='block'; sfxStartup(); await wait(3800,tk); b.style.display='none'; }

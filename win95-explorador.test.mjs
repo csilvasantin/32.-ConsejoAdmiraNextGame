@@ -134,28 +134,48 @@ test("Miscelánea: traspaso del Consejo (cómo funciona, encargos y normas) es d
   assert.match(html, /for\(var i=0;i<MISC_TRASPASO\.length;i\+\+\) ensureMiscSysOne\(MISC_TRASPASO\[i\]\)/);
 });
 
-test("Miscelánea: Elon - Misión.txt es un fichero de sistema de solo lectura", () => {
-  assert.match(html, /id:'doc-elon-mision'/);
-  assert.match(html, /name:'Elon - Misión\.txt'/);
-  assert.match(html, /id="elon-mision-seed"/);
+test("Miscelánea: ElonMusk es subcarpeta de consejero con la misión del día", () => {
+  assert.match(html, /id:'fld-elonmusk'/);
+  assert.match(html, /name:'ElonMusk'/);
+  assert.match(html, /mission:'XperienceWin95'/);
+  assert.match(html, /id:'doc-elon-mision-20261126'/);
+  assert.match(html, /name:'2026-11-26\.txt'/);
+  assert.match(html, /folder:'fld-elonmusk'/);
+  assert.match(html, /id="mision-elon-20261126-seed"/);
   assert.match(html, /function isMiscSysDoc\(d\)/);
   assert.match(html, /function ensureMiscSysOne\(/);
+  assert.match(html, /retireMiscSysDoc\('doc-elon-mision'\)/);
+  assert.doesNotMatch(html, /name:'Elon - Misión\.txt'/);
+  assert.doesNotMatch(html, /id="elon-mision-seed"/);
 });
 
-test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak y misión del día)", () => {
+test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak, ElonMusk y misión en la barra)", () => {
   assert.match(html, /var MISC_SUBFOLDERS=/);
   assert.match(html, /var MISC_SUBDOCS=/);
   assert.match(html, /function ensureMiscSysFolder\(/);
   assert.match(html, /function ensureMiscSubfolders\(/);
   assert.match(html, /ensureMiscSubfolders\(\);/);
+  assert.match(html, /function miscFolderTitle\(/);
+  assert.match(html, /function miscFolderSpec\(/);
+  assert.match(html, /function folderMissionOf\(/);
+  assert.match(html, /c\.principal&&c\.principal\.titulo/);
   assert.match(html, /id:'fld-stevewozniak'/);
   assert.match(html, /name:'SteveWozniak'/);
+  assert.match(html, /mission:'Win95 Xperience'/);
+  assert.match(html, /id:'fld-elonmusk'/);
+  assert.match(html, /name:'ElonMusk'/);
+  assert.match(html, /mission:'XperienceWin95'/);
   assert.match(html, /id:'doc-woz-mision-20261126'/);
+  assert.match(html, /id:'doc-elon-mision-20261126'/);
   assert.match(html, /name:'2026-11-26\.txt'/);
   assert.match(html, /folder:'fld-stevewozniak'/);
+  assert.match(html, /folder:'fld-elonmusk'/);
   assert.match(html, /id="mision-woz-20261126-seed"/);
+  assert.match(html, /id="mision-elon-20261126-seed"/);
   assert.match(html, /Win95 Xperience en admira\.live/);
   assert.match(html, /Napster v2\.0 Transfer/);
+  assert.match(html, /qs\('\.t',w\)\.textContent=miscFolderTitle\(it\)/);
+  assert.match(html, /addTask\('fw-'\+id,miscFolderTitle\(it\),'folder'/);
   assert.match(html, /for\(var s=0;s<MISC_SUBFOLDERS\.length;s\+\+\) if\(MISC_SUBFOLDERS\[s\]\.id===id\) return true/);
   // SteveJobs vive en la hidratación de misiones (padre: miscelanea), no en MISC_SUBFOLDERS.
   assert.doesNotMatch(html, /MISC_SUBFOLDERS=\[[^;]*fld-stevejobs/);

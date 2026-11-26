@@ -259,10 +259,10 @@ test("Miscelánea incluye el traspaso del Consejo precargado en el código", () 
   assert.ok(html.includes(nor.replace(/\s+$/, "")));
 });
 
-test("Miscelánea incluye Elon - Misión.txt precargado en el código", () => {
+test("Miscelánea incluye la subcarpeta ElonMusk con la misión del 26-nov-2026", () => {
   const html = src("windows95/index.html");
-  const txt = src("windows95/elon-mision.txt");
-  assert.match(txt, /MISIÓN DEL CONSEJERO/);
+  const txt = src("windows95/misiones/ElonMusk/2026-11-26.txt");
+  assert.match(txt, /MISIÓN PRINCIPAL/);
   assert.match(txt, /Elon Musk/);
   assert.match(txt, /XperienceWin95/);
   assert.match(txt, /26-nov-2026/);
@@ -270,12 +270,18 @@ test("Miscelánea incluye Elon - Misión.txt precargado en el código", () => {
   assert.match(txt, /#7711/);
   assert.match(txt, /#7536/);
   assert.match(txt, /admira\.live\/win95/);
+  assert.match(txt, /ElonMusk\/2026-11-26\.txt/);
   assert.doesNotMatch(txt, NO_IP);
   assert.doesNotMatch(txt, NO_MAC);
   assert.doesNotMatch(txt, /Bearer\s+[A-Za-z0-9._\-]+/);
-  assert.match(html, /id="elon-mision-seed"/);
-  assert.match(html, /doc-elon-mision/);
-  assert.match(html, /Elon - Misión\.txt/);
+  assert.match(html, /id="mision-elon-20261126-seed"/);
+  assert.match(html, /id:'fld-elonmusk'/);
+  assert.match(html, /name:'ElonMusk'/);
+  assert.match(html, /mission:'XperienceWin95'/);
+  assert.match(html, /id:'doc-elon-mision-20261126'/);
+  assert.match(html, /function miscFolderTitle\(/);
+  assert.doesNotMatch(html, /name:'Elon - Misión\.txt'/);
+  assert.doesNotMatch(html, /id="elon-mision-seed"/);
   assert.ok(html.includes(txt.replace(/\s+$/, "")));
 });
 
@@ -294,6 +300,7 @@ test("Miscelánea incluye la subcarpeta SteveWozniak con la misión del 26-nov-2
   assert.match(html, /id="mision-woz-20261126-seed"/);
   assert.match(html, /fld-stevewozniak/);
   assert.match(html, /SteveWozniak/);
+  assert.match(html, /mission:'Win95 Xperience'/);
   assert.ok(html.includes(txt.replace(/\s+$/, "")));
   assert.doesNotMatch(html, /id:'fld-stevejobs'/);
 });

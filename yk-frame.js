@@ -1789,19 +1789,20 @@
       var cambio = n.idioma && B ? B.ponerIdioma(n.idioma) : "";
       var t = n.texto, m;
       if (/^\/(help|\?)$/i.test(t)) {
-        say(expertT("Órdenes: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura. Castellano pone la web en castellano; inglés, en inglés.",
-                    "Commands: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura. Spanish switches the site to Spanish; English, to English.") + (cambio ? " · 🌐 " + cambio : ""));
+        say(expertT("Órdenes: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro. Castellano pone la web en castellano; inglés, en inglés.",
+                    "Commands: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro. Spanish switches the site to Spanish; English, to English.") + (cambio ? " · 🌐 " + cambio : ""));
         return;
       }
-      if (/^\/(lanzadera|launcher)$/i.test(t) || /^\/demo(?:\s+(lanzadera|admiradesk|interactivo|player(?:\s+interactivo)?|admiranext(?:-interactivo|\s+interactivo)?(?:\.com)?|modo(?:\s+demo)?\s+portaventura(?:next)?(?:\.com)?|portaventura(?:next)?(?:-interactivo|\s+interactivo)?(?:\.com)?|pan(?:-interactivo)?))?$/i.test(t)) {
+      if (/^\/(lanzadera|launcher|sala(?:\s+en)?\s+negro)$/i.test(t) || /^\/demo(?:\s+(lanzadera|negro|sala(?:\s+en)?\s+negro|admiradesk|interactivo|player(?:\s+interactivo)?|admiranext(?:-interactivo|\s+interactivo)?(?:\.com)?|modo(?:\s+demo)?\s+portaventura(?:next)?(?:\.com)?|portaventura(?:next)?(?:-interactivo|\s+interactivo)?(?:\.com)?|pan(?:-interactivo)?))?$/i.test(t)) {
         var dest = "/lanzadera/";
         if (/modo\s*(demo\s*)?portaventura|portaventura[^\n]*interactivo|pan-interactivo/i.test(t)) dest += "?demo=pan-interactivo";
+        else if (/negro|sala(?:\s+en)?\s+negro/i.test(t)) dest += "?demo=negro";
         else if (/admiradesk|interactivo|player/i.test(t)) dest += "?demo=interactivo";
         else if (/admiranext/i.test(t)) dest += "?demo=admiranext";
         else if (/portaventura|\bpan\b/i.test(t) && !/^\/demo\s*$/i.test(t)) dest += "?demo=pan";
         if (/^\/demo\s*$/i.test(t)) {
-          say(expertT("Catálogo: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /lanzadera · /demo help en la home.",
-                      "Catalogue: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /lanzadera · /demo help on the home page.") + (cambio ? " · 🌐 " + cambio : ""));
+          say(expertT("Catálogo: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /demo negro · /lanzadera · /demo help en la home.",
+                      "Catalogue: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /demo negro · /lanzadera · /demo help on the home page.") + (cambio ? " · 🌐 " + cambio : ""));
           return;
         }
         say(expertT("🚀 Abriendo " + dest, "🚀 Opening " + dest) + (cambio ? " · 🌐 " + cambio : ""));

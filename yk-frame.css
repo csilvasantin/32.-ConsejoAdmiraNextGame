@@ -786,3 +786,14 @@ html[data-yk-expert-min] body{padding-bottom:34px}
   .yk-bar .yk-nav{ display: flex }
   .yk-bar .yk-ico{ min-width: 30px; padding: 0 6px }
 }
+
+/* Pausar/reanudar del consejo autónomo, inyectado en el menú superior. */
+.yk-nav button.yk-nav-pausa{
+  appearance:none; background:transparent; border:0; padding:0; margin:0;
+  display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:32px; font: inherit;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--yk-mut); cursor: pointer; white-space: nowrap; transition: .15s;
+}
+.yk-nav button.yk-nav-pausa:hover{ color: var(--yk-ink) }
+.yk-nav button.yk-nav-pausa[aria-pressed="true"]{ color: var(--yk-brand); font-weight: 700 }

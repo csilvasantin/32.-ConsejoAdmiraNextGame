@@ -15,7 +15,16 @@ import {
   planDeLanzamiento,
   puedeMarcarEnMarcha,
   urlLanzaderaDemo,
+  urlLanzaderaApagar,
   validarPlanContraInventario,
+  APAGADOS,
+  ENCENDIDOS,
+  MAQUINAS_PROTEGIDAS,
+  destinosApagadoReuniones,
+  destinosApagadoInteractivos,
+  esMaquinaProtegida,
+  parseComandoApagar,
+  planDeApagado,
 } from './lanzadera-lib.mjs';
 import { parseAutonomoUrl } from './consejo-autonomo-leyendas.mjs';
 
@@ -60,6 +69,12 @@ test('tiene las dos zonas, voz y hora de misión', () => {
   assert.match(html, /Sala en negro/);
   assert.match(html, /86BDL3650Q/);
   assert.match(html, /PC Monitor/);
+  assert.match(html, /id="zona-apagado"/);
+  assert.match(html, /id="apagar-reuniones"/);
+  assert.match(html, /id="apagar-interactivos"/);
+  assert.match(html, /id="apagar-todo"/);
+  assert.match(html, /id="confirm-apagado"/);
+  assert.match(html, /id="encender-reuniones"/);
 });
 
 test('el cursor no se oculta en la lanzadera', () => {
@@ -181,4 +196,55 @@ test('si falta el monitor nombrado, hay error y no se cae a otra pantalla', () =
   assert.equal(localizarDisplay(okInv, plan.rosa).display.nombre, 'PHILIPS 86BDL3650Q');
   assert.equal(puedeMarcarEnMarcha(plan, { pantallas: [{ destino: 'rosa', ok: true }] }), false);
   assert.equal(puedeMarcarEnMarcha(plan, { pantallas: [{ destino: 'rosa', ok: true }, { destino: 'crema', ok: true }] }), true);
+});
+
+test('el apagado por zona pide confirmación, reutiliza Sala en negro y no toca Studio ni Mini', () => {
+  assert.equal(parseComandoApagar('/apagar reuniones').apagado.id, 'reuniones');
+  assert.equal(parseComandoDemo('apagar sala de reuniones').apagado.id, 'reuniones');
+  assert.equal(parseComandoDemo('/apagar interactivos').apagado.id, 'interactivos');
+  assert.equal(parseComandoDemo('/apagar todo').apagado.id, 'todo');
+  assert.equal(parseComandoDemo('/apagar').tipo, 'lanzadera');
+  assert.equal(parseComandoDemo('/encender reuniones').encendido.demo, 'admiranext');
+  assert.equal(parseComandoDemo('/restaurar interactivos').encendido.demo, 'interactivo');
+  assert.equal(parseComandoDemo('/demo').tipo, 'lanzadera');
+  assert.equal(urlLanzaderaApagar('reuniones'), '/lanzadera/?apagar=reuniones');
+
+  const plan = planDeApagado('reuniones', new Date('2026-11-26T13:32:00.000Z'));
+  assert.equal(plan.requiereConfirmacion, true);
+  assert.equal(plan.confirmado, false);
+  assert.equal(plan.dormirPantalla, false);
+  assert.equal(plan.urlNegro, URL_SALA_NEGRO);
+  assert.equal(plan.marca, 'AdmiraNeXT');
+  assert.deepEqual(plan.destinos.map((d) => d.id), ['rosa-philips', 'crema-arriba', 'crema-portatil', 'plata']);
+  assert.equal(plan.destinos[0].display.nombre, '86BDL3650Q');
+  assert.equal(plan.destinos[1].display.nombre, 'PC Monitor');
+  assert.equal(plan.destinos[2].id, 'crema-portatil');
+  assert.equal(plan.destinos[3].siConectado, true);
+  assert.ok(plan.destinos.every((d) => !d.machineId || !esMaquinaProtegida(d.machineId)));
+  assert.ok(MAQUINAS_PROTEGIDAS.some((m) => m.etiqueta === 'MacMini'));
+  assert.ok(MAQUINAS_PROTEGIDAS.some((m) => m.etiqueta === 'MacStudio'));
+  assert.match(plan.etiqueta, /14:32/);
+  assert.match(js, /pedirConfirmacion/);
+  assert.match(js, /admira:lanzadera-apagar/);
+  assert.doesNotMatch(css, /cursor\s*:\s*none/);
+
+  const inter = planDeApagado('interactivos', new Date('2026-11-26T13:32:00.000Z'));
+  const ids = inter.destinos.map((d) => d.id);
+  assert.ok(ids.includes('player-01'));
+  assert.ok(ids.includes('player-05'));
+  assert.ok(ids.includes('player-01V'));
+  assert.ok(ids.includes('player-05V'));
+  assert.ok(ids.includes('admiradesk'));
+  assert.equal(inter.destinos.find((d) => d.id === 'admiradesk').tipo, 'control');
+  assert.ok(inter.destinos.filter((d) => d.tipo === 'player').every((d) => d.url === URL_SALA_NEGRO));
+
+  const todo = planDeApagado('todo', new Date('2026-11-26T13:32:00.000Z'));
+  assert.ok(todo.destinos.some((d) => d.id === 'rosa-philips'));
+  assert.ok(todo.destinos.some((d) => d.id === 'admiradesk'));
+  assert.equal(ENCENDIDOS.reuniones.demo, 'admiranext');
+  assert.equal(ENCENDIDOS.interactivos.demo, 'interactivo');
+  assert.equal(APAGADOS.todo.restaurar, 'todo');
+  assert.match(ayuda, /\/apagar reuniones/);
+  assert.match(frame, /\/apagar reuniones/);
+  assert.match(home, /\/apagar reuniones/);
 });

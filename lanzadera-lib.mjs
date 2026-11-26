@@ -8,6 +8,8 @@
  *      MacBook Air Rosa y el consumo en el «PC Monitor» del MacBook Air
  *      Crema. El Plata queda fuera mientras no esté conectado. «Sala en
  *      negro» pone esas pantallas en una página negra, sin apagar nada.
+ *      El apagado por zona (t454u) reutiliza esa página negra, con
+ *      confirmación, y nunca apaga el Studio ni el Mini.
  *   2. Zona interactiva de Terminator (calle Planeta) — «Demo AdmiraNeXT»
  *      (player interactivo de admira.tv controlado desde AdmiraDesk) y
  *      «Modo demo PortAventuraNeXT».
@@ -50,6 +52,27 @@ export const MAQUINA_PLATA = Object.freeze({
   excluida: true,
   motivoExclusion: 'Sin conexión en ListMachines; queda fuera hasta que vuelva a conectarse. No se sustituye por otra máquina.',
 });
+
+export const MAQUINA_CREMA_PORTATIL = Object.freeze({
+  etiqueta: 'MacBookAirCrema',
+  machineId: MAQUINA_CREMA.machineId,
+  papel: 'Pantalla integrada del portátil del Crema. En el apagado de la sala de reuniones se pone en negro.',
+  display: Object.freeze({
+    nombre: 'Color LCD',
+    alias: Object.freeze(['Built-in Color LCD', 'Built-in Retina', 'Built-in Liquid Retina', 'Liquid Retina Display']),
+  }),
+});
+
+/** Equipos que jamás se apagan ni se reinician desde la lanzadera. */
+export const MAQUINAS_PROTEGIDAS = Object.freeze([
+  Object.freeze({ etiqueta: 'MacMini', machineId: '2eb88abd-0f50-45e6-a554-9c83751732aa' }),
+  Object.freeze({ etiqueta: 'MacStudio', machineId: '28007674-5a52-4836-b7cb-b1d66dc5099c' }),
+]);
+
+export function esMaquinaProtegida(machineId) {
+  const id = String(machineId || '');
+  return MAQUINAS_PROTEGIDAS.some((m) => m.machineId === id);
+}
 
 /**
  * Zona interactiva de Terminator (fuente: control/admiradesk/lanzadera.json
@@ -184,6 +207,9 @@ export function parseComandoDemo(texto) {
   if (!raw) return null;
   const s = norm(raw).replace(/^\//, '');
 
+  const apaga = parseComandoApagar(raw);
+  if (apaga) return apaga;
+
   if (/^(lanzadera|launcher|lanzadera de presentaciones|presentaciones)$/.test(s)) {
     return { tipo: 'lanzadera', demo: null };
   }
@@ -230,6 +256,8 @@ export function urlLanzaderaDesdeComando(texto) {
   const cmd = parseComandoDemo(texto);
   if (!cmd) return null;
   if (cmd.tipo === 'demo' && cmd.demo) return urlLanzaderaDemo(cmd.demo.id);
+  if (cmd.tipo === 'apagar' && cmd.apagado) return URL_LANZADERA + '?apagar=' + encodeURIComponent(cmd.apagado.id);
+  if (cmd.tipo === 'encender' && cmd.encendido) return URL_LANZADERA + '?encender=' + encodeURIComponent(cmd.encendido.id);
   if (cmd.tipo === 'lanzadera') return URL_LANZADERA;
   return null;
 }
@@ -298,8 +326,11 @@ export function localizarDisplay(inventario, destino) {
   if (!m) {
     return { error: 'No está conectado el ' + (destino.etiqueta || 'equipo') + '.' };
   }
-  const clave = String(nombre).toLowerCase();
-  const d = (m.displays || []).find((x) => textoDisplay(x).includes(clave));
+  const claves = [nombre].concat((destino.display && destino.display.alias) || []).map((n) => String(n || '').toLowerCase()).filter(Boolean);
+  const d = (m.displays || []).find((x) => {
+    const bag = textoDisplay(x);
+    return claves.some((clave) => bag.includes(clave));
+  });
   if (!d) {
     return { error: 'No está conectada la pantalla ' + nombre + ' del ' + (destino.etiqueta || 'equipo') + '. No se abre en otra pantalla.' };
   }
@@ -329,4 +360,192 @@ export function puedeMarcarEnMarcha(plan, verificacion) {
   if (plan.crema) needed.push('crema');
   const pantallas = (verificacion && verificacion.pantallas) || [];
   return needed.every((k) => pantallas.some((p) => p.destino === k && p.ok === true));
+}
+
+
+export const APAGADOS = Object.freeze({
+  reuniones: Object.freeze({
+    id: 'reuniones',
+    zona: 'sala',
+    titulo: 'Apagar sala de reuniones Terminator',
+    tituloEn: 'Turn off the Terminator meeting room',
+    restaurar: 'admiranext',
+  }),
+  interactivos: Object.freeze({
+    id: 'interactivos',
+    zona: 'interactiva',
+    titulo: 'Apagar sala de interactivos Terminator',
+    tituloEn: 'Turn off the Terminator interactive room',
+    restaurar: 'interactivo',
+  }),
+  todo: Object.freeze({
+    id: 'todo',
+    zona: 'ambas',
+    titulo: 'Apagar todo',
+    tituloEn: 'Turn everything off',
+    restaurar: 'todo',
+  }),
+});
+
+export const ENCENDIDOS = Object.freeze({
+  reuniones: Object.freeze({ id: 'reuniones', zona: 'sala', titulo: 'Encender sala de reuniones Terminator', tituloEn: 'Restore the Terminator meeting room', demo: 'admiranext' }),
+  interactivos: Object.freeze({ id: 'interactivos', zona: 'interactiva', titulo: 'Encender sala de interactivos Terminator', tituloEn: 'Restore the Terminator interactive room', demo: 'interactivo' }),
+  todo: Object.freeze({ id: 'todo', zona: 'ambas', titulo: 'Encender todo', tituloEn: 'Restore everything', demo: 'todo' }),
+});
+
+const PROTECCIONES_ES = Object.freeze([
+  'Nunca se apaga ni se reinicia el Mac Studio ni el Mac Mini.',
+  'El cursor no se oculta nunca: no se duermen las pantallas, se reutiliza Sala en negro.',
+  'No se cierran los ojos remotos (Firefox en el Rosa) ni se toca el portátil del Rosa.',
+  'No se cierran las sesiones de Grok Bot ni de los agentes.',
+]);
+
+const PROTECCIONES_EN = Object.freeze([
+  'The Mac Studio and the Mac Mini are never shut down or restarted.',
+  'The cursor is never hidden: displays are not put to sleep; Sala en negro is reused.',
+  'Remote eyes (Firefox on the Rosa) stay open and the Rosa laptop is left alone.',
+  'Grok Bot and agent sessions are not closed.',
+]);
+
+function destinoApagado(base, extra) {
+  const d = { ...base, ...extra, url: extra.url || URL_SALA_NEGRO };
+  if (esMaquinaProtegida(d.machineId)) {
+    throw new Error('Un destino de apagado no puede ser el Mac Studio ni el Mac Mini.');
+  }
+  return Object.freeze(d);
+}
+
+export function destinosApagadoReuniones() {
+  return Object.freeze([
+    destinoApagado(MAQUINA_ROSA, {
+      id: 'rosa-philips',
+      rol: 'Philips 86BDL3650Q del Rosa: las Leyendas pasan a Sala en negro. No se toca el portátil (ojos remotos ni sesiones).',
+    }),
+    destinoApagado(MAQUINA_CREMA, {
+      id: 'crema-arriba',
+      rol: 'PC Monitor de arriba del Crema: Consumos en Sala en negro.',
+    }),
+    destinoApagado(MAQUINA_CREMA_PORTATIL, {
+      id: 'crema-portatil',
+      rol: 'Pantalla del portátil del Crema en Sala en negro.',
+    }),
+    destinoApagado(MAQUINA_PLATA, {
+      id: 'plata',
+      siConectado: true,
+      rol: 'Pantalla del Plata en Sala en negro, solo si está conectado. Si no, se anota y no se sustituye por otro equipo.',
+    }),
+  ]);
+}
+
+export function destinosApagadoInteractivos() {
+  const players = MAQUINAS_ZONA_INTERACTIVA.map((m) => Object.freeze({
+    ...m,
+    id: 'player-' + m.e,
+    url: URL_SALA_NEGRO,
+    rol: 'Player de ' + m.etiqueta + ' en Sala en negro.',
+    tipo: 'player',
+  }));
+  const desk = Object.freeze({
+    id: 'admiradesk',
+    etiqueta: 'AdmiraDesk',
+    url: URL_ADMIRADESK,
+    tipo: 'control',
+    rol: 'Se cierra o se pone en negro el control de la demo. No se apaga ningún equipo.',
+  });
+  return Object.freeze([...players, desk]);
+}
+
+export function apagadoPorId(id) {
+  const s = String(id || '').trim().toLowerCase();
+  if (APAGADOS[s]) return APAGADOS[s];
+  if (/^(reunion|reuniones|sala-reuniones|sala de reuniones)$/.test(s)) return APAGADOS.reuniones;
+  if (/^(interactivo|interactivos|sala-interactivos|sala de interactivos)$/.test(s)) return APAGADOS.interactivos;
+  if (/^(todo|all|ambas)$/.test(s)) return APAGADOS.todo;
+  return null;
+}
+
+export function encendidoPorId(id) {
+  const s = String(id || '').trim().toLowerCase();
+  if (ENCENDIDOS[s]) return ENCENDIDOS[s];
+  const a = apagadoPorId(s);
+  return (a && ENCENDIDOS[a.id]) || null;
+}
+
+/**
+ * Voz y CLI del apagado y del encendido.
+ * «/apagar reuniones», «/apagar interactivos», «/apagar todo»,
+ * «apagar sala de reuniones», «/encender reuniones», «/restaurar todo».
+ * Un «/apagar» solo abre la lanzadera, no apaga nada.
+ */
+export function parseComandoApagar(texto) {
+  const raw = String(texto == null ? '' : texto).trim();
+  if (!raw) return null;
+  if (/\?$/.test(raw) && raw.length > 40) return null;
+  const s = norm(raw).replace(/^\//, '');
+  if (/^(no\s+)?(quiero\s+)?(que\s+)?no\s+apagues/.test(s)) return null;
+
+  const enc = s.match(/^(encender|restaurar|prender|reanudar sala)(?:\s+(?:la\s+)?(?:sala\s+(?:de\s+)?)?)?(reuniones?|interactivos?|interactiva|todo|all)?$/);
+  if (enc) {
+    const zona = enc[2] || '';
+    if (!zona || /todo|all/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.todo };
+    if (/interact/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.interactivos };
+    if (/reunion/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.reuniones };
+    return { tipo: 'lanzadera', demo: null };
+  }
+  if (/^restaurar(?:\s+(?:la\s+)?sala(?:\s+de)?\s+(reuniones?|interactivos?))?$/.test(s)
+      || /^encender(?:\s+(?:la\s+)?sala(?:\s+de)?\s+(reuniones?|interactivos?))$/.test(s)) {
+    if (/interact/.test(s)) return { tipo: 'encender', encendido: ENCENDIDOS.interactivos };
+    if (/reunion/.test(s)) return { tipo: 'encender', encendido: ENCENDIDOS.reuniones };
+  }
+
+  if (!/^(apagar|apagado|shutdown|apaga)\b/.test(s) && !/^apagar\b/.test(s)) return null;
+  if (/^(apagar|apagado|shutdown|apaga)$/.test(s)) {
+    return { tipo: 'lanzadera', demo: null, apagar: true };
+  }
+  if (/\btodo\b|\ball\b|ambas salas|todas las salas/.test(s)) {
+    return { tipo: 'apagar', apagado: APAGADOS.todo };
+  }
+  if (/interactivo/.test(s)) {
+    return { tipo: 'apagar', apagado: APAGADOS.interactivos };
+  }
+  if (/reunion/.test(s)) {
+    return { tipo: 'apagar', apagado: APAGADOS.reuniones };
+  }
+  return { tipo: 'lanzadera', demo: null, apagar: true, desconocido: s };
+}
+
+export function planDeApagado(id, inicio) {
+  const a = typeof id === 'string' || !id ? apagadoPorId(id) : id;
+  if (!a) return null;
+  const hora = typeof inicio === 'string' ? inicio : formatHoraInicio(inicio || new Date());
+  let destinos = [];
+  if (a.id === 'reuniones' || a.id === 'todo') destinos = destinos.concat(destinosApagadoReuniones());
+  if (a.id === 'interactivos' || a.id === 'todo') destinos = destinos.concat(destinosApagadoInteractivos());
+  if (destinos.some((d) => esMaquinaProtegida(d.machineId))) {
+    throw new Error('Un destino de apagado no puede ser el Mac Studio ni el Mini.');
+  }
+  return {
+    tipo: 'apagado',
+    apagado: a,
+    zona: a.zona,
+    inicio: hora,
+    etiqueta: etiquetaMision(hora, 'es') + ' · ' + a.titulo,
+    etiquetaEn: etiquetaMision(hora, 'en') + ' · ' + a.tituloEn,
+    requiereConfirmacion: true,
+    confirmado: false,
+    urlNegro: URL_SALA_NEGRO,
+    dormirPantalla: false,
+    cursor: 'El cursor no se oculta nunca: si se mueve el ratón, tiene que reaparecer.',
+    protecciones: PROTECCIONES_ES,
+    proteccionesEn: PROTECCIONES_EN,
+    destinos: Object.freeze(destinos),
+    restaurar: a.restaurar,
+    marca: 'AdmiraNeXT',
+  };
+}
+
+export function urlLanzaderaApagar(id) {
+  const a = apagadoPorId(id);
+  if (!a) return URL_LANZADERA;
+  return URL_LANZADERA + '?apagar=' + encodeURIComponent(a.id);
 }

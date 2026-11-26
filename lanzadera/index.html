@@ -9,8 +9,8 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
-  <link rel="stylesheet" href="/yk-frame.css?v=20261126-enrutado">
-  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261126-enrutado">
+  <link rel="stylesheet" href="/yk-frame.css?v=20261126-apagado">
+  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261126-apagado">
 </head>
 <body data-yk-title="LANZADERA" data-yk-zone="app">
   <a class="skip-link" href="#contenido">Ir a la lanzadera</a>
@@ -18,7 +18,7 @@
   <aside data-yk-slot="left">
     <p class="slot-kicker" data-en="Voice and selection">Voz y selección</p>
     <button type="button" id="btn-voz" class="voz-btn" aria-pressed="false">🎙️ Escuchar</button>
-    <p class="slot-copy" id="voz-estado" data-en="Sala: say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». «Sala en negro» blacks out the screens. Interactive zone: «player interactivo», «AdmiraDesk» or «modo demo PortAventuraNeXT». Expert: /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro.">Sala: di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». «Sala en negro» deja las pantallas negras. Zona interactiva: «player interactivo», «AdmiraDesk» o «modo demo PortAventuraNeXT». Experto: /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro.</p>
+    <p class="slot-copy" id="voz-estado" data-en="Sala: say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». «Sala en negro» blacks out the screens. Shutdown, with confirmation: «apagar reuniones», «apagar interactivos», «apagar todo». Restore: «encender reuniones», «encender interactivos». Interactive zone: «player interactivo», «AdmiraDesk» or «modo demo PortAventuraNeXT». Expert: /demo admiranext, /demo negro, /apagar reuniones, /apagar interactivos, /apagar todo.">Sala: di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». «Sala en negro» deja las pantallas negras. Apagado, con confirmación: «apagar reuniones», «apagar interactivos», «apagar todo». Encender: «encender reuniones», «encender interactivos». Zona interactiva: «player interactivo», «AdmiraDesk» o «modo demo PortAventuraNeXT». Experto: /demo admiranext, /demo negro, /apagar reuniones, /apagar interactivos, /apagar todo.</p>
     <p class="slot-copy" data-en="The cursor is never hidden: when the mouse moves, it has to come back, including in digital signage.">El cursor no se oculta nunca: si mueves el ratón, tiene que reaparecer, también en cartelería.</p>
   </aside>
 
@@ -86,6 +86,51 @@
       </div>
     </section>
 
+
+    <section class="zona zona-apagado" id="zona-apagado" aria-labelledby="zona-apagado-titulo">
+      <h2 id="zona-apagado-titulo">Apagado de las salas · AdmiraNeXT</h2>
+      <p class="zona-lead" data-en="Each shutdown asks for confirmation first. It reuses Sala en negro. The Mac Studio and the Mac Mini are never shut down, the cursor stays visible, remote eyes stay open and Grok Bot sessions are not closed.">Cada apagado pide confirmación antes de actuar. Reutiliza Sala en negro. Nunca se apaga el Mac Studio ni el Mac Mini, el cursor sigue visible, los ojos remotos no se cierran y las sesiones de Grok Bot se quedan abiertas.</p>
+      <div class="lanza-grid" role="group" aria-label="Apagado y encendido de las salas de Terminator">
+        <button type="button" class="demo-card demo-apagar" id="apagar-reuniones" data-apagar="reuniones">
+          <span class="demo-kicker">⏻</span>
+          <span class="demo-title">Apagar sala de reuniones Terminator</span>
+          <span class="demo-copy" data-en="Blacks out the Rosa’s Philips, the Crema’s upper PC Monitor, the Crema laptop screen and the Plata if it is connected.">Pone en negro la Philips del Rosa, el PC Monitor de arriba del Crema, la pantalla del portátil del Crema y el Plata, si está conectado.</span>
+        </button>
+        <button type="button" class="demo-card demo-apagar" id="apagar-interactivos" data-apagar="interactivos">
+          <span class="demo-kicker">⏻</span>
+          <span class="demo-title">Apagar sala de interactivos Terminator</span>
+          <span class="demo-copy" data-en="Blacks out the players on AdmiraNeXT01–05 and the verticals, and closes or blacks out AdmiraDesk. No computer is shut down.">Pone en negro los players de AdmiraNeXT01–05 y las verticales, y cierra o pone en negro AdmiraDesk. No se apaga ningún equipo.</span>
+        </button>
+        <button type="button" class="demo-card demo-apagar" id="apagar-todo" data-apagar="todo">
+          <span class="demo-kicker">⏻</span>
+          <span class="demo-title">Apagar todo</span>
+          <span class="demo-copy" data-en="Does both shutdowns, still with confirmation.">Hace los dos apagados, también con confirmación.</span>
+        </button>
+        <button type="button" class="demo-card demo-encender" id="encender-reuniones" data-encender="reuniones">
+          <span class="demo-kicker">▶</span>
+          <span class="demo-title">Encender sala de reuniones</span>
+          <span class="demo-copy" data-en="Restores the default AdmiraNeXT.com demo: Legends on the Philips, usage on the Crema’s PC Monitor.">Restaura la demo por defecto, AdmiraNeXT.com: Leyendas en la Philips y consumo en el PC Monitor del Crema.</span>
+        </button>
+        <button type="button" class="demo-card demo-encender" id="encender-interactivos" data-encender="interactivos">
+          <span class="demo-kicker">▶</span>
+          <span class="demo-title">Encender sala de interactivos</span>
+          <span class="demo-copy" data-en="Restores the default interactive AdmiraNeXT demo, with AdmiraDesk.">Restaura la demo por defecto de la zona interactiva, AdmiraNeXT, con AdmiraDesk.</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="confirm-apagado" id="confirm-apagado" hidden>
+      <h2 id="confirm-titulo">Confirmar apagado · AdmiraNeXT</h2>
+      <p class="confirm-hora" id="confirm-hora"></p>
+      <p id="confirm-texto"></p>
+      <ul id="confirm-destinos"></ul>
+      <ul id="confirm-protecciones"></ul>
+      <div class="confirm-acciones">
+        <button type="button" id="confirm-apagado-ok" class="confirm-ok">Confirmar apagado</button>
+        <button type="button" id="confirm-apagado-no" class="confirm-no">Cancelar</button>
+      </div>
+    </section>
+
     <section class="plan" id="plan" hidden>
       <h2 id="plan-titulo">Plan de esta misión</h2>
       <ol id="plan-pasos"></ol>
@@ -97,7 +142,7 @@
     </section>
   </main>
 
-  <script type="module" src="/lanzadera/lanzadera.js?v=20261126-enrutado"></script>
-  <script src="/yk-frame.js?v=20261126-enrutado"></script>
+  <script type="module" src="/lanzadera/lanzadera.js?v=20261126-apagado"></script>
+  <script src="/yk-frame.js?v=20261126-apagado"></script>
 </body>
 </html>

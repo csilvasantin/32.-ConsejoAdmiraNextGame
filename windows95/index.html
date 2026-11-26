@@ -1030,10 +1030,13 @@ Miscelánea (carpeta del escritorio):
   · Documentos de sistema del Consejo (este fichero, el de estilo
     ICQGram, el de encargos y el de normas). También de solo
     lectura: para editarlos, Copiar → Pegar una copia propia.
-  · Subcarpetas de consejero (por ejemplo SteveWozniak): cada
-    uno anota ahí su misión del día en un fichero con la fecha
-    (2026-11-26.txt). También de sistema y solo lectura. Para
-    añadir otra carpeta o un día nuevo se declara en
+  · Subcarpetas de consejero (por ejemplo SteveWozniak o
+    ElonMusk): cada uno anota ahí su misión del día en un
+    fichero con la fecha (2026-11-26.txt). También de sistema y
+    solo lectura. La barra de título de la carpeta muestra la
+    misión principal si está declarada (p. ej. «ElonMusk ·
+    XperienceWin95»), con el campo mission de MISC_SUBFOLDERS.
+    Para añadir otra carpeta o un día nuevo se declara en
     MISC_SUBFOLDERS y MISC_SUBDOCS, en windows95/index.html.
   · Si se envían a la Papelera, no se borran del servidor: solo
     se ocultan en este navegador.
@@ -1529,30 +1532,28 @@ Norma de Carlos  ·  25-11-2026  ·  Europe/Madrid
 Fin del documento. Está en Miscelánea, solo lectura.
 ========================================================================
 </script>
-    <script type="text/plain" id="elon-mision-seed">========================================================================
-MISIÓN DEL CONSEJERO
+    <script type="text/plain" id="mision-elon-20261126-seed">========================================================================
+MISIÓN PRINCIPAL
 Elon Musk  ·  26-nov-2026  10:30  Europe/Madrid
 ========================================================================
 
-Este documento está en Miscelánea: «Elon - Misión.txt».
-Es un fichero de sistema, de solo lectura, para que cualquiera
-vea en qué está este consejero.
+Este documento está en Miscelánea: «ElonMusk/2026-11-26.txt».
+Es un fichero de sistema, de solo lectura. Cada consejero anota
+aquí a qué se dedica ese día, en su subcarpeta de Miscelánea.
 
+Fecha: 26-nov-2026
 Consejero: Elon Musk (coetáneo, csilvasantin).
 GrokBot: «Elon / XperienceWin95 · admira.live · Morfeo».
 
-------------------------------------------------------------------------
-MISIÓN PRINCIPAL HOY (26-nov-2026)
-------------------------------------------------------------------------
+Misión principal: XperienceWin95.
+
 XperienceWin95: la Xperiencia Win95 en admira.live/win95.
 Iconos auténticos de Windows 95, menú Inicio real, nube de
 Admira en lugar de la A, monitor CRT, Bloc de notas, carpetas
 y accesos directos, protector de pantalla al pulsar el reloj
 y «Para las Leyendas.txt».
 
-------------------------------------------------------------------------
-TAMBIÉN LLEVO
-------------------------------------------------------------------------
+También llevo:
 - El canal Carlos↔Elon en Admira95 / ICQGram (encargos #7710
   y #7711, y los webhooks que despiertan a los agentes).
 - #7536: espejo de admira.live en la app de Grok Bot.
@@ -1562,8 +1563,7 @@ Actualizado: 26-nov-2026 10:30, hora de Madrid.
 Sin IPs, MACs, tokens, contraseñas ni secretos.
 
 ========================================================================
-Elon Musk  ·  26-nov-2026  10:30  Europe/Madrid
-Fin del documento. Está en Miscelánea, solo lectura.
+Fin del documento. Está en Miscelánea\ElonMusk, solo lectura.
 ========================================================================
 </script>
     <script type="text/plain" id="mision-woz-20261126-seed">========================================================================
@@ -3051,12 +3051,12 @@ function openFolder(id){
   var it=FS[id]; if(!it||it.kind!=='folder') return;
   if(id===MISC_ID){ loadComms(true); loadMisiones(true); }
   if(id===MISIONES_ID||isDeepSysId(id)) loadMisiones(true);
-  if(FWIN[id]&&FWIN[id].parentNode){ FWIN[id].style.display='block'; addTask('fw-'+id,it.name,'folder',[FWIN[id]]); focusWin(FWIN[id]); renderFolder(id); return; }
+  if(FWIN[id]&&FWIN[id].parentNode){ FWIN[id].style.display='block'; addTask('fw-'+id,miscFolderTitle(it),'folder',[FWIN[id]]); focusWin(FWIN[id]); renderFolder(id); return; }
   var w=document.createElement('div'); w.className='win foldwin'; w.id='fw-'+id;
   w.style.cssText='left:90px;top:36px;width:380px;height:260px';
   w.innerHTML='<div class="tb"><span class="fico"></span><span class="t"></span><span class="x" data-min="fw-'+id+'">_</span><span class="x" data-max="fw-'+id+'" title="Maximizar">□</span><span class="x gap" data-close="fw-'+id+'">×</span></div><div class="menubar"><span data-fmenu="archivo"><u>A</u>rchivo</span><span data-fmenu="edicion"><u>E</u>dición</span><span data-fmenu="ver"><u>V</u>er</span><span data-fmenu="ayuda">Ay<u>u</u>da</span></div><div class="foldbar"><button class="btn" type="button" data-up title="Subir un nivel">Subir un nivel</button><div class="foldpath"></div></div><div class="foldbody"></div><div class="sbar1 foldst">0 objeto(s)</div>';
   qs('.fico',w).innerHTML=ICONS.folderOpen||ICONS.folder;
-  qs('.t',w).textContent=it.name;
+  qs('.t',w).textContent=miscFolderTitle(it);
   desk.appendChild(w);
   FWIN[id]=w;
   function close(){ closeFolderMenu(); if(w.parentNode) w.parentNode.removeChild(w); delete FWIN[id]; removeTask('fw-'+id); }
@@ -3077,7 +3077,7 @@ function openFolder(id){
     DM.parent=id; openDeskMenu(p.x,p.y);
   });
   wireFolderMenubar(w, id);
-  addTask('fw-'+id,it.name,'folder',[w]); focusWin(w);
+  addTask('fw-'+id,miscFolderTitle(it),'folder',[w]); focusWin(w);
   renderFolder(id);
 }
 function folderChildren(id){
@@ -3090,11 +3090,11 @@ function folderChildren(id){
 function renderFolder(id){
   var w=FWIN[id]; if(!w) return;
   var it=FS[id], body=qs('.foldbody',w); if(!it||!body) return;
-  qs('.t',w).textContent=it.name;
+  qs('.t',w).textContent=miscFolderTitle(it);
   w._fid=id;
   var pathEl=qs('.foldpath',w); if(pathEl){ pathEl.textContent=folderPathLabel(id); pathEl.title=folderPathLabel(id); }
   var upBtn=qs('[data-up]',w); if(upBtn) upBtn.disabled=!fsParent(it);
-  if(TASKS['fw-'+id]) TASKS['fw-'+id].btn.lastChild.textContent=it.name;
+  if(TASKS['fw-'+id]) TASKS['fw-'+id].btn.lastChild.textContent=miscFolderTitle(it);
   var v=folderView(id), sel=selectedIcon(), selId=sel&&sel._def?sel._def.id:null, sTop=body.scrollTop;
   body.className='foldbody v-'+v.mode;
   applyColWidths(body, v.cols);
@@ -3475,9 +3475,10 @@ function applyMisionesData(data){
     var parent=padreDeCarpeta(c); if(!parent) return;
     var it=FS[c.id];
     if(!it){
-      it=registerItem({id:c.id,kind:'folder',name:c.nombre||c.id,label:c.nombre||c.id,ico:'folder',parent:parent,left:8,top:8+idx*20,mtime:Date.now(),deepSys:true});
+      it=registerItem({id:c.id,kind:'folder',name:c.nombre||c.id,label:c.nombre||c.id,ico:'folder',parent:parent,left:8,top:8+idx*20,mtime:Date.now(),deepSys:true,mission:(c.principal&&c.principal.titulo)||''});
     } else {
       it.name=c.nombre||it.name; it.label=c.nombre||it.label; it.parent=parent;
+      if(c.principal&&c.principal.titulo) it.mission=c.principal.titulo;
     }
     touched[c.id]=1;
     (c.ficheros||[]).forEach(function(f, fi){
@@ -4197,20 +4198,49 @@ var ESTILO_SEED_NAME='Estilo comunicaciones ICQGram.txt';
 var ESTILO_SEED_REV='20261125-2130';
 var ESTILO_SEED_MS=new Date(2026,10,25,21,30).getTime();
 var MISC_TRASPASO=[
-  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:92,top:8},
+  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:92,top:8},
   {id:'doc-encargos-abiertos',name:'Encargos y misiones abiertas.txt',seed:'encargos-abiertos-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:8,top:100},
-  {id:'doc-normas-consejo',name:'Normas del Consejo para nuevos consejeros.txt',seed:'normas-consejo-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:100},
-  {id:'doc-elon-mision',name:'Elon - Misión.txt',seed:'elon-mision-seed',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:176,top:8}
+  {id:'doc-normas-consejo',name:'Normas del Consejo para nuevos consejeros.txt',seed:'normas-consejo-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:100}
 ];
-/* Subcarpetas genéricas de Miscelánea (t1401u): un consejero, una carpeta;
-   dentro, un .txt por día con la misión. Para añadir otra (p. ej. otro
-   consejero) se declara aquí, sin tocar la lógica. */
+/* Subcarpetas genéricas de Miscelánea: un consejero, una carpeta;
+   dentro, un .txt por día con la misión. El campo opcional `mission`
+   (misión principal) se muestra en la barra de título, p. ej.
+   «ElonMusk · XperienceWin95». Para añadir otro consejero se declara
+   aquí, sin tocar la lógica. */
 var MISC_SUBFOLDERS=[
-  {id:'fld-stevewozniak',name:'SteveWozniak',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:176,top:100}
+  {id:'fld-stevewozniak',name:'SteveWozniak',mission:'Win95 Xperience',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:176,top:100},
+  {id:'fld-elonmusk',name:'ElonMusk',mission:'XperienceWin95',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:176,top:8}
 ];
 var MISC_SUBDOCS=[
-  {id:'doc-woz-mision-20261126',name:'2026-11-26.txt',seed:'mision-woz-20261126-seed',folder:'fld-stevewozniak',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:8,top:8}
+  {id:'doc-woz-mision-20261126',name:'2026-11-26.txt',seed:'mision-woz-20261126-seed',folder:'fld-stevewozniak',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:8,top:8},
+  {id:'doc-elon-mision-20261126',name:'2026-11-26.txt',seed:'mision-elon-20261126-seed',folder:'fld-elonmusk',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:8,top:8}
 ];
+function miscFolderSpec(id){
+  for(var i=0;i<MISC_SUBFOLDERS.length;i++) if(MISC_SUBFOLDERS[i].id===id) return MISC_SUBFOLDERS[i];
+  return null;
+}
+function folderMissionOf(it){
+  if(!it) return '';
+  var spec=miscFolderSpec(it.id);
+  if(spec&&spec.mission) return spec.mission;
+  if(it.mission) return (typeof misionCompacta==='function')?misionCompacta(it.mission):it.mission;
+  if(!(spec||it.miscSysFolder||it.deepSys||(MISC_ID&&it.parent===MISC_ID))) return '';
+  var docs=[], k, d, i, pref, list, m;
+  for(k in FS){ d=FS[k]; if(d&&d.kind==='doc'&&fsParent(d)===it.id) docs.push(d); }
+  pref=docs.filter(function(x){ return /misi[oó]n|^\d{4}-\d{2}-\d{2}\.txt$/i.test(x.name||x.label||''); });
+  list=pref.concat(docs);
+  for(i=0;i<list.length;i++){
+    m=typeof misionDeclaradaEnTexto==='function'?misionDeclaradaEnTexto(list[i].text||''):'';
+    if(m&&typeof misionCompacta==='function') m=misionCompacta(m);
+    if(m) return m;
+  }
+  return '';
+}
+function miscFolderTitle(it){
+  if(!it) return '';
+  var mission=folderMissionOf(it);
+  return mission?(it.name+' · '+mission):it.name;
+}
 function isMiscSysId(id){
   if(!id) return false;
   if(id===ESTILO_SEED_ID) return true;
@@ -4310,13 +4340,14 @@ function ensureMiscSysFolder(spec){
   if(parent&&parent!==MISC_ID&&!FS[parent]) return null;
   var it=FS[spec.id];
   if(!it){
-    it=registerItem({id:spec.id,kind:'folder',name:spec.name,label:spec.name,ico:'folder',parent:parent,left:spec.left,top:spec.top,mtime:spec.ms,miscSysRev:spec.rev,miscSysFolder:true});
+    it=registerItem({id:spec.id,kind:'folder',name:spec.name,label:spec.name,ico:'folder',parent:parent,left:spec.left,top:spec.top,mtime:spec.ms,miscSysRev:spec.rev,miscSysFolder:true,mission:spec.mission||''});
     if(FWIN[parent]) renderFolder(parent);
     saveNoteDocs();
     return it;
   }
   it.miscSysFolder=true;
   it.miscSysRev=spec.rev;
+  if(spec.mission) it.mission=spec.mission;
   if(!it.name) it.name=spec.name;
   if(!it.label) it.label=spec.name;
   if(!it.mtime) it.mtime=spec.ms||it.mtime;
@@ -4336,10 +4367,22 @@ function ensureMiscSubfolders(){
     ensureMiscSysOne({id:s.id,name:s.name,seed:s.seed,rev:s.rev,ms:s.ms,left:s.left,top:s.top,parent:s.folder||MISC_ID});
   }
 }
+function retireMiscSysDoc(id){
+  if(!id) return;
+  var it=FS[id]||DOCS[id], parent=it&&it.parent, el=qs('#ic-'+id);
+  if(!it&&!el) return;
+  if(el&&el.parentNode) el.parentNode.removeChild(el);
+  if(NOTE.doc&&(NOTE.doc.id===id||NOTE.doc.docId===id)){ try{ hideNote(); }catch(e){} NOTE.doc=null; }
+  delete FS[id]; delete DOCS[id];
+  TRASH=TRASH.filter(function(x){ return !(x.def&&(x.def.id===id||x.def.docId===id)); });
+  if(parent&&FWIN[parent]) renderFolder(parent);
+  saveNoteDocs();
+}
 function ensureEstiloDoc(){
   ensureMiscSysOne({id:ESTILO_SEED_ID,name:ESTILO_SEED_NAME,seed:'estilo-icqgram-seed',rev:ESTILO_SEED_REV,ms:ESTILO_SEED_MS,left:8,top:8});
   for(var i=0;i<MISC_TRASPASO.length;i++) ensureMiscSysOne(MISC_TRASPASO[i]);
   ensureMiscSubfolders();
+  retireMiscSysDoc('doc-elon-mision');
 }
 function sizeNoteFor(d){
   var w=qs('#note'); if(!w) return;

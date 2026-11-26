@@ -217,12 +217,18 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #icq .qhdr b{margin-left:5px;font:italic bold 14px/1 Arial,sans-serif;color:#1f8a2e}
 #icq .qhdr b span{color:#e02020}
 #icq .qhdr i{margin-left:auto;font-style:normal;font-size:9px;color:#707070}
-.clist{position:absolute;left:3px;right:3px;top:56px;bottom:52px;overflow:hidden;padding:3px 2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
-.cgrp{padding:3px 4px 2px;font-weight:bold;color:#000080;white-space:nowrap}
-.crow{display:flex;align-items:center;height:18px;padding:0 4px 0 10px;white-space:nowrap;overflow:hidden}
+.clist{position:absolute;left:3px;right:3px;top:56px;bottom:52px;overflow:auto;padding:3px 2px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+.cgrp{padding:3px 4px 2px;font-weight:bold;color:#000080;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none}
+.cgrp .chv{display:inline-block;width:10px}
+.csec.col .cbody{display:none}
+.crow{display:flex;align-items:center;height:18px;padding:0 4px 0 2px;white-space:nowrap;overflow:hidden}
 .crow > span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .crow .mis{font-weight:normal}
+.crow .ctog{flex:none;width:10px;margin-right:2px;font-style:normal;font-size:10px;cursor:pointer}
 .crow svg{flex:none;width:14px;height:14px;margin-right:5px}
+.cdet{padding:1px 6px 5px 26px;font-size:10px;line-height:1.35;color:#000;white-space:normal}
+.crow.sel + .cdet{background:#000080;color:#fff}
+.cdet b{font-weight:bold}
 .crow.off{color:#808080}
 .crow.unk span{font-style:italic}
 #icqc .chdr a{color:#606060;text-decoration:underline}
@@ -1617,7 +1623,7 @@ Hoy trabajo en:
 Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
 ========================================================================
 </script>
-    <script type="application/json" id="misiones-fallback-seed">{"ok":true,"generado":1795685100000,"generado_madrid":"26-11-2026 10:25","aviso":"","fuente":"admira.live","carpetas":[{"id":"fld-deep-neo","padre":"misiones","persona":"Neo","nombre":"Neo - #7621 Screen sync AdmiraNeXT01–05","principal":{"encargo":7621,"estado":"in_progress","estado_es":"en curso","titulo":"Screen sync AdmiraNeXT01–05","maquina":"macstudio"},"ficheros":[{"id":"doc-mision-neo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Neo\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7621 (#7621.11.19)\nTítulo: Screen sync AdmiraNeXT01–05\nEstado: en curso\nMáquina: macstudio\nÚltimo latido: sin verificar\n\nResumen:\nRetoma de #7612 (Screen sync AdmiraNeXT01–05), sesión nueva. Los cinco PCs están listos; falta que Carlos pulse SINCRO en admiranext.com/demo.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795073400000},{"id":"doc-encargos-neo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Neo\n26-11-2026 10:25 hora de Madrid\n\n• #7687 · pendiente · StreamDeck\n  Máquina: macstudio · 24-11-2026 11:13\n• #7632 · bloqueado · Modo Demo del player en las ultrawide…\n  Máquina: macstudio · 20-11-2026 11:56\n• #7621 · en curso · Screen sync AdmiraNeXT01–05\n  Máquina: macstudio · 19-11-2026 08:30\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795073400000}]},{"id":"fld-deep-trinity","padre":"misiones","persona":"Trinity","nombre":"Trinity - #7736 Webhook Huang y espejo #7536","principal":{"encargo":7736,"estado":"pending","estado_es":"pendiente","titulo":"Webhook Huang y espejo #7536","maquina":"macbookairrosa"},"ficheros":[{"id":"doc-mision-trinity","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Trinity\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7736 (#7736.11.26)\nTítulo: Webhook Huang y espejo #7536\nEstado: pendiente\nMáquina: macbookairrosa\nÚltimo latido: sin verificar\n\nResumen:\nTitular: Retoma control mañana 26-nov — Reparar el 401 del webhook de Huang y cerrar el espejo #7536\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795680000000},{"id":"doc-encargos-trinity","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Trinity\n26-11-2026 10:25 hora de Madrid\n\n• #7736 · pendiente · Webhook Huang y espejo #7536\n  Máquina: macbookairrosa · 26-11-2026 09:00\n• #7693 · bloqueado · Prueba viva de los 6 webhooks principales y cruce…\n  Máquina: macbookpronegro14 · 25-11-2026 10:14\n• #7692 · pendiente · Webhook Huang y espejo #7536\n  Máquina: macbookairrosa · 25-11-2026 10:13\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795680000000}]},{"id":"fld-deep-morfeo","padre":"misiones","persona":"Morfeo","nombre":"Morfeo - #7706 Vuelta al 95, partir de main","principal":{"encargo":7706,"estado":"pending","estado_es":"pendiente","titulo":"Vuelta al 95, partir de main","maquina":"win95"},"ficheros":[{"id":"doc-mision-morfeo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Morfeo\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7706 (#7706.11.25)\nTítulo: Vuelta al 95, partir de main\nEstado: pendiente\nMáquina: win95\nÚltimo latido: sin verificar\n\nResumen:\n«Vuelta al 95» (admira.live/windows95). Parte siempre de main y no subas tu HTML antiguo.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795626180000},{"id":"doc-encargos-morfeo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Morfeo\n26-11-2026 10:25 hora de Madrid\n\n• #7706 · pendiente · Vuelta al 95, partir de main\n  Máquina: win95 · 25-11-2026 18:03\n• #7704 · pendiente · Vuelta al 95\n  Máquina: win95 · 25-11-2026 14:52\n• #7701 · pendiente · Vuelta al 95\n  Máquina: win95 · 25-11-2026 14:05\n• #7695 · pendiente · Demo /sala-voz Jobs↔Elon en las dos pantallas\n  Máquina: macmini · 25-11-2026 10:14\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795626180000}]},{"id":"fld-deep-oraculo","padre":"misiones","persona":"Oraculo","nombre":"Oráculo - #7677 Ojos Remotos (bloqueado)","principal":{"encargo":7677,"estado":"blocked","estado_es":"bloqueado","titulo":"Ojos Remotos (bloqueado)","maquina":"admiranext04"},"ficheros":[{"id":"doc-mision-oraculo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Oráculo\n26-11-2026 10:25 hora de Madrid\n\nEncargo: #7677 (#7677.11.23)\nTítulo: Ojos Remotos (bloqueado)\nEstado: bloqueado\nMáquina: admiranext04\nÚltimo latido: sin verificar\n\nResumen:\nSeguimiento de Ojos Remotos en AdmiraNeXT04: hace falta acceso de lectura a admira-vault. Los equipos 01, 02, 03 y 05 siguen sin fuente.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795423620000},{"id":"doc-encargos-oraculo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Oráculo\n26-11-2026 10:25 hora de Madrid\n\n• #7677 · bloqueado · Ojos Remotos (bloqueado)\n  Máquina: admiranext04 · 23-11-2026 09:47\n• #7676 · bloqueado · Ojos Remotos (bloqueado)\n  Máquina: admiranext04 · 23-11-2026 09:37\n• #7624 · bloqueado · En AdmiraNeXT03, la pantalla de detrás de la pared…\n  Máquina: admiranext03 · 19-11-2026 12:31\n• #7606 · bloqueado · Dejar sshd en marcha en AdmiraNeXT03 y…\n  Máquina: admiranext03 · 16-11-2026 12:08\n• #7605 · bloqueado · Captura y relanzar el player del show en…\n  Máquina: admiranext04 · 16-11-2026 12:03\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795423620000}]},{"id":"fld-stevejobs","padre":"miscelanea","persona":"Jobs","nombre":"SteveJobs","principal":{"encargo":null,"estado":"in_progress","estado_es":"en curso","titulo":"Win95 Xperience y control de DeepAgents en admira.live","maquina":"GrokBotBox"},"ficheros":[{"id":"doc-mision-stevejobs","nombre":"Misión del día.txt","texto":"MISIÓN DE STEVE JOBS\n26-11-2026 10:25 hora de Madrid\n\nSteve Jobs está dedicado hoy a:\n«Win95 Xperience y control de DeepAgents en admira.live».\n\nFoco de hoy (26-11-2026):\n— Arranque por defecto de la Xperience (distribución de iconos e ICQGram).\n— Subcarpetas (crear, abrir y subir un nivel) en Miscelánea y en Misiones.\n— Control de los DeepAgents (Neo, Trinity, Morfeo y Oráculo) en la carpeta Misiones del escritorio.\n— Frescura de cupos en ICQGram.\n\nNota de solo lectura. Sin secretos.","mtime":1795685100000}]}]}</script>
+    <script type="application/json" id="misiones-fallback-seed">{"ok":true,"generado":1795687800000,"generado_madrid":"26-11-2026 11:10","aviso":"","fuente":"admira.live","carpetas":[{"id":"fld-deep-neo","padre":"misiones","persona":"Neo","nombre":"Neo - #7621 Screen sync AdmiraNeXT01–05","principal":{"encargo":7621,"estado":"in_progress","estado_es":"en curso","titulo":"Screen sync AdmiraNeXT01–05","maquina":"macstudio","acuseMs":0},"abiertos":[{"encargo":7687,"etiqueta":"#7687.11.24","estado":"pending","estado_es":"pendiente","titulo":"StreamDeck","cuandoMs":1795515180000,"acuseMs":0},{"encargo":7632,"etiqueta":"#7632.11.20","estado":"blocked","estado_es":"bloqueado","titulo":"Modo Demo del player en las ultrawide…","cuandoMs":1795172160000,"acuseMs":0},{"encargo":7621,"etiqueta":"#7621.11.19","estado":"in_progress","estado_es":"en curso","titulo":"Screen sync AdmiraNeXT01–05","cuandoMs":1795073400000,"acuseMs":0}],"hechas":[],"ficheros":[{"id":"doc-mision-neo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Neo\n26-11-2026 11:10 hora de Madrid\n\nEncargo: #7621 (#7621.11.19)\nTítulo: Screen sync AdmiraNeXT01–05\nEstado: en curso\nMáquina: macstudio\nÚltimo latido: sin verificar\n\nResumen:\nRetoma de #7612 (Screen sync AdmiraNeXT01–05), sesión nueva. Los cinco PCs están listos; falta que Carlos pulse SINCRO en admiranext.com/demo.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795073400000},{"id":"doc-encargos-neo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Neo\n26-11-2026 11:10 hora de Madrid\n\n• #7687 · pendiente · StreamDeck\n  Máquina: macstudio · 24-11-2026 11:13\n• #7632 · bloqueado · Modo Demo del player en las ultrawide…\n  Máquina: macstudio · 20-11-2026 11:56\n• #7621 · en curso · Screen sync AdmiraNeXT01–05\n  Máquina: macstudio · 19-11-2026 08:30\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795073400000}]},{"id":"fld-deep-trinity","padre":"misiones","persona":"Trinity","nombre":"Trinity - #7736 Webhook Huang y espejo #7536","principal":{"encargo":7736,"estado":"pending","estado_es":"pendiente","titulo":"Webhook Huang y espejo #7536","maquina":"macbookairrosa","acuseMs":0},"abiertos":[{"encargo":7736,"etiqueta":"#7736.11.26","estado":"pending","estado_es":"pendiente","titulo":"Webhook Huang y espejo #7536","cuandoMs":1795680000000,"acuseMs":0},{"encargo":7693,"etiqueta":"#7693.11.25","estado":"blocked","estado_es":"bloqueado","titulo":"Prueba viva de los 6 webhooks principales y cruce…","cuandoMs":1795598040000,"acuseMs":0},{"encargo":7692,"etiqueta":"#7692.11.25","estado":"pending","estado_es":"pendiente","titulo":"Webhook Huang y espejo #7536","cuandoMs":1795597980000,"acuseMs":0}],"hechas":[],"ficheros":[{"id":"doc-mision-trinity","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Trinity\n26-11-2026 11:10 hora de Madrid\n\nEncargo: #7736 (#7736.11.26)\nTítulo: Webhook Huang y espejo #7536\nEstado: pendiente\nMáquina: macbookairrosa\nÚltimo latido: sin verificar\n\nResumen:\nTitular: Retoma control mañana 26-nov — Reparar el 401 del webhook de Huang y cerrar el espejo #7536\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795680000000},{"id":"doc-encargos-trinity","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Trinity\n26-11-2026 11:10 hora de Madrid\n\n• #7736 · pendiente · Webhook Huang y espejo #7536\n  Máquina: macbookairrosa · 26-11-2026 09:00\n• #7693 · bloqueado · Prueba viva de los 6 webhooks principales y cruce…\n  Máquina: macbookpronegro14 · 25-11-2026 10:14\n• #7692 · pendiente · Webhook Huang y espejo #7536\n  Máquina: macbookairrosa · 25-11-2026 10:13\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795680000000}]},{"id":"fld-deep-morfeo","padre":"misiones","persona":"Morfeo","nombre":"Morfeo - #7706 Vuelta al 95, partir de main","principal":{"encargo":7706,"estado":"pending","estado_es":"pendiente","titulo":"Vuelta al 95, partir de main","maquina":"win95","acuseMs":0},"abiertos":[{"encargo":7706,"etiqueta":"#7706.11.25","estado":"pending","estado_es":"pendiente","titulo":"Vuelta al 95, partir de main","cuandoMs":1795626180000,"acuseMs":0},{"encargo":7704,"etiqueta":"#7704.11.25","estado":"pending","estado_es":"pendiente","titulo":"Vuelta al 95","cuandoMs":1795614720000,"acuseMs":0},{"encargo":7701,"etiqueta":"#7701.11.25","estado":"pending","estado_es":"pendiente","titulo":"Vuelta al 95","cuandoMs":1795611900000,"acuseMs":0},{"encargo":7695,"etiqueta":"#7695.11.25","estado":"pending","estado_es":"pendiente","titulo":"Demo /sala-voz Jobs↔Elon en las dos pantallas","cuandoMs":1795598040000,"acuseMs":0}],"hechas":[],"ficheros":[{"id":"doc-mision-morfeo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Morfeo\n26-11-2026 11:10 hora de Madrid\n\nEncargo: #7706 (#7706.11.25)\nTítulo: Vuelta al 95, partir de main\nEstado: pendiente\nMáquina: win95\nÚltimo latido: sin verificar\n\nResumen:\n«Vuelta al 95» (admira.live/windows95). Parte siempre de main y no subas tu HTML antiguo.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795626180000},{"id":"doc-encargos-morfeo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Morfeo\n26-11-2026 11:10 hora de Madrid\n\n• #7706 · pendiente · Vuelta al 95, partir de main\n  Máquina: win95 · 25-11-2026 18:03\n• #7704 · pendiente · Vuelta al 95\n  Máquina: win95 · 25-11-2026 14:52\n• #7701 · pendiente · Vuelta al 95\n  Máquina: win95 · 25-11-2026 14:05\n• #7695 · pendiente · Demo /sala-voz Jobs↔Elon en las dos pantallas\n  Máquina: macmini · 25-11-2026 10:14\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795626180000}]},{"id":"fld-deep-oraculo","padre":"misiones","persona":"Oraculo","nombre":"Oráculo - #7739 Hackeo desde el gemelo de StreamDeck (Terminator)","principal":{"encargo":7739,"estado":"pending","estado_es":"pendiente","titulo":"Hackeo desde el gemelo de StreamDeck (Terminator)","maquina":"admiranext01","acuseMs":0},"abiertos":[{"encargo":7739,"etiqueta":"#7739.11.26","estado":"pending","estado_es":"pendiente","titulo":"Hackeo desde el gemelo de StreamDeck (Terminator)","cuandoMs":1795687080000,"acuseMs":0},{"encargo":7677,"etiqueta":"#7677.11.23","estado":"blocked","estado_es":"bloqueado","titulo":"Ojos Remotos (bloqueado)","cuandoMs":1795423620000,"acuseMs":0},{"encargo":7676,"etiqueta":"#7676.11.23","estado":"blocked","estado_es":"bloqueado","titulo":"Ojos Remotos (bloqueado)","cuandoMs":1795423020000,"acuseMs":0},{"encargo":7624,"etiqueta":"#7624.11.19","estado":"blocked","estado_es":"bloqueado","titulo":"En AdmiraNeXT03, la pantalla de detrás de la pared…","cuandoMs":1795087860000,"acuseMs":0},{"encargo":7606,"etiqueta":"#7606.11.16","estado":"blocked","estado_es":"bloqueado","titulo":"Dejar sshd en marcha en AdmiraNeXT03 y…","cuandoMs":1794827280000,"acuseMs":0},{"encargo":7605,"etiqueta":"#7605.11.16","estado":"blocked","estado_es":"bloqueado","titulo":"Captura y relanzar el player del show en…","cuandoMs":1794826980000,"acuseMs":0}],"hechas":[{"encargo":7626,"etiqueta":"#7626.11.19","estado":"done","estado_es":"hecho","titulo":"Dejar el player de AdmiraTV a pantalla completa en…","cuandoMs":1795088640000,"acuseMs":0},{"encargo":7625,"etiqueta":"#7625.11.19","estado":"done","estado_es":"hecho","titulo":"Arrancar el player de AdmiraTV a pantalla completa…","cuandoMs":1795088640000,"acuseMs":0}],"ficheros":[{"id":"doc-mision-oraculo","nombre":"Misión del día.txt","texto":"MISIÓN DEL DÍA — Oráculo\n26-11-2026 11:10 hora de Madrid\n\nEncargo: #7739 (#7739.11.26)\nTítulo: Hackeo desde el gemelo de StreamDeck (Terminator)\nEstado: pendiente\nMáquina: admiranext01\nÚltimo latido: sin verificar\n\nResumen:\nGemelo digital de StreamDeck para controlar la Xperiencia Terminator. Encargo de Carlos: mejorar el gemelo digital de la StreamDeck, empezando por el BOTÓN HACKEO.\n\nDocumento de solo lectura, hidratado desde admira.live. Sin secretos.","mtime":1795687080000},{"id":"doc-encargos-oraculo","nombre":"Encargos abiertos.txt","texto":"ENCARGOS ABIERTOS — Oráculo\n26-11-2026 11:10 hora de Madrid\n\n• #7739 · pendiente · Hackeo desde el gemelo de StreamDeck (Terminator)\n  Máquina: admiranext01 · 26-11-2026 10:58\n• #7677 · bloqueado · Ojos Remotos (bloqueado)\n  Máquina: admiranext04 · 23-11-2026 09:47\n• #7676 · bloqueado · Ojos Remotos (bloqueado)\n  Máquina: admiranext04 · 23-11-2026 09:37\n• #7624 · bloqueado · En AdmiraNeXT03, la pantalla de detrás de la pared…\n  Máquina: admiranext03 · 19-11-2026 12:31\n• #7606 · bloqueado · Dejar sshd en marcha en AdmiraNeXT03 y…\n  Máquina: admiranext03 · 16-11-2026 12:08\n• #7605 · bloqueado · Captura y relanzar el player del show en…\n  Máquina: admiranext04 · 16-11-2026 12:03\n\nÚltimo latido de cada máquina: sin verificar en este visor.\nSolo lectura. Sin secretos, IPs ni claves.","mtime":1795687080000}]},{"id":"fld-stevejobs","padre":"miscelanea","persona":"Jobs","nombre":"SteveJobs","principal":{"encargo":null,"estado":"in_progress","estado_es":"en curso","titulo":"Win95 Xperience y control de DeepAgents en admira.live","maquina":"GrokBotBox"},"ficheros":[{"id":"doc-mision-stevejobs","nombre":"Misión del día.txt","texto":"MISIÓN DE STEVE JOBS\n26-11-2026 11:10 hora de Madrid\n\nSteve Jobs está dedicado hoy a:\n«Win95 Xperience y control de DeepAgents en admira.live».\n\nFoco de hoy (26-11-2026):\n— Arranque por defecto de la Xperience (distribución de iconos e ICQGram).\n— Subcarpetas (crear, abrir y subir un nivel) en Miscelánea y en Misiones.\n— Control de los DeepAgents (Neo, Trinity, Morfeo y Oráculo) en la carpeta Misiones del escritorio.\n— Frescura de cupos en ICQGram.\n\nNota de solo lectura. Sin secretos.","mtime":1795687800000}]}]}</script>
     <!-- Admister (homenaje P2P) -->
     <div id="nap" class="win" style="left:88px;top:24px;width:540px;height:340px;display:none">
       <div class="tb"><span data-ico="p2p"></span><span class="t">Napster v2.0 Transfer</span><span class="x" data-min="nap">_</span><span class="x" data-max="nap" title="Maximizar">□</span><span class="x gap" data-close="nap">×</span></div>
@@ -3538,14 +3544,14 @@ var MISIONES={at:0,loading:false,error:''};
 function loadMisiones(force){
   if(!MISC_ID) ensureMiscFolder();
   if(!MISIONES_ID) ensureMisionesFolder();
-  if(typeof fetch!=='function'){ applyMisionesData(misionesFallback()); return; }
+  if(typeof fetch!=='function'){ MISIONES.datos=misionesFallback(); applyMisionesData(MISIONES.datos); return; }
   if(MISIONES.loading) return;
   if(!force&&MISIONES.at&&now()-MISIONES.at<15000) return;
   MISIONES.loading=true;
   fetch(MISIONES_URL,{cache:'no-store',credentials:'same-origin',headers:{accept:'application/json'}})
     .then(function(r){ if(r.status===401) return null; return r.ok?r.json():null; })
-    .then(function(d){ MISIONES.loading=false; MISIONES.at=now(); if(d&&d.ok&&Array.isArray(d.carpetas)) applyMisionesData(d); else applyMisionesData(misionesFallback()); })
-    .catch(function(){ MISIONES.loading=false; MISIONES.at=now(); applyMisionesData(misionesFallback()); });
+    .then(function(d){ MISIONES.loading=false; MISIONES.at=now(); if(d&&d.ok&&Array.isArray(d.carpetas)){ MISIONES.datos=d; applyMisionesData(d); } else { MISIONES.datos=misionesFallback(); applyMisionesData(MISIONES.datos); } })
+    .catch(function(){ MISIONES.loading=false; MISIONES.at=now(); MISIONES.datos=misionesFallback(); applyMisionesData(MISIONES.datos); });
 }
 function plainKeyConsejero(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 function clavesCarpetaConsejero(c){
@@ -5584,7 +5590,7 @@ function wireNap(){
 var ICQ={open:false,who:null,chatId:0,busy:false,ended:false,pending:{},greeted:false,timer:null,sel:null};
 var ENV='<svg viewBox="0 0 14 10"><rect x=".5" y=".5" width="13" height="9" fill="#ffe14a" stroke="#000"/><path d="M.5.5l6.5 5 6.5-5" fill="none" stroke="#000"/></svg>';
 function bub(col){ return '<svg viewBox="0 0 14 14"><path d="M1.5 2.5h11v7h-6l-3 3v-3h-2z" fill="'+col+'" stroke="#000" shape-rendering="crispEdges"/></svg>'; }
-function contact(id){ var g=consejero(id); if(g) return g; for(var i=0;i<CONFIG.contacts.length;i++) if(CONFIG.contacts[i].id===id) return CONFIG.contacts[i]; return null; }
+function contact(id){ var g=consejero(id); if(g) return g; var d=typeof deepAgent==='function'?deepAgent(id):null; if(d) return d; for(var i=0;i<CONFIG.contacts.length;i++) if(CONFIG.contacts[i].id===id) return CONFIG.contacts[i]; return null; }
 
 /* ---------- ICQGram en línea: hilo real con los consejeros de admira.live ---------- */
 var ICQG={on:false,sent:0,known:{},waitingSince:0,yo:''};
@@ -5823,6 +5829,58 @@ function cupoCuando(ts){
     return g('day')+'-'+g('month')+' '+g('hour')+':'+g('minute')+' (Madrid)';
   }catch(e){ return ''; }
 }
+var DEEP_ICQ=[
+  {id:'d-neo',persona:'Neo',name:'Neo'},
+  {id:'d-trinity',persona:'Trinity',name:'Trinity'},
+  {id:'d-morfeo',persona:'Morfeo',name:'Morfeo'},
+  {id:'d-oraculo',persona:'Oraculo',name:'Oráculo'}
+];
+var ICQ_FOLD_KEY='admira-win95-icq-fold', ICQ_OPEN_KEY='admira-win95-icq-open';
+var ICQ_FOLD={leyendas:false,actuales:false,deepagents:true,offline:false,'en-linea':false};
+var ICQ_OPEN={};
+function loadIcqFold(){
+  try{ var d=JSON.parse(localStorage.getItem(ICQ_FOLD_KEY)||'null'); if(d&&typeof d==='object'){ Object.keys(ICQ_FOLD).forEach(function(k){ if(k in d) ICQ_FOLD[k]=!!d[k]; }); } }catch(e){}
+  try{ var o=JSON.parse(localStorage.getItem(ICQ_OPEN_KEY)||'null'); if(o&&typeof o==='object') ICQ_OPEN=o; }catch(e){}
+}
+function saveIcqFold(){
+  try{ localStorage.setItem(ICQ_FOLD_KEY,JSON.stringify(ICQ_FOLD)); }catch(e){}
+  try{ localStorage.setItem(ICQ_OPEN_KEY,JSON.stringify(ICQ_OPEN)); }catch(e){}
+}
+function carpetaDeep(persona){
+  var d=(MISIONES&&MISIONES.datos)||misionesFallback()||{}, list=d.carpetas||[];
+  for(var i=0;i<list.length;i++) if(list[i]&&list[i].persona===persona) return list[i];
+  return null;
+}
+function deepAgent(id){
+  for(var i=0;i<DEEP_ICQ.length;i++) if(DEEP_ICQ[i].id===id){
+    var a=DEEP_ICQ[i], c=carpetaDeep(a.persona), p=c&&c.principal, st=p?String(p.estado||''):'';
+    var on=(st==='in_progress'||st==='ack'), desconocido=!on;
+    var corto=p?('#'+p.encargo+' · '+(p.estado_es||p.estado)+' · '+(p.titulo||'')):'';
+    var status=p?('encargo #'+p.encargo+' · '+(p.estado_es||p.estado)+(p.acuseMs?' · acusado':' · sin acuse')):'sin encargo abierto';
+    return {id:a.id,persona:a.persona,name:a.name,deep:true,sinChat:true,real:true,on:on,desconocido:desconocido,status:status,hoy:0,principal:p||null,abiertos:(c&&c.abiertos)||[],hechas:(c&&c.hechas)||[],mis:corto?{corto:corto,largo:corto}:null};
+  }
+  return null;
+}
+function misionDeContacto(c){ return c&&c.deep?(c.mis||null):misionConsejeroEnMiscelanea(c); }
+function detalleMisiones(c, mis){
+  var out=[], p, i, e, hechas;
+  if(c.deep){
+    p=c.principal;
+    if(p) out.push('<div><b>En curso:</b> #'+p.encargo+(p.etiqueta&&p.etiqueta!==('#'+p.encargo)?' ('+esc(p.etiqueta)+')':'')+' · '+esc(p.estado_es||p.estado)+' · '+esc(p.titulo)+(p.acuseMs?' · acusado':' · sin acuse')+'</div>');
+    else out.push('<div>Sin encargo abierto ahora.</div>');
+    (c.abiertos||[]).forEach(function(x){ if(!p||x.encargo!==p.encargo) out.push('<div>#'+x.encargo+' · '+esc(x.estado_es||x.estado)+' · '+esc(x.titulo)+'</div>'); });
+    hechas=c.hechas||[];
+    if(hechas.length){
+      out.push('<div><b>Hechas:</b></div>');
+      for(i=0;i<hechas.length;i++){ e=hechas[i]; out.push('<div>#'+e.encargo+' · '+esc(e.estado_es||e.estado)+' · '+esc(e.titulo)+'</div>'); }
+    } else out.push('<div>Sin misiones hechas recientes.</div>');
+  } else if(mis){
+    out.push('<div><b>En curso:</b> '+esc(mis.largo||mis.corto)+'</div>');
+  } else {
+    out.push('<div>Sin misión publicada en Miscelánea.</div>');
+  }
+  return '<div class="cdet" data-id="'+c.id+'">'+out.join('')+'</div>';
+}
 function cupoCab(k){
   var c=PRES.datos&&PRES.datos.cuentas&&PRES.datos.cuentas[k]&&PRES.datos.cuentas[k].cupo;
   if(!c||c.pct===null||c.pct===undefined||!isFinite(Number(c.pct))) return {txt:'', title:''};
@@ -5831,15 +5889,14 @@ function cupoCab(k){
   return {txt:'('+Math.round(q)+' %)', title:tit};
 }
 function renderContacts(){
-  function row(c){ var mis=misionConsejeroEnMiscelanea(c); var n=(c.hoy>0)?' ('+c.hoy+')':''; var misH=mis?' <span class="mis">· '+esc(mis.corto)+'</span>':''; var bits=[]; if(c.real&&c.status) bits.push(c.status); if(mis) bits.push(mis.largo||mis.corto); var tt=bits.length?' title="'+esc(bits.join(' · '))+'"':''; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+'" data-id="'+c.id+'"'+tt+'>'+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+misH+'</span><i class="env">'+ENV+'</i></div>'; }
+  function row(c){ var mis=misionDeContacto(c); var n=(c.hoy>0)?' ('+c.hoy+')':''; var misH=mis?' <span class="mis">· '+esc(mis.corto)+'</span>':''; var bits=[]; if(c.real&&c.status) bits.push(c.status); if(mis) bits.push(mis.largo||mis.corto); var tt=bits.length?' title="'+esc(bits.join(' · '))+'"':''; var open=!!ICQ_OPEN[c.id]; var tog='<i class="ctog" data-id="'+c.id+'" title="Ver misiones">'+(open?'▾':'▸')+'</i>'; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+(c.deep?' deep':'')+'" data-id="'+c.id+'"'+tt+'>'+tog+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+misH+'</span><i class="env">'+ENV+'</i></div>'+(open?detalleMisiones(c,mis):''); }
   var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
-  // Por cuenta: «Leyendas (11 %)» = cupo Grok Bot que QUEDA por consumir, si hay lectura vigente (< 13 h y antes del reset); si no, solo el nombre, sin porcentaje. Al lado de cada consejero, las intervenciones de hoy (Madrid); si son 0, no se pone nada. «Fuera de línea» = cuentas caídas + los 3 de la demo.
-  var grp=function(t,l,k){ var h='<div class="cgrp">'+t+' ('+l.length+')</div>';
-    if(k){ var cu=cupoCab(k); h='<div class="cgrp"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'>'+t+(cu.txt?' '+cu.txt:'')+'</div>'; }
-    return h+l.map(row).join(''); }, html;
+  // Por cuenta: «Leyendas (11 %)» = cupo Grok Bot que QUEDA por consumir, si hay lectura vigente (< 13 h y antes del reset); si no, solo el nombre, sin porcentaje. Al lado de cada consejero, las intervenciones de hoy (Madrid); si son 0, no se pone nada. «Fuera de línea» = cuentas caídas + los 3 de la demo. DeepAgents (Neo, Trinity, Morfeo, Oráculo) va justo antes, plegado por defecto; un clic en la cabecera pliega o despliega el grupo.
+  var grp=function(t,l,k){ var key=k||(t==='Fuera de línea'?'offline':t==='En línea'?'en-linea':'g'); var folded=!!ICQ_FOLD[key]; var cu=k?cupoCab(k):{txt:'',title:''}; var label=k?(t+(cu.txt?' '+cu.txt:'')):(t+' ('+l.length+')'); var h='<div class="csec'+(folded?' col':'')+'" data-grp="'+esc(key)+'">'; h+='<div class="cgrp" data-grp="'+esc(key)+'"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'><span class="chv">'+(folded?'▸':'▾')+'</span> '+label+'</div>'; return h+'<div class="cbody">'+l.map(row).join('')+'</div></div>'; }, html;
   if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }), de=function(k){ return todos.filter(function(c){ return c.on&&c.cuenta===k; }); };
     off=todos.filter(function(c){ return !c.on; }).concat(off); html=grp('Leyendas',de('leyendas'),'leyendas')+grp('Actuales',de('actuales'),'actuales'); }
   else html=grp('En línea',CONFIG.contacts.filter(function(c){ return c.on; }));
+  html+=grp('DeepAgents',DEEP_ICQ.map(function(a){ return deepAgent(a.id); }),'deepagents');
   qs('#clist').innerHTML=html+grp('Fuera de línea',off);
   qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
 }
@@ -5876,6 +5933,7 @@ function addMsg(name,text,cls,auto){
 }
 function openChat(id){
   var c=contact(id); if(!c) return;
+  if(c.deep){ ICQ_OPEN[c.id]=true; saveIcqFold(); renderContacts(); return; }
   if(c.real&&c.sinChat){ sfxDing(); msgBox('ICQGram',c.name+' ('+(c.cuenta==='actuales'?'Actuales':'Leyendas')+') no tiene línea directa todavía.\nAún no existe su hilo en admira.live/chat/'+c.persona+'.','info'); return; }
   if(c.real){ if(icqgLive()) openRealChat(c); return; }
   realInput(false);
@@ -5930,8 +5988,17 @@ async function choose(o){
 }
 function wireIcq(){
   var list=qs('#clist');
-  list.addEventListener('click',function(e){ var r=e.target.closest('.crow'); if(!r) return; ICQ.sel=r.getAttribute('data-id'); qsa('.crow',list).forEach(function(x){ x.classList.toggle('sel',x===r); }); if(e.isTrusted&&lastPointerType==='touch') openChat(ICQ.sel); });
-  list.addEventListener('dblclick',function(e){ var r=e.target.closest('.crow'); if(r) openChat(r.getAttribute('data-id')); });
+  loadIcqFold();
+  list.addEventListener('click',function(e){
+    var g=e.target.closest('.cgrp');
+    if(g){ var k=g.getAttribute('data-grp'); if(k){ ICQ_FOLD[k]=!ICQ_FOLD[k]; saveIcqFold(); renderContacts(); } return; }
+    var tog=e.target.closest('.ctog'), r=e.target.closest('.crow'); if(!r) return;
+    var id=r.getAttribute('data-id'), c=contact(id);
+    ICQ.sel=id; qsa('.crow',list).forEach(function(x){ x.classList.toggle('sel',x.getAttribute('data-id')===id); });
+    if(tog||(c&&c.deep)){ ICQ_OPEN[id]=!ICQ_OPEN[id]; saveIcqFold(); renderContacts(); return; }
+    if(e.isTrusted&&lastPointerType==='touch') openChat(id);
+  });
+  list.addEventListener('dblclick',function(e){ if(e.target.closest('.cgrp')||e.target.closest('.ctog')) return; var r=e.target.closest('.crow'); if(!r) return; var id=r.getAttribute('data-id'), c=contact(id); if(c&&c.deep){ ICQ_OPEN[id]=true; saveIcqFold(); renderContacts(); return; } openChat(id); });
   qs('#icqMain').addEventListener('click',function(){ sfxDing(); msgBox('ICQGram','Menú principal de ICQGram\n\nAñadir contactos, preferencias, cambiar estado…\n(Disponible en la versión 99b.)','info'); });
   qs('#icqSend').addEventListener('click',function(){ if(consejero(ICQ.who)){ sendReal(qs('#icqReal').value); return; } var b=qs('#icqOpts .btn'); if(b) b.click(); });
   qs('#icqReal').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendReal(qs('#icqReal').value); } });

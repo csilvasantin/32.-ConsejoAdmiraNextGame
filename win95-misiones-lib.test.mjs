@@ -29,6 +29,7 @@ test("titularCorto: Titular, comillas, retoma y frases de proyecto", () => {
   assert.equal(titularCorto("Retoma de #7612 (Screen sync AdmiraNeXT01–05), sesión nueva."), "Screen sync AdmiraNeXT01–05");
   assert.equal(titularCorto("«Vuelta al 95» (admira.live/windows95). Parte siempre de main."), "Vuelta al 95, partir de main");
   assert.equal(titularCorto("Seguimiento de Ojos Remotos en AdmiraNeXT04: hace falta acceso.", "blocked"), "Ojos Remotos (bloqueado)");
+  assert.equal(titularCorto("Gemelo digital de StreamDeck para controlar la Xperiencia Terminator. Encargo de Carlos: mejorar el gemelo, empezando por el BOTÓN HACKEO."), "Hackeo desde el gemelo de StreamDeck (Terminator)");
 });
 
 test("principalDe: hoy gana; si no, in_progress; si no, el más reciente", () => {
@@ -41,7 +42,9 @@ test("principalDe: hoy gana; si no, in_progress; si no, el más reciente", () =>
   const mor = BANDEJAS_26NOV.Morfeo.map(normalizarEncargo);
   assert.equal(principalDe(mor, AHORA).encargo, 7706);
   const ora = BANDEJAS_26NOV.Oraculo.map(normalizarEncargo);
-  assert.equal(principalDe(ora, AHORA).encargo, 7677);
+  assert.equal(principalDe(ora, AHORA).encargo, 7739);
+  assert.equal(principalDe(ora, AHORA).estado, "pending");
+  assert.equal(principalDe(ora, AHORA).acuseMs, 0);
 });
 
 test("fallback 26-nov: 4 DeepAgents + SteveJobs, misiones reales, sin secretos", () => {
@@ -52,7 +55,14 @@ test("fallback 26-nov: 4 DeepAgents + SteveJobs, misiones reales, sin secretos",
   assert.ok(nombres.some((n) => n.startsWith("Neo - #7621") && /Screen sync/i.test(n)), nombres.join(" | "));
   assert.ok(nombres.some((n) => n.startsWith("Trinity - #7736") && /webhook|Huang|7536/i.test(n)), nombres.join(" | "));
   assert.ok(nombres.some((n) => n.startsWith("Morfeo - #7706") && /Vuelta al 95/i.test(n)), nombres.join(" | "));
-  assert.ok(nombres.some((n) => n.startsWith("Oráculo - #7677") && /Ojos Remotos/i.test(n)), nombres.join(" | "));
+  assert.ok(nombres.some((n) => n.startsWith("Oráculo - #7739") && /Hackeo desde el gemelo de StreamDeck \(Terminator\)/i.test(n)), nombres.join(" | "));
+  const oraC = d.carpetas.find((c) => c.persona === "Oraculo");
+  assert.equal(oraC.principal.encargo, 7739);
+  assert.equal(oraC.principal.estado, "pending");
+  assert.equal(oraC.principal.acuseMs, 0);
+  assert.ok(oraC.abiertos.some((e) => e.encargo === 7739 && e.titulo.includes("StreamDeck")));
+  assert.ok(oraC.hechas.some((e) => e.encargo === 7626 && e.estado === "done"));
+  assert.ok(oraC.hechas.every((e) => !("texto" in e) && !("maquina" in e)));
   assert.ok(nombres.includes("SteveJobs"));
   assert.ok(d.carpetas.filter((c) => c.padre === "misiones").length === 4);
   assert.equal(d.carpetas.find((c) => c.nombre === "SteveJobs").padre, "miscelanea");
@@ -187,4 +197,31 @@ test("Win95 ICQGram: la fila muestra nombre (n) · misión leída de Miscelánea
   assert.match(html, /class="mis"/);
   assert.match(html, /misionConsejeroEnMiscelanea\(c\)/);
   assert.match(html, /\.crow > span\{[^}]*text-overflow:ellipsis/);
+});
+
+test("ICQGram: grupos plegables, DeepAgents antes de Fuera de línea, plegado por defecto, misiones reales", () => {
+  assert.match(html, /var DEEP_ICQ=/);
+  assert.match(html, /id:'d-neo',persona:'Neo',name:'Neo'/);
+  assert.match(html, /id:'d-trinity',persona:'Trinity',name:'Trinity'/);
+  assert.match(html, /id:'d-morfeo',persona:'Morfeo',name:'Morfeo'/);
+  assert.match(html, /id:'d-oraculo',persona:'Oraculo',name:'Oráculo'/);
+  assert.match(html, /ICQ_FOLD=\{leyendas:false,actuales:false,deepagents:true/);
+  assert.match(html, /function deepAgent\(/);
+  assert.match(html, /function detalleMisiones\(/);
+  assert.match(html, /grp\('DeepAgents'/);
+  assert.match(html, /grp\('Fuera de línea',off/);
+  const render = html.slice(html.indexOf("function renderContacts()"), html.indexOf("function dockIcq()"));
+  const da = render.indexOf("grp('DeepAgents'");
+  const fl = render.indexOf("grp('Fuera de línea'");
+  assert.ok(da >= 0 && fl >= 0 && da < fl, "DeepAgents debe ir antes de Fuera de línea");
+  assert.match(html, /data-grp=/);
+  assert.match(html, /class="cgrp"/);
+  assert.match(html, /class="ctog"/);
+  assert.match(html, /class="cdet"/);
+  assert.match(html, /\.clist\{[^}]*overflow:auto/);
+  assert.match(html, /e\.target\.closest\('\.cgrp'\)/);
+  assert.doesNotMatch(html, /id:'d-morfeo'[^\n]*sinChat:false/);
+  // no se pisa el contacto de demo «morfeo»
+  assert.match(html, /id:'morfeo', name:'Morfeo'/);
+  assert.match(html, /if\(c\.deep\)/);
 });

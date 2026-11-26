@@ -76,6 +76,8 @@ export function titularCorto(texto, estado) {
   if (/Vuelta al 95/i.test(t)) return "Vuelta al 95";
   if (/webhook de Huang/i.test(t) && /#7536/.test(t)) return "Webhook Huang y espejo #7536";
   if (/Screen sync/i.test(t)) return "Screen sync AdmiraNeXT01–05";
+  if (/\bStreamDeck\b/i.test(t) && /hackeo/i.test(t) && /Terminator/i.test(t)) return "Hackeo desde el gemelo de StreamDeck (Terminator)";
+  if (/\bStreamDeck\b/i.test(t) && /hackeo/i.test(t)) return "Hackeo desde el gemelo de StreamDeck";
   if (/\bStreamDeck\b/i.test(t)) return "StreamDeck";
   const first = (t.split(/\n/).map((s) => s.trim()).find((s) => s && !/^(⏰|✅|Alcance|Normas|Evidencia|Fecha límite)/.test(s)) || "");
   return acorta(first) || "misión en curso";
@@ -114,12 +116,26 @@ export function normalizarEncargo(raw) {
     const n = Number(cuando);
     ms = n < 1e12 ? n * 1000 : n;
   }
+  const acuse = raw.acuse || raw.ack_at || raw.ackAt || raw.acusado;
+  let acuseMs = Date.parse(acuse);
+  if (!Number.isFinite(acuseMs) && Number(acuse) > 0) {
+    const n = Number(acuse);
+    acuseMs = n < 1e12 ? n * 1000 : n;
+  }
+  const cierre = raw.cierre || raw.done_at || raw.doneAt;
+  let cierreMs = Date.parse(cierre);
+  if (!Number.isFinite(cierreMs) && Number(cierre) > 0) {
+    const n = Number(cierre);
+    cierreMs = n < 1e12 ? n * 1000 : n;
+  }
   return {
     encargo: id,
     etiqueta: String(raw.etiqueta || ("#" + id)).slice(0, 24),
     estado: ESTADO_ES[estado] ? estado : "pending",
     de: sanear(String(raw.de || raw.from_name || "")).slice(0, 80),
     cuandoMs: Number.isFinite(ms) ? ms : 0,
+    acuseMs: Number.isFinite(acuseMs) ? acuseMs : 0,
+    cierreMs: Number.isFinite(cierreMs) ? cierreMs : 0,
     maquina: maquinaLimpia(raw.maquina || raw.machine || raw.target_machine),
     texto: String(raw.texto || raw.text || raw.title || ""),
   };
@@ -209,6 +225,24 @@ function carpetaAgente(agente, encargos, ahora) {
   const lista = (encargos || []).map(normalizarEncargo).filter(Boolean);
   const principal = principalDe(lista, ahora);
   const mtime = principal && principal.cuandoMs ? principal.cuandoMs : ahora;
+  const ficha = (e) => e && {
+    encargo: e.encargo,
+    etiqueta: e.etiqueta,
+    estado: e.estado,
+    estado_es: ESTADO_ES[e.estado] || e.estado,
+    titulo: titularCorto(e.texto, e.estado),
+    cuandoMs: e.cuandoMs || 0,
+    acuseMs: e.acuseMs || 0,
+  };
+  const abiertos = lista.filter((e) => ABIERTOS.has(e.estado))
+    .slice()
+    .sort((a, b) => (b.cuandoMs || 0) - (a.cuandoMs || 0) || (b.encargo || 0) - (a.encargo || 0))
+    .map(ficha);
+  const hechas = lista.filter((e) => e.estado === "done")
+    .slice()
+    .sort((a, b) => (b.cierreMs || b.cuandoMs || 0) - (a.cierreMs || a.cuandoMs || 0) || (b.encargo || 0) - (a.encargo || 0))
+    .slice(0, 6)
+    .map(ficha);
   return {
     id: agente.folderId,
     padre: "misiones",
@@ -220,7 +254,10 @@ function carpetaAgente(agente, encargos, ahora) {
       estado_es: ESTADO_ES[principal.estado],
       titulo: titularCorto(principal.texto, principal.estado),
       maquina: principal.maquina || "",
+      acuseMs: principal.acuseMs || 0,
     } : null,
+    abiertos,
+    hechas,
     ficheros: [
       { id: "doc-mision-" + agente.id, nombre: "Misión del día.txt", texto: textoMisionDia(agente, principal, ahora), mtime },
       { id: "doc-encargos-" + agente.id, nombre: "Encargos abiertos.txt", texto: textoEncargos(agente, lista, ahora), mtime },
@@ -370,13 +407,16 @@ export const BANDEJAS_26NOV = {
     { encargo: 7695, etiqueta: "#7695.11.25", estado: "pending", de: "status-web · Elon Musk", cuando: "2026-11-25T09:14:00Z", maquina: "macmini", texto: "Titular: Demo /sala-voz Jobs↔Elon en las dos pantallas" },
   ],
   Oraculo: [
+    { encargo: 7739, etiqueta: "#7739.11.26", estado: "pending", de: "status-web · Jensen Huang", cuando: "2026-11-26T09:58:00Z", maquina: "admiranext01", texto: "Gemelo digital de StreamDeck para controlar la Xperiencia Terminator. Encargo de Carlos: mejorar el gemelo digital de la StreamDeck, empezando por el BOTÓN HACKEO." },
     { encargo: 7677, etiqueta: "#7677.11.23", estado: "blocked", de: "status-web · HuangGrokBot", cuando: "2026-11-23T08:47:00Z", maquina: "admiranext04", texto: "Seguimiento de Ojos Remotos en AdmiraNeXT04: hace falta acceso de lectura a admira-vault. Los equipos 01, 02, 03 y 05 siguen sin fuente." },
     { encargo: 7676, etiqueta: "#7676.11.23", estado: "blocked", de: "status-web · HuangGrokBot", cuando: "2026-11-23T08:37:00Z", maquina: "admiranext04", texto: "Instala y deja funcionando Ojos Remotos en AdmiraNeXT04. Duplicado de #7677." },
     { encargo: 7624, etiqueta: "#7624.11.19", estado: "blocked", de: "status-web · HuangGrokBot", cuando: "2026-11-19T11:31:00Z", maquina: "admiranext03", texto: "En AdmiraNeXT03, la pantalla de detrás de la pared de ladrillo está en negro." },
     { encargo: 7606, etiqueta: "#7606.11.16", estado: "blocked", de: "status-web · ArquitectoCursorCloud", cuando: "2026-11-16T11:08:00Z", maquina: "admiranext03", texto: "Dejar sshd en marcha en AdmiraNeXT03 y AdmiraNeXT04. Falta acceso elevado." },
     { encargo: 7605, etiqueta: "#7605.11.16", estado: "blocked", de: "status-web · ArquitectoCursorCloud", cuando: "2026-11-16T11:03:00Z", maquina: "admiranext04", texto: "Captura y relanzar el player del show en AdmiraNeXT03 y AdmiraNeXT04. Duplicado." },
+    { encargo: 7626, etiqueta: "#7626.11.19", estado: "done", de: "status-web · HuangGrokBot", cuando: "2026-11-19T11:44:00Z", done_at: "2026-11-19T11:45:05Z", maquina: "admiranext03", texto: "Dejar el player de AdmiraTV a pantalla completa en este equipo." },
+    { encargo: 7625, etiqueta: "#7625.11.19", estado: "done", de: "status-web · HuangGrokBot", cuando: "2026-11-19T11:44:00Z", done_at: "2026-11-19T11:45:03Z", maquina: "admiranext04", texto: "Arrancar el player de AdmiraTV a pantalla completa en la pantalla principal." },
   ],
 };
 
-const AHORA_FALLBACK = Date.parse("2026-11-26T09:25:00Z"); // 10:25 hora de Madrid
+const AHORA_FALLBACK = Date.parse("2026-11-26T10:10:00Z"); // 11:10 hora de Madrid
 export const MISIONES_FALLBACK = construirMisiones({ bandejas: BANDEJAS_26NOV, ahora: AHORA_FALLBACK });

@@ -1,6 +1,7 @@
 /**
  * GET /api/win95/misiones — misiones de los DeepAgents (y la nota de SteveJobs)
- * para las subcarpetas de Miscelánea en admira.live/windows95 (Carlos, 26-11-2026).
+ * para las subcarpetas de Miscelánea y el grupo DeepAgents de ICQGram (Carlos, 26-11-2026).
+ * Cada carpeta trae principal, abiertos y hechas (títulos saneados, sin texto crudo ni notas).
  * Solo lectura, mismo origen y detrás de la verja: cookie de la puerta o sesión de Google.
  * Fuente: bandeja pública de bot.yokup.com/api/public/inbox?persona=… (sin credenciales).
  * Texto saneado en win95-misiones-lib.mjs: sin tokens, IPs, MACs, correos ni claves SSH.

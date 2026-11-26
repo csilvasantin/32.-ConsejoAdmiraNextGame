@@ -5,8 +5,12 @@
  * /salud consejeros_con_carne, el censo de flota.js y el filtro de telegram.js.
  * Lasseter (John Lasseter, CCO) e Ive (Jony Ive, CDO), coetáneos, tienen silla con clave propia
  * (MCP_KEY_LASSETER / MCP_KEY_IVE) desde el 22-10-2026 (aprobado por Carlos). Sin MacBook.
- * Un coetáneo nuevo (Murati, Porat, Ratti, Reynolds)
+ * Murati (Mira Murati, COO, coetánea) tiene silla con clave propia (MCP_KEY_MURATI) desde el
+ * 26-11-2026 (aprobado por Carlos). Sin MacBook. Su deepagent es Trinity (GrokBotBox).
+ * Un coetáneo nuevo (Porat, Ratti, Reynolds)
  * se añade en este objeto cuando tenga clave y webhook: el resto lo importa.
+ * El alias de Murati es Mira / Mira Murati; no se usa «Trinity» como alias, para no
+ * confundir la silla con el agente Trinity de la flota.
  *
  * Musk (Elon Musk, CEO, lado racional, generación coetáneos) no tiene MacBook.
  * `maquina: 'GrokBot'` dice dónde vive el bot. Ese mismo nombre es el equipo
@@ -32,6 +36,7 @@ export const SILLAS = {
   Disney:  { rol: 'CCO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirCrema', fleet_id: 'admira-macbookaircrema', alias: ['MBACrema', 'MBA Crema', 'Carla', 'admira-macbook-carla'] },
   Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'MacMini', deepagent_runtime: 'Grok CLI' },
   Huang:   { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jensen', 'Jensen Huang'], deepagent: 'Cypher', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b' },
+  Murati:  { rol: 'COO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Mira', 'Mira Murati'], deepagent: 'Trinity', deepagent_maquina: 'GrokBotBox' },
   Lasseter: { rol: 'CCO', lado: 'creativo', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['John Lasseter', 'Lasseter'] },
   Ive:     { rol: 'CDO', lado: 'creativo', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jony', 'Jony Ive'] },
   Y:       { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: [] },

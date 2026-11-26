@@ -98,12 +98,14 @@ test('cli-ayuda: /demo help cuenta, ordena por fecha (interruptores arriba, lueg
   assert.match(h[3], /^26-11-2026 {2}\/demo interactivo/);
   assert.match(h[4], /^26-11-2026 {2}\/demo modo portaventura/);
   assert.match(h[6], /^26-11-2026 {2}\/demo negro/);
-  assert.match(h[7], /^14-10-2026 {2}\/demo interruptores/);
+  assert.match(h[7], /^26-11-2026 {2}\/apagar reuniones/);
+  assert.match(h[10], /^14-10-2026 {2}\/demo interruptores/);
   const old = A.demoHelp('antiguas', false).split('\n');
   assert.match(old[1], /07-10-2026/);
   const az = A.demoHelp('--orden alfabetico', true).split('\n');
   assert.match(az[0], /^There are \d+ demos · by name/);
-  assert.match(az[1], /\/demo admiranext/);
+  assert.match(az[1], /\/apagar interactivos/);
+  assert.ok(az.some((l) => /\/demo admiranext/.test(l)));
   assert.ok(A.RE_DEMO_HELP.test('/demo help antiguas') && A.RE_DEMO_HELP.test('/demo ayuda') && !A.RE_DEMO_HELP.test('/demo lista'));
 });
 

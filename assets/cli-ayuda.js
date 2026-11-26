@@ -21,6 +21,7 @@
   // [orden, fecha AAAA-MM-DD | null, castellano, inglés, origen]
   // /demo interruptores (#5862): página pública propia con su recorrido automático.
   var RE_DEMO_INT = /^\/?demo\s+(interruptores?|apps|clis)\s*$/i;
+  var RE_APAGAR = /^\/?(?:apagar(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|todo))?|encender(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|todo))?|restaurar(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|todo))?)\s*$/i;
   var RE_DEMO_LANZA = /^\/?(?:lanzadera|sala(?:\s+en)?\s+negro|demo\s+(lanzadera|negro|sala(?:\s+en)?\s+negro|admiradesk|interactivo|player(?:\s+interactivo)?|admiranext(?:-interactivo|\s+interactivo)?(?:\.com)?|modo(?:\s+demo)?\s+portaventura(?:next)?(?:\.com)?|portaventura(?:next)?(?:-interactivo|\s+interactivo)?(?:\.com)?|pan(?:-interactivo)?))\s*$/i;
   var CATALOGO = [
     ['/demo admiranext', '2026-11-26', 'Lanzadera, sala de reuniones de Terminator: las Leyendas presentan AdmiraNeXT.com en la Philips 86BDL3650Q del MacBook Air Rosa y el consumo en el PC Monitor del MacBook Air Crema (también «Demo AdmiraNeXT.com»)', 'Launcher, Terminator meeting room: the Legends present AdmiraNeXT.com on the Rosa’s Philips 86BDL3650Q and usage on the Crema’s PC Monitor (also “Demo AdmiraNeXT.com”)', 'admira.live'],
@@ -29,6 +30,9 @@
     ['/demo modo portaventura', '2026-11-26', 'Lanzadera, zona interactiva de Terminator: modo demo PortAventuraNeXT (admiranext.com/demo/PortAventuraNeXT y el player en 01–05)', 'Launcher, Terminator interactive zone: PortAventuraNeXT demo mode (admiranext.com/demo/PortAventuraNeXT and the player on 01–05)', 'admira.live'],
     ['/demo lanzadera', '2026-11-26', 'Abre la lanzadera de presentaciones (/lanzadera/) sin arrancar una demo', 'Opens the presentations launcher (/lanzadera/) without starting a demo', 'admira.live'],
     ['/demo negro', '2026-11-26', 'Lanzadera: pone la sala de reuniones en negro (Philips del Rosa y PC Monitor del Crema), sin apagar nada (también «sala en negro», /sala negro)', 'Launcher: puts the meeting room in black (Rosa’s Philips and the Crema’s PC Monitor) without turning anything off (also “sala en negro”, /sala negro)', 'admira.live'],
+    ['/apagar reuniones', '2026-11-26', 'Lanzadera: apaga la sala de reuniones de Terminator (Philips del Rosa, PC Monitor y portátil del Crema, Plata si está conectado) con confirmación, reutilizando Sala en negro. No apaga el Studio ni el Mini', 'Launcher: turns off the Terminator meeting room (Rosa’s Philips, the Crema’s PC Monitor and laptop, the Plata if connected) after confirmation, reusing Sala en negro. The Studio and Mini are not shut down', 'admira.live'],
+    ['/apagar interactivos', '2026-11-26', 'Lanzadera: apaga la sala de interactivos (players de AdmiraNeXT01–05, verticales y AdmiraDesk) con confirmación, en negro. No apaga ningún equipo', 'Launcher: turns off the interactive room (AdmiraNeXT01–05 players, verticals and AdmiraDesk) after confirmation, in black. No computer is shut down', 'admira.live'],
+    ['/apagar todo', '2026-11-26', 'Lanzadera: apaga las dos zonas de Terminator, con confirmación (también /encender reuniones, /encender interactivos, /restaurar todo)', 'Launcher: turns off both Terminator zones, after confirmation (also /encender reuniones, /encender interactivos, /restaurar todo)', 'admira.live'],
     ['/demo interruptores', '2026-10-14', '⏻ Desktop app y ⏻ CLI de cada Mac, con un botón por unidad («Morfeo · CLI · MBP16» apaga solo ese Morfeo): abrir/cerrar Claude y ChatGPT/Codex y arrancar/apagar los deepagents, de uno en uno o todos (también /demo apps, /demo clis)', '⏻ Desktop app and ⏻ CLI per Mac, with one button per unit («Morfeo · CLI · MBP16» stops only that Morfeo): open/close Claude and ChatGPT/Codex and start/stop the deepagents, one by one or all at once (also /demo apps, /demo clis)', 'admira.live'],
     ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off → 2 claude · codex · grok · Neo Trinity → error con menos de 2, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off → 2 claude · codex · grok · Neo Trinity → fewer-than-2 error, by itself', 'admira.live'],
     ['/demo velocidad', '2026-10-09', 'velocímetro de tokens/hora de la flota (/demo speed en inglés)', 'fleet tokens/hour speedometer (/demo speed)', 'admira.live'],
@@ -149,7 +153,7 @@
     ));
     sec('Suite EXPERTO (admira.live y plataformas)', 'EXPERTO suite (admira.live and platforms)');
     row('/marca · /idioma · /estado · /version', 'verbos de la suite anclada abajo', 'verbs of the suite docked at the bottom');
-    row('/demo · /demo help', 'catálogo de demos (también /demo ayuda, /demo ?). /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura y /demo negro abren la lanzadera', 'demo catalogue (also /demo help, /demo ?). /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura and /demo negro open the launcher');
+    row('/demo · /demo help', 'catálogo de demos (también /demo ayuda, /demo ?). /demo admiranext, /demo negro, /apagar reuniones, /apagar interactivos y /apagar todo abren la lanzadera', 'demo catalogue (also /demo help, /demo ?). /demo admiranext, /demo negro, /apagar reuniones, /apagar interactivos and /apagar todo open the launcher');
     L.push('');
     L.push(t('No se listan aquí capacidades inventadas: solo lo que el código de admira.live entiende hoy.', 'Nothing invented is listed here: only what admira.live’s code understands today.'));
     return L.join('\n').replace(/^\n/, '');
@@ -230,12 +234,22 @@
         return;
       }
       if (/^\/?demo$/i.test(t)) { setTimeout(function () { li(log, T('Hay ', 'There are ') + CATALOGO.length + T(' demos · /demo help las lista de la más reciente a la más antigua (la última: /demo admiranext)', ' demos · /demo help lists them newest first (latest: /demo admiranext)')); }, 0); return; }
-      if (RE_DEMO_LANZA.test(t)) {
+      if (RE_APAGAR.test(t) || RE_DEMO_LANZA.test(t)) {
         e.preventDefault(); e.stopPropagation();
         if (input) input.value = '';
         var dest = '/lanzadera/';
         var arg = (t.replace(/^\//, '').replace(/^demo\s+/i, '') || '').toLowerCase();
-        if (/modo\s*(demo\s*)?portaventura|portaventura[^\n]*interactivo|pan-interactivo/.test(arg)) dest += '?demo=pan-interactivo';
+        if (/^apagar|^encender|^restaurar/.test(arg)) {
+          if (/^apagar\s*$/.test(arg)) dest += '#zona-apagado';
+          else if (/^encender|^restaurar/.test(arg)) {
+            if (/todo|all/.test(arg)) dest += '?encender=todo';
+            else if (/interact/.test(arg)) dest += '?encender=interactivos';
+            else dest += '?encender=reuniones';
+          } else if (/todo|all/.test(arg)) dest += '?apagar=todo';
+          else if (/interact/.test(arg)) dest += '?apagar=interactivos';
+          else dest += '?apagar=reuniones';
+        }
+        else if (/modo\s*(demo\s*)?portaventura|portaventura[^\n]*interactivo|pan-interactivo/.test(arg)) dest += '?demo=pan-interactivo';
         else if (/negro|sala(?:\s+en)?\s+negro/.test(arg) || /sala(?:\s+en)?\s+negro/.test(t)) dest += '?demo=negro';
         else if (/admiradesk|interactivo|player/.test(arg)) dest += '?demo=interactivo';
         else if (/admiranext/.test(arg)) dest += '?demo=admiranext';

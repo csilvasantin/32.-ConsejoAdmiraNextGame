@@ -30,3 +30,16 @@
 /* El cursor no se oculta nunca en esta página. */
 html,body,.lanzadera,.demo-card{cursor:auto}
 .demo-card,.voz-btn,a,button{cursor:pointer}
+
+#zona-apagado{padding-top:8px;border-top:1px solid rgba(120,243,255,.2)}
+.demo-card.demo-apagar{border-color:rgba(255,215,94,.45)}
+.demo-card.demo-apagar:hover,.demo-card.demo-apagar:focus-visible{border-color:#ffd75e}
+.demo-card.demo-encender{border-color:rgba(120,243,255,.5)}
+.confirm-apagado{margin:0 0 36px;padding:18px 20px;border:2px solid #ffd75e;background:#0d0a05}
+.confirm-apagado h2{margin:0 0 8px;color:#ffd75e;font-size:20px}
+.confirm-hora{margin:0 0 10px;color:#ffd75e;font:600 15px/1.4 system-ui,sans-serif}
+.confirm-apagado ul{margin:0 0 12px;padding-left:1.2em;line-height:1.5}
+.confirm-acciones{display:flex;flex-wrap:wrap;gap:12px}
+.confirm-ok,.confirm-no{appearance:none;cursor:pointer;border-radius:8px;padding:10px 16px;font:700 14px/1 system-ui,sans-serif}
+.confirm-ok{border:1px solid #ffd75e;background:#1a140a;color:#ffd75e}
+.confirm-no{border:1px solid rgba(120,243,255,.5);background:#06121a;color:#78f3ff}

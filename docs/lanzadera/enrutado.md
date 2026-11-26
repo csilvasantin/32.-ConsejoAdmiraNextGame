@@ -19,3 +19,16 @@ Antes de marcar una demo como en marcha se hace una captura de cada pantalla des
 ## Sala en negro
 
 El botón «Sala en negro» (voz: «sala en negro», CLI: `/sala negro`, `/demo negro`) abre una página negra a pantalla completa en la Philips del Rosa y en el PC Monitor del Crema. No apaga los equipos, no oculta el cursor (`cursor: auto`) y no desactiva ningún dispositivo.
+
+
+## Apagado por zona (t454u)
+
+Cada apagado pide confirmación en la propia lanzadera. Reutiliza [Sala en negro](/lanzadera/negro.html). No se duermen las pantallas, para que el cursor siga viéndose.
+
+- **Apagar sala de reuniones Terminator** (`/apagar reuniones`): Philips 86BDL3650Q del Rosa, PC Monitor de arriba del Crema, pantalla del portátil del Crema y el Plata si está conectado. No se toca el portátil del Rosa (ojos remotos ni sesiones).
+- **Apagar sala de interactivos Terminator** (`/apagar interactivos`): players de AdmiraNeXT01–05 y las verticales 01V, 03V y 05V, más AdmiraDesk (se cierra o se pone en negro el control, no se apaga el equipo). 03 y 04 quedan pendientes hasta confirmar su machineId.
+- **Apagar todo** (`/apagar todo`): las dos zonas.
+
+Nunca se apaga ni se reinicia el Mac Studio ni el Mac Mini. El cursor no se oculta. No se cierran los ojos remotos ni las sesiones de Grok Bot o de los agentes.
+
+**Encender / Restaurar:** `/encender reuniones` relanza la demo por defecto AdmiraNeXT.com; `/encender interactivos`, la Demo AdmiraNeXT con AdmiraDesk; `/restaurar todo`, las dos.

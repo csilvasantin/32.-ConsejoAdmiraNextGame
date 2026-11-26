@@ -1566,6 +1566,30 @@ Sin IPs, MACs, tokens, contraseñas ni secretos.
 Fin del documento. Está en Miscelánea\ElonMusk, solo lectura.
 ========================================================================
 </script>
+    <script type="text/plain" id="mision-jensen-20261126-seed">========================================================================
+MISIÓN PRINCIPAL
+Jensen Huang  ·  26-nov-2026  11:09  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «JensenHuang/2026-11-26.txt».
+Es un fichero de sistema, de solo lectura. Cada consejero anota
+aquí a qué se dedica ese día, en su subcarpeta de Miscelánea.
+
+Fecha: 26-nov-2026
+Consejero: Jensen Huang.
+
+Misión principal: ModoDemoAdmiraNeXT.
+
+Misión principal 26-nov-2026: Modo demo AdmiraNeXT en la zona Terminator (consumo a pantalla completa en el MBACrema y el consejo conversando en la Philips del MBARosa). Antes: Admira95 (ICQGram con aviso instantáneo y Novedades de Netscape).
+
+Actualizado: 26-nov-2026 11:09, hora de Madrid.
+
+Sin IPs, MACs, tokens, contraseñas ni secretos.
+
+========================================================================
+Fin del documento. Está en Miscelánea\JensenHuang, solo lectura.
+========================================================================
+</script>
     <script type="text/plain" id="mision-woz-20261126-seed">========================================================================
 MISIÓN PRINCIPAL
 Steve Wozniak (Woz)  ·  26-nov-2026  ·  Europe/Madrid
@@ -4205,15 +4229,17 @@ var MISC_TRASPASO=[
 /* Subcarpetas genéricas de Miscelánea: un consejero, una carpeta;
    dentro, un .txt por día con la misión. El campo opcional `mission`
    (misión principal) se muestra en la barra de título, p. ej.
-   «ElonMusk · XperienceWin95». Para añadir otro consejero se declara
-   aquí, sin tocar la lógica. */
+   «ElonMusk · XperienceWin95» o «JensenHuang · ModoDemoAdmiraNeXT».
+   Para añadir otro consejero se declara aquí, sin tocar la lógica. */
 var MISC_SUBFOLDERS=[
   {id:'fld-stevewozniak',name:'SteveWozniak',mission:'Win95 Xperience',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:176,top:100},
-  {id:'fld-elonmusk',name:'ElonMusk',mission:'XperienceWin95',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:176,top:8}
+  {id:'fld-elonmusk',name:'ElonMusk',mission:'XperienceWin95',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:176,top:8},
+  {id:'fld-jensenhuang',name:'JensenHuang',mission:'ModoDemoAdmiraNeXT',rev:'20261126-1109',ms:new Date(2026,10,26,11,9).getTime(),left:260,top:8}
 ];
 var MISC_SUBDOCS=[
   {id:'doc-woz-mision-20261126',name:'2026-11-26.txt',seed:'mision-woz-20261126-seed',folder:'fld-stevewozniak',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:8,top:8},
-  {id:'doc-elon-mision-20261126',name:'2026-11-26.txt',seed:'mision-elon-20261126-seed',folder:'fld-elonmusk',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:8,top:8}
+  {id:'doc-elon-mision-20261126',name:'2026-11-26.txt',seed:'mision-elon-20261126-seed',folder:'fld-elonmusk',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:8,top:8},
+  {id:'doc-jensen-mision-20261126',name:'2026-11-26.txt',seed:'mision-jensen-20261126-seed',folder:'fld-jensenhuang',rev:'20261126-1109',ms:new Date(2026,10,26,11,9).getTime(),left:8,top:8}
 ];
 function miscFolderSpec(id){
   for(var i=0;i<MISC_SUBFOLDERS.length;i++) if(MISC_SUBFOLDERS[i].id===id) return MISC_SUBFOLDERS[i];

@@ -285,6 +285,32 @@ test("Miscelánea incluye la subcarpeta ElonMusk con la misión del 26-nov-2026"
   assert.ok(html.includes(txt.replace(/\s+$/, "")));
 });
 
+test("Miscelánea incluye la subcarpeta JensenHuang con la misión del 26-nov-2026", () => {
+  const html = src("windows95/index.html");
+  const txt = src("windows95/misiones/JensenHuang/2026-11-26.txt");
+  assert.match(txt, /MISIÓN PRINCIPAL/);
+  assert.match(txt, /Jensen Huang/);
+  assert.match(txt, /ModoDemoAdmiraNeXT/);
+  assert.match(txt, /26-nov-2026/);
+  assert.match(txt, /Modo demo AdmiraNeXT en la zona Terminator/);
+  assert.match(txt, /MBACrema/);
+  assert.match(txt, /MBARosa/);
+  assert.match(txt, /Admira95/);
+  assert.match(txt, /ICQGram/);
+  assert.match(txt, /Novedades de Netscape/);
+  assert.match(txt, /JensenHuang\/2026-11-26\.txt/);
+  assert.doesNotMatch(txt, NO_IP);
+  assert.doesNotMatch(txt, NO_MAC);
+  assert.doesNotMatch(txt, /Bearer\s+[A-Za-z0-9._\-]+/);
+  assert.match(html, /id="mision-jensen-20261126-seed"/);
+  assert.match(html, /id:'fld-jensenhuang'/);
+  assert.match(html, /name:'JensenHuang'/);
+  assert.match(html, /mission:'ModoDemoAdmiraNeXT'/);
+  assert.match(html, /id:'doc-jensen-mision-20261126'/);
+  assert.ok(html.includes(txt.replace(/\s+$/, "")));
+});
+
+
 test("Miscelánea incluye la subcarpeta SteveWozniak con la misión del 26-nov-2026", () => {
   const html = src("windows95/index.html");
   const txt = src("windows95/misiones/SteveWozniak/2026-11-26.txt");

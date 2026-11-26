@@ -4,7 +4,7 @@ import {
   planDeLanzamiento,
   etiquetaMision,
   formatHoraInicio,
-} from '/lanzadera-lib.mjs?v=20261126-lanzadera';
+} from '/lanzadera-lib.mjs?v=20261126-zonas';
 
 const $ = (id) => document.getElementById(id);
 
@@ -26,12 +26,19 @@ function pintarPlan(plan) {
   if (!sec) return;
   sec.hidden = false;
   $('plan-titulo').textContent = T('Plan de esta misión', 'Plan for this mission') + ' · ' + T(plan.demo.titulo, plan.demo.tituloEn);
-  const pasos = [
-    T('Inicio: ', 'Start: ') + plan.inicio,
-    T('MacBook Air Rosa, pantalla externa de la derecha: ', 'MacBook Air Rosa, right-hand external screen: ') + plan.rosa.url,
-    T('MacBook Air Plata, enfrente: ', 'MacBook Air Plata, opposite: ') + plan.plata.url,
-    plan.cursor,
-  ];
+  const pasos = [T('Inicio: ', 'Start: ') + plan.inicio];
+  if (plan.zona === 'interactiva') {
+    pasos.push(T('Control: ', 'Control: ') + plan.control.etiqueta + ' · ' + plan.control.url);
+    for (const p of plan.players) {
+      const pend = p.pendiente ? ' — ' + p.pendiente : '';
+      pasos.push(p.etiqueta + ' (' + p.pantalla + '): ' + p.url + pend);
+    }
+    pasos.push(plan.noRobarFoco);
+  } else {
+    pasos.push(T('MacBook Air Rosa, pantalla externa de la derecha: ', 'MacBook Air Rosa, right-hand external screen: ') + plan.rosa.url);
+    pasos.push(T('MacBook Air Plata, enfrente: ', 'MacBook Air Plata, opposite: ') + plan.plata.url);
+  }
+  pasos.push(plan.cursor);
   const ol = $('plan-pasos');
   ol.innerHTML = '';
   for (const p of pasos) {
@@ -39,10 +46,32 @@ function pintarPlan(plan) {
     li.textContent = p;
     ol.appendChild(li);
   }
-  const a1 = $('plan-url-leyendas');
-  const a2 = $('plan-url-consumos');
-  if (a1) { a1.href = plan.rosa.url; a1.textContent = T('Leyendas · abrir', 'Legends · open'); }
-  if (a2) { a2.href = plan.plata.url; }
+  const urls = $('plan-urls');
+  if (urls) {
+    urls.innerHTML = '';
+    const add = (href, es, en) => {
+      if (urls.childNodes.length) urls.appendChild(document.createTextNode(' · '));
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = T(es, en);
+      urls.appendChild(a);
+    };
+    if (plan.zona === 'interactiva') {
+      add(plan.control.url, plan.control.etiqueta + ' · abrir', plan.control.etiqueta + ' · open');
+      const visto = new Set();
+      for (const p of plan.players) {
+        if (visto.has(p.url)) continue;
+        visto.add(p.url);
+        add(p.url, p.etiqueta, p.etiqueta);
+        if (visto.size >= 3) break;
+      }
+    } else {
+      add(plan.rosa.url, 'Leyendas · abrir', 'Legends · open');
+      add(plan.plata.url, 'Consumos', 'Usage');
+    }
+  }
   for (const btn of document.querySelectorAll('.demo-card')) {
     btn.setAttribute('aria-pressed', btn.getAttribute('data-demo') === plan.demo.id ? 'true' : 'false');
   }
@@ -70,8 +99,8 @@ function onComando(texto) {
   if (cmd.tipo === 'lanzadera') {
     const box = $('mision');
     if (box && cmd.desconocido) {
-      box.textContent = T('No reconozco esa demo. Elige AdmiraNeXT.com o PortAventuraNeXT.com.',
-        'I do not recognise that demo. Choose AdmiraNeXT.com or PortAventuraNeXT.com.');
+      box.textContent = T('No reconozco esa demo. Elige una de las dos zonas: AdmiraNeXT.com, PortAventuraNeXT.com, player interactivo o modo demo PortAventuraNeXT.',
+        'I do not recognise that demo. Choose one of the two zones: AdmiraNeXT.com, PortAventuraNeXT.com, the interactive player or PortAventuraNeXT demo mode.');
     }
     return true;
   }
@@ -83,8 +112,8 @@ function escuchar() {
   const btn = $('btn-voz');
   const estado = $('voz-estado');
   if (!Rec) {
-    if (estado) estado.textContent = T('Este navegador no tiene reconocimiento de voz. Usa los botones o el Experto: /demo admiranext.',
-      'This browser has no speech recognition. Use the buttons or Expert: /demo admiranext.');
+    if (estado) estado.textContent = T('Este navegador no tiene reconocimiento de voz. Usa los botones o el Experto: /demo admiranext, /demo interactivo.',
+      'This browser has no speech recognition. Use the buttons or Expert: /demo admiranext, /demo interactivo.');
     return;
   }
   if (escuchar.rec) {

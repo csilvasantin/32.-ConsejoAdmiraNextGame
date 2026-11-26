@@ -33,11 +33,19 @@ test('la lanzadera usa la retícula cuadrática y el mismo menú superior', () =
   assert.equal(URL_PUBLICA_LANZADERA, 'https://www.admira.live/lanzadera/');
 });
 
-test('tiene las dos demos grandes, voz y hora de misión', () => {
+test('tiene las dos zonas, voz y hora de misión', () => {
+  assert.match(html, /Sala de reuniones de Terminator/);
+  assert.match(html, /Zona interactiva de Terminator/);
+  assert.match(html, /id="zona-sala"/);
+  assert.match(html, /id="zona-interactiva"/);
   assert.match(html, /Demo AdmiraNeXT\.com/);
   assert.match(html, /Demo PortAventuraNeXT\.com/);
+  assert.match(html, />Demo AdmiraNeXT</);
+  assert.match(html, /Modo demo PortAventuraNeXT/);
   assert.match(html, /id="demo-admiranext"/);
   assert.match(html, /id="demo-pan"/);
+  assert.match(html, /id="demo-interactivo"/);
+  assert.match(html, /id="demo-pan-interactivo"/);
   assert.match(html, /id="btn-voz"/);
   assert.match(html, /id="mision"/);
   assert.match(js, /SpeechRecognition|webkitSpeechRecognition/);
@@ -62,6 +70,15 @@ test('parseComandoDemo reconoce voz, selección y CLI', () => {
   assert.equal(parseComandoDemo('/demo').tipo, 'lanzadera');
   assert.equal(parseComandoDemo('qué opinas de la demo de otro cliente'), null);
   assert.equal(demoPorId('admiranext'), DEMOS.admiranext);
+  assert.equal(parseComandoDemo('/demo interactivo').demo.id, 'interactivo');
+  assert.equal(parseComandoDemo('player interactivo').demo.id, 'interactivo');
+  assert.equal(parseComandoDemo('AdmiraDesk').demo.id, 'interactivo');
+  assert.equal(parseComandoDemo('/demo admiradesk').demo.id, 'interactivo');
+  assert.equal(parseComandoDemo('modo demo PortAventuraNeXT').demo.id, 'pan-interactivo');
+  assert.equal(parseComandoDemo('/demo modo portaventura').demo.id, 'pan-interactivo');
+  assert.equal(parseComandoDemo('/demo portaventura interactivo').demo.id, 'pan-interactivo');
+  assert.equal(demoPorId('interactivo'), DEMOS.interactivo);
+  assert.equal(demoPorId('pan-interactivo'), DEMOS['pan-interactivo']);
 });
 
 test('el plan apunta al Rosa (TCL derecha) y al Plata (consumos)', () => {
@@ -86,5 +103,34 @@ test('la CLI de la home, el experto y el catálogo /demo cablean la lanzadera', 
   assert.match(frame, /\/demo admiranext/);
   assert.match(ayuda, /\/demo admiranext', '2026-11-26'/);
   assert.match(ayuda, /dest = '\/lanzadera\/'/);
-  assert.match(ayuda, /dest \+= '\?demo=admiranext'/);
+  assert.match(ayuda, /\?demo=admiranext/);
+  assert.match(ayuda, /\?demo=interactivo/);
+  assert.match(ayuda, /\?demo=pan-interactivo/);
+  assert.match(frame, /\/demo interactivo/);
+  assert.match(home, /\/demo interactivo/);
+});
+
+test('la zona interactiva apunta al player de admira.tv y a AdmiraDesk, sin adivinar el 03 ni el 04', () => {
+  const plan = planDeLanzamiento('interactivo', new Date('2026-11-26T11:02:00.000Z'));
+  assert.equal(plan.zona, 'interactiva');
+  assert.equal(plan.control.url, 'https://www.admira.store/control/admiradesk/');
+  assert.equal(plan.players[0].pantalla, 'admiranext01-a');
+  assert.equal(plan.players[0].url, 'https://admira.tv/canal.html?screen=admiranext01-a');
+  assert.equal(plan.players[0].machineId, '7d817289-d0a8-45ea-965a-0a8271b0c0d5');
+  const tres = plan.players.find((p) => p.e === '03');
+  const cuatro = plan.players.find((p) => p.e === '04');
+  assert.equal(tres.machineId, null);
+  assert.equal(cuatro.machineId, null);
+  assert.match(tres.pendiente, /AdmiraNeXT03/);
+  assert.match(plan.etiqueta, /12:02/);
+  assert.match(plan.noRobarFoco, /foco/);
+  assert.equal(urlLanzaderaDemo('interactivo'), '/lanzadera/?demo=interactivo');
+});
+
+test('el modo demo PortAventuraNeXT usa la presentación oficial y el player de 01–05', () => {
+  const plan = planDeLanzamiento('pan-interactivo', new Date('2026-11-26T11:02:00.000Z'));
+  assert.equal(plan.zona, 'interactiva');
+  assert.equal(plan.control.url, 'https://www.admiranext.com/demo/PortAventuraNeXT/');
+  assert.ok(plan.players.every((p) => p.url === 'https://www.admiranext.com/demo/player'));
+  assert.equal(urlLanzaderaDemo('pan-interactivo'), '/lanzadera/?demo=pan-interactivo');
 });

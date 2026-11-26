@@ -95,7 +95,9 @@ test('cli-ayuda: /demo help cuenta, ordena por fecha (interruptores arriba, lueg
   assert.match(h[0], new RegExp('^Hay ' + A.CATALOGO.length + ' demos'));
   assert.match(h[1], /^26-11-2026 {2}\/demo admiranext/);
   assert.match(h[2], /^26-11-2026 {2}\/demo portaventura/);
-  assert.match(h[4], /^14-10-2026 {2}\/demo interruptores/);
+  assert.match(h[3], /^26-11-2026 {2}\/demo interactivo/);
+  assert.match(h[4], /^26-11-2026 {2}\/demo modo portaventura/);
+  assert.match(h[6], /^14-10-2026 {2}\/demo interruptores/);
   const old = A.demoHelp('antiguas', false).split('\n');
   assert.match(old[1], /07-10-2026/);
   const az = A.demoHelp('--orden alfabetico', true).split('\n');

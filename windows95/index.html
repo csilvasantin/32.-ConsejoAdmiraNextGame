@@ -3528,6 +3528,7 @@ function applyMisionesData(data){
   if(MISIONES_ID&&FWIN[MISIONES_ID]) renderFolder(MISIONES_ID);
   DEEP_FOLDER_IDS.forEach(function(id){ if(FWIN[id]) renderFolder(id); });
   try{ if(typeof renderContacts==='function') renderContacts(); }catch(e){}
+  try{ for(var fw in FWIN){ if(FWIN[fw]&&FS[fw]&&FS[fw].parent===MISC_ID) renderFolder(fw); } }catch(e){}
   saveNoteDocs();
 }
 function ensureDeepAgents(){
@@ -4254,6 +4255,14 @@ function miscFolderSpec(id){
 }
 function folderMissionOf(it){
   if(!it) return '';
+  if(MISC_ID&&it.parent===MISC_ID&&typeof CONSEJO!=='undefined'){
+    for(var ci=0;ci<CONSEJO.length;ci++){
+      if(coincideCarpetaConsejero(it.name||it.label, CONSEJO[ci])){
+        var mm=misionConsejero(CONSEJO[ci]);
+        return (mm&&mm.corto)||'';
+      }
+    }
+  }
   var spec=miscFolderSpec(it.id);
   if(spec&&spec.mission) return spec.mission;
   if(it.mission) return (typeof misionCompacta==='function')?misionCompacta(it.mission):it.mission;
@@ -5862,7 +5871,24 @@ function deepAgent(id){
   }
   return null;
 }
-function misionDeContacto(c){ return c&&c.deep?(c.mis||null):misionConsejeroEnMiscelanea(c); }
+/* Fuente única (Carlos 26-11-2026): «(n)» = misiones hechas y «· misión» = la que está en curso,
+   las dos de /api/win95/misiones (consejeros). Orden de la misión actual: latido «trabajando»
+   > encargo en curso de hoy > misión declarada hoy en su carpeta de Miscelánea > encargo en
+   curso antiguo. La barra de título de su carpeta usa esta misma función: nunca se contradicen. */
+function datosConsejero(persona){
+  var l=(MISIONES&&MISIONES.datos&&MISIONES.datos.consejeros)||[];
+  for(var i=0;i<l.length;i++) if(l[i]&&l[i].persona===persona) return l[i];
+  return null;
+}
+function misionConsejero(c){
+  if(!c) return null;
+  var d=datosConsejero(c.persona), a=d&&d.actual, mc=misionConsejeroEnMiscelanea(c);
+  if(a&&a.titulo) return {corto:misionCompacta(a.titulo),largo:a.titulo+(a.encargo?' (encargo #'+a.encargo+')':a.fuente==='latido'?' (latido)':''),fuente:a.fuente};
+  if(mc) return {corto:mc.corto,largo:mc.largo+' (Miscelánea)',fuente:'miscelanea',carpeta:mc.carpeta};
+  return null;
+}
+function hechasConsejero(c){ var d=c&&datosConsejero(c.persona); return d&&typeof d.hechas==='number'?d.hechas:null; }
+function misionDeContacto(c){ return c&&c.deep?(c.mis||null):misionConsejero(c); }
 function detalleMisiones(c, mis){
   var out=[], p, i, e, hechas;
   if(c.deep){
@@ -5875,10 +5901,12 @@ function detalleMisiones(c, mis){
       out.push('<div><b>Hechas:</b></div>');
       for(i=0;i<hechas.length;i++){ e=hechas[i]; out.push('<div>#'+e.encargo+' · '+esc(e.estado_es||e.estado)+' · '+esc(e.titulo)+'</div>'); }
     } else out.push('<div>Sin misiones hechas recientes.</div>');
-  } else if(mis){
-    out.push('<div><b>En curso:</b> '+esc(mis.largo||mis.corto)+'</div>');
   } else {
-    out.push('<div>Sin misión publicada en Miscelánea.</div>');
+    var d=datosConsejero(c.persona), hn=hechasConsejero(c);
+    if(hn!==null) out.push('<div><b>Hechas:</b> '+hn+'</div>');
+    if(mis) out.push('<div><b>En curso:</b> '+esc(mis.largo||mis.corto)+'</div>');
+    else out.push('<div>Sin misión en curso en admira.live.</div>');
+    if(d&&d.falta&&d.falta.length) out.push('<div>'+esc(d.falta.join('. '))+'.</div>');
   }
   return '<div class="cdet" data-id="'+c.id+'">'+out.join('')+'</div>';
 }
@@ -5890,9 +5918,9 @@ function cupoCab(k){
   return {txt:'('+Math.round(q)+' %)', title:tit};
 }
 function renderContacts(){
-  function row(c){ var mis=misionDeContacto(c); var n=(c.hoy>0)?' ('+c.hoy+')':''; var misH=mis?' <span class="mis">· '+esc(mis.corto)+'</span>':''; var bits=[]; if(c.real&&c.status) bits.push(c.status); if(mis) bits.push(mis.largo||mis.corto); var tt=bits.length?' title="'+esc(bits.join(' · '))+'"':''; var open=!!ICQ_OPEN[c.id]; var tog='<i class="ctog" data-id="'+c.id+'" title="Ver misiones">'+(open?'▾':'▸')+'</i>'; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+(c.deep?' deep':'')+'" data-id="'+c.id+'"'+tt+'>'+tog+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+misH+'</span><i class="env">'+ENV+'</i></div>'+(open?detalleMisiones(c,mis):''); }
+  function row(c){ var mis=misionDeContacto(c); var hn=c.deep?null:hechasConsejero(c); var n=c.deep?((c.hoy>0)?' ('+c.hoy+')':''):(hn!==null?' ('+hn+')':''); var misH=mis?' <span class="mis">· '+esc(mis.corto)+'</span>':''; var bits=[]; if(c.real&&c.status) bits.push(c.status); if(mis) bits.push(mis.largo||mis.corto); var tt=bits.length?' title="'+esc(bits.join(' · '))+'"':''; var open=!!ICQ_OPEN[c.id]; var tog='<i class="ctog" data-id="'+c.id+'" title="Ver misiones">'+(open?'▾':'▸')+'</i>'; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+(c.deep?' deep':'')+'" data-id="'+c.id+'"'+tt+'>'+tog+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+misH+'</span><i class="env">'+ENV+'</i></div>'+(open?detalleMisiones(c,mis):''); }
   var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
-  // Por cuenta: «Leyendas (11 %)» = cupo Grok Bot que QUEDA por consumir, si hay lectura vigente (< 13 h y antes del reset); si no, solo el nombre, sin porcentaje. Al lado de cada consejero, las intervenciones de hoy (Madrid); si son 0, no se pone nada. «Fuera de línea» = cuentas caídas + los 3 de la demo. DeepAgents (Neo, Trinity, Morfeo, Oráculo) va justo antes, plegado por defecto; un clic en la cabecera pliega o despliega el grupo.
+  // Por cuenta: «Leyendas (11 %)» = cupo Grok Bot que QUEDA por consumir, si hay lectura vigente (< 13 h y antes del reset); si no, solo el nombre, sin porcentaje. Al lado de cada consejero, «(n)» = misiones hechas (encargos done de su bandeja) y «· misión» = la que está en curso (latido trabajando o encargo in_progress/ack; si no, la declarada en su carpeta de Miscelánea). Las dos salen de /api/win95/misiones, la misma fuente que la barra de título de su carpeta. «(0)» se muestra. «Fuera de línea» = cuentas caídas + los 3 de la demo. DeepAgents va justo antes, plegado por defecto.
   var grp=function(t,l,k){ var key=k||(t==='Fuera de línea'?'offline':t==='En línea'?'en-linea':'g'); var folded=!!ICQ_FOLD[key]; var cu=k?cupoCab(k):{txt:'',title:''}; var label=k?(t+(cu.txt?' '+cu.txt:'')):(t+' ('+l.length+')'); var h='<div class="csec'+(folded?' col':'')+'" data-grp="'+esc(key)+'">'; h+='<div class="cgrp" data-grp="'+esc(key)+'"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'><span class="chv">'+(folded?'▸':'▾')+'</span> '+label+'</div>'; return h+'<div class="cbody">'+l.map(row).join('')+'</div></div>'; }, html;
   if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }), de=function(k){ return todos.filter(function(c){ return c.on&&c.cuenta===k; }); };
     off=todos.filter(function(c){ return !c.on; }).concat(off); html=grp('Leyendas',de('leyendas'),'leyendas')+grp('Actuales',de('actuales'),'actuales'); }

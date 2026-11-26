@@ -157,7 +157,8 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
  */
 export const CUPO_MEDIDOR = "Grok Bot semanal";
 export const CUPO_ORIGEN = "/api/consumos/lecturas";
-export const CUPO_FRESCO_H = 2;
+// Las lecturas automáticas llegan cada ~12 h (00:15 y 12:15 Madrid): vale hasta 13 h o hasta el reset.
+export const CUPO_FRESCO_H = 13;
 const CUPO_MAPA = { leyendas: "leyendas", actuales: "coetaneos" };
 
 function edadCupo(ts, ahoraMs) {
@@ -196,7 +197,8 @@ export function cupoDesdeLecturas(lecturas, ahoraMs = Date.now()) {
       out[dest] = { ...base, motivo: "sin datos", anterior: Math.round(Number(l.pct) * 100) / 100 };
       continue;
     }
-    out[dest] = { ...base, pct: Math.round(Number(l.pct) * 100) / 100, motivo: null };
+    const pct = Math.round(Number(l.pct) * 100) / 100;
+    out[dest] = { ...base, pct, restante: Math.max(0, Math.round((100 - pct) * 100) / 100), motivo: null };
   }
   return out;
 }

@@ -259,6 +259,26 @@ test("Miscelánea incluye el traspaso del Consejo precargado en el código", () 
   assert.ok(html.includes(nor.replace(/\s+$/, "")));
 });
 
+test("Miscelánea incluye Elon - Misión.txt precargado en el código", () => {
+  const html = src("windows95/index.html");
+  const txt = src("windows95/elon-mision.txt");
+  assert.match(txt, /MISIÓN DEL CONSEJERO/);
+  assert.match(txt, /Elon Musk/);
+  assert.match(txt, /XperienceWin95/);
+  assert.match(txt, /26-nov-2026/);
+  assert.match(txt, /#7710/);
+  assert.match(txt, /#7711/);
+  assert.match(txt, /#7536/);
+  assert.match(txt, /admira\.live\/win95/);
+  assert.doesNotMatch(txt, NO_IP);
+  assert.doesNotMatch(txt, NO_MAC);
+  assert.doesNotMatch(txt, /Bearer\s+[A-Za-z0-9._\-]+/);
+  assert.match(html, /id="elon-mision-seed"/);
+  assert.match(html, /doc-elon-mision/);
+  assert.match(html, /Elon - Misión\.txt/);
+  assert.ok(html.includes(txt.replace(/\s+$/, "")));
+});
+
 test("el menú Inicio imita Windows 95 y la A de Admira es la nube, con estrellas en Navigator", () => {
   const html = src("windows95/index.html");
   assert.match(html, /Windows <b>95<\/b>/);

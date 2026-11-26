@@ -132,3 +132,12 @@ test("Miscelánea: traspaso del Consejo (cómo funciona, encargos y normas) es d
   assert.match(html, /documento del Consejo en Miscelánea/);
   assert.match(html, /for\(var i=0;i<MISC_TRASPASO\.length;i\+\+\) ensureMiscSysOne\(MISC_TRASPASO\[i\]\)/);
 });
+
+test("Miscelánea: Elon - Misión.txt es un fichero de sistema de solo lectura", () => {
+  assert.match(html, /id:'doc-elon-mision'/);
+  assert.match(html, /name:'Elon - Misión\.txt'/);
+  assert.match(html, /id="elon-mision-seed"/);
+  assert.match(html, /function isMiscSysDoc\(d\)/);
+  assert.match(html, /function ensureMiscSysOne\(/);
+});
+

@@ -149,23 +149,69 @@ export function presencia({ latido, hilos, bandejas, ahoraMs = Date.now(), vivoS
 }
 
 /**
- * % de cupo Grok Bot semanal de cada cuenta, a partir de las lecturas ya
- * publicadas en /api/consumos/lecturas. Nunca inventa un número: si no hay
- * lectura, o el reset de esa lectura ya pasó y no hay otra posterior, o la
- * lectura tiene más de CUPO_FRESCO_H horas, pct es null (la UI no enseña un
- * número viejo ni un «— %»).
+ * % USADO del cupo Grok Bot semanal de cada cuenta, a partir de las lecturas
+ * ya publicadas en /api/consumos/lecturas (el mismo dato que admira.live/consumos).
+ * pct es el % del plan ya gastado (0–100), el mismo sentido que «15 % usado»
+ * en la app de Grok Bot. Nunca inventa un número: si no hay lectura, o el
+ * reset de esa lectura ya pasó y no hay otra posterior, o la lectura tiene
+ * más de CUPO_FRESCO_H horas, pct es null y la UI enseña «sin dato» / «sin
+ * dato fresco» en vez de un número viejo o un «— %».
  */
 export const CUPO_MEDIDOR = "Grok Bot semanal";
 export const CUPO_ORIGEN = "/api/consumos/lecturas";
 // Las lecturas automáticas llegan cada ~12 h (00:15 y 12:15 Madrid): vale hasta 13 h o hasta el reset.
 export const CUPO_FRESCO_H = 13;
+// A partir de esta edad el porcentaje se enseña con «hace X h», no como cifra actual.
+export const CUPO_AVISO_H = 2;
 const CUPO_MAPA = { leyendas: "leyendas", actuales: "coetaneos" };
+
+/** «hace 12 min», «hace 2,3 h», «hace 3 días». */
+export function textoEdadCupo(edadH) {
+  if (edadH == null || !Number.isFinite(Number(edadH)) || Number(edadH) < 0) return null;
+  const h = Number(edadH);
+  if (h < 1) return "hace " + Math.max(1, Math.round(h * 60)) + " min";
+  if (h >= 48) return "hace " + Math.floor(h / 24) + " días";
+  const r = Math.round(h * 10) / 10;
+  return "hace " + String(r).replace(".", ",") + " h";
+}
 
 function edadCupo(ts, ahoraMs) {
   if (!ts) return { edadH: null, edadTexto: null };
   const edadH = Math.round(((ahoraMs - Date.parse(ts)) / 3600e3) * 10) / 10;
-  if (!(edadH > CUPO_FRESCO_H)) return { edadH, edadTexto: null };
-  return { edadH, edadTexto: "dato de hace " + (edadH >= 48 ? Math.floor(edadH / 24) + " días" : Math.round(edadH) + " h") };
+  if (!Number.isFinite(edadH)) return { edadH: null, edadTexto: null };
+  return { edadH, edadTexto: textoEdadCupo(edadH) };
+}
+
+/**
+ * Etiqueta visible y tooltip del grupo ICQGram (Leyendas / Actuales).
+ * Enseña el % usado, nunca lo que queda. Si no hay cifra vigente: «sin dato»
+ * o «sin dato fresco» (con el último % conocido solo en el tooltip).
+ */
+export function cupoEtiqueta(c) {
+  if (!c) return { txt: "(sin dato)", title: "Grok Bot semanal · sin dato" };
+  const med = c.medidor || CUPO_MEDIDOR;
+  const u = c.pct != null && Number.isFinite(Number(c.pct)) ? Number(c.pct) : null;
+  const ant = c.anterior != null && Number.isFinite(Number(c.anterior)) ? Number(c.anterior) : null;
+  const usado = u !== null ? u : ant;
+  const q = usado === null
+    ? null
+    : (c.restante != null && Number.isFinite(Number(c.restante))
+      ? Number(c.restante)
+      : Math.max(0, Math.round((100 - usado) * 100) / 100));
+  const fmt = (n) => String(Math.round(Number(n) * 10) / 10).replace(".", ",");
+  let title = med;
+  if (usado !== null) title += " · usado " + fmt(usado) + " % · queda " + fmt(q) + " %";
+  else title += " · sin dato";
+  if (c.edadTexto) title += " · " + c.edadTexto;
+  if (c.fuente) title += " · " + c.fuente;
+  if (u === null) {
+    return { txt: (c.ts || ant !== null) ? "(sin dato fresco)" : "(sin dato)", title };
+  }
+  let txt = "(" + Math.round(u) + " % usado)";
+  if (c.edadH != null && Number.isFinite(Number(c.edadH)) && Number(c.edadH) >= CUPO_AVISO_H) {
+    txt = "(" + Math.round(u) + " % usado · " + (c.edadTexto || textoEdadCupo(c.edadH)) + ")";
+  }
+  return { txt, title };
 }
 
 /** Última lectura del medidor Grok Bot semanal de una cuenta de lecturas. */

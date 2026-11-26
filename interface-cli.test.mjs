@@ -93,13 +93,14 @@ test('cli-ayuda: /demo help cuenta, ordena por fecha (interruptores arriba, lueg
   const A = globalThis.AdmiraCliAyuda;
   const h = A.demoHelp('', false).split('\n');
   assert.match(h[0], new RegExp('^Hay ' + A.CATALOGO.length + ' demos'));
-  assert.match(h[1], /^14-10-2026 {2}\/demo interruptores/);
-  assert.match(h[2], /^11-10-2026 {2}\/demo interface/);
+  assert.match(h[1], /^26-11-2026 {2}\/demo admiranext/);
+  assert.match(h[2], /^26-11-2026 {2}\/demo portaventura/);
+  assert.match(h[4], /^14-10-2026 {2}\/demo interruptores/);
   const old = A.demoHelp('antiguas', false).split('\n');
   assert.match(old[1], /07-10-2026/);
   const az = A.demoHelp('--orden alfabetico', true).split('\n');
   assert.match(az[0], /^There are \d+ demos · by name/);
-  assert.match(az[1], /\/demo app/);
+  assert.match(az[1], /\/demo admiranext/);
   assert.ok(A.RE_DEMO_HELP.test('/demo help antiguas') && A.RE_DEMO_HELP.test('/demo ayuda') && !A.RE_DEMO_HELP.test('/demo lista'));
 });
 

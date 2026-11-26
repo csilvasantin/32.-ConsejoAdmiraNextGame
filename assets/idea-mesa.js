@@ -6,10 +6,22 @@
  * elegida. Respeta la retícula (el mapa vive en el escenario, no tapa el menú
  * superior; las opciones van en la barra de demo de abajo o se invocan por CLI).
  */
-import { comandoMostrarIdea, IDEAS_PRESET } from '/escena0-lib.mjs?v=20261124-show-idea';
+import { comandoMostrarIdea, IDEAS_PRESET } from '/escena0-lib.mjs?v=20261126-lanzadera';
 
-const SRC = (IDEAS_PRESET[0] && IDEAS_PRESET[0].src) || '/assets/escena0/idea-ip-portaventura.webp?v=20261119';
-const PIE = IDEAS_PRESET[0] || { pie: '', pieEn: '' };
+let actualIdea = IDEAS_PRESET[0] || { src: '/assets/escena0/idea-ip-portaventura.webp?v=20261119', pie: '', pieEn: '' };
+function SRC() { return actualIdea.src; }
+function PIE() { return actualIdea; }
+function usar(idOrObj) {
+  if (!idOrObj) return actualIdea;
+  if (typeof idOrObj === 'string') {
+    const p = IDEAS_PRESET.find((x) => x.id === idOrObj);
+    if (p) actualIdea = p;
+  } else if (idOrObj.src) {
+    actualIdea = idOrObj;
+  }
+  colocar();
+  return actualIdea;
+}
 
 function lang() {
   try {
@@ -93,9 +105,9 @@ function colocar() {
   const box = caja();
   if (!ideaOn || !box) { el.hidden = true; return; }
   const img = document.getElementById('idea-mesa-img');
-  if (img && img.getAttribute('src') !== SRC) img.src = SRC;
+  if (img && img.getAttribute('src') !== SRC()) img.src = SRC();
   const pie = document.getElementById('idea-mesa-pie');
-  if (pie) pie.textContent = lang() === 'en' ? (PIE.pieEn || '') : (PIE.pie || '');
+  if (pie) pie.textContent = lang() === 'en' ? (PIE().pieEn || '') : (PIE().pie || '');
   const ancho = ideaGrande ? 0.72 : 0.34;
   el.style.width = (box.w * ancho) + 'px';
   el.style.left = (box.x + box.w / 2) + 'px';
@@ -193,7 +205,7 @@ function montar() {
 
 window.IdeaMesa = {
   comando: comandoMostrarIdea,
-  manejar, aplicar, colocar,
+  manejar, aplicar, colocar, usar,
   on: () => ideaOn,
 };
 

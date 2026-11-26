@@ -21,7 +21,11 @@
   // [orden, fecha AAAA-MM-DD | null, castellano, inglés, origen]
   // /demo interruptores (#5862): página pública propia con su recorrido automático.
   var RE_DEMO_INT = /^\/?demo\s+(interruptores?|apps|clis)\s*$/i;
+  var RE_DEMO_LANZA = /^\/?(?:lanzadera|demo\s+(lanzadera|admiranext(?:\.com)?|portaventura(?:next)?(?:\.com)?|pan))\s*$/i;
   var CATALOGO = [
+    ['/demo admiranext', '2026-11-26', 'Lanzadera: las Leyendas presentan AdmiraNeXT.com en la pantalla externa del MacBook Air Rosa y el consumo en el MacBook Air Plata (también «Demo AdmiraNeXT.com»)', 'Launcher: the Legends present AdmiraNeXT.com on the MacBook Air Rosa external screen and usage on the MacBook Air Plata (also “Demo AdmiraNeXT.com”)', 'admira.live'],
+    ['/demo portaventura', '2026-11-26', 'Lanzadera: las Leyendas presentan PortAventuraNeXT.com («El parque que se cuenta solo») en el Rosa y el consumo en el Plata (también /demo pan y «Demo PortAventuraNeXT.com»)', 'Launcher: the Legends present PortAventuraNeXT.com (“the park that tells itself”) on the Rosa and usage on the Plata (also /demo pan and “Demo PortAventuraNeXT.com”)', 'admira.live'],
+    ['/demo lanzadera', '2026-11-26', 'Abre la lanzadera de presentaciones (/lanzadera/) sin arrancar una demo', 'Opens the presentations launcher (/lanzadera/) without starting a demo', 'admira.live'],
     ['/demo interruptores', '2026-10-14', '⏻ Desktop app y ⏻ CLI de cada Mac, con un botón por unidad («Morfeo · CLI · MBP16» apaga solo ese Morfeo): abrir/cerrar Claude y ChatGPT/Codex y arrancar/apagar los deepagents, de uno en uno o todos (también /demo apps, /demo clis)', '⏻ Desktop app and ⏻ CLI per Mac, with one button per unit («Morfeo · CLI · MBP16» stops only that Morfeo): open/close Claude and ChatGPT/Codex and start/stop the deepagents, one by one or all at once (also /demo apps, /demo clis)', 'admira.live'],
     ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off → 2 claude · codex · grok · Neo Trinity → error con menos de 2, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off → 2 claude · codex · grok · Neo Trinity → fewer-than-2 error, by itself', 'admira.live'],
     ['/demo velocidad', '2026-10-09', 'velocímetro de tokens/hora de la flota (/demo speed en inglés)', 'fleet tokens/hour speedometer (/demo speed)', 'admira.live'],
@@ -142,7 +146,7 @@
     ));
     sec('Suite EXPERTO (admira.live y plataformas)', 'EXPERTO suite (admira.live and platforms)');
     row('/marca · /idioma · /estado · /version', 'verbos de la suite anclada abajo', 'verbs of the suite docked at the bottom');
-    row('/demo · /demo help', 'catálogo de demos (también /demo ayuda, /demo ?)', 'demo catalogue (also /demo help, /demo ?)');
+    row('/demo · /demo help', 'catálogo de demos (también /demo ayuda, /demo ?). /demo admiranext y /demo portaventura abren la lanzadera', 'demo catalogue (also /demo help, /demo ?). /demo admiranext and /demo portaventura open the launcher');
     L.push('');
     L.push(t('No se listan aquí capacidades inventadas: solo lo que el código de admira.live entiende hoy.', 'Nothing invented is listed here: only what admira.live’s code understands today.'));
     return L.join('\n').replace(/^\n/, '');
@@ -222,7 +226,18 @@
         setTimeout(function () { window.open(MCP_URL, '_blank', 'noopener'); }, 200);
         return;
       }
-      if (/^\/?demo$/i.test(t)) { setTimeout(function () { li(log, T('Hay ', 'There are ') + CATALOGO.length + T(' demos · /demo help las lista de la más reciente a la más antigua (la última: /demo interruptores)', ' demos · /demo help lists them newest first (latest: /demo interruptores)')); }, 0); return; }
+      if (/^\/?demo$/i.test(t)) { setTimeout(function () { li(log, T('Hay ', 'There are ') + CATALOGO.length + T(' demos · /demo help las lista de la más reciente a la más antigua (la última: /demo admiranext)', ' demos · /demo help lists them newest first (latest: /demo admiranext)')); }, 0); return; }
+      if (RE_DEMO_LANZA.test(t)) {
+        e.preventDefault(); e.stopPropagation();
+        if (input) input.value = '';
+        var dest = '/lanzadera/';
+        var arg = (t.replace(/^\//, '').replace(/^demo\s+/i, '') || '').toLowerCase();
+        if (/admiranext/.test(arg)) dest += '?demo=admiranext';
+        else if (/portaventura|\bpan\b/.test(arg)) dest += '?demo=pan';
+        li(log, T('Abriendo ' + dest + ' …', 'Opening ' + dest + ' …'));
+        setTimeout(function () { location.href = dest; }, 400);
+        return;
+      }
       if (RE_DEMO_INT.test(t)) { e.preventDefault(); e.stopPropagation(); if (input) input.value = ''; li(log, T('Abriendo /demo/interruptores/ …', 'Opening /demo/interruptores/ …')); setTimeout(function () { location.href = '/demo/interruptores/?auto=1'; }, 400); return; }
       var m = RE_DEMO_HELP.exec(t);
       if (!m) return;

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es" data-yk-expert-min>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lanzadera de presentaciones · AdmiraNeXT</title>
+  <meta name="description" content="Lanzadera de presentaciones: Demo AdmiraNeXT.com y Demo PortAventuraNeXT.com. Las Leyendas en la pantalla externa del MacBook Air Rosa y el consumo en el MacBook Air Plata.">
+  <meta name="theme-color" content="#02080d">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+  <link rel="stylesheet" href="/yk-frame.css?v=20261126-lanzadera">
+  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261126-lanzadera">
+</head>
+<body data-yk-title="LANZADERA" data-yk-zone="app">
+  <a class="skip-link" href="#contenido">Ir a la lanzadera</a>
+
+  <aside data-yk-slot="left">
+    <p class="slot-kicker" data-en="Voice and selection">Voz y selección</p>
+    <button type="button" id="btn-voz" class="voz-btn" aria-pressed="false">🎙️ Escuchar</button>
+    <p class="slot-copy" id="voz-estado" data-en="Say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». You can also type /demo admiranext or /demo portaventura in Expert.">Di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». También vale /demo admiranext o /demo portaventura en el Experto.</p>
+    <p class="slot-copy" data-en="The cursor is never hidden: when the mouse moves, it has to come back, including in digital signage.">El cursor no se oculta nunca: si mueves el ratón, tiene que reaparecer, también en cartelería.</p>
+  </aside>
+
+  <aside data-yk-slot="right">
+    <p class="slot-kicker" data-en="Where it opens">Dónde se abre</p>
+    <ul class="destinos">
+      <li><strong>MacBook Air Rosa</strong> — pantalla externa a la derecha (TCL, 1920×1080). Consejo de las Leyendas.</li>
+      <li><strong>MacBook Air Plata</strong> — enfrente. <a href="https://www.admira.live/consumos">/consumos</a>.</li>
+    </ul>
+    <p class="slot-copy" data-en="The launch is recorded here with the mission start time. Opening Chrome on the other Macs uses the fleet (control «abrir app», Shell on the machine, without stealing focus from the computer Carlos is using and without disabling any device).">El arranque queda anotado aquí con la hora de inicio de la misión. Abrir Chrome en los otros Macs lo hace la flota (control «abrir app», Shell en la máquina, sin quitar el foco del ordenador que está usando Carlos y sin desactivar ningún dispositivo).</p>
+  </aside>
+
+  <main class="lanzadera" id="contenido">
+    <header class="lanza-cabeza">
+      <p class="eyebrow" data-en="Presentations">Presentaciones</p>
+      <h1 data-en="Launcher">Lanzadera</h1>
+      <p class="lead" data-en="Two lines to start with: AdmiraNeXT.com and PortAventuraNeXT.com. Say it or tap it. The Legends present it on Rosa’s external screen; usage appears on the Plata opposite.">Dos líneas para empezar: AdmiraNeXT.com y PortAventuraNeXT.com. Dilo o selecciónalo. Las Leyendas lo presentan en la pantalla externa del Rosa; el consumo sale en el Plata, enfrente.</p>
+    </header>
+
+    <p class="mision" id="mision" role="status" aria-live="polite">Misión: aún no se ha lanzado ninguna demo en esta página.</p>
+
+    <div class="lanza-grid" role="group" aria-label="Demos de presentación">
+      <button type="button" class="demo-card" id="demo-admiranext" data-demo="admiranext">
+        <span class="demo-kicker">01</span>
+        <span class="demo-title">Demo AdmiraNeXT.com</span>
+        <span class="demo-copy" data-en="The four legs of the retail operating system, taken from admiranext.com. Nothing invented.">Las cuatro patas del sistema operativo del retail, tomadas de admiranext.com. Nada inventado.</span>
+      </button>
+      <button type="button" class="demo-card" id="demo-pan" data-demo="pan">
+        <span class="demo-kicker">02</span>
+        <span class="demo-title">Demo PortAventuraNeXT.com</span>
+        <span class="demo-copy" data-en="«The park that tells itself», with the map in the centre of the table.">«El parque que se cuenta solo», con el mapa en el centro de la mesa.</span>
+      </button>
+    </div>
+
+    <section class="plan" id="plan" hidden>
+      <h2 id="plan-titulo">Plan de esta misión</h2>
+      <ol id="plan-pasos"></ol>
+      <p class="plan-urls">
+        <a id="plan-url-leyendas" href="#" target="_blank" rel="noopener">Leyendas</a>
+        ·
+        <a id="plan-url-consumos" href="https://www.admira.live/consumos" target="_blank" rel="noopener">Consumos</a>
+      </p>
+    </section>
+  </main>
+
+  <script type="module" src="/lanzadera/lanzadera.js?v=20261126-lanzadera"></script>
+  <script src="/yk-frame.js?v=20261126-lanzadera"></script>
+</body>
+</html>

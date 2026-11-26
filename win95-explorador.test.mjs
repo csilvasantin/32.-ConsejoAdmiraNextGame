@@ -110,7 +110,8 @@ test("Miscelánea: Estilo comunicaciones ICQGram.txt es un fichero de sistema de
   assert.match(html, /ESTILO_SEED_NAME='Estilo comunicaciones ICQGram\.txt'/);
   assert.match(html, /function ensureEstiloDoc\(/);
   assert.match(html, /function isEstiloDoc\(d\)/);
-  assert.match(html, /parent:MISC_ID/);
+  assert.match(html, /parent:spec\.parent\|\|MISC_ID/);
+  assert.match(html, /x\.parent=MISC_ID/);
   assert.match(html, /function canMoveDef\(d\)\{ return !!d&&!isFixedDef\(d\)&&!d\.remote&&!isMiscSysDoc\(d\); \}/);
   assert.match(html, /var ro=remote\|\|sys\|\|\(isLeyendasDoc\(d\)&&!d\.leyendasLocal\);/);
   assert.match(html, /id===LEYENDAS_SEED_ID\|\|isMiscSysId\(id\)\|\|id==='fld-misc'/);
@@ -141,3 +142,21 @@ test("Miscelánea: Elon - Misión.txt es un fichero de sistema de solo lectura",
   assert.match(html, /function ensureMiscSysOne\(/);
 });
 
+test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak y misión del día)", () => {
+  assert.match(html, /var MISC_SUBFOLDERS=/);
+  assert.match(html, /var MISC_SUBDOCS=/);
+  assert.match(html, /function ensureMiscSysFolder\(/);
+  assert.match(html, /function ensureMiscSubfolders\(/);
+  assert.match(html, /ensureMiscSubfolders\(\);/);
+  assert.match(html, /id:'fld-stevewozniak'/);
+  assert.match(html, /name:'SteveWozniak'/);
+  assert.match(html, /id:'doc-woz-mision-20261126'/);
+  assert.match(html, /name:'2026-11-26\.txt'/);
+  assert.match(html, /folder:'fld-stevewozniak'/);
+  assert.match(html, /id="mision-woz-20261126-seed"/);
+  assert.match(html, /Win95 Xperience en admira\.live/);
+  assert.match(html, /Napster v2\.0 Transfer/);
+  assert.match(html, /for\(var s=0;s<MISC_SUBFOLDERS\.length;s\+\+\) if\(MISC_SUBFOLDERS\[s\]\.id===id\) return true/);
+  assert.doesNotMatch(html, /fld-stevejobs/i);
+  assert.doesNotMatch(html, /id:'fld-stevejobs'/);
+});

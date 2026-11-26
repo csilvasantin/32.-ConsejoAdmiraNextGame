@@ -1,0 +1,26 @@
+========================================================================
+MISIÓN PRINCIPAL
+Steve Wozniak (Woz)  ·  26-nov-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «SteveWozniak/2026-11-26.txt».
+Es un fichero de sistema, de solo lectura. Cada consejero anota
+aquí a qué se dedica ese día, en su subcarpeta de Miscelánea.
+
+Fecha: 26-nov-2026
+Consejero: Steve Wozniak (Woz)
+
+Misión principal: Win95 Xperience en admira.live.
+
+Hoy trabajo en:
+
+  · Emulador Lenovo en iPhone Duo (Fn+F12 y selector de fuente).
+  · Admira Media Player (playlist real, pantalla completa y
+    menú Archivo).
+  · Napster v2.0 Transfer (biblioteca, playlists y búsqueda
+    editable).
+  · Consumos restantes en ICQGram.
+
+========================================================================
+Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
+========================================================================

@@ -8,6 +8,7 @@ import {
   construirMisiones, MISIONES_FALLBACK, BANDEJAS_26NOV, DEEPAGENTS, STEVEJOBS,
   notaSteveJobs, textoMisionDia, misionDeclaradaEnTexto, misionCompacta,
   coincideCarpetaConsejero, misionDesdeCarpeta, misionDeConsejeroEnCarpetas,
+  CONSEJEROS_ICQ, consejeroMisiones, construirConsejeros,
 } from "./win95-misiones-lib.mjs";
 import { onRequestGet, construir } from "./functions/api/win95/misiones.js";
 
@@ -105,6 +106,11 @@ test("/api/win95/misiones: sin sesión 401; con sesión no reenvía secretos", a
   assert.equal(d.ok, true);
   assert.ok(d.carpetas.some((c) => c.nombre.startsWith("Trinity - #7736")));
   assert.ok(d.carpetas.some((c) => c.nombre === "SteveJobs"));
+  assert.ok(Array.isArray(d.consejeros));
+  assert.equal(d.consejeros.length, CONSEJEROS_ICQ.length);
+  const mu = d.consejeros.find((c) => c.persona === "murati");
+  assert.equal(mu.hechas, 0);
+  assert.equal(mu.actual, null);
 });
 
 test("Win95: Misiones hidrata los 4 DeepAgents y Miscelánea guarda SteveJobs; Detalles por defecto; Nueva carpeta y Subir un nivel", () => {
@@ -196,7 +202,92 @@ test("Win95 ICQGram: la fila muestra nombre (n) · misión leída de Miscelánea
   assert.match(html, /function misionDeclaradaEnTexto\(/);
   assert.match(html, /class="mis"/);
   assert.match(html, /misionConsejeroEnMiscelanea\(c\)/);
+  assert.match(html, /function misionConsejero\(/);
+  assert.match(html, /function hechasConsejero\(/);
+  assert.match(html, /function datosConsejero\(/);
+  assert.match(html, /hn!==null\?' \('\+hn\+'\)':''/);
+  assert.match(html, /misionConsejero\(CONSEJO\[ci\]\)/);
   assert.match(html, /\.crow > span\{[^}]*text-overflow:ellipsis/);
+});
+
+test("consejeroMisiones: hechas de la bandeja, actual del latido o del encargo en curso, y no se inventa", () => {
+  const t = AHORA;
+  const done = (id) => ({ id, status: "done", done_at: "2026-11-20T10:00:00Z", text: "hecho #" + id });
+  const murati = consejeroMisiones({ persona: "murati", items: [], latido: null, ahora: t });
+  assert.equal(murati.hechas, 0);
+  assert.equal(murati.actual, null);
+  assert.ok(murati.falta.some((f) => /bandeja/.test(f)));
+  assert.ok(murati.falta.some((f) => /latido/.test(f)));
+
+  const sinFuente = consejeroMisiones({ persona: "murati", ahora: t });
+  assert.equal(sinFuente.hechas, null);
+  assert.equal(sinFuente.actual, null);
+
+  const s = Math.floor(t / 1000);
+  const lucas = consejeroMisiones({
+    persona: "lucas",
+    items: [done(1), done(2), done(3), { id: 7740, status: "pending", created_at: "2026-11-26T08:00:00Z", text: "algo pendiente" }],
+    latido: { modo: "trabajando", caducado: false, mision: "Sincronizar consumos hoy en admira.live y base 1 M", until: s + 3600, hasta: s + 3600, encargo: null },
+    ahora: t,
+  });
+  assert.equal(lucas.hechas, 3);
+  assert.equal(lucas.actual.fuente, "latido");
+  assert.match(lucas.actual.titulo, /Sincronizar consumos/);
+  assert.equal(lucas.actual.encargo, null);
+
+  const musk = consejeroMisiones({
+    persona: "musk",
+    items: [
+      { id: 7536, status: "in_progress", created_at: "2026-11-11T10:00:00Z", text: "Titular: Webhook Huang y espejo #7536" },
+      { id: 7707, status: "pending", created_at: "2026-11-25T10:00:00Z", text: "pendiente" },
+    ],
+    latido: { modo: "reposo", caducado: false, mision: "otra", at: s - 100, hasta: s - 10 },
+    ahora: t,
+  });
+  assert.equal(musk.hechas, 0);
+  assert.equal(musk.actual.fuente, "encargo");
+  assert.equal(musk.actual.encargo, 7536);
+  assert.match(musk.actual.titulo, /Webhook Huang y espejo #7536/);
+
+  const caducado = consejeroMisiones({
+    persona: "lasseter",
+    items: [],
+    latido: { modo: "trabajando", caducado: true, mision: "prueba estado mesa", at: s - 4000, hasta: s - 10 },
+    ahora: t,
+  });
+  assert.equal(caducado.hechas, 0);
+  assert.equal(caducado.actual, null, "un latido caducado no es la misión en curso");
+
+  const sinTexto = consejeroMisiones({
+    persona: "wozniak",
+    items: [done(10), done(11), { id: 7546, status: "in_progress", created_at: "2026-11-26T08:00:00Z" }],
+    ahora: t,
+  });
+  assert.equal(sinTexto.hechas, 2);
+  assert.equal(sinTexto.actual.encargo, 7546);
+  assert.equal(sinTexto.actual.titulo, "#7546");
+  assert.notEqual(sinTexto.actual.titulo, "misión en curso");
+
+  const huang = consejeroMisiones({
+    persona: "huang",
+    items: Array.from({ length: 17 }, (_, i) => done(100 + i)).concat([{ id: 7705, status: "pending", created_at: "2026-11-25T10:00:00Z", text: "pendiente" }]),
+    latido: null,
+    ahora: t,
+  });
+  assert.equal(huang.hechas, 17);
+  assert.equal(huang.actual, null, "un pendiente no cuenta como misión en curso");
+
+  const todos = construirConsejeros({
+    bandejas: { jobs: [done(1)], wozniak: [done(2), done(3)], disney: [], lucas: [], musk: [], huang: [], murati: [], lasseter: [] },
+    latido: { ok: true, consejeros: { Jobs: { modo: "trabajando", mision: "Win95 Xperience y control de DeepAgents en admira.live", hasta: s + 600 } } },
+    ahora: t,
+  });
+  assert.equal(todos.length, 8);
+  assert.equal(todos[0].persona, "jobs");
+  assert.equal(todos[0].hechas, 1);
+  assert.equal(todos[0].actual.fuente, "latido");
+  assert.equal(todos.find((c) => c.persona === "wozniak").hechas, 2);
+  assert.equal(todos.find((c) => c.persona === "murati").actual, null);
 });
 
 test("ICQGram: grupos plegables, DeepAgents antes de Fuera de línea, plegado por defecto, misiones reales", () => {

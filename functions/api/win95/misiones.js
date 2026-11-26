@@ -1,6 +1,6 @@
 /**
- * GET /api/win95/misiones — misiones de los DeepAgents (y la nota de SteveJobs)
- * para las subcarpetas de Miscelánea y el grupo DeepAgents de ICQGram (Carlos, 26-11-2026).
+ * GET /api/win95/misiones — misiones de los DeepAgents, la nota de SteveJobs y, para
+ * cada consejero de ICQGram, hechas + misión en curso (Carlos, 26-11-2026: una sola fuente).
  * Cada carpeta trae principal, abiertos y hechas (títulos saneados, sin texto crudo ni notas).
  * Solo lectura, mismo origen y detrás de la verja: cookie de la puerta o sesión de Google.
  * Fuente: bandeja pública de bot.yokup.com/api/public/inbox?persona=… (sin credenciales).
@@ -10,7 +10,9 @@
 import { verificar, leerCookie } from "../../_puerta.js";
 import { emailGoogle } from "../../../chat-hilo-lib.mjs";
 import { INBOX_PUBLICO } from "../../../consejo-comunicaciones-lib.mjs";
-import { DEEPAGENTS, construirMisiones, MISIONES_FALLBACK } from "../../../win95-misiones-lib.mjs";
+import { DEEPAGENTS, construirMisiones, MISIONES_FALLBACK, CONSEJEROS_ICQ, construirConsejeros } from "../../../win95-misiones-lib.mjs";
+
+const LATIDO = "https://mcp.admira.live/consejeros/latido";
 
 const CABECERAS = {
   "content-type": "application/json; charset=utf-8",
@@ -44,11 +46,20 @@ export async function construir({ fetchImpl, ahora } = {}) {
   const aviso = fallos === DEEPAGENTS.length
     ? "La bandeja pública de encargos no ha respondido; se muestra la instantánea de hoy."
     : (fallos ? "Alguna bandeja de encargos no ha respondido; el resto está al día." : "");
+  // Consejeros (Leyendas y Actuales): misiones hechas y misión en curso, de la misma fuente.
+  const bandejasC = {};
+  const [latido] = await Promise.all([
+    leer(f, LATIDO),
+    ...CONSEJEROS_ICQ.map(async (c) => {
+      const d = await leer(f, INBOX_PUBLICO + "?" + new URLSearchParams({ persona: c.latido }));
+      bandejasC[c.persona] = d && Array.isArray(d.items) ? d.items : (d && Array.isArray(d.encargos) ? d.encargos : null);
+    }),
+  ]);
+  const consejeros = construirConsejeros({ bandejas: bandejasC, latido: latido && latido.ok ? latido : null, ahora: t });
   if (fallos === DEEPAGENTS.length) {
-    const fb = { ...MISIONES_FALLBACK, generado: t, aviso };
-    return fb;
+    return { ...MISIONES_FALLBACK, generado: t, aviso, consejeros };
   }
-  return construirMisiones({ bandejas, ahora: t, aviso });
+  return { ...construirMisiones({ bandejas, ahora: t, aviso }), consejeros };
 }
 
 export async function onRequestGet({ request, env, fetchImpl }) {
@@ -57,7 +68,8 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const cuerpo = await construir({ fetchImpl: f });
   const s = JSON.stringify(cuerpo);
   if (/192\.168\.|10\.\d+\.|100\.\d+\.\d+\.\d+|ssh-ed25519|BEGIN [A-Z ]*PRIVATE|ghp_|Bearer [A-Za-z0-9._-]{8,}/.test(s)) {
-    return json({ ok: true, generado: Date.now(), aviso: "La respuesta se ha retenido por precaución (posible secreto).", fuente: "admira.live", carpetas: MISIONES_FALLBACK.carpetas });
+    const cons = Array.isArray(cuerpo.consejeros) ? cuerpo.consejeros.map((c) => ({ persona: c.persona, hechas: c.hechas, actual: null, falta: c.falta })) : [];
+    return json({ ok: true, generado: Date.now(), aviso: "La respuesta se ha retenido por precaución (posible secreto).", fuente: "admira.live", carpetas: MISIONES_FALLBACK.carpetas, consejeros: cons });
   }
   return json(cuerpo);
 }

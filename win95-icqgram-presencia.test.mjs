@@ -88,6 +88,8 @@ test("ICQGram: Fuera de línea = consejeros sin señal + los 3 de la demo; conta
   assert.match(html, /txt:'\('\+Math\.round\(q\)\+' %\)'/, "entre paréntesis, lo que queda");
   assert.doesNotMatch(html, /txt:'— %'|class="cbar"|\.cbar/);
   assert.match(html, /c\.hoy>0\)\?' \('\+c\.hoy\+'\)'/);
+  assert.match(html, /function hechasConsejero\(/);
+  assert.match(html, /hn!==null\?' \('\+hn\+'\)':''/, "el (n) del consejero es hechas, también si es 0");
   assert.doesNotMatch(html, /grp\('Leyendas',de\('leyendas'\)\)\+grp\('Actuales',de\('actuales'\)\)/);
   assert.match(html, /\{id:'c-murati',persona:'murati',name:'Mira Murati',cuenta:'actuales',sinChat:true\}/);
   assert.match(html, /\{id:'c-lasseter',persona:'lasseter',name:'John Lasseter',cuenta:'actuales',sinChat:true\}/);

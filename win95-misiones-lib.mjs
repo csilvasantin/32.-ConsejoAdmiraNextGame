@@ -293,6 +293,51 @@ export function construirMisiones({ bandejas, ahora, aviso } = {}) {
   };
 }
 
+/**
+ * Consejeros (Leyendas y Actuales) para ICQGram y las carpetas de Miscelánea
+ * (Carlos, 26-11-2026: «cantidad de misiones realizadas y en la que se está tiene
+ * que ser perfecto»). UNA sola fuente para los dos valores:
+ *  · hechas = encargos en estado done de su bandeja pública de bot.yokup.com.
+ *  · actual = misión en curso: latido «trabajando» vigente (mcp.admira.live/consejeros/latido)
+ *    y, si no, su encargo en curso o acusado (in_progress/ack). Nunca pendientes ni bloqueados.
+ * Si no hay registro, actual es null y se dice qué falta; nunca se inventa.
+ */
+export const CONSEJEROS_ICQ = [
+  { persona: "jobs", latido: "Jobs" }, { persona: "wozniak", latido: "Wozniak" },
+  { persona: "disney", latido: "Disney" }, { persona: "lucas", latido: "Lucas" },
+  { persona: "musk", latido: "Musk" }, { persona: "huang", latido: "Huang" },
+  { persona: "murati", latido: "Murati" }, { persona: "lasseter", latido: "Lasseter" },
+];
+export function consejeroMisiones({ persona, items, latido, ahora } = {}) {
+  const t = ahora || Date.now();
+  const lista = Array.isArray(items) ? items.map(normalizarEncargo).filter(Boolean) : null;
+  const hechas = lista ? lista.filter((e) => e.estado === "done").length : null;
+  const l = latido && typeof latido === "object" ? latido : null;
+  const hastaMs = l && Number(l.hasta) > 0 ? (Number(l.hasta) < 1e12 ? Number(l.hasta) * 1000 : Number(l.hasta)) : 0;
+  let actual = null;
+  const vigente = l && l.modo === "trabajando" && !l.caducado && (hastaMs ? hastaMs > t : true) && String(l.mision || "").trim();
+  if (vigente) {
+    const enc = Number(l.encargo);
+    actual = { titulo: acorta(sanear(String(l.mision)), 60), fuente: "latido", encargo: Number.isFinite(enc) && enc > 0 ? enc : null, hoy: true };
+  } else if (lista) {
+    const curso = lista.filter((e) => e.estado === "in_progress" || e.estado === "ack")
+      .sort((a, b) => (Math.max(b.acuseMs, b.cuandoMs) || 0) - (Math.max(a.acuseMs, a.cuandoMs) || 0))[0];
+    if (curso) {
+      // titularCorto, sin texto, devolvería «misión en curso»: eso sería inventar. Usamos la etiqueta.
+      const titulo = String(curso.texto || "").trim() ? titularCorto(curso.texto, curso.estado) : (curso.etiqueta || ("#" + curso.encargo));
+      actual = { titulo, fuente: "encargo", encargo: curso.encargo, hoy: esHoyMadrid(Math.max(curso.acuseMs, curso.cuandoMs), t) };
+    }
+  }
+  const falta = [];
+  if (!lista || !lista.length) falta.push("sin encargos en su bandeja de bot.yokup.com");
+  if (!l) falta.push("sin latido en mcp.admira.live/consejeros/latido");
+  return { persona, hechas, actual, falta };
+}
+export function construirConsejeros({ bandejas, latido, ahora } = {}) {
+  const cons = (latido && latido.consejeros) || {};
+  return CONSEJEROS_ICQ.map((c) => consejeroMisiones({ persona: c.persona, items: bandejas ? bandejas[c.persona] : null, latido: cons[c.latido], ahora }));
+}
+
 /** Nombres de carpeta en Miscelánea que corresponden a un consejero (sin espacios). */
 export const CARPETAS_CONSEJERO = [
   "SteveJobs", "SteveWozniak", "WaltDisney", "GeorgeLucas",

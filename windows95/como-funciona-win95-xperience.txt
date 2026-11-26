@@ -39,6 +39,11 @@ Miscelánea (carpeta del escritorio):
   · Documentos de sistema del Consejo (este fichero, el de estilo
     ICQGram, el de encargos y el de normas). También de solo
     lectura: para editarlos, Copiar → Pegar una copia propia.
+  · Subcarpetas de consejero (por ejemplo SteveWozniak): cada
+    uno anota ahí su misión del día en un fichero con la fecha
+    (2026-11-26.txt). También de sistema y solo lectura. Para
+    añadir otra carpeta o un día nuevo se declara en
+    MISC_SUBFOLDERS y MISC_SUBDOCS, en windows95/index.html.
   · Si se envían a la Papelera, no se borran del servidor: solo
     se ocultan en este navegador.
 

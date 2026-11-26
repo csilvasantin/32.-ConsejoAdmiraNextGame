@@ -1025,6 +1025,11 @@ Miscelánea (carpeta del escritorio):
   · Documentos de sistema del Consejo (este fichero, el de estilo
     ICQGram, el de encargos y el de normas). También de solo
     lectura: para editarlos, Copiar → Pegar una copia propia.
+  · Subcarpetas de consejero (por ejemplo SteveWozniak): cada
+    uno anota ahí su misión del día en un fichero con la fecha
+    (2026-11-26.txt). También de sistema y solo lectura. Para
+    añadir otra carpeta o un día nuevo se declara en
+    MISC_SUBFOLDERS y MISC_SUBDOCS, en windows95/index.html.
   · Si se envían a la Papelera, no se borran del servidor: solo
     se ocultan en este navegador.
 
@@ -1554,6 +1559,33 @@ Sin IPs, MACs, tokens, contraseñas ni secretos.
 ========================================================================
 Elon Musk  ·  26-nov-2026  10:30  Europe/Madrid
 Fin del documento. Está en Miscelánea, solo lectura.
+========================================================================
+</script>
+    <script type="text/plain" id="mision-woz-20261126-seed">========================================================================
+MISIÓN PRINCIPAL
+Steve Wozniak (Woz)  ·  26-nov-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «SteveWozniak/2026-11-26.txt».
+Es un fichero de sistema, de solo lectura. Cada consejero anota
+aquí a qué se dedica ese día, en su subcarpeta de Miscelánea.
+
+Fecha: 26-nov-2026
+Consejero: Steve Wozniak (Woz)
+
+Misión principal: Win95 Xperience en admira.live.
+
+Hoy trabajo en:
+
+  · Emulador Lenovo en iPhone Duo (Fn+F12 y selector de fuente).
+  · Admira Media Player (playlist real, pantalla completa y
+    menú Archivo).
+  · Napster v2.0 Transfer (biblioteca, playlists y búsqueda
+    editable).
+  · Consumos restantes en ICQGram.
+
+========================================================================
+Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
 ========================================================================
 </script>
     <!-- Admister (homenaje P2P) -->
@@ -3969,15 +4001,26 @@ var ESTILO_SEED_NAME='Estilo comunicaciones ICQGram.txt';
 var ESTILO_SEED_REV='20261125-2130';
 var ESTILO_SEED_MS=new Date(2026,10,25,21,30).getTime();
 var MISC_TRASPASO=[
-  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:8},
+  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:92,top:8},
   {id:'doc-encargos-abiertos',name:'Encargos y misiones abiertas.txt',seed:'encargos-abiertos-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:8,top:100},
   {id:'doc-normas-consejo',name:'Normas del Consejo para nuevos consejeros.txt',seed:'normas-consejo-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:100},
   {id:'doc-elon-mision',name:'Elon - Misión.txt',seed:'elon-mision-seed',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:176,top:8}
+];
+/* Subcarpetas genéricas de Miscelánea (t1401u): un consejero, una carpeta;
+   dentro, un .txt por día con la misión. Para añadir otra (p. ej. otro
+   consejero) se declara aquí, sin tocar la lógica. */
+var MISC_SUBFOLDERS=[
+  {id:'fld-stevewozniak',name:'SteveWozniak',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:176,top:100}
+];
+var MISC_SUBDOCS=[
+  {id:'doc-woz-mision-20261126',name:'2026-11-26.txt',seed:'mision-woz-20261126-seed',folder:'fld-stevewozniak',rev:'20261126-1030',ms:new Date(2026,10,26,10,30).getTime(),left:8,top:8}
 ];
 function isMiscSysId(id){
   if(!id) return false;
   if(id===ESTILO_SEED_ID) return true;
   for(var i=0;i<MISC_TRASPASO.length;i++) if(MISC_TRASPASO[i].id===id) return true;
+  for(var s=0;s<MISC_SUBFOLDERS.length;s++) if(MISC_SUBFOLDERS[s].id===id) return true;
+  for(var d=0;d<MISC_SUBDOCS.length;d++) if(MISC_SUBDOCS[d].id===id) return true;
   return false;
 }
 function isMiscSysDoc(d){ return !!(d&&(isMiscSysId(d.id)||isMiscSysId(d.docId))); }
@@ -3985,6 +4028,8 @@ function miscSysMtime(d){
   if(isEstiloDoc(d)) return ESTILO_SEED_MS;
   var id=d&&(isMiscSysId(d.id)?d.id:d.docId);
   for(var i=0;i<MISC_TRASPASO.length;i++) if(MISC_TRASPASO[i].id===id) return MISC_TRASPASO[i].ms;
+  for(var s=0;s<MISC_SUBFOLDERS.length;s++) if(MISC_SUBFOLDERS[s].id===id) return MISC_SUBFOLDERS[s].ms;
+  for(var d2=0;d2<MISC_SUBDOCS.length;d2++) if(MISC_SUBDOCS[d2].id===id) return MISC_SUBDOCS[d2].ms;
   return 0;
 }
 function miscSeedText(seedId){
@@ -4002,12 +4047,14 @@ function ensureMiscSysOne(spec){
   if(HIDDEN[spec.id]) return;
   if(!MISC_ID) ensureMiscFolder();
   if(!MISC_ID) return;
+  var parent=spec.parent||MISC_ID;
+  if(parent&&parent!==MISC_ID&&!FS[parent]) return;
   var it=FS[spec.id]||DOCS[spec.id];
   if(!it&&miscSysInTrash(spec.id)) return;
   if(!it){
-    it=registerItem({id:spec.id,kind:'doc',name:spec.name,label:spec.name,text:seed,parent:MISC_ID,ico:'txt',left:spec.left,top:spec.top,docId:spec.id,miscSysRev:spec.rev,mtime:spec.ms});
+    it=registerItem({id:spec.id,kind:'doc',name:spec.name,label:spec.name,text:seed,parent:spec.parent||MISC_ID,ico:'txt',left:spec.left,top:spec.top,docId:spec.id,miscSysRev:spec.rev,mtime:spec.ms});
     if(spec.id===ESTILO_SEED_ID) it.estiloRev=spec.rev;
-    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+    if(FWIN[parent]) renderFolder(parent);
     saveNoteDocs();
     return;
   }
@@ -4017,10 +4064,10 @@ function ensureMiscSysOne(spec){
   if(!it.name) it.name=spec.name;
   if(!it.label) it.label=spec.name;
   if(!it.mtime) it.mtime=spec.ms;
-  if(it.parent!==MISC_ID&&!miscSysInTrash(spec.id)){
+  if(it.parent!==(spec.parent||MISC_ID)&&!miscSysInTrash(spec.id)){
     var el=qs('#ic-'+spec.id); if(el&&el.parentNode) el.parentNode.removeChild(el);
-    it.parent=MISC_ID;
-    if(FWIN[MISC_ID]) renderFolder(MISC_ID);
+    it.parent=spec.parent||MISC_ID;
+    if(FWIN[parent]) renderFolder(parent);
   }
 }
 var NOTE_DEFAULT_BOX={left:'150px',top:'50px',width:'340px',height:'220px'};
@@ -4057,9 +4104,46 @@ function ensureLeyendasDoc(){
 function estiloSeedText(){ return miscSeedText('estilo-icqgram-seed'); }
 function isEstiloDoc(d){ return !!(d&&(d.id===ESTILO_SEED_ID||d.docId===ESTILO_SEED_ID)); }
 function estiloInTrash(){ return miscSysInTrash(ESTILO_SEED_ID); }
+function ensureMiscSysFolder(spec){
+  if(!spec||!spec.id||!spec.name) return null;
+  if(HIDDEN[spec.id]) return null;
+  if(!MISC_ID) ensureMiscFolder();
+  if(!MISC_ID) return null;
+  if(miscSysInTrash(spec.id)) return null;
+  var parent=spec.parent||MISC_ID;
+  if(parent&&parent!==MISC_ID&&!FS[parent]) return null;
+  var it=FS[spec.id];
+  if(!it){
+    it=registerItem({id:spec.id,kind:'folder',name:spec.name,label:spec.name,ico:'folder',parent:parent,left:spec.left,top:spec.top,mtime:spec.ms,miscSysRev:spec.rev,miscSysFolder:true});
+    if(FWIN[parent]) renderFolder(parent);
+    saveNoteDocs();
+    return it;
+  }
+  it.miscSysFolder=true;
+  it.miscSysRev=spec.rev;
+  if(!it.name) it.name=spec.name;
+  if(!it.label) it.label=spec.name;
+  if(!it.mtime) it.mtime=spec.ms||it.mtime;
+  if(it.parent!==parent){
+    var el=qs('#ic-'+spec.id); if(el&&el.parentNode) el.parentNode.removeChild(el);
+    it.parent=parent;
+    if(FWIN[parent]) renderFolder(parent);
+  }
+  return it;
+}
+function ensureMiscSubfolders(){
+  var i,s;
+  for(i=0;i<MISC_SUBFOLDERS.length;i++) ensureMiscSysFolder(MISC_SUBFOLDERS[i]);
+  for(i=0;i<MISC_SUBDOCS.length;i++){
+    s=MISC_SUBDOCS[i];
+    if(s.folder&&!FS[s.folder]) continue;
+    ensureMiscSysOne({id:s.id,name:s.name,seed:s.seed,rev:s.rev,ms:s.ms,left:s.left,top:s.top,parent:s.folder||MISC_ID});
+  }
+}
 function ensureEstiloDoc(){
   ensureMiscSysOne({id:ESTILO_SEED_ID,name:ESTILO_SEED_NAME,seed:'estilo-icqgram-seed',rev:ESTILO_SEED_REV,ms:ESTILO_SEED_MS,left:8,top:8});
   for(var i=0;i<MISC_TRASPASO.length;i++) ensureMiscSysOne(MISC_TRASPASO[i]);
+  ensureMiscSubfolders();
 }
 function sizeNoteFor(d){
   var w=qs('#note'); if(!w) return;

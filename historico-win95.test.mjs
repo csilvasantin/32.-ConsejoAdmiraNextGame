@@ -212,7 +212,7 @@ test("Miscelánea incluye Estilo comunicaciones ICQGram.txt precargado en el có
   assert.match(html, /doc-estilo-icqgram/);
   assert.match(html, /function ensureEstiloDoc/);
   assert.match(html, /Estilo comunicaciones ICQGram\.txt/);
-  assert.match(html, /it\.parent=MISC_ID/);
+  assert.match(html, /it\.parent=spec\.parent\|\|MISC_ID/);
   assert.ok(html.includes(estiloSeedBody()));
 });
 
@@ -277,6 +277,25 @@ test("Miscelánea incluye Elon - Misión.txt precargado en el código", () => {
   assert.match(html, /doc-elon-mision/);
   assert.match(html, /Elon - Misión\.txt/);
   assert.ok(html.includes(txt.replace(/\s+$/, "")));
+});
+
+test("Miscelánea incluye la subcarpeta SteveWozniak con la misión del 26-nov-2026", () => {
+  const html = src("windows95/index.html");
+  const txt = src("windows95/misiones/SteveWozniak/2026-11-26.txt");
+  assert.match(txt, /MISIÓN PRINCIPAL/);
+  assert.match(txt, /Steve Wozniak \(Woz\)/);
+  assert.match(txt, /26-nov-2026/);
+  assert.match(txt, /Win95 Xperience en admira\.live/);
+  assert.match(txt, /Admira Media Player/);
+  assert.match(txt, /Napster v2\.0 Transfer/);
+  assert.match(txt, /ICQGram/);
+  assert.doesNotMatch(txt, NO_IP);
+  assert.doesNotMatch(txt, NO_MAC);
+  assert.match(html, /id="mision-woz-20261126-seed"/);
+  assert.match(html, /fld-stevewozniak/);
+  assert.match(html, /SteveWozniak/);
+  assert.ok(html.includes(txt.replace(/\s+$/, "")));
+  assert.doesNotMatch(html, /id:'fld-stevejobs'/);
 });
 
 test("el menú Inicio imita Windows 95 y la A de Admira es la nube, con estrellas en Navigator", () => {

@@ -1089,8 +1089,15 @@ Otras piezas del escritorio:
 ------------------------------------------------------------------------
 3. ICQGRAM
 ------------------------------------------------------------------------
-Código: windows95/index.html (openIcq, presenciaCargar, cupoCab).
+Código: windows95/index.html (openIcq, presenciaCargar, cupoCab, deepCab).
 API: GET /api/win95/presencia  (regla: win95-presencia-lib.mjs).
+API: GET /api/win95/deepagents (regla: win95-deepagents-lib.mjs).
+El grupo DeepAgents no usa el % de cupo de Grok Bot. Su cabecera es
+«DeepAgents (N abiertos · M distintos)»: instancias de app de escritorio
+abiertas ahora y deepagents distintos (el mismo puede estar en varios
+equipos). Sale del pulso de las máquinas (superficies tipo app) y de los
+process_snapshot verificados con host «app». «(sin dato)» solo si no ha
+llegado ninguna de las dos fuentes.
 Chat real (solo en admira.live, con sesión): /assets/chat-hilo-client.js
 habla con /api/chat/hilo, /api/chat/enviar y /api/chat/adjunto.
 
@@ -1182,12 +1189,13 @@ PRs #508–#514.
   windows95/index.html                 interfaz
   windows95/*.txt                      documentos precargados
   functions/api/win95/presencia.js     presencia + cupo + recuento
+  functions/api/win95/deepagents.js    DeepAgents abiertos en app de escritorio
   functions/api/win95/napster.js       catálogo y búsqueda
   functions/api/win95/comunicaciones.js  ficheros de Miscelánea
   functions/api/win95/ajuste.js        ajuste desde Director
   functions/api/win95/visitas.js       contador de Netscape
   functions/api/win95/emision.js       inventario para el Media Player
-  win95-presencia-lib.mjs, win95-napster-lib.mjs,
+  win95-presencia-lib.mjs, win95-deepagents-lib.mjs, win95-napster-lib.mjs,
   win95-comunicaciones-lib.mjs, win95-ajuste-lib.mjs
   Tests: win95-*.test.mjs, historico-win95.test.mjs
 
@@ -1941,7 +1949,8 @@ var CONFIG = {
     // Presencia real (Carlos 25-11-2026 v2): en verde quien tiene el canal de despertar operativo (respondió o cerró un encargo en 24 h,
     // o latido < 15 min) y no tiene un mensaje de Carlos sin contestar > 10 min ni el webhook roto;
     // el resto, en «Fuera de línea» con los 3 contactos de la demo. Si la fuente falla: desconocido (gris), nunca verde.
-    presencia:{ url:'/api/win95/presencia', cadaSeg:30 } },
+    presencia:{ url:'/api/win95/presencia', cadaSeg:30 },
+    deepagents:{ url:'/api/win95/deepagents' } },
   // ICQGram · contactos de la demo (auto = respuesta automática; on:false = fuera de línea)
   contacts: [
     { id:'jensen', name:'Jensen', status:'Consejero AdmiraNeXT', on:true },
@@ -5634,8 +5643,8 @@ function presenciaCargar(){
 }
 function presenciaVigilar(){
   var cfg=CONFIG.icqgram.presencia; if(!cfg) return;
-  clearInterval(PRES.timer); presenciaCargar();
-  PRES.timer=setInterval(function(){ if(!document.hidden&&icqgLive()) presenciaCargar(); },(cfg.cadaSeg||30)*1000);
+  clearInterval(PRES.timer); presenciaCargar(); deepCargar();
+  PRES.timer=setInterval(function(){ if(!document.hidden&&icqgLive()){ presenciaCargar(); deepCargar(); } },(cfg.cadaSeg||30)*1000);
 }
 function icqgLive(){ return ICQG.on&&MODE==='interactive'; }
 // Solo en admira.live: carga el cliente oficial del chat (sesión de Google, /api/chat/hilo y /api/chat/enviar).
@@ -5840,11 +5849,17 @@ function cupoCuando(ts){
   }catch(e){ return ''; }
 }
 var DEEP_ICQ=[
-  {id:'d-neo',persona:'Neo',name:'Neo'},
-  {id:'d-trinity',persona:'Trinity',name:'Trinity'},
-  {id:'d-morfeo',persona:'Morfeo',name:'Morfeo'},
-  {id:'d-oraculo',persona:'Oraculo',name:'Oráculo'}
+  {id:'d-neo',persona:'Neo',name:'Neo',app:'Claude'},
+  {id:'d-morfeo',persona:'Morfeo',name:'Morfeo',app:'Claude'},
+  {id:'d-whiterabbit',persona:'WhiteRabbit',name:'WhiteRabbit',app:'Claude'},
+  {id:'d-trinity',persona:'Trinity',name:'Trinity',app:'Codex'},
+  {id:'d-oraculo',persona:'Oraculo',name:'Oráculo',app:'Codex'},
+  {id:'d-smith',persona:'Smith',name:'Smith',app:'Grok'},
+  {id:'d-merovingio',persona:'Merovingio',name:'Merovingio',app:'Grok'},
+  {id:'d-niobe',persona:'Niobe',name:'Niobe',app:'OpenCode'},
+  {id:'d-cypher',persona:'Cypher',name:'Cypher',app:'DeepAgents'}
 ];
+var DEEP={datos:null,enVuelo:false,at:0};
 var ICQ_FOLD_KEY='admira-win95-icq-fold', ICQ_OPEN_KEY='admira-win95-icq-open';
 var ICQ_FOLD={leyendas:false,actuales:false,deepagents:true,offline:false,'en-linea':false};
 var ICQ_OPEN={};
@@ -5861,13 +5876,37 @@ function carpetaDeep(persona){
   for(var i=0;i<list.length;i++) if(list[i]&&list[i].persona===persona) return list[i];
   return null;
 }
+function deepCensoDe(persona){
+  var l=(DEEP.datos&&DEEP.datos.agentes)||[], i, n=String(persona||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(i=0;i<l.length;i++) if(String(l[i].persona||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')===n) return l[i];
+  return null;
+}
+function deepLista(){
+  var seen={}, out=[], i, a, x, id;
+  function add(p,name,app){
+    var k=String(p||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(!k||seen[k]) return; seen[k]=1;
+    id='d-'+k.replace(/[^a-z0-9]+/g,'');
+    out.push({id:id,persona:p,name:name||p,app:app||''});
+  }
+  for(i=0;i<DEEP_ICQ.length;i++) add(DEEP_ICQ[i].persona,DEEP_ICQ[i].name,DEEP_ICQ[i].app);
+  a=(DEEP.datos&&DEEP.datos.agentes)||[];
+  for(i=0;i<a.length;i++) add(a[i].persona,a[i].persona,a[i].app);
+  return out;
+}
 function deepAgent(id){
-  for(var i=0;i<DEEP_ICQ.length;i++) if(DEEP_ICQ[i].id===id){
-    var a=DEEP_ICQ[i], c=carpetaDeep(a.persona), p=c&&c.principal, st=p?String(p.estado||''):'';
-    var on=(st==='in_progress'||st==='ack'), desconocido=!on;
-    var corto=p?('#'+p.encargo+' · '+(p.estado_es||p.estado)+' · '+(p.titulo||'')):'';
-    var status=p?('encargo #'+p.encargo+' · '+(p.estado_es||p.estado)+(p.acuseMs?' · acusado':' · sin acuse')):'sin encargo abierto';
-    return {id:a.id,persona:a.persona,name:a.name,deep:true,sinChat:true,real:true,on:on,desconocido:desconocido,status:status,hoy:0,principal:p||null,abiertos:(c&&c.abiertos)||[],hechas:(c&&c.hechas)||[],mis:corto?{corto:corto,largo:corto}:null};
+  var list=deepLista(), i, a, c, p, st, on, desconocido, corto, status, ce, mis, linea, maqs;
+  for(i=0;i<list.length;i++) if(list[i].id===id){
+    a=list[i]; c=carpetaDeep(a.persona); p=c&&c.principal; st=p?String(p.estado||''):'';
+    ce=deepCensoDe(a.persona);
+    on=!!(ce&&ce.maquinas&&ce.maquinas.length);
+    desconocido=!DEEP.datos||DEEP.datos.sinFuente||DEEP.datos.ok===false;
+    if(desconocido) on=false;
+    maqs=ce&&ce.maquinas?ce.maquinas.join(', '):'';
+    corto=on?((ce.app||a.app||'')+(ce.modelo?' · '+ce.modelo:'')+(maqs?' — '+maqs:'')):'';
+    status=on?('abierto en app de escritorio'+(maqs?' en '+maqs:'')+(ce&&ce.modelo?' · '+ce.modelo:'')):(desconocido?'sin dato de app de escritorio':'no abierto en app de escritorio');
+    mis=corto?{corto:corto,largo:status}:null;
+    return {id:a.id,persona:a.persona,name:a.name,deep:true,app:(ce&&ce.app)||a.app||'',modelo:ce&&ce.modelo||null,maquinas:ce&&ce.maquinas||[],sinChat:true,real:true,on:on,desconocido:desconocido&&!on,status:status,hoy:0,principal:p||null,abiertos:(c&&c.abiertos)||[],hechas:(c&&c.hechas)||[],mis:mis};
   }
   return null;
 }
@@ -5892,6 +5931,9 @@ function misionDeContacto(c){ return c&&c.deep?(c.mis||null):misionConsejero(c);
 function detalleMisiones(c, mis){
   var out=[], p, i, e, hechas;
   if(c.deep){
+    if(c.maquinas&&c.maquinas.length) out.push('<div><b>App de escritorio:</b> '+esc((c.app||'')+(c.modelo?' · '+c.modelo:''))+' — '+esc(c.maquinas.join(', '))+'</div>');
+    else if(c.desconocido) out.push('<div>Sin dato de app de escritorio abierta.</div>');
+    else out.push('<div>No abierto en app de escritorio ahora.</div>');
     p=c.principal;
     if(p) out.push('<div><b>En curso:</b> #'+p.encargo+(p.etiqueta&&p.etiqueta!==('#'+p.encargo)?' ('+esc(p.etiqueta)+')':'')+' · '+esc(p.estado_es||p.estado)+' · '+esc(p.titulo)+(p.acuseMs?' · acusado':' · sin acuse')+'</div>');
     else out.push('<div>Sin encargo abierto ahora.</div>');
@@ -5933,15 +5975,40 @@ function cupoCab(k){
   if(c.edadH!==undefined&&c.edadH!==null&&isFinite(Number(c.edadH))&&Number(c.edadH)>=2) txt='('+Math.round(u)+' % usado · '+(c.edadTexto||('hace '+Math.round(Number(c.edadH))+' h'))+')';
   return {txt:txt, title:tit};
 }
+function deepCab(){
+  var d=DEEP.datos, txt, title, ab, di;
+  if(!d||d.sinFuente||d.ok===false){
+    return {txt:'(sin dato)', title:'DeepAgents · sin dato: '+((d&&d.motivo)||'no ha llegado el censo de apps de escritorio')};
+  }
+  ab=d.abiertos; di=d.distintos;
+  txt='('+ab+' abiertos · '+di+' distintos'+(d.edadTexto?' · '+d.edadTexto:'')+')';
+  title='DeepAgents en app de escritorio · '+ab+' instancias · '+di+' distintos';
+  if(d.edadTexto) title+=' · '+d.edadTexto;
+  if(d.fuente) title+=' · '+d.fuente;
+  if(d.motivo) title+=' · '+d.motivo;
+  return {txt:txt, title:title};
+}
+function deepCargar(){
+  var cfg=CONFIG.icqgram.deepagents, url=cfg&&cfg.url||'/api/win95/deepagents';
+  if(DEEP.enVuelo) return;
+  DEEP.enVuelo=true;
+  fetch(url,{cache:'no-store',credentials:'same-origin',headers:{accept:'application/json'}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){ DEEP.datos=(d&&(d.ok===true||d.sinFuente))?d:{ok:false,sinFuente:true,motivo:'no ha llegado el censo de apps de escritorio',abiertos:0,distintos:0,agentes:[]}; })
+    .catch(function(){ DEEP.datos={ok:false,sinFuente:true,motivo:'no ha llegado el censo de apps de escritorio',abiertos:0,distintos:0,agentes:[]}; })
+    .then(function(){ DEEP.enVuelo=false; DEEP.at=now(); renderContacts(); });
+}
 function renderContacts(){
+
   function row(c){ var mis=misionDeContacto(c); var hn=c.deep?null:hechasConsejero(c); var n=c.deep?((c.hoy>0)?' ('+c.hoy+')':''):(hn!==null?' ('+hn+')':''); var misH=mis?' <span class="mis">· '+esc(mis.corto)+'</span>':''; var bits=[]; if(c.real&&c.status) bits.push(c.status); if(mis) bits.push(mis.largo||mis.corto); var tt=bits.length?' title="'+esc(bits.join(' · '))+'"':''; var open=!!ICQ_OPEN[c.id]; var tog='<i class="ctog" data-id="'+c.id+'" title="Ver misiones">'+(open?'▾':'▸')+'</i>'; return '<div class="crow'+(c.on?'':' off')+(c.desconocido?' unk':'')+(ICQ.pending[c.id]?' msg':'')+(ICQ.sel===c.id?' sel':'')+(c.deep?' deep':'')+'" data-id="'+c.id+'"'+tt+'>'+tog+bub(c.on?'#3cc83c':c.desconocido?'#a0a0a0':'#e03030')+'<span>'+esc(c.name)+n+misH+'</span><i class="env">'+ENV+'</i></div>'+(open?detalleMisiones(c,mis):''); }
   var live=icqgLive(), off=CONFIG.contacts.filter(function(c){ return !c.on; }), on;
+  // DeepAgents: cabecera «(N abiertos · M distintos)» del censo de apps de escritorio (/api/win95/deepagents), nunca el % de cupo; «(sin dato)» solo si no hay pulso ni process_snapshot. Una línea por deepagent con app y las máquinas donde está abierto.
   // Por cuenta: «Leyendas (15 % usado)» = % del plan Grok Bot semanal ya gastado (el mismo sentido que en la app), si hay lectura vigente (< 13 h y antes del reset); si la lectura tiene 2 h o más, se añade «hace X h»; si no hay dato vigente, «(sin dato)» o «(sin dato fresco)», nunca un número viejo presentado como actual. El tooltip trae usado, lo que queda, la hora de la lectura, la renovación y la fuente. Al lado de cada consejero, «(n)» = misiones hechas (encargos done de su bandeja) y «· misión» = la que está en curso (latido trabajando o encargo in_progress/ack; si no, la declarada en su carpeta de Miscelánea). Las dos salen de /api/win95/misiones, la misma fuente que la barra de título de su carpeta. «(0)» se muestra. «Fuera de línea» = cuentas caídas + los 3 de la demo. DeepAgents va justo antes, plegado por defecto.
-  var grp=function(t,l,k){ var key=k||(t==='Fuera de línea'?'offline':t==='En línea'?'en-linea':'g'); var folded=!!ICQ_FOLD[key]; var cu=k?cupoCab(k):{txt:'',title:''}; var label=k?(t+(cu.txt?' '+cu.txt:'')):(t+' ('+l.length+')'); var h='<div class="csec'+(folded?' col':'')+'" data-grp="'+esc(key)+'">'; h+='<div class="cgrp" data-grp="'+esc(key)+'"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'><span class="chv">'+(folded?'▸':'▾')+'</span> '+label+'</div>'; return h+'<div class="cbody">'+l.map(row).join('')+'</div></div>'; }, html;
+  var grp=function(t,l,k){ var key=k||(t==='Fuera de línea'?'offline':t==='En línea'?'en-linea':'g'); var folded=!!ICQ_FOLD[key]; var cu=k==='deepagents'?deepCab():(k?cupoCab(k):{txt:'',title:''}); var label=k?(t+(cu.txt?' '+cu.txt:'')):(t+' ('+l.length+')'); var h='<div class="csec'+(folded?' col':'')+'" data-grp="'+esc(key)+'">'; h+='<div class="cgrp" data-grp="'+esc(key)+'"'+(cu.title?' title="'+esc(cu.title)+'"':'')+'><span class="chv">'+(folded?'▸':'▾')+'</span> '+label+'</div>'; return h+'<div class="cbody">'+l.map(row).join('')+'</div></div>'; }, html;
   if(live){ var todos=CONSEJO.map(function(c){ return consejero(c.id); }), de=function(k){ return todos.filter(function(c){ return c.on&&c.cuenta===k; }); };
     off=todos.filter(function(c){ return !c.on; }).concat(off); html=grp('Leyendas',de('leyendas'),'leyendas')+grp('Actuales',de('actuales'),'actuales'); }
   else html=grp('En línea',CONFIG.contacts.filter(function(c){ return c.on; }));
-  html+=grp('DeepAgents',DEEP_ICQ.map(function(a){ return deepAgent(a.id); }),'deepagents');
+  html+=grp('DeepAgents',deepLista().map(function(a){ return deepAgent(a.id); }),'deepagents');
   qs('#clist').innerHTML=html+grp('Fuera de línea',off);
   qs('#trayIcq').classList.toggle('blinking',Object.keys(ICQ.pending).length>0);
 }

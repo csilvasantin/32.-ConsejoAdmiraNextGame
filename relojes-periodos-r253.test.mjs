@@ -59,5 +59,5 @@ test("UI: dos mitades por reloj sobre la esfera (no sobre bolas ni odómetro), c
   assert.match(html, /\.vel-da\{position:relative;[^}]*z-index:2\}/); // bolas por encima de las mitades
   assert.match(js, /pintaCerrado\(\{ valor: P\.media/); // Agentes: media tokens/hora del periodo
   assert.match(js, /pintaCerrado\(\{ valor: todosP \? PP\.tok : null/); // Proyectos: total del periodo
-  assert.match(html, /consumos-velocimetro\.js\?v=20261122-r253-periodos/);
+  assert.match(html, /consumos-velocimetro\.js\?v=20261126-r254-hoy-sync/);
 });

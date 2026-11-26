@@ -13,7 +13,7 @@
  * El texto del bocadillo se pinta igual si la voz falla.
  * La barra va abajo: no tapa el menú superior ni el player.
  */
-import { ANCLA } from '/escena0-lib.mjs?v=20261124-autonomo';
+import { ANCLA } from '/escena0-lib.mjs?v=20261126-lanzadera';
 import {
   parseAutonomoUrl,
   siguienteTurno,
@@ -23,7 +23,7 @@ import {
   textoTurno,
   URL_PUBLICA_HOME,
   TIMEOUT_BACKEND_MS,
-} from '/consejo-autonomo-leyendas.mjs?v=20261124-autonomo';
+} from '/consejo-autonomo-leyendas.mjs?v=20261126-lanzadera';
 
 const modo = parseAutonomoUrl(typeof location !== 'undefined' ? new URLSearchParams(location.search) : null);
 if (typeof document === 'undefined' || !modo || !modo.soportado || !modo.guion) {
@@ -42,6 +42,7 @@ function irALeyendas() {
 
 function mostrarMapa() {
   if (window.IdeaMesa && typeof window.IdeaMesa.aplicar === 'function') {
+    if (modo.ideaId && typeof window.IdeaMesa.usar === 'function') window.IdeaMesa.usar(modo.ideaId);
     window.IdeaMesa.aplicar({ on: true, mesa: 'leyendas' });
   }
 }

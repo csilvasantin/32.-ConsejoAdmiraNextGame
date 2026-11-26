@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">AdmiraNeXT · las 4 patas del sistema operativo del retail</title>
+  <desc id="desc">Diagrama tomado de admiranext.com: admira.studio (pixeria.com) crea, admira.store (xpaceos.com) distribuye, admira.biz comercializa DooH y Retail Media, y admira.app mantiene e inventario ITIL.</desc>
+  <rect width="1600" height="900" fill="#030409"/>
+  <text x="80" y="120" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="64" letter-spacing="6" fill="#ffffff">ADMIRA</text>
+  <text x="520" y="120" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="64" letter-spacing="-2">
+    <tspan fill="#ff2029">N</tspan><tspan fill="#fff400">e</tspan><tspan fill="#62d650">X</tspan><tspan fill="#ff00a8">T</tspan>
+  </text>
+  <text x="80" y="180" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#c9a227">el sistema operativo del retail · las 4 patas</text>
+  <text x="80" y="220" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#8ea0b8">Donde las Cosas se Conectan a Internet con Inteligencia Artificial</text>
+
+  <!-- four official legs -->
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="80" y="280" width="340" height="420" rx="8" fill="#0d1218" stroke="#ff2029" stroke-width="3"/>
+    <text x="104" y="330" font-size="16" font-weight="700" fill="#ff2029" letter-spacing="2">1 · CREAR</text>
+    <text x="104" y="390" font-size="28" font-weight="800" fill="#ffffff">admira.studio</text>
+    <text x="104" y="430" font-size="20" fill="#fff400">= pixeria.com</text>
+    <text x="104" y="480" font-size="18" fill="#c9d6e5">Pixeria</text>
+    <text x="104" y="530" font-size="18" fill="#8ea0b8">importación y</text>
+    <text x="104" y="558" font-size="18" fill="#8ea0b8">creación de</text>
+    <text x="104" y="586" font-size="18" fill="#8ea0b8">contenidos</text>
+
+    <rect x="446" y="280" width="340" height="420" rx="8" fill="#0d1218" stroke="#fff400" stroke-width="3"/>
+    <text x="470" y="330" font-size="16" font-weight="700" fill="#fff400" letter-spacing="2">2 · DISTRIBUIR</text>
+    <text x="470" y="390" font-size="28" font-weight="800" fill="#ffffff">admira.store</text>
+    <text x="470" y="430" font-size="20" fill="#62d650">= xpaceos.com</text>
+    <text x="470" y="480" font-size="18" fill="#c9d6e5">XpaceOS</text>
+    <text x="470" y="530" font-size="18" fill="#8ea0b8">inventario del</text>
+    <text x="470" y="558" font-size="18" fill="#8ea0b8">punto de venta y</text>
+    <text x="470" y="586" font-size="18" fill="#8ea0b8">distribución</text>
+
+    <rect x="812" y="280" width="340" height="420" rx="8" fill="#0d1218" stroke="#62d650" stroke-width="3"/>
+    <text x="836" y="330" font-size="16" font-weight="700" fill="#62d650" letter-spacing="2">3 · COMERCIALIZAR</text>
+    <text x="836" y="390" font-size="28" font-weight="800" fill="#ffffff">admira.biz</text>
+    <text x="836" y="430" font-size="20" fill="#c9d6e5">DooH y Retail Media</text>
+    <text x="836" y="480" font-size="18" fill="#8ea0b8">antes clearchannel.tv</text>
+    <text x="836" y="530" font-size="18" fill="#8ea0b8">comercialización de</text>
+    <text x="836" y="558" font-size="18" fill="#8ea0b8">los Xpacios y visión</text>
+    <text x="836" y="586" font-size="18" fill="#8ea0b8">global de circuitos</text>
+
+    <rect x="1178" y="280" width="340" height="420" rx="8" fill="#0d1218" stroke="#ff00a8" stroke-width="3"/>
+    <text x="1202" y="330" font-size="16" font-weight="700" fill="#ff00a8" letter-spacing="2">4 · MANTENER</text>
+    <text x="1202" y="390" font-size="28" font-weight="800" fill="#ffffff">admira.app</text>
+    <text x="1202" y="430" font-size="20" fill="#c9d6e5">instalaciones y</text>
+    <text x="1202" y="458" font-size="20" fill="#c9d6e5">mantenimiento</text>
+    <text x="1202" y="510" font-size="18" fill="#8ea0b8">maestro del ITIL</text>
+    <text x="1202" y="538" font-size="18" fill="#8ea0b8">sitio anterior:</text>
+    <text x="1202" y="566" font-size="18" fill="#8ea0b8">Yokup</text>
+  </g>
+  <text x="80" y="760" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#c9a227">Studio → Store → Biz → App, y vuelta a empezar. El MCP es el pegamento.</text>
+  <text x="80" y="800" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#8ea0b8">Fuente: admiranext.com/filosofia y admiranext.com/mcp · nada inventado</text>
+  <text x="80" y="850" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#5a6a7a">Trilogía corporativa (distinta del producto): admiranext.com · admira.shop · admira.live</text>
+</svg>

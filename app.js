@@ -1882,6 +1882,7 @@
             li('<strong>/conversacion &lt;a&gt; vs &lt;b&gt; &lt;tema&gt; · /conversation</strong>', 'hace hablar a dos consejeros sobre un tema (p. ej. /conversacion jobs vs elon PortAventuraNeXT). También /conversación. Una mención @consejero en Conversación le habla a ese consejero', 'has two counsellors talk about a topic (e.g. /conversation jobs vs elon PortAventuraNeXT). An @counsellor mention in Conversation talks to that counsellor') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/idea · show the idea</strong>', 'pone el mapa de PortAventura en el centro de la mesa y se queda en ella; /idea leyendas o /idea actuales (o «show the idea leyendas|actuales») elige qué consejo la presenta, sin saltar solo a Coetáneos; /idea off la oculta', 'places the PortAventura map in the centre of the table and stays there; /idea leyendas or /idea actuales (or “show the idea leyendas|actuales”) chooses which council presents it, without jumping to Contemporaries on its own; /idea off hides it') +
+            li('<strong>/lanzadera · Demo AdmiraNeXT.com · /demo admiranext · /demo portaventura</strong>', 'abre la lanzadera de presentaciones: las Leyendas presentan AdmiraNeXT.com o PortAventuraNeXT.com en la pantalla externa del MacBook Air Rosa y el consumo en el MacBook Air Plata. También se puede decir o pulsar el nombre de la demo en /lanzadera/', 'opens the presentations launcher: the Legends present AdmiraNeXT.com or PortAventuraNeXT.com on the MacBook Air Rosa external screen and usage on the MacBook Air Plata. You can also say or tap the demo name at /lanzadera/') +
             li('<strong>/consejero · /counselor · /advisor</strong>', 'aparece o desaparece cada consejero de la mesa: /consejero todos · /consejero ninguno (solo sillas) · /consejero jobs | woz | musk… (alterna) · /consejero a secas invierte la mesa. También /consejeros, /counselors, /advisors y /consejero &lt;nombre&gt; aparecer|desaparecer', 'shows or hides each councillor at the table: /consejero todos · ninguno (empty chairs) · /consejero jobs | woz | musk… (toggles) · bare /consejero inverts the table. Also /consejeros, /counselors, /advisors and /consejero &lt;name&gt; show|hide') +
             li('<strong>/consejeros placas [on | off]</strong>', 'enseña u oculta las placas con el nombre en la mesa de los Coetáneos (por defecto ocultas: cada consejero tiene su objeto en ese sitio — Model X, DGX, portátil, Ferrari Land); sin argumento alterna', 'shows or hides the name plates on the Contemporaries table (hidden by default: each councillor has their object there — Model X, DGX, laptop, Ferrari Land); with no argument it toggles') +
             li('<strong>Misiones (botón)</strong>', 'las cajas de misión de la mesa van ocultas por defecto, igual en Leyendas y en Coetáneos (Ferrari Land); el botón Misiones las enseña u oculta y lo recuerda. El tablero de misiones Yokup está en https://www.admira.live/misiones', 'the table mission boxes are hidden by default, the same on Legends and on Contemporaries (Ferrari Land); the Missions button shows or hides them and remembers the choice. The Yokup mission board is at https://www.admira.live/misiones') +
@@ -2229,7 +2230,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/idea', '/consejero', '/ceo', '/cabecera', '/agentes', '/comandos', '/sendto',
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/idea', '/lanzadera', '/demo', '/consejero', '/ceo', '/cabecera', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca',
         // Pieles de cine (FLT-101666 c): /81 … /89 = /marca 81 … /marca 89
         '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89',
@@ -2317,6 +2318,25 @@
         // t402u/t403u: «show the idea» / /idea [leyendas|actuales] — mapa en el centro, sin saltar a Coetáneos.
         if (window.IdeaMesa && typeof window.IdeaMesa.manejar === 'function' && window.IdeaMesa.manejar(text, setActionLine, addUserEntry)) {
             return true;
+        }
+        // t430u (26-nov-2026): «Demo AdmiraNeXT.com» / /demo admiranext / /lanzadera.
+        // Abre la lanzadera (Leyendas en la TCL del Rosa, consumo en el Plata).
+        if (/^\/?(?:lanzadera|launcher|demo(?:\s+(lanzadera|admiranext(?:\.com)?|portaventura(?:next)?(?:\.com)?|pan))?)$/i.test(text)
+            || /^demo\s+(admiranext|portaventura)/i.test(text)
+            || /^(?:lanza|abre|elige|selecciono|selecciona|pon|muestra|arranca)\s+(?:la\s+)?demo\s+/i.test(text)) {
+            addUserEntry(text);
+            var destLanza = '/lanzadera/';
+            var argLanza = text.toLowerCase();
+            if (/admiranext/.test(argLanza)) destLanza += '?demo=admiranext';
+            else if (/portaventura|\bpan\b/.test(argLanza) && !/lanzadera/.test(argLanza.replace(/demo/g, ''))) destLanza += '?demo=pan';
+            // «/demo» solo (sin argumento de presentación) lo sigue atendiendo el catálogo de demos.
+            if (/^\/?demo\s*$/i.test(text)) {
+                /* no interceptamos el catálogo general */
+            } else {
+                setActionLine(cliT('🚀 Lanzadera → ', '🚀 Launcher → ') + destLanza);
+                window.location.href = destLanza;
+                return true;
+            }
         }
         // /hablar [consejero] [mensaje] · /talk (11-11-2026): se intercepta aquí y en el panel de chat.
         // El literal nunca llega al consejero.

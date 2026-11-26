@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   GUION_AUTONOMO_LEYENDAS_PAN,
+  GUION_AUTONOMO_LEYENDAS_ADMIRANEXT,
+  TEMA_ADMIRANEXT,
+  MAPA_ADMIRANEXT,
   LEYENDAS,
   MAPA_PORTAVENTURA,
   TIMEOUT_BACKEND_MS,
@@ -87,7 +90,7 @@ test('la home y Escena 0 están cableados al modo autónomo', () => {
   const escenaHtml = readFileSync(new URL('./escena0/index.html', import.meta.url), 'utf8');
   const demo = readFileSync(new URL('./assets/consejo-demo.js', import.meta.url), 'utf8');
   const auto = readFileSync(new URL('./assets/consejo-autonomo.js', import.meta.url), 'utf8');
-  assert.match(home, /assets\/consejo-autonomo\.js\?v=20261124-mira/);
+  assert.match(home, /assets\/consejo-autonomo\.js\?v=20261126-lanzadera/);
   assert.match(auto, /parseAutonomoUrl/);
   assert.match(auto, /speechSynthesis/);
   assert.match(auto, /IdeaMesa/);
@@ -138,4 +141,34 @@ test('los subtítulos del modo autónomo se ven sin el verbo Conversación y por
   const ideaGrandeZ = /#idea\.grande[^}]*z-index:\s*(\d+)/.exec(escenaCss);
   assert.ok(globoZ && ideaGrandeZ, 'reglas de z-index en escena0.css');
   assert.ok(Number(globoZ[1]) > Number(ideaGrandeZ[1]), 'el globo queda por encima del mapa agrandado');
+});
+
+test('parseAutonomoUrl reconoce ?autonomo=leyendas&tema=admiranext y no usa el guion de PortAventura', () => {
+  const a = parseAutonomoUrl(new URLSearchParams('autonomo=leyendas&tema=admiranext'));
+  assert.equal(a.temaId, 'admiranext');
+  assert.equal(a.ideaId, 'cuatro-patas');
+  assert.equal(a.guion, GUION_AUTONOMO_LEYENDAS_ADMIRANEXT);
+  assert.match(a.titulo, /sistema operativo del retail/);
+  assert.equal(resolverTema('AdmiraNeXT.com').id, 'admiranext');
+  assert.equal(resolverTema('admiranext').id, 'admiranext');
+  assert.ok(MAPA_ADMIRANEXT.includes('idea-admiranext.svg'));
+  const personas = personasDelGuion(GUION_AUTONOMO_LEYENDAS_ADMIRANEXT);
+  assert.deepEqual(new Set(personas), new Set(LEYENDAS));
+  const n = GUION_AUTONOMO_LEYENDAS_ADMIRANEXT.turnos.length;
+  assert.ok(n >= 8);
+  const last = siguienteTurno(GUION_AUTONOMO_LEYENDAS_ADMIRANEXT, n - 1);
+  assert.equal(last.esResumen, true);
+  const all = GUION_AUTONOMO_LEYENDAS_ADMIRANEXT.turnos.map((x) => x.texto + ' ' + x.textoEn).join(' ');
+  assert.match(all, /admira\.studio/);
+  assert.match(all, /pixeria\.com/);
+  assert.match(all, /admira\.store/);
+  assert.match(all, /xpaceos\.com/);
+  assert.match(all, /admira\.biz/);
+  assert.match(all, /clearchannel\.tv/);
+  assert.match(all, /admira\.app/);
+  assert.match(all, /ITIL/);
+  assert.match(all, /admiranext\.com/);
+  assert.match(all, /admira\.shop/);
+  assert.match(all, /admira\.live/);
+  assert.doesNotMatch(all, /PortAventuraNeXT/);
 });

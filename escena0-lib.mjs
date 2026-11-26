@@ -194,6 +194,8 @@ export const TEMAS_PRESET = Object.freeze([
 export const IDEAS_PRESET = Object.freeze([
   Object.freeze({ id: 'ip-portaventura', es: 'PortAventura con IP (4 parques)', en: 'IP-led PortAventura (4 parks)',
     src: '/assets/escena0/idea-ip-portaventura.webp?v=20261119', pie: 'Ilustrativo · PortAventura con IP: Netflix, Universal, Sony, Skydance', pieEn: 'Illustrative · IP-led PortAventura: Netflix, Universal, Sony, Skydance' }),
+  Object.freeze({ id: 'cuatro-patas', es: 'AdmiraNeXT · las 4 patas del retail OS', en: 'AdmiraNeXT · the 4 legs of the retail OS',
+    src: '/assets/escena0/idea-admiranext.svg?v=20261126-lanzadera', pie: 'Fuente · admiranext.com: studio, store, biz y app', pieEn: 'Source · admiranext.com: studio, store, biz and app' }),
 ]);
 export const LS_IDEA = 'admira_escena0_idea';
 /** Valor guardado de la idea: 'off' | id de preset | URL https/ruta propia. Devuelve {on, src, pie, id}. */

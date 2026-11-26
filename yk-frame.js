@@ -1768,7 +1768,7 @@
   if (!window.AdmiraIdioma && !document.querySelector('script[src*="admira-idioma.js"]')) {
     expertScript("/admira-idioma.js?v=" + EXPERT_CMD_V, "AdmiraIdioma");
   }
-  var EXPERT_CMD_VERBS = ["/ayuda", "/help", "/idioma", "/language", "/marca", "/brand", "/81", "/82", "/83", "/84", "/85", "/86", "/87", "/88", "/89"];
+  var EXPERT_CMD_VERBS = ["/ayuda", "/help", "/idioma", "/language", "/marca", "/brand", "/81", "/82", "/83", "/84", "/85", "/86", "/87", "/88", "/89", "/demo", "/lanzadera", "/launcher"];
   function expertCommand(raw, say) {
     var text = String(raw || "").trim();
     if (!text) return Promise.resolve();
@@ -1789,8 +1789,21 @@
       var cambio = n.idioma && B ? B.ponerIdioma(n.idioma) : "";
       var t = n.texto, m;
       if (/^\/(help|\?)$/i.test(t)) {
-        say(expertT("Órdenes: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89. Castellano pone la web en castellano; inglés, en inglés.",
-                    "Commands: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89. Spanish switches the site to Spanish; English, to English.") + (cambio ? " · 🌐 " + cambio : ""));
+        say(expertT("Órdenes: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura. Castellano pone la web en castellano; inglés, en inglés.",
+                    "Commands: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura. Spanish switches the site to Spanish; English, to English.") + (cambio ? " · 🌐 " + cambio : ""));
+        return;
+      }
+      if (/^\/(lanzadera|launcher)$/i.test(t) || /^\/demo(?:\s+(lanzadera|admiranext(?:\.com)?|portaventura(?:next)?(?:\.com)?|pan))?$/i.test(t)) {
+        var dest = "/lanzadera/";
+        if (/admiranext/i.test(t)) dest += "?demo=admiranext";
+        else if (/portaventura|\bpan\b/i.test(t) && !/^\/demo\s*$/i.test(t)) dest += "?demo=pan";
+        if (/^\/demo\s*$/i.test(t)) {
+          say(expertT("Catálogo: /demo admiranext · /demo portaventura · /lanzadera · /demo help en la home.",
+                      "Catalogue: /demo admiranext · /demo portaventura · /lanzadera · /demo help on the home page.") + (cambio ? " · 🌐 " + cambio : ""));
+          return;
+        }
+        say(expertT("🚀 Abriendo " + dest, "🚀 Opening " + dest) + (cambio ? " · 🌐 " + cambio : ""));
+        setTimeout(function () { location.href = dest; }, 200);
         return;
       }
       m = t.match(/^\/(?:marca|brand|marcablanca)(?:\s+([\s\S]*))?$/i) || t.match(/^\/(8[1-9])$/);

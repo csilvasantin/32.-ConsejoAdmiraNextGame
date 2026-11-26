@@ -19,6 +19,16 @@ export const TEMA_PAN = Object.freeze({
   tema: 'Presentación de PortAventuraNeXT, «El parque que se cuenta solo»: un parque donde cada historia que se compra, se come, se monta o se duerme ya existía antes en una pantalla. Una sala, cinco ordenadores, una cocina: un solo relato con un solo reloj.',
 });
 
+
+export const TEMA_ADMIRANEXT = Object.freeze({
+  id: 'admiranext',
+  titulo: 'AdmiraNeXT.com · el sistema operativo del retail',
+  tema: 'Presentación de AdmiraNeXT.com: empresa agéntica de Robots-as-a-Service e IoT con IA, cuyo producto es el sistema operativo del retail: las 4 patas admira.studio (pixeria.com), admira.store (xpaceos.com), admira.biz (DooH y Retail Media, antes clearchannel.tv) y admira.app (instalaciones y mantenimiento, maestro del ITIL).',
+  ideaId: 'cuatro-patas',
+});
+
+export const MAPA_ADMIRANEXT = '/assets/escena0/idea-admiranext.svg?v=20261126-lanzadera';
+
 export const MAPA_PORTAVENTURA = (IDEAS_PRESET[0] && IDEAS_PRESET[0].src)
   || '/assets/escena0/idea-ip-portaventura.webp?v=20261119';
 
@@ -26,6 +36,9 @@ export const URL_HOME = '/?autonomo=leyendas&tema=pan';
 export const URL_ESCENA0 = '/escena0/?autonomo=leyendas&tema=pan';
 export const URL_PUBLICA_HOME = 'https://www.admira.live/?autonomo=leyendas&tema=pan';
 export const URL_PUBLICA_ESCENA0 = 'https://www.admira.live/escena0/?autonomo=leyendas&tema=pan';
+export const URL_HOME_ADMIRANEXT = '/?autonomo=leyendas&tema=admiranext';
+export const URL_ESCENA0_ADMIRANEXT = '/escena0/?autonomo=leyendas&tema=admiranext';
+export const URL_PUBLICA_HOME_ADMIRANEXT = 'https://www.admira.live/?autonomo=leyendas&tema=admiranext';
 
 export const TIMEOUT_BACKEND_MS = 8000;
 
@@ -49,6 +62,27 @@ export const GUION_AUTONOMO_LEYENDAS_PAN = Object.freeze({
   ]),
 });
 
+
+/** Guion local de AdmiraNeXT.com: solo hechos de admiranext.com (filosofía, MCP, impacto, marca blanca). */
+export const GUION_AUTONOMO_LEYENDAS_ADMIRANEXT = Object.freeze({
+  id: 'autonomo-leyendas-admiranext',
+  titulo: TEMA_ADMIRANEXT.titulo,
+  tema: TEMA_ADMIRANEXT.tema,
+  mesa: 'leyendas',
+  turnos: Object.freeze([
+    { persona: 'George Lucas', texto: 'Os presento AdmiraNeXT: donde las cosas se conectan a internet con inteligencia artificial. Es una empresa agéntica de Robots-as-a-Service e IoT, y su producto es el sistema operativo del retail.', textoEn: 'This is AdmiraNeXT: where things connect to the internet with artificial intelligence. It is an agentic Robots-as-a-Service and IoT company, and its product is the retail operating system.' },
+    { persona: 'Walt Disney', texto: 'Ese sistema es una mesa de cuatro patas: la comunicación en el punto de venta. La coordinación de las cuatro es el sistema operativo del retail.', textoEn: 'That system is a four-legged table: communication at the point of sale. Coordinating the four is the retail operating system.' },
+    { persona: 'Steve Jobs', texto: 'La primera pata crea. admira.studio, que es pixeria.com, Pixeria: importación y creación de contenidos para las pantallas y los altavoces.', textoEn: 'The first leg creates. admira.studio, which is pixeria.com, Pixeria: importing and creating content for screens and speakers.' },
+    { persona: 'Steve Wozniak', texto: 'La segunda distribuye. admira.store, que es xpaceos.com, XpaceOS: inventario del punto de venta y distribución de los contenidos a cada pantalla y altavoz.', textoEn: 'The second distributes. admira.store, which is xpaceos.com, XpaceOS: point-of-sale inventory and distribution of the content to each screen and speaker.' },
+    { persona: 'George Lucas', texto: 'La tercera comercializa. admira.biz, DooH y Retail Media —antes clearchannel.tv—: vende los Xpacios y ve todos los circuitos de un vistazo.', textoEn: 'The third commercializes. admira.biz, DooH and Retail Media —formerly clearchannel.tv—: it sells the Xpacios and sees every circuit at a glance.' },
+    { persona: 'Walt Disney', texto: 'La cuarta mantiene. admira.app, instalaciones y mantenimiento: cuida cada Xpacio cada día y es el maestro del ITIL, el inventario tecnológico que reparte por MCP a las otras tres. El sitio anterior era el de Yokup.', textoEn: 'The fourth maintains. admira.app, installation and maintenance: it looks after each Xpacio every day and is the master of ITIL, the technology inventory it serves over MCP to the other three. Its previous site was Yokup’s.' },
+    { persona: 'Steve Jobs', texto: 'Se coordinan en bucle: Studio, Store, Biz y App, y vuelta a empezar. El MCP es el pegamento: cada pata publica el suyo y todas se hablan por él.', textoEn: 'They run in a loop: Studio, Store, Biz and App, and back again. MCP is the glue: each leg publishes its own and they all talk through it.' },
+    { persona: 'Steve Wozniak', texto: 'Y la empresa se organiza en una trilogía distinta del producto: la matriz admiranext.com, la tienda de robots admira.shop y el Consejo de Silicio admira.live, la única con API viva.', textoEn: 'And the company is organised in a trilogy that is not the product: the admiranext.com matrix, the robot shop admira.shop and the Silicon Council admira.live, the only one with a live API.' },
+    { persona: 'Walt Disney', texto: 'En la narrativa de impacto lo dicen claro: no mostramos pantallas; mostramos lo que una persona puede hacer gracias a ellas. Historias de salud, comercio y movilidad, desde Barcelona.', textoEn: 'The impact narrative says it plainly: we do not show screens; we show what a person can do thanks to them. Stories of health, retail and mobility, from Barcelona.' },
+    { persona: 'Steve Jobs', texto: 'Cuatro patas, un solo sistema operativo del retail. AdmiraNeXT: donde las cosas se conectan a internet con inteligencia artificial.', textoEn: 'Four legs, one retail operating system. AdmiraNeXT: where things connect to the internet with artificial intelligence.', resumen: true },
+  ]),
+});
+
 function getParam(q, key) {
   if (!q) return '';
   if (typeof q.get === 'function') return q.get(key);
@@ -67,10 +101,13 @@ function normTema(v) {
 
 export function resolverTema(v) {
   const s = normTema(v);
-  if (!s || /^(pan|portaventura|portaventuranext|el parque que se cuenta solo)$/.test(s)) {
-    return { ...TEMA_PAN };
+  if (/^(admiranext|admira next|admiranext com)$/.test(s)) {
+    return { ...TEMA_ADMIRANEXT, guion: GUION_AUTONOMO_LEYENDAS_ADMIRANEXT, ideaId: TEMA_ADMIRANEXT.ideaId };
   }
-  return { id: 'custom', titulo: String(v).trim(), tema: String(v).trim() };
+  if (!s || /^(pan|portaventura|portaventuranext|el parque que se cuenta solo)$/.test(s)) {
+    return { ...TEMA_PAN, guion: GUION_AUTONOMO_LEYENDAS_PAN, ideaId: 'ip-portaventura' };
+  }
+  return { id: 'custom', titulo: String(v).trim(), tema: String(v).trim(), guion: GUION_AUTONOMO_LEYENDAS_PAN, ideaId: 'ip-portaventura' };
 }
 
 export function parseAutonomoUrl(q) {
@@ -89,7 +126,8 @@ export function parseAutonomoUrl(q) {
     temaId: tema.id,
     tema: tema.tema,
     titulo: tema.titulo,
-    guion: mesa === 'leyendas' ? GUION_AUTONOMO_LEYENDAS_PAN : null,
+    ideaId: tema.ideaId || 'ip-portaventura',
+    guion: mesa === 'leyendas' ? (tema.guion || GUION_AUTONOMO_LEYENDAS_PAN) : null,
   };
 }
 

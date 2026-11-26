@@ -286,15 +286,32 @@ export function coincideCarpetaConsejero(folderName, c) {
   return clavesCarpetaConsejero(c).some((k) => plainKey(k) === b);
 }
 
-/** Misión declarada dentro del .txt (comillas, Título, o «dedicado hoy a»). Vacío si no hay. */
+/** Misión declarada dentro del .txt (Misión principal, Título, «dedicado hoy a» o comillas). Vacío si no hay. Nunca una ruta o un nombre de fichero. */
+export function pareceRutaOFichero(s) {
+  const v = String(s || "").trim();
+  if (!v) return true;
+  if (/[\\/]/.test(v)) return true;
+  if (/\.(?:txt|md|rtf|doc|docx|pdf|html|htm|json|csv|log)\s*$/i.test(v)) return true;
+  return false;
+}
 export function misionDeclaradaEnTexto(texto) {
   const t = String(texto || "");
-  const q = t.match(/[«“"]([^»”"]{6,120})[»”"]/);
-  if (q) return q[1].trim();
-  const tit = t.match(/^Título:\s*(.+)$/m);
-  if (tit) return tit[1].trim();
-  const d = t.match(/dedicado hoy a:\s*\n?\s*[«"]?([^\n»"]+)/i);
-  if (d) return d[1].trim();
+  const etiqueta = t.match(/^(?:Misi[oó]n principal|T[ií]tulo):\s*(.+)$/im);
+  if (etiqueta) {
+    const v = etiqueta[1].trim().replace(/[.,;]+$/, "");
+    if (v && !pareceRutaOFichero(v)) return v;
+  }
+  const d = t.match(/dedicado hoy a:\s*\n?\s*[«“"]?([^\n»”"]+)/i);
+  if (d) {
+    const v = d[1].trim().replace(/[.,;]+$/, "");
+    if (v && !pareceRutaOFichero(v)) return v;
+  }
+  const q = t.match(/[«“"]([^»”"]{6,120})[»”"]/g) || [];
+  for (const raw of q) {
+    const m = raw.match(/[«“"]([^»”"]{6,120})[»”"]/);
+    const v = m ? m[1].trim() : "";
+    if (v && !pareceRutaOFichero(v)) return v;
+  }
   return "";
 }
 

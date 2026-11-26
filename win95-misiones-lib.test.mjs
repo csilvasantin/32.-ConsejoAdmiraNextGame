@@ -172,6 +172,12 @@ test("ICQGram: la misión se lee de la subcarpeta del consejero en Miscelánea; 
   assert.equal(misionDeConsejeroEnCarpetas({ name: "Elon Musk", persona: "musk" }, MISIONES_FALLBACK.carpetas), null);
   assert.equal(misionDesdeCarpeta({ nombre: "SteveWozniak", ficheros: [] }), null);
   assert.equal(misionDesdeCarpeta({ nombre: "ElonMusk - Xperience en admira.tv", ficheros: [] }).corto, "Xperience en admira.tv");
+  const wozTxt = "Este documento está en Miscelánea: «SteveWozniak/2026-11-26.txt».\n\nMisión principal: Win95 Xperience en admira.live.";
+  assert.equal(misionDeclaradaEnTexto(wozTxt), "Win95 Xperience en admira.live");
+  assert.equal(misionDeclaradaEnTexto("Ruta: «SteveWozniak/2026-11-26.txt»."), "");
+  assert.equal(misionCompacta("Win95 Xperience en admira.live"), "Win95 Xperience");
+  const woz = misionDesdeCarpeta({ nombre: "SteveWozniak", ficheros: [{ nombre: "2026-11-26.txt", texto: wozTxt }] });
+  assert.equal(woz.corto, "Win95 Xperience");
 });
 
 test("Win95 ICQGram: la fila muestra nombre (n) · misión leída de Miscelánea, con ellipsis y title", () => {

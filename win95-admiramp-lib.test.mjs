@@ -24,6 +24,11 @@ import {
   moveGroup,
   reflowDocks,
   initialAmpLayout,
+  ampLayoutBox,
+  restackAmpWindows,
+  reflowVisibleDocks,
+  visibleDockParent,
+  shouldUndockOnPointer,
   detectDocks,
   layoutPlaylist,
   skinScale,
@@ -263,6 +268,11 @@ test("el HTML cablea imán, escalado del interior y EQ Web Audio con CORS/proxy"
   assert.match(html, /function makeAmpDraggable\(/);
   assert.match(html, /function layoutSkin\(/);
   assert.match(html, /function snapAmpWindow\(/);
+  assert.match(html, /function restackAmpDefault\(/);
+  assert.match(html, /function restackAmpWindows\(/);
+  assert.match(html, /function ampLayoutBox\(/);
+  assert.match(html, /restackAmpDefault\(\);/);
+  assert.match(html, /shouldUndockOnPointer\(/);
   assert.match(html, /skin-body/);
   assert.match(html, /pl-tools/);
   assert.match(html, /createBiquadFilter/);
@@ -439,5 +449,95 @@ test("el visor WINAMP arranca en barras de espectro y el EQ pinta la onda en tie
   assert.equal(samples.length, 10);
   assert.ok(samples[0] > 0.5, "ataque positivo de la onda");
   assert.ok(samples[9] < -0.5, "valle negativo de la onda");
+});
+
+test("ampLayoutBox no usa (0,0) cuando la ventana está oculta: conserva left/top del estilo", () => {
+  const hidden = ampLayoutBox("eqw", {
+    hidden: true,
+    offsetL: 0, offsetT: 0, offsetW: 0, offsetH: 0,
+    styleL: 400, styleT: 132, styleW: 275, styleH: 116,
+  });
+  assert.equal(hidden.l, 400);
+  assert.equal(hidden.t, 132);
+  assert.equal(hidden.w, 275);
+  assert.equal(hidden.h, 116);
+  const vis = ampLayoutBox("eqw", {
+    hidden: false,
+    offsetL: 300, offsetT: 140, offsetW: 275, offsetH: 116,
+    styleL: 0, styleT: 0,
+  });
+  assert.equal(vis.l, 300);
+  assert.equal(vis.t, 140);
+});
+
+test("mover WINAMP y desactivar/reactivar EQ y PL los deja alineados bajo el player, no en la posición inicial", () => {
+  const start = initialAmpLayout(182, 16);
+  const moved = moveGroup(start.positions, "amp", 400, 40, start.docks, "cluster");
+  assert.equal(moved.amp.l, 400);
+  assert.equal(moved.eqw.l, 400);
+  assert.equal(moved.plw.l, 400);
+
+  const hidEq = restackAmpWindows(moved, { amp: true, eqw: false, plw: true });
+  assert.equal(hidEq.positions.plw.l, 400);
+  assert.equal(hidEq.positions.plw.t, hidEq.positions.amp.b);
+  assert.equal(hidEq.docks.plw.parentId, "amp");
+  assert.equal(hidEq.positions.eqw.l, 400);
+  assert.equal(hidEq.positions.eqw.t, hidEq.positions.amp.b);
+  assert.notEqual(hidEq.positions.eqw.l, 182);
+  assert.notEqual(hidEq.positions.plw.t, 248);
+
+  const shown = restackAmpWindows(hidEq.positions, { amp: true, eqw: true, plw: true });
+  assert.equal(shown.positions.eqw.l, 400);
+  assert.equal(shown.positions.eqw.t, shown.positions.amp.b);
+  assert.equal(shown.positions.plw.l, 400);
+  assert.equal(shown.positions.plw.t, shown.positions.eqw.b);
+  assert.equal(shown.docks.eqw.parentId, "amp");
+  assert.equal(shown.docks.plw.parentId, "eqw");
+});
+
+test("al ocultar EQ, el reflow no ancla la playlist a una caja (0,0)", () => {
+  const start = initialAmpLayout(182, 16);
+  const moved = moveGroup(start.positions, "amp", 360, 20, start.docks, "cluster");
+  const hiddenEqBox = { ...moved.eqw, l: 0, t: 0, w: 0, h: 0, r: 0, b: 0 };
+  const broken = { ...moved, eqw: hiddenEqBox };
+  const fixed = reflowVisibleDocks(broken, start.docks, { amp: true, eqw: false, plw: true });
+  assert.equal(visibleDockParent(start.docks, "plw", { amp: true, eqw: false, plw: true }), "amp");
+  assert.equal(fixed.plw.l, moved.amp.l);
+  assert.equal(fixed.plw.t, moved.amp.b);
+  assert.notEqual(fixed.plw.l, 0);
+  assert.notEqual(fixed.plw.t, 0);
+});
+
+test("desacoplar al arrastrar no parte de (0,0): un clic no desenchufa y el arrastre usa la posición actual", () => {
+  assert.equal(shouldUndockOnPointer(0, 0), false);
+  assert.equal(shouldUndockOnPointer(3, 0), false);
+  assert.equal(shouldUndockOnPointer(4, 0), true);
+  assert.equal(shouldUndockOnPointer(0, -5), true);
+  const start = initialAmpLayout(182, 16);
+  const moved = moveGroup(start.positions, "amp", 410, 50, start.docks, "cluster");
+  const eqStart = ampLayoutBox("eqw", {
+    hidden: false,
+    offsetL: moved.eqw.l, offsetT: moved.eqw.t, offsetW: moved.eqw.w, offsetH: moved.eqw.h,
+  });
+  assert.equal(eqStart.l, 410);
+  assert.equal(eqStart.t, moved.amp.b);
+  const dragged = moveGroup(moved, "eqw", eqStart.l + 12, eqStart.t + 8, undock(start.docks, "eqw"), "subtree");
+  assert.equal(dragged.eqw.l, 422);
+  assert.notEqual(dragged.eqw.l, 182);
+  assert.notEqual(dragged.eqw.l, 0);
+});
+
+test("mover WINAMP con EQ oculto y reabrir EQ lo coloca bajo el player, empujando PL debajo", () => {
+  const start = initialAmpLayout(182, 16);
+  const afterHide = restackAmpWindows(start.positions, { amp: true, eqw: false, plw: true });
+  const moved = moveGroup(afterHide.positions, "amp", 350, 30, afterHide.docks, "cluster");
+  // EQ oculto viaja con el cluster si sigue imantado (posición de estilo, no 0,0)
+  assert.equal(moved.eqw.l, 350);
+  const reopened = restackAmpWindows(moved, { amp: true, eqw: true, plw: true });
+  assert.equal(reopened.positions.eqw.l, 350);
+  assert.equal(reopened.positions.eqw.t, reopened.positions.amp.b);
+  assert.equal(reopened.positions.plw.l, 350);
+  assert.equal(reopened.positions.plw.t, reopened.positions.eqw.b);
+  assert.ok(reopened.positions.plw.t >= reopened.positions.eqw.b);
 });
 

@@ -424,3 +424,69 @@ html.crt-frame-off #crt-ui { top: auto; bottom: 40px; right: 12px; }
 
 #crt-ui #win95-page-fs-salir{position:static;right:auto;top:auto;box-shadow:2px 2px #090603}
 #win95-page-fs-hint{z-index:2147483645}
+
+/* Extended: escritorio a todo el viewport, sin formato 4:3 ni marco CRT.
+ * Por defecto OFF. Los tres botones quedan abajo-derecha, por encima del reloj. */
+html.crt-extended #crt-shell,
+html.crt-extended.crt-frame-off #crt-shell {
+  width: 100vw;
+  height: 100vh;
+  transform: none;
+}
+html.crt-extended #crt-monitor,
+html.crt-extended.crt-frame-off #crt-monitor {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+html.crt-extended #crt-monitor .crt-grain,
+html.crt-extended #crt-monitor .crt-lip,
+html.crt-extended #crt-monitor .crt-well,
+html.crt-extended #crt-chin,
+html.crt-extended #crt-stand,
+html.crt-extended .crt-ambient { display: none !important; }
+html.crt-extended #crt-screen,
+html.crt-extended.crt-frame-off #crt-screen {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+html.crt-extended #crt-screen #stage,
+html.crt-extended #stage {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0;
+}
+html.crt-extended #desk,
+html.crt-extended #wall {
+  width: 100%;
+  height: calc(100% - 28px);
+}
+html.crt-extended #taskbar { width: 100%; }
+html.crt-extended #ssaver,
+html.crt-extended #shade,
+html.crt-extended #boot,
+html.crt-extended #shut,
+html.crt-extended #brw.fs,
+html.crt-extended #mpw.fs {
+  width: 100% !important;
+  height: 100% !important;
+}
+html.crt-extended .win.max,
+html.crt-extended .skin.max {
+  width: 100% !important;
+  height: 100% !important;
+}
+html.crt-extended #crt-fx,
+html.crt-extended #crt-screen #admira-gate,
+html.crt-extended #crt-screen #admira-gate .frame { border-radius: 0 !important; }
+html.crt-extended #crt-ui { top: auto; bottom: 40px; right: 12px; }
+html.crt-extended #boot .bar { width: 100%; background-size: 100% 8px; }

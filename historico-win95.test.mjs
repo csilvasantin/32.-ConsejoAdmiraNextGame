@@ -107,7 +107,7 @@ test("el preloader de Windows cubre desde el primer frame, antes del JS", () => 
   assert.doesNotMatch(html, /async function bootSeq\(tk\)\{ var b=qs\('#boot'\); b\.style\.display='block'/);
   const frame = html.slice(html.indexOf('id="boot-frame"'), html.indexOf('id="win95-filters"'));
   assert.match(frame, /class="ms">AdmiraNeXT/);
-  assert.match(frame, /class="win">Windows/);
+  assert.match(frame, /class="wname">Windows/);
   assert.match(frame, /class="n95">95/);
   assert.doesNotMatch(frame, /Admira<span>95/);
   assert.match(frame, /#eb5a28/);

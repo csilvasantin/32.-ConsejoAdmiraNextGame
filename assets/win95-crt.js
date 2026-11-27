@@ -1,8 +1,10 @@
-/* CRT realista + interruptor del marco (ON/OFF, tecla M, ?crt=0/1, localStorage).
+/* CRT realista + interruptor del marco (ON/OFF, tecla M, ?crt=0/1, localStorage)
+ * y modo Extended (OFF por defecto): escritorio a 100vw×100vh, sin formato 4:3.
  * El efecto de cristal (viñeta, scanlines, reflejo) se mantiene en los dos modos. */
 (function () {
   "use strict";
   var KEY = "admira-win95-crt";
+  var KEY_EXT = "admira-win95-extended";
   var CRT_W = 784, CRT_H = 716, BARE_W = 640, BARE_H = 480;
 
   function $(id) { return document.getElementById(id); }
@@ -19,6 +21,12 @@
     } catch (e) { return true; }
   }
 
+  function leerExtended() {
+    try {
+      return localStorage.getItem(KEY_EXT) === "1";
+    } catch (e) { return false; }
+  }
+
   function escribirUrl(on) {
     try {
       var u = new URL(location.href);
@@ -27,20 +35,58 @@
     } catch (e) {}
   }
 
+  function syncMonitorBtn(on) {
+    var btn = $("crt-monitor-toggle");
+    if (!btn) return;
+    btn.textContent = on ? "Monitor: ON" : "Monitor: OFF";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on
+      ? "Ocultar el marco del monitor. Tecla M."
+      : "Mostrar el marco del monitor. Tecla M.");
+  }
+
+  function syncExtendedBtn(on) {
+    var btn = $("crt-extended-toggle");
+    if (!btn) return;
+    btn.textContent = on ? "Extended: ON" : "Extended: OFF";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on
+      ? "Volver al formato 4:3 original del escritorio."
+      : "Extender el escritorio a todo el ancho y alto disponibles.");
+  }
+
+  function aplicarExtended(on, opts) {
+    opts = opts || {};
+    on = !!on;
+    document.documentElement.classList.toggle("crt-extended", on);
+    try { localStorage.setItem(KEY_EXT, on ? "1" : "0"); } catch (e) {}
+    if (on) {
+      document.documentElement.classList.add("crt-frame-off");
+      syncMonitorBtn(false);
+    } else if (!opts.skipMonitorRestore) {
+      aplicar(leerCrt(), { url: false, skipStore: true, skipResize: true, skipExtendedCheck: true });
+    }
+    syncExtendedBtn(on);
+    if (!opts.skipResize) {
+      try { window.dispatchEvent(new Event("resize")); } catch (e) {}
+    }
+  }
+
   function aplicar(on, opts) {
     opts = opts || {};
-    document.documentElement.classList.toggle("crt-frame-off", !on);
-    try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (e) {}
-    if (opts.url) escribirUrl(on);
-    var btn = $("crt-monitor-toggle");
-    if (btn) {
-      btn.textContent = on ? "Monitor: ON" : "Monitor: OFF";
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-      btn.setAttribute("aria-label", on
-        ? "Ocultar el marco del monitor. Tecla M."
-        : "Mostrar el marco del monitor. Tecla M.");
+    if (on && opts.fromUser && !opts.skipExtendedCheck &&
+        document.documentElement.classList.contains("crt-extended")) {
+      aplicarExtended(false, { skipMonitorRestore: true, skipResize: true });
     }
-    try { window.dispatchEvent(new Event("resize")); } catch (e) {}
+    document.documentElement.classList.toggle("crt-frame-off", !on);
+    if (!opts.skipStore) {
+      try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (e) {}
+    }
+    if (opts.url) escribirUrl(on);
+    syncMonitorBtn(on);
+    if (!opts.skipResize) {
+      try { window.dispatchEvent(new Event("resize")); } catch (e) {}
+    }
     if (inIframe()) {
       try {
         window.parent.postMessage({ source: "win95-crt", action: "crt-state", on: on }, location.origin);
@@ -181,24 +227,46 @@
     comp.setAttribute("aria-pressed", "true");
     comp.setAttribute("aria-label", "Apagar el equipo y volver al menú de admira.live.");
     ui.appendChild(comp);
+    var ext = document.createElement("button");
+    ext.type = "button";
+    ext.id = "crt-extended-toggle";
+    ext.textContent = "Extended: OFF";
+    ext.setAttribute("aria-pressed", "false");
+    ext.setAttribute("aria-label", "Extender el escritorio a todo el ancho y alto disponibles.");
+    ui.appendChild(ext);
     var salir = $("win95-page-fs-salir");
     if (salir) ui.appendChild(salir);
     document.body.appendChild(ui);
     mon.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true });
+      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true, fromUser: true });
     });
     comp.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       apagarEquipo();
     });
+    ext.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      aplicarExtended(!document.documentElement.classList.contains("crt-extended"));
+    });
   }
 
   window.win95CrtFit = function () {
     var shell = $("crt-shell");
     if (!shell) return 1;
+    var ext = document.documentElement.classList.contains("crt-extended");
+    if (ext) {
+      var evw = window.innerWidth, evh = window.innerHeight;
+      shell.style.width = evw + "px";
+      shell.style.height = evh + "px";
+      shell.style.transform = "none";
+      return 1;
+    }
+    shell.style.width = "";
+    shell.style.height = "";
     var off = document.documentElement.classList.contains("crt-frame-off");
     var sw = off ? BARE_W : CRT_W, sh = off ? BARE_H : CRT_H;
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -209,20 +277,27 @@
     return scale;
   };
 
-  window.win95CrtSet = function (on) { aplicar(!!on, { url: true }); };
+  window.win95CrtSet = function (on) { aplicar(!!on, { url: true, fromUser: true }); };
   window.win95CrtOn = function () { return !document.documentElement.classList.contains("crt-frame-off"); };
+  window.win95ExtendedSet = function (on) { aplicarExtended(!!on); };
+  window.win95ExtendedOn = function () { return document.documentElement.classList.contains("crt-extended"); };
 
   function ready(fn) {
     if (document.body) fn();
     else document.addEventListener("DOMContentLoaded", fn);
   }
 
-  aplicar(leerCrt(), { url: false });
+  function aplicarInicio() {
+    if (leerExtended()) aplicarExtended(true, { skipResize: true });
+    else aplicar(leerCrt(), { url: false, skipResize: true });
+  }
+
+  aplicarInicio();
 
   ready(function () {
     capas();
     botonera();
-    aplicar(leerCrt(), { url: false });
+    aplicarInicio();
     placeGate();
     bindPower();
     if (window.MutationObserver) {
@@ -235,14 +310,14 @@
     if (esEscribiendo(e)) return;
     if (e.key === "m" || e.key === "M") {
       e.preventDefault();
-      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true });
+      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true, fromUser: true });
     }
   });
 
   window.addEventListener("message", function (e) {
     if (e.origin !== location.origin) return;
     if (!e.data || e.data.source !== "win95-crt") return;
-    if (e.data.action === "set-crt") aplicar(!!e.data.on, { url: true });
+    if (e.data.action === "set-crt") aplicar(!!e.data.on, { url: true, fromUser: true });
     if (e.data.action === "query-crt") {
       try {
         e.source && e.source.postMessage({ source: "win95-crt", action: "crt-state", on: window.win95CrtOn() }, location.origin);

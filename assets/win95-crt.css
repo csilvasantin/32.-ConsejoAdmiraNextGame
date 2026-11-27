@@ -363,7 +363,7 @@ html.crt-frame-off #crt-fx,
 html.crt-frame-off #crt-screen #admira-gate,
 html.crt-frame-off #crt-screen #admira-gate .frame { border-radius: 0 !important; }
 
-/* Botonera retro fija: Monitor y Computer apilados a la derecha, sin solaparse. */
+/* Botonera retro fija: Monitor, Computer, Extended y Entrelazado apilados a la derecha, sin solaparse. */
 #crt-ui {
   position: fixed;
   top: 10px;
@@ -375,9 +375,10 @@ html.crt-frame-off #crt-screen #admira-gate .frame { border-radius: 0 !important
   align-items: stretch;
 }
 #crt-ui button {
-  min-width: 12.2em;
+  min-width: 19em;
   text-align: center;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 #computer-off-cover {
   position: fixed;
@@ -426,7 +427,7 @@ html.crt-frame-off #crt-ui { top: auto; bottom: 40px; right: 12px; }
 #win95-page-fs-hint{z-index:2147483645}
 
 /* Extended: escritorio a todo el viewport, sin formato 4:3 ni marco CRT.
- * Por defecto OFF. Los tres botones quedan abajo-derecha, por encima del reloj. */
+ * Por defecto OFF. Los cuatro botones quedan abajo-derecha, por encima del reloj. */
 html.crt-extended #crt-shell,
 html.crt-extended.crt-frame-off #crt-shell {
   width: 100vw;
@@ -490,3 +491,11 @@ html.crt-extended #crt-screen #admira-gate,
 html.crt-extended #crt-screen #admira-gate .frame { border-radius: 0 !important; }
 html.crt-extended #crt-ui { top: auto; bottom: 40px; right: 12px; }
 html.crt-extended #boot .bar { width: 100%; background-size: 100% 8px; }
+
+/* Entrelazado OFF: oculta las scanlines / líneas horizontales del CRT.
+ * Por defecto ON (sin esta clase). Independiente de Monitor y de Extended. */
+html.crt-interlace-off #crt-fx .scan {
+  display: none !important;
+  opacity: 0 !important;
+  background: none !important;
+}

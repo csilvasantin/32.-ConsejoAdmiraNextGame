@@ -1,10 +1,12 @@
-/* CRT realista + interruptor del marco (ON/OFF, tecla M, ?crt=0/1, localStorage)
- * y modo Extended (OFF por defecto): escritorio a 100vw×100vh, sin formato 4:3.
- * El efecto de cristal (viñeta, scanlines, reflejo) se mantiene en los dos modos. */
+/* CRT realista + interruptor del marco (ON/OFF, tecla M, ?crt=0/1, localStorage),
+ * modo Extended (OFF por defecto): escritorio a 100vw×100vh, sin formato 4:3,
+ * y Entrelazado (ON por defecto): scanlines CRT; OFF las quita para trabajar nítido.
+ * Viñeta y reflejo se mantienen; las scanlines solo se ocultan con Entrelazado OFF. */
 (function () {
   "use strict";
   var KEY = "admira-win95-crt";
   var KEY_EXT = "admira-win95-extended";
+  var KEY_ENT = "admira-win95-entrelazado";
   var CRT_W = 784, CRT_H = 716, BARE_W = 640, BARE_H = 480;
 
   function $(id) { return document.getElementById(id); }
@@ -25,6 +27,12 @@
     try {
       return localStorage.getItem(KEY_EXT) === "1";
     } catch (e) { return false; }
+  }
+
+  function leerEntrelazado() {
+    try {
+      return localStorage.getItem(KEY_ENT) !== "0";
+    } catch (e) { return true; }
   }
 
   function escribirUrl(on) {
@@ -53,6 +61,26 @@
     btn.setAttribute("aria-label", on
       ? "Volver al formato 4:3 original del escritorio."
       : "Extender el escritorio a todo el ancho y alto disponibles.");
+  }
+
+  function syncEntrelazadoBtn(on) {
+    var btn = $("crt-entrelazado-toggle");
+    if (!btn) return;
+    btn.textContent = on ? "Entrelazado: ON" : "Entrelazado: OFF";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on
+      ? "Quitar las líneas de entrelazado CRT para ver el escritorio nítido."
+      : "Activar las líneas de entrelazado CRT, el modo retro.");
+  }
+
+  function aplicarEntrelazado(on, opts) {
+    opts = opts || {};
+    on = !!on;
+    document.documentElement.classList.toggle("crt-interlace-off", !on);
+    if (!opts.skipStore) {
+      try { localStorage.setItem(KEY_ENT, on ? "1" : "0"); } catch (e) {}
+    }
+    syncEntrelazadoBtn(on);
   }
 
   function aplicarExtended(on, opts) {
@@ -234,6 +262,13 @@
     ext.setAttribute("aria-pressed", "false");
     ext.setAttribute("aria-label", "Extender el escritorio a todo el ancho y alto disponibles.");
     ui.appendChild(ext);
+    var ent = document.createElement("button");
+    ent.type = "button";
+    ent.id = "crt-entrelazado-toggle";
+    ent.textContent = "Entrelazado: ON";
+    ent.setAttribute("aria-pressed", "true");
+    ent.setAttribute("aria-label", "Quitar las líneas de entrelazado CRT para ver el escritorio nítido.");
+    ui.appendChild(ent);
     var salir = $("win95-page-fs-salir");
     if (salir) ui.appendChild(salir);
     document.body.appendChild(ui);
@@ -251,6 +286,11 @@
       e.preventDefault();
       e.stopPropagation();
       aplicarExtended(!document.documentElement.classList.contains("crt-extended"));
+    });
+    ent.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      aplicarEntrelazado(document.documentElement.classList.contains("crt-interlace-off"));
     });
   }
 
@@ -281,6 +321,8 @@
   window.win95CrtOn = function () { return !document.documentElement.classList.contains("crt-frame-off"); };
   window.win95ExtendedSet = function (on) { aplicarExtended(!!on); };
   window.win95ExtendedOn = function () { return document.documentElement.classList.contains("crt-extended"); };
+  window.win95EntrelazadoSet = function (on) { aplicarEntrelazado(!!on); };
+  window.win95EntrelazadoOn = function () { return !document.documentElement.classList.contains("crt-interlace-off"); };
 
   function ready(fn) {
     if (document.body) fn();
@@ -290,6 +332,7 @@
   function aplicarInicio() {
     if (leerExtended()) aplicarExtended(true, { skipResize: true });
     else aplicar(leerCrt(), { url: false, skipResize: true });
+    aplicarEntrelazado(leerEntrelazado(), { skipStore: true });
   }
 
   aplicarInicio();

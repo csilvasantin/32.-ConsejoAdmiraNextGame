@@ -174,7 +174,8 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .prow.sel{background:#0000c6}
 .plsb{background:#0d0d12}
 .plsb div{position:absolute;left:1px;top:1px;width:5px;height:18px;background:linear-gradient(90deg,#7a7a8e,#4a4a5a)}
-.alogo{width:18px;height:18px;border-radius:4px;background:#ff6a00;color:#fff;font:bold 13px/18px Arial,sans-serif;text-align:center;box-shadow:inset -1px -1px rgba(0,0,0,.35),inset 1px 1px rgba(255,255,255,.35)}
+.alogo{width:20px;height:20px;border-radius:0;background:transparent;color:transparent;font:0/0 a;box-shadow:none;overflow:visible}
+.alogo img{display:block;width:20px;height:20px;object-fit:contain;image-rendering:auto;pointer-events:none}
 
 /* AdmirAmp: imán visual, lista que rellena y cuerpo de WINAMP/EQ que escala */
 #amp,#eqw,#plw{box-sizing:border-box;overflow:hidden}
@@ -772,6 +773,7 @@ body.theme-matrix #matrix-rain,#stage.theme-matrix #matrix-rain,#desktop.theme-m
 #stage.theme-matrix .skin{box-shadow:inset 1px 1px #5c5c70,inset -1px -1px #0c0c10,0 0 12px rgba(0,255,65,.35)}
 .rundlg .run-open-lbl{flex:none;white-space:nowrap}
 .rundlg .run-fb{margin:8px 0 0;color:#800000;white-space:pre-line}
+.rundlg .run-fb.run-ok{color:#000080}
 .rundlg .run-fb[hidden],.rundlg .run-help[hidden]{display:none}
 .rundlg .run-help{margin:8px 0 0;max-height:160px;overflow:auto;background:#fff;padding:6px;font:11px/14px "Lucida Console","Courier New",monospace;white-space:pre-wrap;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
 #stage.theme-matrix .rundlg .run-help{background:rgba(0,20,8,.86);color:#9f6;box-shadow:inset 0 0 0 1px #00ff41}
@@ -1956,7 +1958,7 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
       <div class="sk tp" id="bEject" style="left:133px;top:74px;width:22px;height:16px"></div>
       <div class="sk tog" id="tShuf" style="left:162px;top:76px;width:42px;height:12px">MEZCLA</div>
       <div class="sk tog on" id="tRep" style="left:206px;top:76px;width:30px;height:12px">REP</div>
-      <div class="alogo" style="left:247px;top:72px">W</div>
+      <div class="alogo" style="left:247px;top:70px" title="Winamp"><img src="icons/amp-badge.png" width="20" height="20" alt="Winamp"></div>
       </div>
     </div>
     <!-- AdmirAmp: ecualizador -->
@@ -2124,7 +2126,7 @@ var CONFIG = {
     mailtray:'icons/inbox.png',
     media:'icons/media.png',
     ssaver:'icons/ssaver.png',
-    amp:'icons/amp.png',
+    amp:'icons/amp.png?v=20261127-r329',
     browser:'icono_netscape.png',
     p2p:'icono_napster.png',
     lnkarr:'icons/lnkarr.png',
@@ -4739,13 +4741,34 @@ function dispatchRun(r){
     return;
   }
   if(r.action==='open'&&r.url){ openExpertoView(r.url); return; }
+  if(r.action==='crt'){
+    if(window.Win95Experto&&typeof window.Win95Experto.applyCrtCommand==='function'){
+      return window.Win95Experto.applyCrtCommand(r, crtRuntime());
+    }
+  }
+}
+function crtRuntime(){
+  function isOn(feature){
+    if(feature==='monitor') return !!(window.win95CrtOn&&window.win95CrtOn());
+    if(feature==='extended') return !!(window.win95ExtendedOn&&window.win95ExtendedOn());
+    if(feature==='entrelazado') return !!(window.win95EntrelazadoOn&&window.win95EntrelazadoOn());
+    if(feature==='computer') return window.win95ComputerOn?!!window.win95ComputerOn():true;
+    return false;
+  }
+  function set(feature,on){
+    if(feature==='monitor'&&window.win95CrtSet) window.win95CrtSet(on);
+    else if(feature==='extended'&&window.win95ExtendedSet) window.win95ExtendedSet(on);
+    else if(feature==='entrelazado'&&window.win95EntrelazadoSet) window.win95EntrelazadoSet(on);
+    else if(feature==='computer'&&window.win95ComputerSet) window.win95ComputerSet(on);
+  }
+  return {isOn:isOn,set:set};
 }
 function openRunDlg(){
   if(RUNDLG){ focusWin(RUNDLG); try{ qs('input',RUNDLG).select(); }catch(e){} return; }
   var w=document.createElement('div'), key='rundlg'; w.className='win dlg rundlg'; w.id=key; w.style.width='360px';
   w.innerHTML='<div class="tb"><span class="t">Ejecutar</span><span class="x gap">×</span></div>'
-    +'<div class="body" style="display:block;padding:10px 10px 4px"><div class="msg" style="margin:0 0 8px">Escriba un comando del Modo Experto (con o sin /) y Admira 95 lo ejecutará.<br>Pruebe <b>demo</b>, <b>matrix</b>, <b>win95</b> o <b>ayuda</b>.</div>'
-    +'<label class="run-open" style="display:flex;align-items:center;gap:6px"><span class="run-open-lbl"><u>A</u>brir:</span> <input type="text" value="demo" spellcheck="false" autocapitalize="off" style="flex:1;height:20px;border:0;padding:2px 4px;font:inherit;background:#fff;-webkit-user-select:text;user-select:text;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf"></label>'
+    +'<div class="body" style="display:block;padding:10px 10px 4px"><div class="msg" style="margin:0 0 8px">Escriba un comando del Modo Experto (con o sin /) y Admira 95 lo ejecutará.<br>Pruebe <b>demo</b>, <b>matrix</b>, <b>win95</b> o <b>ayuda</b>.<br>Ejecuta <b>Monitor</b>, <b>Computer</b>, <b>Extended</b> o <b>Entrelazado</b>.</div>'
+    +'<label class="run-open" style="display:flex;align-items:center;gap:6px"><span class="run-open-lbl"><u>E</u>jecutar:</span> <input type="text" value="demo" spellcheck="false" autocapitalize="off" style="flex:1;height:20px;border:0;padding:2px 4px;font:inherit;background:#fff;-webkit-user-select:text;user-select:text;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf"></label>'
     +'<div class="run-fb" data-run-fb hidden></div>'
     +'<pre class="run-help" data-run-help hidden></pre></div>'
     +'<div class="acts"><button class="btn" data-ok>Aceptar</button> <button class="btn" data-cancel>Cancelar</button></div>';
@@ -4758,14 +4781,20 @@ function openRunDlg(){
     var fb=qs('[data-run-fb]',w), hp=qs('[data-run-help]',w);
     if(!r||!r.ok||r.action==='unknown'){
       if(hp) hp.hidden=true;
-      if(fb){ fb.hidden=false; fb.textContent=(r&&r.message)||('No se encuentra «'+raw+'».\nPruebe con «ayuda».'); }
+      if(fb){ fb.hidden=false; fb.classList.remove('run-ok'); fb.textContent=(r&&r.message)||('No se encuentra «'+raw+'».\nPruebe con «ayuda».'); }
       return;
     }
     if(r.action==='help'){
-      if(fb) fb.hidden=true;
+      if(fb){ fb.hidden=true; fb.classList.remove('run-ok'); }
       if(hp){ hp.hidden=false; hp.textContent=r.text||''; }
       w.style.width='440px';
       w.style.top=Math.round(Math.max(8, DESK_H-w.offsetHeight-8))+'px';
+      return;
+    }
+    if(r.action==='crt'){
+      if(hp) hp.hidden=true;
+      var out=dispatchRun(r);
+      if(fb){ fb.hidden=false; fb.classList.add('run-ok'); fb.textContent=(out&&out.message)||''; }
       return;
     }
     close();
@@ -4773,7 +4802,7 @@ function openRunDlg(){
   }
   qs('[data-ok]',w).addEventListener('click',ok); qs('[data-cancel]',w).addEventListener('click',close); qs('.x.gap',w).addEventListener('click',close);
   inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ok(); } else if(e.key==='Escape'){ e.preventDefault(); close(); } });
-  inp.addEventListener('input',function(){ var fb=qs('[data-run-fb]',w); if(fb) fb.hidden=true; });
+  inp.addEventListener('input',function(){ var fb=qs('[data-run-fb]',w); if(fb){ fb.hidden=true; fb.classList.remove('run-ok'); } });
   addTask(key,'Ejecutar','info',[w]); makeDraggable(qs('.tb',w),w); w.addEventListener('pointerdown',function(){ focusWin(w); });
   focusWin(w); setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },30);
 }
@@ -8979,7 +9008,8 @@ function preloadIcons(done){
     var im=new Image();
     im.onload=function(){
       var w=im.naturalWidth||32, h=im.naturalHeight||32;
-      ICONS[k]='<svg viewBox="0 0 '+w+' '+h+'"><image href="'+esc(f[k])+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated"/></svg>';
+      var render=(k==='amp')?'auto':'pixelated';
+      ICONS[k]='<svg viewBox="0 0 '+w+' '+h+'"><image href="'+esc(f[k])+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid meet" style="image-rendering:'+render+'"/></svg>';
       if(--left===0) end();
     };
     im.onerror=function(){ if(--left===0) end(); };
@@ -8997,10 +9027,10 @@ function boot(){
 }
 })();
 </script>
-<script src="/assets/win95-crt.js?v=20261127-t1459u"></script>
+<script src="/assets/win95-crt.js?v=20261127-r329"></script>
 <script src="/assets/win95-fs.js?v=20261125-fs"></script>
 <script type="module">
-  import * as Win95Experto from '/win95-experto-lib.mjs?v=20261127-r327';
+  import * as Win95Experto from '/win95-experto-lib.mjs?v=20261127-r329';
   window.Win95Experto = Win95Experto;
   window.dispatchEvent(new Event('win95-experto-ready'));
   if (Win95Experto.wantsMatrixFromUrl(location.search)) {

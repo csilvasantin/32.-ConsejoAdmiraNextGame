@@ -7,12 +7,11 @@ import { fileURLToPath } from "node:url";
 const raiz = dirname(fileURLToPath(import.meta.url));
 const src = (rel) => readFileSync(join(raiz, rel), "utf8");
 
-test("el botón Entrelazado existe, arranca en ON por defecto y está debajo de Extended", () => {
+test("Entrelazado arranca en ON por defecto y ya no se pinta como caja en la interfaz", () => {
   const js = src("assets/win95-crt.js");
   const css = src("assets/win95-crt.css");
   const html = src("windows95/index.html");
 
-  assert.match(js, /crt-entrelazado-toggle/);
   assert.match(js, /Entrelazado: ON/);
   assert.match(js, /Entrelazado: OFF/);
   assert.match(js, /admira-win95-entrelazado/);
@@ -22,13 +21,9 @@ test("el botón Entrelazado existe, arranca en ON por defecto y está debajo de 
   assert.doesNotMatch(js, /admira-win95-entrelazado"\)==="1"/);
   assert.doesNotMatch(js, /admira-win95-entrelazado"\) === "1"/);
 
-  const mon = js.indexOf('mon.id = "crt-monitor-toggle"');
-  const comp = js.indexOf('comp.id = "crt-computer-toggle"');
-  const ext = js.indexOf('ext.id = "crt-extended-toggle"');
-  const ent = js.indexOf('ent.id = "crt-entrelazado-toggle"');
-  assert.ok(mon >= 0 && comp >= 0 && ext >= 0 && ent >= 0, "faltan los cuatro botones");
-  assert.ok(mon < comp && comp < ext && ext < ent, "Entrelazado debe declararse después de Extended");
-  assert.match(js, /ui\.appendChild\(ext\);[\s\S]*ui\.appendChild\(ent\);/);
+  assert.doesNotMatch(js, /ent\.id = "crt-entrelazado-toggle"/);
+  assert.doesNotMatch(js, /ui\.appendChild\(ent\)/);
+  assert.match(css, /#crt-entrelazado-toggle[^{]*\{[^}]*display:\s*none\s*!important/s);
 
   assert.match(html, /admira-win95-entrelazado"\)!=="0"/);
   assert.match(html, /classList\.add\("crt-interlace-off"\)/);
@@ -49,7 +44,7 @@ test("Entrelazado OFF quita las scanlines, persiste en localStorage y funciona e
   assert.match(js, /win95EntrelazadoSet/);
   assert.match(js, /win95EntrelazadoOn/);
   assert.match(js, /aplicarEntrelazado\(leerEntrelazado\(\)/);
-  assert.match(js, /aplicarEntrelazado\(document\.documentElement\.classList\.contains\("crt-interlace-off"\)\)/);
+  assert.match(js, /win95EntrelazadoSet = function \(on\) \{ aplicarEntrelazado\(!!on\); \}/);
 
   // Independiente de Extended / Monitor: no se fuerza ni se limpia al cambiar de modo.
   const aplicarExt = js.slice(js.indexOf("function aplicarExtended"), js.indexOf("function aplicar("));

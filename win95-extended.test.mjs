@@ -7,12 +7,11 @@ import { fileURLToPath } from "node:url";
 const raiz = dirname(fileURLToPath(import.meta.url));
 const src = (rel) => readFileSync(join(raiz, rel), "utf8");
 
-test("el botón Extended existe, arranca en OFF por defecto y está debajo de Computer", () => {
+test("Extended arranca en OFF por defecto y ya no se pinta como caja en la interfaz", () => {
   const js = src("assets/win95-crt.js");
   const css = src("assets/win95-crt.css");
   const html = src("windows95/index.html");
 
-  assert.match(js, /crt-extended-toggle/);
   assert.match(js, /Extended: OFF/);
   assert.match(js, /Extended: ON/);
   assert.match(js, /admira-win95-extended/);
@@ -21,12 +20,11 @@ test("el botón Extended existe, arranca en OFF por defecto y está debajo de Co
   assert.doesNotMatch(js, /getItem\(KEY_EXT\) !== "0"/);
   assert.doesNotMatch(js, /admira-win95-extended"\) !== "0"/);
 
-  const mon = js.indexOf('mon.id = "crt-monitor-toggle"');
-  const comp = js.indexOf('comp.id = "crt-computer-toggle"');
-  const ext = js.indexOf('ext.id = "crt-extended-toggle"');
-  assert.ok(mon >= 0 && comp >= 0 && ext >= 0, "faltan los tres botones");
-  assert.ok(mon < comp && comp < ext, "Extended debe declararse después de Computer");
-  assert.match(js, /ui\.appendChild\(comp\);[\s\S]*ui\.appendChild\(ext\);/);
+  // Las cajas beige salieron de la interfaz (se alternan en Ejecutar).
+  assert.doesNotMatch(js, /ext\.id = "crt-extended-toggle"/);
+  assert.doesNotMatch(js, /ui\.appendChild\(ext\)/);
+  assert.doesNotMatch(js, /ui\.appendChild\(comp\)/);
+  assert.match(css, /#crt-extended-toggle[^{]*\{[^}]*display:\s*none\s*!important/s);
 
   const early = html.slice(html.indexOf("admira-win95-extended"), html.indexOf("admira-win95-extended") + 400);
   assert.match(html, /admira-win95-extended"\)==="1"/);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import {
   MATRIX_GLYPHS, MATRIX_HEAD, MATRIX_TRAIL, MATRIX_TRAIL_DIM, MATRIX_BG, MATRIX_FADE,
-  HELP_TEXT, normalizeCommand, parseRunCommand, wantsMatrixFromUrl, syncMatrixUrl,
+  HELP_TEXT, normalizeCommand, parseRunCommand, applyCrtCommand, wantsMatrixFromUrl, syncMatrixUrl,
   createMatrixRain, setMatrixTheme, isMatrixTheme,
 } from './win95-experto-lib.mjs';
 
@@ -60,6 +60,11 @@ test('parseRunCommand: ayuda / help / ? muestran la lista', () => {
     assert.match(r.text, /matrix/);
     assert.match(r.text, /win95/);
     assert.match(r.text, /demo/);
+    assert.match(r.text, /monitor/);
+    assert.match(r.text, /computer/);
+    assert.match(r.text, /extended/);
+    assert.match(r.text, /entrelazado/);
+    assert.match(r.text, /alternan ON\/OFF/);
     assert.match(HELP_TEXT, /consumos/);
   }
 });
@@ -305,19 +310,22 @@ test('setMatrixTheme aplica body.theme-matrix / #desktop|#stage y limpia el canv
 });
 
 test('windows95/index.html: typo Abrir: corregido, Ejecutar es Modo Experto y carga la lib', () => {
-  assert.match(html, /<span class="run-open-lbl"><u>A<\/u>brir:<\/span>/);
+  assert.match(html, /<span class="run-open-lbl"><u>E<\/u>jecutar:<\/span>/);
+  assert.doesNotMatch(html, /<u>A<\/u>brir:/);
   assert.doesNotMatch(html, /gap:6px"><u>A<\/u>brir:/);
   assert.match(html, /Modo Experto/);
   assert.match(html, /<b>demo<\/b>/);
   assert.match(html, /<b>matrix<\/b>/);
   assert.match(html, /<b>win95<\/b>/);
   assert.match(html, /<b>ayuda<\/b>/);
+  assert.match(html, /Ejecuta <b>Monitor<\/b>, <b>Computer<\/b>, <b>Extended<\/b> o <b>Entrelazado<\/b>/);
   assert.match(html, /win95-experto-lib\.mjs/);
   assert.match(html, /body\.theme-matrix|#stage\.theme-matrix/);
   assert.match(html, /#matrix-rain/);
   assert.match(html, /parseRunCommand/);
   assert.match(html, /setMatrixTheme/);
+  assert.match(html, /applyCrtCommand/);
   assert.match(html, /tema=matrix|wantsMatrixFromUrl/);
-  // El gap del flex ya no separa la A de «brir:»
+  // El gap del flex ya no separa la E de «jecutar:»
   assert.match(html, /run-open-lbl/);
 });

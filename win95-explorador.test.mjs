@@ -182,13 +182,16 @@ test("Miscelánea: subcarpetas genéricas de consejero (SteveWozniak, ElonMusk, 
   assert.match(html, /name:'JensenHuang'/);
   assert.match(html, /mission:'ModoDemoAdmiraNeXT'/);
   assert.match(html, /id:'doc-woz-mision-20261126'/);
+  assert.match(html, /id:'doc-woz-mision-20261127'/);
   assert.match(html, /id:'doc-elon-mision-20261126'/);
   assert.match(html, /id:'doc-jensen-mision-20261126'/);
   assert.match(html, /name:'2026-11-26\.txt'/);
+  assert.match(html, /name:'2026-11-27\.txt'/);
   assert.match(html, /folder:'fld-stevewozniak'/);
   assert.match(html, /folder:'fld-elonmusk'/);
   assert.match(html, /folder:'fld-jensenhuang'/);
   assert.match(html, /id="mision-woz-20261126-seed"/);
+  assert.match(html, /id="mision-woz-20261127-seed"/);
   assert.match(html, /id="mision-elon-20261126-seed"/);
   assert.match(html, /id="mision-jensen-20261126-seed"/);
   assert.match(html, /Win95 Xperience en admira\.live/);

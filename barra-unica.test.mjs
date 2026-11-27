@@ -23,6 +23,26 @@ test("home: opciones primero y las pestañas en el orden canónico (DeepAgents a
   assert.match(tabs, /<a href="\/deepagents"[^>]*>🤖 DeepAgents<\/a>/);
 });
 
+// t1408u (Carlos, 27-11-2026): en la home, y solo en la home, la nube verde abre /win95.
+// En subpáginas (admira-bar.js) y en el marco (yk-frame.js) la marca sigue yendo a la home.
+test("home: la nube verde abre /win95; en el resto de páginas sigue yendo a la home", () => {
+  const html = readFileSync("index.html", "utf8");
+  const bar = html.slice(html.indexOf('<div class="top-bar">'), html.indexOf('<nav class="top-tabs"'));
+  assert.match(bar, /<a href="\/win95" class="version-badge brand-logo"/);
+  assert.match(bar, /title="Win95 Xperience · Sistema Operativo Admira"/);
+  assert.match(bar, /data-en-title="Win95 Xperience · Admira Operating System"/);
+  assert.doesNotMatch(bar, /href="https:\/\/www\.admira\.live\/" class="version-badge brand-logo"/);
+
+  const js = readFileSync("admira-bar.js", "utf8");
+  assert.match(js, /if \(path === "\/" \|\| path === ""\) return;/);
+  assert.match(js, /brand\.href = "https:\/\/www\.admira\.live\/"/);
+  assert.doesNotMatch(js, /brand\.href = "\/win95"/);
+
+  const marco = readFileSync("yk-frame.js", "utf8");
+  assert.match(marco, /logo\.href = "\/"/);
+  assert.doesNotMatch(marco, /logo\.href = "\/win95"/);
+});
+
 test("admira-bar.js: misma fila plana, opciones a la izquierda del todo", () => {
   const js = readFileSync("admira-bar.js", "utf8");
   const top = js.slice(js.indexOf("var TOP = ["), js.indexOf("];", js.indexOf("var TOP = [")));

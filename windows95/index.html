@@ -2860,13 +2860,71 @@ var AMP_DOCKS={};
 var AMP_IDS=['amp','eqw','plw'];
 var AMP_MAGNET=16;
 function isAmpWin(el){ return !!(el&&(el.id==='amp'||el.id==='eqw'||el.id==='plw')); }
-function ampBox(el){ return {id:el.id,l:el.offsetLeft,t:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight,r:el.offsetLeft+el.offsetWidth,b:el.offsetTop+el.offsetHeight}; }
-function ampPositions(){ var o={}; AMP_IDS.forEach(function(id){ var el=qs('#'+id); if(el) o[id]=ampBox(el); }); return o; }
 function ampVisible(el){ return !!(el&&el.style.display!=='none'&&el.getAttribute('data-hidden')!=='1'); }
+function ampLayoutBox(id,raw){
+  raw=raw||{};
+  var sizes={amp:{w:275,h:116},eqw:{w:275,h:116},plw:{w:275,h:150}};
+  var fb=sizes[id]||{w:275,h:116}, hidden=!!raw.hidden;
+  var ow=isFinite(raw.offsetW)?+raw.offsetW:0, oh=isFinite(raw.offsetH)?+raw.offsetH:0;
+  var useStyle=hidden||ow<1||oh<1;
+  var l=useStyle?(isFinite(raw.styleL)?+raw.styleL:(isFinite(raw.offsetL)?+raw.offsetL:0)):(isFinite(raw.offsetL)?+raw.offsetL:0);
+  var t=useStyle?(isFinite(raw.styleT)?+raw.styleT:(isFinite(raw.offsetT)?+raw.offsetT:0)):(isFinite(raw.offsetT)?+raw.offsetT:0);
+  var w=useStyle?((isFinite(raw.styleW)&&raw.styleW)?+raw.styleW:ow||fb.w):ow;
+  var h=useStyle?((isFinite(raw.styleH)&&raw.styleH)?+raw.styleH:oh||fb.h):oh;
+  return {id:id,l:l,t:t,w:w,h:h,r:l+w,b:t+h};
+}
+function ampBox(el){
+  return ampLayoutBox(el.id,{
+    hidden:!ampVisible(el),
+    offsetL:el.offsetLeft,offsetT:el.offsetTop,offsetW:el.offsetWidth,offsetH:el.offsetHeight,
+    styleL:parseInt(el.style.left,10),styleT:parseInt(el.style.top,10),
+    styleW:parseInt(el.style.width,10),styleH:parseInt(el.style.height,10)
+  });
+}
+function ampPositions(){ var o={}; AMP_IDS.forEach(function(id){ var el=qs('#'+id); if(el) o[id]=ampBox(el); }); return o; }
 function placeAmpEl(el,l,t){
-  l=Math.round(clampWinLeft(l,el.offsetWidth));
+  var w=el.offsetWidth||parseInt(el.style.width,10)||275;
+  l=Math.round(clampWinLeft(l,w));
   t=Math.round(clamp(t,0,DESK_TOP_MAX));
   el.style.left=l+'px'; el.style.top=t+'px';
+}
+function ampVisMap(){ return {amp:ampVisible(qs('#amp')),eqw:ampVisible(qs('#eqw')),plw:ampVisible(qs('#plw'))}; }
+function visibleDockParent(docks,id,visible){
+  var d=docks&&docks[id]; if(!d) return null;
+  var cur=d.parentId, seen={};
+  while(cur){
+    if(seen[cur]) return 'amp';
+    seen[cur]=1;
+    if(visible[cur]!==false) return cur;
+    cur=(docks[cur]&&docks[cur].parentId)||(cur==='amp'?null:'amp');
+  }
+  return 'amp';
+}
+function restackAmpWindows(positions,visible){
+  var amp=positions&&positions.amp; if(!amp) return {positions:positions||{},docks:{}};
+  var visEq=!!visible.eqw, visPl=!!visible.plw;
+  var eqSize=positions.eqw||{w:275,h:116}, plSize=positions.plw||{w:275,h:150};
+  var next={}, docks={}, x=amp.l, y=amp.b;
+  next.amp={id:'amp',l:amp.l,t:amp.t,w:amp.w,h:amp.h,r:amp.l+amp.w,b:amp.t+amp.h};
+  docks.eqw={parentId:'amp',side:'bottom',align:0};
+  next.eqw={id:'eqw',l:x,t:y,w:eqSize.w,h:eqSize.h,r:x+eqSize.w,b:y+eqSize.h};
+  if(visEq) y=next.eqw.b;
+  docks.plw={parentId:visEq?'eqw':'amp',side:'bottom',align:0};
+  next.plw={id:'plw',l:x,t:y,w:plSize.w,h:plSize.h,r:x+plSize.w,b:y+plSize.h};
+  return {positions:next,docks:docks};
+}
+function restackAmpDefault(){
+  var pos=ampPositions(), r=restackAmpWindows(pos,ampVisMap()), id, el, p;
+  AMP_DOCKS={};
+  Object.keys(r.docks).forEach(function(k){ AMP_DOCKS[k]=r.docks[k]; });
+  AMP_IDS.forEach(function(id){
+    el=qs('#'+id); p=r.positions[id];
+    if(el&&p&&id!=='amp') placeAmpEl(el,p.l,p.t);
+  });
+}
+function shouldUndockOnPointer(dx,dy,threshold){
+  if(threshold==null) threshold=4;
+  return Math.abs(dx)>=threshold||Math.abs(dy)>=threshold;
 }
 function ampCluster(id){
   var graph={}, add=function(a,b){ if(!a||!b) return; (graph[a]||(graph[a]=[])).push(b); (graph[b]||(graph[b]=[])).push(a); };
@@ -2928,14 +2986,19 @@ function placeAgainstAmp(p,c,side,align){
   return {l:c.l,t:c.t};
 }
 function reflowAmpDocks(){
-  var pos=ampPositions(), placed={}, id, guard=0, progress, d, loc, el;
-  AMP_IDS.forEach(function(i){ if(!AMP_DOCKS[i]) placed[i]=1; });
+  var pos=ampPositions(), vis=ampVisMap(), placed={}, id, guard=0, progress, d, loc, el, parentId, same;
+  AMP_IDS.forEach(function(i){ if(!AMP_DOCKS[i]||vis[i]===false) placed[i]=1; });
+  placed.amp=1;
   while(guard++<20){
     progress=false;
     for(id in AMP_DOCKS){
-      d=AMP_DOCKS[id]; if(!d||placed[id]||!pos[id]||!pos[d.parentId]) continue;
-      if(!placed[d.parentId]&&AMP_DOCKS[d.parentId]) continue;
-      loc=placeAgainstAmp(pos[d.parentId],pos[id],d.side,d.align||0);
+      d=AMP_DOCKS[id]; if(!d||placed[id]||!pos[id]) continue;
+      if(vis[id]===false){ placed[id]=1; continue; }
+      parentId=visibleDockParent(AMP_DOCKS,id,vis)||d.parentId;
+      if(!pos[parentId]) continue;
+      if(!placed[parentId]&&AMP_DOCKS[parentId]&&vis[parentId]!==false) continue;
+      same=parentId===d.parentId;
+      loc=placeAgainstAmp(pos[parentId],pos[id],same?d.side:'bottom',same?(d.align||0):0);
       el=qs('#'+id); if(el){ placeAmpEl(el,loc.l,loc.t); pos[id]=ampBox(el); }
       placed[id]=1; progress=true;
     }
@@ -2963,30 +3026,36 @@ function layoutSkin(el){
 }
 function layoutAllAmp(){ AMP_IDS.forEach(function(id){ var el=qs('#'+id); if(el) layoutSkin(el); }); }
 function dockAmpOnOpen(){
-  var amp=qs('#amp'), eq=qs('#eqw'), pl=qs('#plw'); if(!amp) return;
-  var y=amp.offsetTop+amp.offsetHeight, x=amp.offsetLeft;
-  if(ampVisible(eq)){ placeAmpEl(eq,x,y); setAmpDock('eqw',{parentId:'amp',side:'bottom',align:0}); y+=eq.offsetHeight; } else undockAmp('eqw');
-  if(ampVisible(pl)){ placeAmpEl(pl,x,y); setAmpDock('plw',{parentId:ampVisible(eq)?'eqw':'amp',side:'bottom',align:0}); } else undockAmp('plw');
+  restackAmpDefault();
   layoutAllAmp();
 }
 function makeAmpDraggable(handle,win){
   var sx,sy,ox,oy,pid=null,start=null,movingKids=null;
+  var undockArmed=false;
   handle.addEventListener('pointerdown',function(e){
     if(e.target.closest('.x,.sbx')) return;
     if(win.classList.contains('max')){ focusWin(win); return; }
     pid=e.pointerId; try{ handle.setPointerCapture(pid); }catch(_){}
-    sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win);
-    start=ampPositions();
+    sx=e.clientX; sy=e.clientY;
+    var startBox=ampBox(win); ox=startBox.l; oy=startBox.t; focusWin(win);
+    start=ampPositions(); undockArmed=false; win._pendingDock=null;
     if(win.id==='amp') movingKids=ampCluster('amp');
-    else { undockAmp(win.id); movingKids=[win.id].concat(ampDescendants(win.id)); }
+    else movingKids=[win.id].concat(ampDescendants(win.id));
   });
   handle.addEventListener('pointermove',function(e){
     if(pid!==e.pointerId) return;
     var nx=Math.round(ox+(e.clientX-sx)/SCALE), ny=Math.round(oy+(e.clientY-sy)/SCALE);
     if(win.id!=='amp'){
+      if(!undockArmed){
+        if(!shouldUndockOnPointer(nx-ox,ny-oy)) return;
+        undockAmp(win.id); undockArmed=true;
+        movingKids=[win.id].concat(ampDescendants(win.id));
+        start=ampPositions();
+      }
       var others=[];
       AMP_IDS.forEach(function(k){ if(k!==win.id&&movingKids.indexOf(k)<0){ var el=qs('#'+k); if(ampVisible(el)) others.push(ampBox(el)); } });
-      var moving={id:win.id,l:nx,t:ny,w:win.offsetWidth,h:win.offsetHeight,r:nx+win.offsetWidth,b:ny+win.offsetHeight};
+      var moving={id:win.id,l:nx,t:ny,w:start[win.id]?start[win.id].w:win.offsetWidth,h:start[win.id]?start[win.id].h:win.offsetHeight,r:0,b:0};
+      moving.r=moving.l+moving.w; moving.b=moving.t+moving.h;
       var sn=snapAmpWindow(moving,others);
       nx=sn.l; ny=sn.t; win._pendingDock=sn.dock;
     } else win._pendingDock=null;
@@ -2998,8 +3067,8 @@ function makeAmpDraggable(handle,win){
   });
   function end(e){
     if(pid!==e.pointerId) return; pid=null;
-    if(win.id!=='amp'&&win._pendingDock) setAmpDock(win.id, win._pendingDock);
-    win._pendingDock=null;
+    if(win.id!=='amp'&&undockArmed&&win._pendingDock) setAmpDock(win.id, win._pendingDock);
+    win._pendingDock=null; undockArmed=false;
     reflowAmpDocks();
     if(MODE==='interactive'&&typeof saveDeskLayout==='function') saveDeskLayout();
   }
@@ -8557,6 +8626,8 @@ function toggleSub(id,togId){
   var w=qs(id), hidden=w.getAttribute('data-hidden')==='1';
   if(hidden){ w.removeAttribute('data-hidden'); w.style.display='block'; focusWin(w); } else { w.setAttribute('data-hidden','1'); w.style.display='none'; }
   qs(togId).classList.toggle('on',hidden);
+  restackAmpDefault();
+  if(MODE==='interactive'&&typeof saveDeskLayout==='function') saveDeskLayout();
 }
 
 /* ---------- menú Inicio ---------- */

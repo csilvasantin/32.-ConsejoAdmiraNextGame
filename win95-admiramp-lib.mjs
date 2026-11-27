@@ -265,6 +265,100 @@ export function initialAmpLayout(originL = 182, originT = 16, sizes = AMP_DESIGN
   };
 }
 
+function numOr(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/**
+ * Caja de una ventana AdmirAmp. Si está oculta, offsetLeft/Width son 0;
+ * hay que usar left/top/width/height del estilo para no saltar a (0,0).
+ */
+export function ampLayoutBox(id, raw = {}, sizes = AMP_DESIGN) {
+  const fallbackW = (sizes[id] && sizes[id].w) || 275;
+  const fallbackH = (sizes[id] && sizes[id].h) || 116;
+  const hidden = !!raw.hidden;
+  const offsetW = numOr(raw.offsetW, 0);
+  const offsetH = numOr(raw.offsetH, 0);
+  const useStyle = hidden || offsetW < 1 || offsetH < 1;
+  const l = useStyle ? numOr(raw.styleL, numOr(raw.offsetL, 0)) : numOr(raw.offsetL, 0);
+  const t = useStyle ? numOr(raw.styleT, numOr(raw.offsetT, 0)) : numOr(raw.offsetT, 0);
+  const w = useStyle ? (numOr(raw.styleW, 0) || offsetW || fallbackW) : offsetW;
+  const h = useStyle ? (numOr(raw.styleH, 0) || offsetH || fallbackH) : offsetH;
+  return box(id, l, t, w, h);
+}
+
+/** Ancestro visible para reflow: si el padre está oculto, sube hasta WINAMP. */
+export function visibleDockParent(docks, id, visible = {}) {
+  const d = docks && docks[id];
+  if (!d) return null;
+  let cur = d.parentId;
+  const seen = new Set();
+  while (cur) {
+    if (seen.has(cur)) return "amp";
+    seen.add(cur);
+    if (visible[cur] !== false) return cur;
+    cur = (docks[cur] && docks[cur].parentId) || (cur === "amp" ? null : "amp");
+  }
+  return "amp";
+}
+
+/**
+ * Pila por defecto, siempre respecto a la posición ACTUAL de WINAMP:
+ * EQ visible justo debajo, PL debajo de EQ si EQ está visible, o debajo de WINAMP si no.
+ * Las ocultas se guardan ya alineadas (sin ocupar hueco) para reabrirlas en el sitio correcto.
+ */
+export function restackAmpWindows(positions, visible = {}, sizes = AMP_DESIGN) {
+  const amp = positions && positions.amp;
+  if (!amp) return { positions: { ...(positions || {}) }, docks: {} };
+  const visEq = !!visible.eqw;
+  const visPl = !!visible.plw;
+  const eqSize = positions.eqw || sizes.eqw;
+  const plSize = positions.plw || sizes.plw;
+  const next = { ...positions, amp: box("amp", amp.l, amp.t, amp.w, amp.h) };
+  const docks = {};
+  const x = amp.l;
+  let y = amp.b;
+  docks.eqw = { parentId: "amp", side: "bottom", align: 0 };
+  next.eqw = box("eqw", x, y, eqSize.w, eqSize.h);
+  if (visEq) y = next.eqw.b;
+  docks.plw = { parentId: visEq ? "eqw" : "amp", side: "bottom", align: 0 };
+  next.plw = box("plw", x, y, plSize.w, plSize.h);
+  return { positions: next, docks };
+}
+
+export function reflowVisibleDocks(positions, docks, visible = {}) {
+  const next = { ...positions };
+  const placed = new Set();
+  for (const id of Object.keys(next)) {
+    if (!docks || !docks[id] || visible[id] === false) placed.add(id);
+  }
+  if (next.amp) placed.add("amp");
+  let guard = 0;
+  while (guard++ < 20) {
+    let progress = false;
+    for (const [child, d] of Object.entries(docks || {})) {
+      if (placed.has(child) || !next[child] || !d) continue;
+      if (visible[child] === false) { placed.add(child); continue; }
+      const parentId = visibleDockParent(docks, child, visible) || d.parentId;
+      if (!next[parentId]) continue;
+      if (!placed.has(parentId) && docks[parentId] && visible[parentId] !== false) continue;
+      const same = parentId === d.parentId;
+      const pos = placeAgainst(next[parentId], next[child], same ? d.side : "bottom", same ? (d.align || 0) : 0);
+      next[child] = box(child, pos.l, pos.t, next[child].w, next[child].h);
+      placed.add(child);
+      progress = true;
+    }
+    if (!progress) break;
+  }
+  return next;
+}
+
+/** Un clic en la barra no desenchufa; solo un arrastre real. */
+export function shouldUndockOnPointer(dx, dy, threshold = 4) {
+  return Math.abs(Number(dx) || 0) >= threshold || Math.abs(Number(dy) || 0) >= threshold;
+}
+
 export function detectDocks(positions, threshold = MAGNET_THRESHOLD, ids = AMP_IDS) {
   let docks = {};
   const boxes = ids.map((id) => positions[id]).filter(Boolean);

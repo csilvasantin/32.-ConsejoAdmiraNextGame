@@ -6,5 +6,6 @@ test('#7728: la demo no arranca sola; solo con Inicio → Ejecutar «demo» o ?d
   assert.match(html, /function start\(\)\{[^\n]*if\(DEMO_URL\) startAttract\(true\); else startDesktop\(\);/);
   assert.match(html, /if\(MODE!=='interactive'\|\|!DEMO_URL\) return;/);
   assert.match(html, /'mi-run':function\(\)\{ openRunDlg\(\); \}/);
-  assert.match(html, /cmd==='demo'[^\n]*launchDemo\(\)/);
+  assert.match(html, /r\.action==='demo'\)\{ launchDemo\(\);/);
+  assert.match(html, /parseRunCommand/);
 });

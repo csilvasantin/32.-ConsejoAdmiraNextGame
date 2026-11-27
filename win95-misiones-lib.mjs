@@ -32,6 +32,11 @@ export const ESTADO_ES = {
   blocked: "bloqueado",
   done: "hecho",
   cancelled: "anulado",
+  canceled: "anulado",
+  failed: "fallido",
+  error: "error",
+  expired: "caducado",
+  discarded: "descartado",
 };
 
 /** Redacción extra: claves SSH y correos, además de IPs/tokens de redactar(). */
@@ -131,7 +136,7 @@ export function normalizarEncargo(raw) {
   return {
     encargo: id,
     etiqueta: String(raw.etiqueta || ("#" + id)).slice(0, 24),
-    estado: ESTADO_ES[estado] ? estado : "pending",
+    estado: ESTADO_ES[estado] ? (estado === "canceled" ? "cancelled" : estado) : "pending",
     de: sanear(String(raw.de || raw.from_name || "")).slice(0, 80),
     cuandoMs: Number.isFinite(ms) ? ms : 0,
     acuseMs: Number.isFinite(acuseMs) ? acuseMs : 0,

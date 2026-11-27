@@ -8,6 +8,7 @@ import {
   cuerpoMision, emailDesdeEncargo, construirBandeja, tooltipBandeja, aplicarLeidos,
   contieneSecreto, BANDEJA_FALLBACK, HECHAS_26NOV, BANDEJA_URL, BANDEJA_LEIDOS_KEY,
   BANDEJA_CADA_SEG, CC_CARLOS, PARA_DEFECTO, DEEPAGENTS_BANDEJA,
+  mailDeEncargo, carpetaDeEstado, nombreConsejeroFiel, asuntoCarpeta,
 } from "./win95-bandeja-lib.mjs";
 import { onRequestGet, construir } from "./functions/api/win95/bandeja.js";
 
@@ -174,4 +175,124 @@ test("Win95: Bandeja de entrada pinta De/Para/CC, sondea /api/win95/bandeja y el
   assert.ok(DEEPAGENTS_BANDEJA.some((a) => a.persona === "Smith"));
   assert.ok(DEEPAGENTS_BANDEJA.some((a) => a.persona === "Niobe"));
   assert.ok(DEEPAGENTS_BANDEJA.some((a) => a.persona === "Arquitecto"));
+});
+
+
+test("las 4 carpetas mapean estados reales: entrada done, salida en curso, enviados del consejero, eliminados no acabadas", () => {
+  assert.equal(carpetaDeEstado("done"), "entrada");
+  assert.equal(carpetaDeEstado("in_progress"), "salida");
+  assert.equal(carpetaDeEstado("pending"), "salida");
+  assert.equal(carpetaDeEstado("ack"), "salida");
+  assert.equal(carpetaDeEstado("blocked"), "eliminados");
+  assert.equal(carpetaDeEstado("cancelled"), "eliminados");
+  assert.equal(carpetaDeEstado("canceled"), "eliminados");
+  assert.equal(carpetaDeEstado("failed"), "eliminados");
+
+  const rawCurso = {
+    encargo: 8801,
+    estado: "in_progress",
+    de: "status-web · JobsGrokBot",
+    from_name: "status-web · JobsGrokBot",
+    target_persona: "Neo",
+    cuando: "2026-11-27T09:00:00Z",
+    texto: "Titular: Retoma del preloader de Windows 95",
+  };
+  const rawBloq = {
+    encargo: 8802,
+    estado: "blocked",
+    de: "status-web · HuangGrokBot",
+    from_name: "status-web · HuangGrokBot",
+    target_persona: "Oraculo",
+    cuando: "2026-11-20T10:00:00Z",
+    texto: "Ojos Remotos en AdmiraNeXT04: hace falta acceso de lectura.",
+    respuesta: "Bloqueado: falta el acceso de lectura a admira-vault.",
+  };
+  const rawFail = {
+    encargo: 8803,
+    estado: "failed",
+    de: "status-web · Elon Musk",
+    from_name: "status-web · Elon Musk",
+    target_persona: "Trinity",
+    cuando: "2026-11-21T08:00:00Z",
+    texto: "Titular: Prueba del webhook que no llegó a cerrarse",
+  };
+
+  const d = construirBandeja({
+    bandejas: {
+      Neo: [rawCurso, HECHAS_26NOV.find((e) => e.encargo === 7722)],
+      Oraculo: [rawBloq],
+      Trinity: [rawFail],
+    },
+    ahora: AHORA,
+  });
+  assert.equal(d.carpetas.conteo.entrada, 1);
+  assert.equal(d.carpetas.entrada[0].encargo, 7722);
+  assert.equal(d.carpetas.entrada[0].de, "Neo");
+  assert.equal(d.emails.length, 1);
+
+  assert.equal(d.carpetas.conteo.salida, 1);
+  const sal = d.carpetas.salida[0];
+  assert.equal(sal.de, "Neo");
+  assert.equal(sal.para, "Steve Jobs");
+  assert.equal(sal.cc, "Carlos Silva");
+  assert.match(sal.asunto, /#8801/);
+  assert.match(sal.asunto, /en curso/i);
+  assert.match(sal.cuerpo, /Estado: en curso/i);
+  assert.match(sal.cuerpo, /preloader de Windows 95/i);
+
+  const env = d.carpetas.enviados;
+  assert.ok(env.some((e) => e.encargo === 8801 && e.de === "Steve Jobs" && e.para === "Neo"));
+  assert.ok(env.some((e) => e.encargo === 7722 && e.de === "Steve Jobs" && e.para === "Neo"));
+  assert.ok(env.some((e) => e.encargo === 8802 && e.de === "Jensen Huang" && e.para === "Oráculo"));
+  assert.ok(env.some((e) => e.encargo === 8803 && e.de === "Elon Musk" && e.para === "Trinity"));
+  assert.ok(env.every((e) => e.cc === "Carlos Silva"));
+  const enc = env.find((e) => e.encargo === 8801);
+  assert.match(enc.asunto, /^Encargo · #8801/);
+  assert.match(enc.cuerpo, /preloader de Windows 95/);
+
+  assert.equal(d.carpetas.conteo.eliminados, 2);
+  const bloq = d.carpetas.eliminados.find((e) => e.encargo === 8802);
+  assert.equal(bloq.de, "Oráculo");
+  assert.equal(bloq.para, "Jensen Huang");
+  assert.equal(bloq.estado, "blocked");
+  assert.match(bloq.asunto, /No acabada · #8802/);
+  assert.match(bloq.cuerpo, /bloqueado/i);
+  assert.match(bloq.cuerpo, /admira-vault/);
+  const fail = d.carpetas.eliminados.find((e) => e.encargo === 8803);
+  assert.equal(fail.de, "Trinity");
+  assert.equal(fail.estado, "failed");
+  assert.match(fail.cuerpo, /fallido/i);
+  assert.ok(!JSON.stringify(d).includes("token="));
+});
+
+test("nombreConsejeroFiel lee creado_por, consejero, origen o de sin inventar", () => {
+  assert.equal(nombreConsejeroFiel({ creado_por: "JobsGrokBot", de: "status-web" }), "Steve Jobs");
+  assert.equal(nombreConsejeroFiel({ consejero: "Walt Disney", target_persona: "Morfeo" }), "Walt Disney");
+  assert.equal(nombreConsejeroFiel({ origen: "status-web · Mira Murati" }), "Mira Murati");
+  assert.equal(nombreConsejeroFiel({ solicitante: "George Lucas" }), "George Lucas");
+  assert.equal(nombreConsejeroFiel({ de: "NeoMacStudio" }), "");
+  assert.equal(nombreConsejeroFiel({}), "");
+});
+
+test("Win95: las 4 carpetas del Correo Admira son clicables y Enviar y recibir las refresca", () => {
+  assert.match(html, /id="mfIn"/);
+  assert.match(html, /id="mfOut"/);
+  assert.match(html, /id="mfSent"/);
+  assert.match(html, /id="mfDel"/);
+  assert.match(html, /setMailView\('fin'\)/);
+  assert.match(html, /setMailView\('out'\)/);
+  assert.match(html, /setMailView\('sent'\)/);
+  assert.match(html, /setMailView\('del'\)/);
+  assert.match(html, /No hay mensajes en esta carpeta\./);
+  assert.match(html, /encargos enviados/);
+  assert.match(html, /no acabadas/);
+  assert.match(html, /De → Para/);
+  assert.match(html, /loadBandeja\(true\); if\(MVIEW==='da'\) loadDaCom\(true\)/);
+  assert.match(html, /MAILBOX=\{entrada:\[\],salida:\[\],enviados:\[\],eliminados:\[\]\}/);
+  const seed = html.match(/id="bandeja-fallback-seed">([^<]+)</);
+  const datos = JSON.parse(seed[1]);
+  assert.equal(datos.carpetas.conteo.entrada, 4);
+  assert.equal(datos.carpetas.conteo.enviados, 4);
+  assert.equal(datos.carpetas.conteo.salida, 0);
+  assert.equal(datos.carpetas.conteo.eliminados, 0);
 });

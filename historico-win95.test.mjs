@@ -105,6 +105,16 @@ test("el preloader de Windows cubre desde el primer frame, antes del JS", () => 
   assert.match(html, /function hideBoot\(/);
   assert.match(html, /function showBoot\(/);
   assert.doesNotMatch(html, /async function bootSeq\(tk\)\{ var b=qs\('#boot'\); b\.style\.display='block'/);
+  const frame = html.slice(html.indexOf('id="boot-frame"'), html.indexOf('id="win95-filters"'));
+  assert.match(frame, /class="ms">AdmiraNeXT/);
+  assert.match(frame, /class="win">Windows/);
+  assert.match(frame, /class="n95">95/);
+  assert.doesNotMatch(frame, /Admira<span>95/);
+  assert.match(frame, /#eb5a28/);
+  assert.match(frame, /#65b849/);
+  assert.match(frame, /#3b86d1/);
+  assert.match(frame, /#f6c318/);
+  assert.match(frame, /admira-cloud/);
 });
 
 test("el Bloc de notas es un textarea editable con menús de los 90", () => {

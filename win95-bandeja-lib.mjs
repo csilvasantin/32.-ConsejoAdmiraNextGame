@@ -1,21 +1,22 @@
 /**
  * win95-bandeja-lib.mjs — Bandeja de entrada de Win95 Xperience.
  *
- * Carlos, 26-11-2026: los correos son las finalizaciones reales (done) de
- * misiones de los DeepAgents. De = el agente que la cerró; Para = el consejero
+ * Carlos, 26-11-2026 y 27-11-2026 (t1411u): las 4 carpetas del Correo Admira
+ * se llenan con misiones reales de la flota, nunca con mocks.
+ * Bandeja de entrada: finalizaciones (done) de los DeepAgents. De = el agente que la cerró; Para = el consejero
  * que la encargó; CC = Carlos Silva siempre. Texto saneado: sin tokens, IPs,
  * MACs, correos ni claves. Fuente viva: bandeja pública de bot.yokup.com
  * (el campo «nota»/«respuesta» se usa solo si viene, y siempre pasa por sanear).
  */
 import { fechaMadrid, horaMadrid } from "./win95-comunicaciones-lib.mjs";
-import { sanear, titularCorto, normalizarEncargo } from "./win95-misiones-lib.mjs";
+import { sanear, titularCorto, normalizarEncargo, ESTADO_ES } from "./win95-misiones-lib.mjs";
 
 export const BANDEJA_URL = "/api/win95/bandeja";
 export const BANDEJA_LEIDOS_KEY = "admira-win95-bandeja-leidos";
 export const BANDEJA_CADA_SEG = 45;
 export const CC_CARLOS = "Carlos Silva";
 export const PARA_DEFECTO = "Consejo de Silicio";
-export const MAX_CORREOS = 20;
+export const MAX_CORREOS = 30;
 export const MAX_CUERPO = 2000;
 
 export const DEEPAGENTS_BANDEJA = [
@@ -156,28 +157,210 @@ export function emailDesdeEncargo(raw, opts = {}) {
   };
 }
 
+
+export const SALIDA_ESTADOS = new Set(["in_progress", "ack", "pending"]);
+export const ELIMINADOS_ESTADOS = new Set(["cancelled", "canceled", "failed", "blocked", "error", "expired", "discarded"]);
+
+export function estadoCanonico(s) {
+  const e = String(s || "").toLowerCase().replace(/-/g, "_");
+  return e === "canceled" ? "cancelled" : e;
+}
+
+export function carpetaDeEstado(estado) {
+  const e = estadoCanonico(estado);
+  if (e === "done") return "entrada";
+  if (SALIDA_ESTADOS.has(e)) return "salida";
+  if (ELIMINADOS_ESTADOS.has(e)) return "eliminados";
+  return "";
+}
+
+function camposOrigen(raw) {
+  return [raw && raw.creado_por, raw && raw.consejero, raw && raw.solicitante, raw && raw.origen, raw && raw.from_name, raw && raw.de, raw && raw.from]
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+}
+
+/** Consejero u origen fiel; no se inventa un nombre si el campo no encaja. */
+export function nombreConsejeroFiel(raw) {
+  for (const f of camposOrigen(raw || {})) {
+    const p = paraDesdeRemitente(f);
+    if (p !== PARA_DEFECTO) return p;
+  }
+  for (const f of camposOrigen(raw || {})) {
+    if (nombreDeepAgent(f)) continue;
+    const cleaned = sanear(f).replace(/^status-web\s*[·•\-–]\s*/i, "").trim();
+    if (cleaned) return cleaned.slice(0, 80);
+  }
+  return "";
+}
+
+export function asuntoCarpeta(carpeta, encargo, texto, estado) {
+  const tit = titularBandeja(texto);
+  const n = Number(encargo);
+  const id = Number.isFinite(n) && n > 0 ? n : encargo;
+  const cola = tit ? " " + tit : "";
+  if (carpeta === "entrada") return "Misión finalizada · #" + id + cola;
+  if (carpeta === "salida") {
+    const es = ESTADO_ES[estadoCanonico(estado)] || estadoCanonico(estado) || "en curso";
+    return es.charAt(0).toUpperCase() + es.slice(1) + " · #" + id + cola;
+  }
+  if (carpeta === "enviados") return "Encargo · #" + id + cola;
+  if (carpeta === "eliminados") {
+    const es = ESTADO_ES[estadoCanonico(estado)] || "no acabada";
+    return "No acabada · #" + id + " · " + es + cola;
+  }
+  return "#" + id + cola;
+}
+
+function recortaCuerpo(s, max) {
+  const t = String(s || "").replace(/\s+\n/g, "\n").trim();
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1).replace(/\s+\S*$/, "").replace(/[.,;:]+$/, "") + "…";
+}
+
+export function cuerpoCarpeta(carpeta, raw, n) {
+  const texto = sanear((n && n.texto) || (raw && (raw.texto || raw.text)) || "").trim();
+  const nota = sanear(raw && (raw.respuesta || raw.nota || raw.note || raw.reply) || "").trim();
+  const estado = estadoCanonico((n && n.estado) || (raw && (raw.estado || raw.status)) || "");
+  const estadoEs = ESTADO_ES[estado] || estado;
+  if (carpeta === "entrada") return cuerpoMision(raw, n);
+  if (carpeta === "salida") {
+    const bits = ["Estado: " + estadoEs + "."];
+    if (texto) bits.push(texto);
+    if (nota) bits.push(nota);
+    return recortaCuerpo(bits.join("\n\n"), MAX_CUERPO);
+  }
+  if (carpeta === "enviados") {
+    const bits = [];
+    if (texto) bits.push(texto);
+    else bits.push("Encargo #" + ((n && n.encargo) || "") + " enviado al DeepAgent.");
+    if (estado && estado !== "pending") bits.push("Estado actual: " + estadoEs + ".");
+    return recortaCuerpo(bits.join("\n\n"), MAX_CUERPO);
+  }
+  if (carpeta === "eliminados") {
+    const bits = ["Estado: " + estadoEs + " (misión no acabada)."];
+    if (texto) bits.push(texto);
+    if (nota) bits.push(nota);
+    return recortaCuerpo(bits.join("\n\n"), MAX_CUERPO);
+  }
+  return recortaCuerpo(texto || nota, MAX_CUERPO);
+}
+
+function rolesDe(raw, opts) {
+  const target = (raw && (raw.target_persona || raw.persona)) || (opts && opts.bandejaPersona) || "";
+  const from = (raw && (raw.from_name || raw.de)) || "";
+  const agenteTarget = nombreDeepAgent(target);
+  const agenteFrom = nombreDeepAgent(from);
+  const agenteBag = nombreDeepAgent((opts && opts.bandejaPersona) || "");
+  const agente = agenteTarget || agenteFrom || agenteBag;
+  let consejero = nombreConsejeroFiel(raw);
+  if (!consejero) {
+    const consTarget = paraDesdeRemitente(target);
+    const consFrom = paraDesdeRemitente(from);
+    if (!agenteTarget && consTarget !== PARA_DEFECTO) consejero = consTarget;
+    else if (consFrom !== PARA_DEFECTO) consejero = consFrom;
+    else if (consTarget !== PARA_DEFECTO) consejero = consTarget;
+  }
+  return { agente, consejero };
+}
+
+/** Correo de una carpeta a partir de un encargo real. No inventa remitentes ni cuerpos. */
+export function mailDeEncargo(raw, opts = {}) {
+  const n = normalizarEncargo(raw);
+  if (!n) return null;
+  const carpeta = opts.carpeta;
+  if (!carpeta) return null;
+  const { agente, consejero } = rolesDe(raw, opts);
+  if (!agente) return null;
+  let de = "";
+  let para = PARA_DEFECTO;
+  if (carpeta === "enviados") {
+    de = consejero || PARA_DEFECTO;
+    para = agente;
+  } else {
+    de = agente;
+    para = consejero || PARA_DEFECTO;
+  }
+  const estado = estadoCanonico(n.estado);
+  const ms = (carpeta === "entrada" ? (n.cierreMs || n.cuandoMs) : (n.cuandoMs || n.cierreMs)) || 0;
+  const ahora = opts.ahora || Date.now();
+  const cuerpo = cuerpoCarpeta(carpeta, raw, n);
+  if (!cuerpo) return null;
+  const pref = carpeta === "entrada" ? "mision" : (carpeta === "salida" ? "salida" : (carpeta === "enviados" ? "enviado" : "elim"));
+  return {
+    id: pref + "-" + n.encargo,
+    encargo: n.encargo,
+    etiqueta: n.etiqueta,
+    de,
+    para,
+    cc: CC_CARLOS,
+    asunto: (carpeta === "entrada" ? asuntoMision(n.encargo, n.texto) : asuntoCarpeta(carpeta, n.encargo, n.texto, estado)),
+    fecha: fechaBandeja(ms),
+    when: whenBandeja(ms, ahora),
+    cuandoMs: ms,
+    cuerpo,
+    estado,
+    estadoEs: ESTADO_ES[estado] || estado,
+    carpeta,
+  };
+}
+
+function ordena(emails) {
+  return emails.sort((a, b) => (b.cuandoMs || 0) - (a.cuandoMs || 0) || (b.encargo || 0) - (a.encargo || 0));
+}
+
 export function construirBandeja({ bandejas, ahora, aviso } = {}) {
   const t = ahora || Date.now();
-  const seen = new Set();
-  const emails = [];
   const bags = bandejas && typeof bandejas === "object" ? bandejas : {};
+  const seen = { entrada: new Set(), salida: new Set(), enviados: new Set(), eliminados: new Set() };
+  const carpetas = { entrada: [], salida: [], enviados: [], eliminados: [] };
   for (const [persona, items] of Object.entries(bags)) {
     const lista = Array.isArray(items) ? items : [];
     for (const raw of lista) {
-      const mail = emailDesdeEncargo(raw, { bandejaPersona: persona, ahora: t });
-      if (!mail || seen.has(mail.encargo)) continue;
-      seen.add(mail.encargo);
-      emails.push(mail);
+      const n = normalizarEncargo(raw);
+      if (!n) continue;
+      const estadoCarpeta = carpetaDeEstado(n.estado);
+      const opts = { bandejaPersona: persona, ahora: t };
+      if (estadoCarpeta === "entrada") {
+        const mail = emailDesdeEncargo(raw, opts);
+        if (mail && !seen.entrada.has(mail.encargo)) {
+          seen.entrada.add(mail.encargo);
+          carpetas.entrada.push({ ...mail, estado: "done", estadoEs: ESTADO_ES.done, carpeta: "entrada" });
+        }
+      } else if (estadoCarpeta === "salida" || estadoCarpeta === "eliminados") {
+        const mail = mailDeEncargo(raw, { ...opts, carpeta: estadoCarpeta });
+        if (mail && !seen[estadoCarpeta].has(mail.encargo)) {
+          seen[estadoCarpeta].add(mail.encargo);
+          carpetas[estadoCarpeta].push(mail);
+        }
+      }
+      const enviado = mailDeEncargo(raw, { ...opts, carpeta: "enviados" });
+      if (enviado && !seen.enviados.has(enviado.encargo)) {
+        seen.enviados.add(enviado.encargo);
+        carpetas.enviados.push(enviado);
+      }
     }
   }
-  emails.sort((a, b) => (b.cuandoMs || 0) - (a.cuandoMs || 0) || (b.encargo || 0) - (a.encargo || 0));
+  for (const k of Object.keys(carpetas)) ordena(carpetas[k]);
+  const recorta = (arr) => arr.slice(0, MAX_CORREOS);
+  const entrada = recorta(carpetas.entrada);
+  const salida = recorta(carpetas.salida);
+  const enviados = recorta(carpetas.enviados);
+  const eliminados = recorta(carpetas.eliminados);
   return {
     ok: true,
     generado: t,
     generado_madrid: fechaMadrid(t) + " " + horaMadrid(t),
     aviso: aviso ? String(aviso) : "",
     fuente: "admira.live",
-    emails: emails.slice(0, MAX_CORREOS),
+    emails: entrada,
+    carpetas: {
+      entrada,
+      salida,
+      enviados,
+      eliminados,
+      conteo: { entrada: entrada.length, salida: salida.length, enviados: enviados.length, eliminados: eliminados.length },
+    },
   };
 }
 

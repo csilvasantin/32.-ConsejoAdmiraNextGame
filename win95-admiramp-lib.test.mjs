@@ -42,6 +42,12 @@ import {
   useFakeSpectrum,
   importStatus,
   isAudioResult,
+  ampIsPlaying,
+  ampVisorState,
+  playerSpectrumActive,
+  marqueeCanDraw,
+  playlistCounterText,
+  playlistCount,
 } from "./win95-admiramp-lib.mjs";
 import * as api from "./functions/api/win95/audio.js";
 import { emitir as emitirPuerta, COOKIE as COOKIE_PUERTA } from "./functions/_puerta.js";
@@ -276,6 +282,15 @@ test("el HTML cablea imán, escalado del interior y EQ Web Audio con CORS/proxy"
   assert.match(html, /createObjectURL/);
   assert.match(html, /shouldProxyAudio/);
   assert.match(html, /eqLiveBarsNow/);
+  assert.match(html, /function ampIsPlaying\(/);
+  assert.match(html, /function ampVisorState\(/);
+  assert.match(html, /function playlistCounterText\(/);
+  assert.match(html, /if\(!MARQ\.img\) return;/);
+  assert.match(html, /try\{ if\(PL\.open\)\{/);
+  assert.match(html, /catch\(e\)\{\} requestAnimationFrame\(frame\)/);
+  assert.match(html, /ampIsPlaying\(\)&&audioRunning\(\)&&A\.analyser/);
+  assert.match(html, /\.prow \.n\{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis\}/);
+  assert.match(html, /#plw>#plist\{[^}]*right:16px/);
   assert.match(html, /Importar a #winamp/);
   assert.doesNotMatch(html, /if\(!box\.children\.length\)/);
 });
@@ -369,3 +384,34 @@ test("GET /api/win95/audio sigue redirects a hosts Admira y rechaza un 302 a un 
   });
   assert.equal(bad.status, 502);
 });
+
+test("el visor del player WINAMP se activa cuando el audio está realmente sonando, aunque PL.state diga stop", () => {
+  assert.equal(ampIsPlaying({ state: "stop", elPaused: false, elEnded: false, elSrc: "https://stock.admira.store/a.mp3" }), true);
+  assert.equal(ampVisorState({ state: "stop", elPaused: false, elEnded: false, elSrc: "https://stock.admira.store/a.mp3" }), "play");
+  assert.equal(playerSpectrumActive({ state: "stop", elPaused: false, elEnded: false, elSrc: "https://stock.admira.store/a.mp3" }), true);
+  assert.equal(ampIsPlaying({ state: "play", elPaused: true, elEnded: false, elSrc: "" }), true);
+  assert.equal(ampIsPlaying({ state: "stop", elPaused: true, elEnded: false, elSrc: "https://x/a.mp3" }), false);
+  assert.equal(ampIsPlaying({ state: "pause", elPaused: true, elEnded: false, elSrc: "https://x/a.mp3" }), false);
+  assert.equal(ampVisorState({ state: "pause", elPaused: true, elEnded: false, elSrc: "https://x/a.mp3" }), "pause");
+  assert.equal(ampIsPlaying({ state: "stop", seqPlaying: true }), true);
+  assert.equal(playerSpectrumActive({ state: "stop" }), false);
+  assert.equal(marqueeCanDraw(null), false);
+  assert.equal(marqueeCanDraw(undefined), false);
+  assert.equal(marqueeCanDraw({ width: 0, height: 0 }), false);
+  assert.equal(marqueeCanDraw({ width: 40, height: 7 }), true);
+});
+
+test("el contador de la lista nunca pinta 1/0 y usa el total real de pistas", () => {
+  assert.equal(playlistCounterText(0, 0, 0, 0), "0/0 0:00/0:00");
+  assert.equal(playlistCounterText(0, 3, 0, 0), "1/3 0:00/0:00");
+  assert.equal(playlistCounterText(1, 3, 75, 360), "2/3 1:15/6:00");
+  assert.equal(playlistCounterText(9, 3, 12, 40), "3/3 0:12/0:40");
+  assert.equal(playlistCount(0, 0), 0);
+  assert.equal(playlistCount(0, 3), 3);
+  assert.equal(playlistCount(3, 0), 3);
+  const L = layoutPlaylist(275, 150);
+  assert.equal(L.list.l + L.list.w, L.scrollbar.l);
+  assert.equal(L.list.r, 16);
+  assert.ok(L.list.l + L.list.w + L.list.r === 275);
+});
+

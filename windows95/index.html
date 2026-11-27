@@ -1,6 +1,29 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="booting">
 <head>
+<style>
+/* t1409u: primera pintura = preloader de Windows, antes de auth-gate, CSS del CRT o JS. */
+html.booting,html.booting body{margin:0;width:100%;height:100%;background:#1d5cc0!important;overflow:hidden}
+#boot-frame{position:fixed;inset:0;z-index:2147483647;background:linear-gradient(#1d5cc0 0%,#3b84de 45%,#94caf6 100%);color:#fff;text-align:center;font-family:Arial,sans-serif}
+html:not(.booting) #boot-frame{display:none!important}
+html.booting #crt-ui{display:none!important}
+#boot-frame .clouds{position:absolute;left:-8%;top:0;width:116%;height:100%;pointer-events:none;background:
+  radial-gradient(130px 34px at 14% 18%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%),
+  radial-gradient(170px 46px at 30% 24%,rgba(255,255,255,.75),rgba(255,255,255,0) 70%),
+  radial-gradient(120px 30px at 72% 14%,rgba(255,255,255,.85),rgba(255,255,255,0) 70%),
+  radial-gradient(190px 52px at 86% 30%,rgba(255,255,255,.7),rgba(255,255,255,0) 70%),
+  radial-gradient(220px 60px at 18% 70%,rgba(255,255,255,.8),rgba(255,255,255,0) 70%),
+  radial-gradient(160px 40px at 40% 82%,rgba(255,255,255,.7),rgba(255,255,255,0) 70%),
+  radial-gradient(240px 64px at 78% 76%,rgba(255,255,255,.85),rgba(255,255,255,0) 70%),
+  radial-gradient(140px 36px at 60% 58%,rgba(255,255,255,.5),rgba(255,255,255,0) 70%);animation:bootDrift 5s linear infinite alternate}
+@keyframes bootDrift{from{transform:translateX(0)}to{transform:translateX(-28px)}}
+#boot-frame .art{position:absolute;left:50%;top:46%;width:min(300px,80vw);transform:translate(-50%,-50%);filter:drop-shadow(2px 3px 2px rgba(0,0,40,.45))}
+#boot-frame .word{font:italic bold 28px/1 Arial,sans-serif}
+#boot-frame .word b{display:block;font:900 64px/1 "Arial Black",Arial,sans-serif;letter-spacing:-1px;margin-top:6px}
+#boot-frame .word span{font:24px/1 Arial,sans-serif;margin-left:6px;font-style:normal;font-weight:400;vertical-align:super}
+#boot-frame .bar{position:absolute;left:0;bottom:0;width:100%;height:8px;background:linear-gradient(90deg,#000 0,#ff6a00 20%,#ffd000 35%,#00c8ff 55%,#7a3cff 75%,#000 100%);background-size:100% 8px;animation:bootBar 1.4s linear infinite}
+@keyframes bootBar{from{background-position:0 0}to{background-position:100% 0}}
+</style>
 <script src="/auth-gate.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
@@ -659,10 +682,11 @@ html.mp-fs-on,html.mp-fs-on body{overflow:hidden!important}
 #shut.more .l2,#shut.more .l3{opacity:1}
 #ghost{position:absolute;left:0;top:0;width:13px;height:20px;z-index:9500;pointer-events:none;display:none}
 </style>
-<link rel="stylesheet" href="/assets/win95-crt.css?v=20261125-crt3">
+<link rel="stylesheet" href="/assets/win95-crt.css?v=20261127-t1409u">
 <script>(function(){try{var q=new URL(location.href).searchParams.get("crt");var on=q==="0"?false:q==="1"?true:localStorage.getItem("admira-win95-crt")!=="0";document.documentElement.classList.toggle("crt-frame-off",!on);}catch(e){}})();</script>
 </head>
 <body class="attract">
+<div id="boot-frame" aria-hidden="true"><div class="clouds"></div><div class="art"><div class="word">AdmiraNeXT<b>Admira<span>95</span></b></div></div><div class="bar"></div></div>
 <svg id="win95-filters" width="0" height="0" style="position:absolute;left:0;top:0;overflow:hidden" aria-hidden="true" focusable="false">
   <defs>
     <filter id="win95-sel" x="0" y="0" width="100%" height="100%" filterUnits="objectBoundingBox" primitiveUnits="objectBoundingBox">
@@ -7749,7 +7773,28 @@ function scrollView(el,tk){
 async function ghostType(el,text,tk){ for(var i=0;i<text.length;i++){ if(el&&'value' in el&&/^(INPUT|TEXTAREA)$/.test(el.tagName)) el.value+=text.charAt(i); else el.textContent+=text.charAt(i); await wait(90+Math.random()*90,tk); } }
 async function waitUntil(fn,tk,max){ var t0=now(); while(!fn()&&now()-t0<max) await wait(200,tk); }
 async function typeNote(text,tk){ var nt=qs('#nt'); nt.value=''; for(var i=0;i<text.length;i++){ var ch=text.charAt(i); nt.value+=ch; nt.scrollTop=nt.scrollHeight; await wait(ch==='\n'?200:(ch===' '?45:22+Math.random()*40),tk); } NOTE.saved=nt.value; NOTE.dirty=false; refreshNoteTitle(); }
-async function bootSeq(tk){ var b=qs('#boot'); b.style.display='block'; sfxStartup(); await wait(3800,tk); b.style.display='none'; }
+function hideBoot(){
+  document.documentElement.classList.remove('booting');
+  document.documentElement.classList.add('booted');
+  var b=qs('#boot'); if(b) b.style.display='none';
+  var frame=qs('#boot-frame'); if(frame){ frame.style.display='none'; frame.setAttribute('aria-hidden','true'); }
+}
+function showBoot(){
+  document.documentElement.classList.add('booting');
+  document.documentElement.classList.remove('booted');
+  var b=qs('#boot'); if(b) b.style.display='block';
+  var frame=qs('#boot-frame'); if(frame){ frame.style.display='block'; }
+}
+async function bootSeq(tk){
+  showBoot();
+  sfxStartup();
+  var elapsed=0;
+  try{ if(window.performance&&performance.now) elapsed=performance.now(); }catch(e){}
+  // Ya se ha visto el preloader durante la carga: no encadenar 3,8 s extra.
+  var waitMs=Math.max(900, 2400-Math.min(elapsed,2400));
+  await wait(waitMs,tk);
+  hideBoot();
+}
 async function shutdownSeq(tk){
   closeStart(); var shade=qs('#shade'), shut=qs('#shut');
   shade.style.display='block'; await wait(900,tk);
@@ -7844,7 +7889,7 @@ function resetDesktop(){
   qs('#tShuf').classList.remove('on'); qs('#tRep').classList.add('on');
   ['#eqw','#plw'].forEach(function(s){ qs(s).removeAttribute('data-hidden'); }); qs('#tEQ').classList.add('on'); qs('#tPL').classList.add('on');
   qs('#amp').style.left='182px'; qs('#amp').style.top='16px'; qs('#eqw').style.left='182px'; qs('#eqw').style.top='132px'; qs('#plw').style.left='182px'; qs('#plw').style.top='248px'; qs('#note').style.left='150px'; qs('#note').style.top='50px';
-  qs('#shut').style.display='none'; qs('#shade').style.display='none'; qs('#boot').style.display='none';
+  qs('#shut').style.display='none'; qs('#shade').style.display='none'; hideBoot();
   renderPlaylist();
 }
 function startAttract(withBoot){
@@ -7864,7 +7909,7 @@ function takeOver(){
   if(ICQ.open&&ICQG.on){ closeChat(); renderContacts(); }   // ICQGram pasa de la demo a los consejeros reales
   openIcq();
   applyWinLayout();
-  qs('#boot').style.display='none';
+  hideBoot();
   if(qs('#shut').style.display==='block'||qs('#shade').style.display==='block'){ qs('#shut').style.display='none'; qs('#shut').classList.remove('more'); qs('#shade').style.display='none'; }
   closeStart();
   if(qs('#note').style.display==='block'){ noteSetVal(leemeText(),true); NOTE.saved=noteVal(); NOTE.dirty=false; refreshNoteTitle(); }
@@ -8015,7 +8060,7 @@ function boot(){
 }
 })();
 </script>
-<script src="/assets/win95-crt.js?v=20261125-crt2"></script>
+<script src="/assets/win95-crt.js?v=20261127-t1409u"></script>
 <script src="/assets/win95-fs.js?v=20261125-fs"></script>
 </body>
 </html>

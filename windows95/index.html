@@ -234,6 +234,20 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .home p{margin:0 0 8px;line-height:15px}
 .home .box{padding:6px 8px;margin-bottom:8px;background:#fff;line-height:15px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
 
+/* ---------- CLI DeepAgents (Carlos t1457u, 27-11-2026): extensión de ICQGram, debajo ---------- */
+#dacli .dtabs{position:absolute;left:3px;right:3px;top:22px;height:18px;display:flex;gap:2px;overflow:hidden;white-space:nowrap}
+#dacli .dtab{display:flex;align-items:center;gap:3px;padding:0 6px;height:17px;background:#c0c0c0;cursor:pointer;font-size:10px;box-shadow:inset -1px -1px #000,inset 1px 1px #fff}
+#dacli .dtab.on{background:#dfdfdf;font-weight:bold;box-shadow:inset 1px 1px #000,inset -1px -1px #fff}
+#dacli .dtab i{display:inline-block;width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 1px #404040}
+#dacli i.rojo{background:#e02020} #dacli i.verde{background:#2fc42f} #dacli i.amarillo{background:#f0c800}
+#dacli .dterm{position:absolute;left:3px;right:3px;top:42px;bottom:26px;background:#0c0c0c;color:#33ff66;font:10px/1.35 "Lucida Console","Courier New",monospace;overflow:auto;padding:3px 5px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000}
+#dacli .dhead{position:sticky;top:-3px;background:#0c0c0c;color:#ffbf00;border-bottom:1px dashed #3a3a3a;padding-bottom:2px;margin-bottom:3px;white-space:pre-wrap;word-break:break-word}
+#dacli pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+#dacli pre .am{color:#ffbf00} #dacli pre .gr{color:#8a8a8a} #dacli pre .rj{color:#ff6060}
+#dacli .cur{display:inline-block;width:7px;height:11px;background:#33ff66;vertical-align:-1px;animation:dacur 1s steps(1) infinite}
+@keyframes dacur{50%{opacity:0}}
+#dacli .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff;font-size:10px}
+@media (prefers-reduced-motion: reduce){ #dacli .cur{animation:none} }
 /* ---------- ICQGram (homenaje mensajería) ---------- */
 #icq .qhdr{height:30px;margin-top:2px;display:flex;align-items:center;padding:0 6px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
 #icq .qhdr [data-ico] svg{width:22px;height:22px}
@@ -1753,7 +1767,7 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
       <div class="tb"><span data-ico="inbox"></span><span class="t">Bandeja de entrada - Correo Admira</span><span class="x" data-min="mail">_</span><span class="x" data-max="mail" title="Maximizar">□</span><span class="x gap" data-close="mail">×</span></div>
       <div class="menubar"><span><u>A</u>rchivo</span><span><u>E</u>dición</span><span><u>V</u>er</span><span><u>H</u>erramientas</span><span><u>R</u>edactar</span><span>Ay<u>u</u>da</span></div>
       <div class="mtools"><button class="btn" id="mlSend">Enviar y recibir</button><button class="btn" id="mlNew">Nuevo mensaje</button><button class="btn" id="mlReply">Responder</button></div>
-      <div class="mfold"><div class="mf on" id="mfIn"><span data-ico="inbox"></span>Bandeja de entrada</div><div class="mf"><span data-ico="folder"></span>Bandeja de salida</div><div class="mf"><span data-ico="folder"></span>Elementos enviados</div><div class="mf"><span data-ico="trash"></span>Elementos eliminados</div></div>
+      <div class="mfold"><div class="mf on" id="mfIn"><span data-ico="inbox"></span>Bandeja de entrada</div><div class="mf" id="mfDa" title="Todas las comunicaciones DeepAgents: encargos, acuses, bloqueos y cierres"><span data-ico="folder"></span>Com. DeepAgents</div><div class="mf"><span data-ico="folder"></span>Bandeja de salida</div><div class="mf"><span data-ico="folder"></span>Elementos enviados</div><div class="mf"><span data-ico="trash"></span>Elementos eliminados</div></div>
       <div class="lv" id="mlList"></div>
       <div id="mlPrev"></div>
       <div class="sbar1" id="mlSt"></div>
@@ -1786,6 +1800,13 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
       <div class="qhdr"><span data-ico="chat"></span><b>ICQ<span>Gram</span></b><i>Nº 25111997</i></div>
       <div class="clist" id="clist"></div>
       <div class="cbot"><button class="btn" id="icqMain">ICQGram ▴</button><div class="cstat"><span class="sdot"></span>En línea</div></div>
+    </div>
+    <!-- CLI DeepAgents: extensión de ICQGram, anclada justo debajo (Carlos t1457u). Solo eventos reales; sin stream inventado. -->
+    <div id="dacli" class="win" style="left:236px;top:234px;width:320px;height:214px;display:none" aria-label="CLI DeepAgents">
+      <div class="tb"><span data-ico="startRun"></span><span class="t" id="daT">CLI DeepAgents - MS-DOS</span><span class="x" data-min="dacli">_</span><span class="x" data-max="dacli" title="Maximizar">□</span><span class="x gap" data-close="dacli">×</span></div>
+      <div class="dtabs" id="daTabs"></div>
+      <div class="dterm" id="daTerm"><div class="dhead" id="daHead"></div><pre id="daLog"></pre><span class="cur"></span></div>
+      <div class="sbar1" id="daSt">Conectando con la flota…</div>
     </div>
     <!-- ICQGram: conversación -->
     <div id="icqc" class="win" style="left:140px;top:96px;width:330px;height:284px;display:none">
@@ -3141,7 +3162,7 @@ function openShortcut(d){
 function openFolder(id){
   var it=FS[id]; if(!it||it.kind!=='folder') return;
   if(id===MISC_ID){ loadComms(true); loadMisiones(true); }
-  if(id===MISIONES_ID||isDeepSysId(id)) loadMisiones(true);
+  if(id===MISIONES_ID||isDeepSysId(id)){ loadMisiones(true); if(typeof loadDaCom==='function') loadDaCom(true); }
   if(FWIN[id]&&FWIN[id].parentNode){ FWIN[id].style.display='block'; addTask('fw-'+id,miscFolderTitle(it),'folder',[FWIN[id]]); focusWin(FWIN[id]); renderFolder(id); return; }
   var w=document.createElement('div'); w.className='win foldwin'; w.id='fw-'+id;
   w.style.cssText='left:90px;top:36px;width:380px;height:260px';
@@ -3535,7 +3556,8 @@ function folderPathLabel(id){
 }
 var DEEP_FOLDER_IDS=['fld-deep-neo','fld-deep-trinity','fld-deep-morfeo','fld-deep-oraculo','fld-stevejobs'];
 var DEEP_DOC_IDS=['doc-mision-neo','doc-encargos-neo','doc-mision-trinity','doc-encargos-trinity','doc-mision-morfeo','doc-encargos-morfeo','doc-mision-oraculo','doc-encargos-oraculo','doc-mision-stevejobs'];
-function isDeepSysId(id){ return !!id&&(DEEP_FOLDER_IDS.indexOf(id)>=0||DEEP_DOC_IDS.indexOf(id)>=0); }
+function isDaComId(id){ id=String(id||''); return id.indexOf('fld-dacom-')===0||id.indexOf('doc-dacom-')===0||(id.indexOf('fld-deep-')===0&&DEEP_FOLDER_IDS.indexOf(id)<0); }
+function isDeepSysId(id){ return !!id&&(DEEP_FOLDER_IDS.indexOf(id)>=0||DEEP_DOC_IDS.indexOf(id)>=0||isDaComId(id)); }
 function isDeepSys(d){ return !!(d&&(isDeepSysId(d.id)||isDeepSysId(d.docId))); }
 function ensureMiscTree(){
   ensureLeyendasDoc();
@@ -4185,6 +4207,7 @@ function openRunDlg(){
     close();
     if(cmd==='demo'||cmd==='demostracion'||cmd==='demostración'){ launchDemo(); return; }
     var apps={winamp:'amp',notepad:'readme','leeme':'readme',napster:'p2p',icq:'icq',icqgram:'icq',netscape:'browser'};
+    if(cmd==='cli'||cmd==='deepagents'||cmd==='command'||cmd==='cmd'){ openDaCli(true); return; }
     if(apps[cmd]){ openApp(apps[cmd]); return; }
     msgBox('Ejecutar','No se encuentra «'+(inp.value||'')+'».\nPruebe con «demo».','warn');
   }
@@ -4237,7 +4260,7 @@ function serializeItem(d){
 function saveNoteDocs(){
   var st=loadNoteStore(), items=[];
   st.v=2; st.leeme=(NOTE.leeme!=null)?NOTE.leeme:st.leeme; st.seq=Math.max(docSeq,itemSeq);
-  for(var k in FS){ if(FS[k]&&FS[k].parent!=='__virtual__'&&k!=='fld-mypc'&&String(FS[k].parent||'')!=='fld-mypc') items.push(serializeItem(FS[k])); }
+  for(var k in FS){ if(FS[k]&&FS[k].parent!=='__virtual__'&&k!=='fld-mypc'&&String(FS[k].parent||'')!=='fld-mypc'&&!isDaComId(k)) items.push(serializeItem(FS[k])); }
   // compat docs sueltos
   for(var k2 in DOCS){ if(DOCS[k2]&&!FS[k2]&&!DOCS[k2].remote&&!inTrash(k2)) items.push(serializeItem(DOCS[k2])); }
   st.hidden=HIDDEN; st.apps=APPST;
@@ -6066,7 +6089,19 @@ function renderContacts(){
 }
 function dockIcq(){
   var w=qs('#icq'), dh=desk.clientHeight||452;
-  var ww=w.offsetWidth||320, hh=w.offsetHeight||330;
+  var ww=w.offsetWidth||320;
+  var cli=qs('#dacli'), cliOn=!!(cli&&cli.style.display==='block'&&!(TASKS.dacli&&TASKS.dacli.min));
+  if(cliOn){
+    var ch=DACLI_H, ih=Math.max(150, dh-ch-12);
+    w.style.height=ih+'px';
+    w.style.left=Math.max(4, DESK_RIGHT_COL-ww-8)+'px';
+    w.style.top='4px';
+    cli.style.width=ww+'px'; cli.style.height=ch+'px';
+    cli.style.left=w.style.left; cli.style.top=(4+ih+4)+'px';
+    return;
+  }
+  w.style.height='330px';
+  var hh=w.offsetHeight||330;
   w.style.left=Math.max(4, DESK_RIGHT_COL-ww-8)+'px';
   w.style.top=Math.max(4, dh-hh-4)+'px';
 }
@@ -7468,7 +7503,16 @@ function mailReset(){
   aplicarBandeja(fb&&fb.emails?fb:{emails:[]});
   MSEL=0;
 }
+var MVIEW='fin', DAMAILS=[];
+function mailList(){ return MVIEW==='da'?DAMAILS:MAILS; }
+function setMailView(v){
+  MVIEW=v==='da'?'da':'fin'; MSEL=0;
+  qs('#mfIn').classList.toggle('on',MVIEW==='fin'); qs('#mfDa').classList.toggle('on',MVIEW==='da');
+  if(MVIEW==='da') loadDaCom(true);
+  renderMail();
+}
 function renderMail(){
+  if(MVIEW==='da'){ renderMailDa(); return; }
   var cols=[['De',88],['Asunto',188],['Recibido',72]], h=lvHeader(cols);
   MAILS.forEach(function(m,i){ h+=lvRow(i,cols,[esc(m.from),esc(m.subj),esc(m.when||m.fecha)],i===MSEL).replace('class="lvr','class="lvr'+(m.unread?' unread':'')); });
   qs('#mlList').innerHTML=h;
@@ -7517,13 +7561,16 @@ function openMail(check){
 }
 function closeMail(){ qs('#mail').style.display='none'; removeTask('mail'); }
 function wireMail(){
+  qs('#mfIn').addEventListener('click',function(){ setMailView('fin'); });
+  qs('#mfDa').addEventListener('click',function(){ setMailView('da'); });
   qs('#mlList').addEventListener('click',function(e){
     var r=e.target.closest('.lvr'); if(!r) return;
     MSEL=+r.getAttribute('data-i');
+    if(MVIEW==='da'){ renderMail(); return; }
     if(MAILS[MSEL]){ MAILS[MSEL].unread=false; guardarLeido(MAILS[MSEL].id); }
     updateTrayMail(); renderMail();
   });
-  qs('#mlSend').addEventListener('click',function(){ loadBandeja(true); });
+  qs('#mlSend').addEventListener('click',function(){ if(MVIEW==='da') loadDaCom(true); else loadBandeja(true); });
   qs('#mlNew').addEventListener('click',function(){ sfxDing(); msgBox('Nuevo mensaje','El módem está ocupado bajando el adjunto de tu primo.\nInténtalo más tarde (en 1998).','info'); });
   qs('#mlReply').addEventListener('click',function(){ sfxDing(); msgBox('Responder','Para responder a '+(MAILS[MSEL]?MAILS[MSEL].from:'nadie')+', pásate por el stand de AdmiraNeXT. ;-)','info'); });
   qs('#trayMail').addEventListener('click',function(){ openMail(false); });
@@ -7533,6 +7580,117 @@ function wireMail(){
   loadBandeja(false);
   clearInterval(BANDEJA.timer);
   BANDEJA.timer=setInterval(function(){ if(!document.hidden) loadBandeja(false); },45000);
+}
+
+/* ---------- Comunicaciones Consejo ↔ DeepAgents + CLI DeepAgents (Carlos t1457u, 27-11-2026) ----------
+   GET /api/win95/deepagents-comunicaciones (tras login) cada 15 s: todas las comunicaciones (encargos en
+   cualquier estado, acuses, cierres, mensajes privados) a «Misiones» y a la Bandeja, y el panel CLI debajo
+   de ICQGram con los DeepAgents que trabajan por orden de un consejero. Nunca se inventan líneas de terminal. */
+var DA_COM_URL='/api/win95/deepagents-comunicaciones', DACLI_H=214;
+var DACOM={at:0,loading:false,timer:0,datos:null,sel:null,auto:true,cerradoPorCarlos:false};
+function daBolitaTxt(b){ return b==='rojo'?'trabajando':b==='verde'?'libre':'sin señal'; }
+function daComPorId(id){ var d=DACOM.datos; if(!d||!d.comunicaciones) return null; for(var i=0;i<d.comunicaciones.length;i++){ if(d.comunicaciones[i].id===id) return d.comunicaciones[i]; } return null; }
+function applyDaComFolders(d){
+  if(!d||!Array.isArray(d.carpetas)) return;
+  if(!MISIONES_ID) ensureMisionesFolder();
+  if(!MISIONES_ID) return;
+  var touched={}, renders={};
+  d.carpetas.forEach(function(c, idx){
+    if(!c||!c.id) return;
+    if(inTrash(c.id)||HIDDEN[c.id]) return;
+    var parentFld=FS[c.id];
+    if(!parentFld){ parentFld=registerItem({id:c.id,kind:'folder',name:c.nombreSiNueva||c.id,label:c.nombreSiNueva||c.id,ico:'folder',parent:MISIONES_ID,left:8,top:120+idx*20,mtime:Date.now(),deepSys:true}); renders[MISIONES_ID]=1; }
+    touched[c.id]=1;
+    var sub=FS[c.subId];
+    if(!sub){ sub=registerItem({id:c.subId,kind:'folder',name:c.subNombre,label:c.subNombre,ico:'folder',parent:c.id,left:8,top:60,mtime:Date.now(),deepSys:true}); }
+    else { sub.name=c.subNombre; sub.label=c.subNombre; sub.parent=c.id; }
+    touched[c.subId]=1; renders[c.id]=1; renders[c.subId]=1;
+    (c.ficheros||[]).forEach(function(f, fi){
+      var com=daComPorId(f.comId); if(!com) return;
+      var doc=FS[f.id];
+      if(!doc){ doc=registerItem({id:f.id,kind:'doc',name:com.nombreFichero,label:com.nombreFichero,text:com.textoFichero||'',parent:c.subId,ico:'txt',left:8,top:8+fi*20,docId:f.id,mtime:+f.mtime||Date.now(),deepSys:true}); }
+      else { doc.name=com.nombreFichero; doc.label=com.nombreFichero; doc.text=com.textoFichero||''; doc.parent=c.subId; doc.mtime=+f.mtime||doc.mtime; }
+      touched[f.id]=1;
+    });
+  });
+  for(var k in FS){ if(isDaComId(k)&&k.indexOf('fld-deep-')!==0&&!touched[k]){ renders[FS[k].parent]=1; delete FS[k]; delete DOCS[k]; } }
+  for(var r in renders){ if(FWIN[r]) renderFolder(r); }
+}
+function daMailsDe(d){
+  return ((d&&d.comunicaciones)||[]).map(function(c){ return {id:c.id,from:c.de,to:c.para,subj:c.asunto||'',when:c.when||c.fecha||'',fecha:c.fecha||'',body:c.textoFichero||c.texto||'',estado:c.estadoEs||'',encargo:c.encargo||0}; });
+}
+function renderMailDa(){
+  var cols=[['De',70],['Para',62],['Asunto',150],['Recibido',60]], h=lvHeader(cols);
+  DAMAILS.forEach(function(m,i){ h+=lvRow(i,cols,[esc(m.from),esc(m.to),esc(m.subj),esc(m.when||m.fecha)],i===MSEL); });
+  qs('#mlList').innerHTML=h;
+  var m=DAMAILS[MSEL], p=qs('#mlPrev');
+  if(m){ p.innerHTML='<div class="mh"></div><div class="mb"></div>'; qs('.mh',p).textContent='De: '+m.from+'\nPara: '+m.to+'\nCC: Carlos Silva\nAsunto: '+m.subj+'\nFecha: '+(m.fecha||m.when||''); qs('.mb',p).textContent=m.body; }
+  else { p.innerHTML=''; p.textContent=DACOM.datos?'Sin comunicaciones con DeepAgents.':'Inicie sesión en admira.live para ver las comunicaciones con los DeepAgents.'; }
+  var d=DACOM.datos, act=d&&d.activos?d.activos.length:0;
+  qs('#mlSt').textContent=DAMAILS.length+' comunicaciones con DeepAgents · '+act+' trabajando ahora'+(d&&d.aviso?' · '+d.aviso:'');
+}
+function daCliLista(){
+  var d=DACOM.datos; if(!d) return [];
+  var out=(d.activos||[]).slice();
+  (d.enCola||[]).forEach(function(c){ if(!out.some(function(a){ return a.persona===c.persona; })) out.push(c); });
+  return out;
+}
+function renderDaCli(){
+  var w=qs('#dacli'); if(!w) return;
+  var d=DACOM.datos, list=daCliLista(), tabs=qs('#daTabs'), head=qs('#daHead'), log=qs('#daLog');
+  if(!d){ tabs.innerHTML=''; head.textContent='C:\\ADMIRA\\DEEPAGENTS> conectando…'; log.textContent='Inicie sesión en admira.live para ver a los DeepAgents trabajando.'; qs('#daSt').textContent='Sin datos de la flota'; return; }
+  if(!DACOM.sel||!list.some(function(a){ return a.persona===DACOM.sel; })) DACOM.sel=list.length?list[0].persona:null;
+  var th='';
+  list.forEach(function(a){ th+='<span class="dtab'+(a.persona===DACOM.sel?' on':'')+'" data-p="'+esc(a.persona)+'" title="'+esc(a.nombre+' · '+daBolitaTxt(a.bolita)+(a.trabajando?'':' · en cola'))+'"><i class="'+esc(a.bolita)+'"></i>'+esc(a.nombre)+(a.trabajando?'':' (cola)')+'</span>'; });
+  tabs.innerHTML=th;
+  var a=null; list.forEach(function(x){ if(x.persona===DACOM.sel) a=x; });
+  if(!a){ head.textContent='C:\\ADMIRA\\DEEPAGENTS> dir'; log.textContent='Ningún DeepAgent trabaja ahora por orden de un consejero ni tiene encargos en cola.'; qs('#daSt').textContent='0 trabajando · actualizado '+(d.generado_madrid||''); return; }
+  head.textContent=a.cabecera+' · '+(a.trabajando?'TRABAJANDO':'EN COLA (recepción en sesión real sin verificar)');
+  var html='C:\\ADMIRA\\DEEPAGENTS\\'+esc(String(a.nombre).toUpperCase())+'> type '+esc(a.etiqueta)+'\n<span class="gr">'+esc(a.titulo)+'</span>\n';
+  (a.log||[]).forEach(function(l){ var cls=l.tipo==='stream'||l.tipo==='tarea'?'gr':(l.tipo==='orden'||l.tipo==='estado'?'am':(l.tipo==='anulado'?'rj':'')); html+='<span class="gr">['+esc(l.hora)+']</span> '+(cls?'<span class="'+cls+'">':'')+esc(l.txt)+(cls?'</span>':'')+'\n'; });
+  log.innerHTML=html;
+  var nAct=(d.activos||[]).length, nCola=(d.enCola||[]).length;
+  qs('#daSt').textContent=nAct+' trabajando · '+nCola+' en cola · '+(a.streamEnVivo?'stream en vivo':'sin stream en vivo')+' · '+(d.generado_madrid||'');
+  var t=qs('#daTerm'); if(DACOM.pintado!==a.persona+a.etiqueta){ t.scrollTop=0; DACOM.pintado=a.persona+a.etiqueta; }
+}
+function openDaCli(manual){
+  var w=qs('#dacli'); if(!w) return;
+  if(manual) DACOM.cerradoPorCarlos=false;
+  if(!ICQ.open||qs('#icq').style.display==='none') openIcq();
+  w.style.display='block';
+  if(TASKS.dacli&&TASKS.dacli.min) toggleTask('dacli');
+  addTask('dacli','CLI DeepAgents','startRun',[w]);
+  dockIcq(); renderDaCli();
+  if(manual){ focusWin(w); loadDaCom(true); }
+}
+function closeDaCli(){ var w=qs('#dacli'); if(!w) return; w.style.display='none'; removeTask('dacli'); DACOM.cerradoPorCarlos=true; if(ICQ.open) dockIcq(); }
+function aplicarDaCom(d){
+  DACOM.datos=d;
+  applyDaComFolders(d);
+  DAMAILS=daMailsDe(d);
+  if(qs('#mail').style.display==='block'&&MVIEW==='da') renderMail();
+  var hay=!!(d&&d.activos&&d.activos.length), w=qs('#dacli');
+  // Se muestra solo cuando un DeepAgent trabaja por orden de un consejero (sin robar el foco).
+  if(hay&&w.style.display!=='block'&&!DACOM.cerradoPorCarlos&&MODE==='interactive') openDaCli(false);
+  else if(w.style.display==='block') renderDaCli();
+}
+function loadDaCom(force){
+  if(typeof fetch!=='function') return;
+  if(DACOM.loading) return;
+  if(!force&&DACOM.at&&now()-DACOM.at<10000) return;
+  DACOM.loading=true;
+  fetch(DA_COM_URL,{cache:'no-store',credentials:'same-origin',headers:{accept:'application/json'}})
+    .then(function(r){ if(r.status===401) return null; return r.ok?r.json():null; })
+    .then(function(d){ DACOM.loading=false; DACOM.at=now(); if(d&&d.ok&&Array.isArray(d.comunicaciones)) aplicarDaCom(d); else if(qs('#dacli').style.display==='block') renderDaCli(); })
+    .catch(function(){ DACOM.loading=false; DACOM.at=now(); });
+}
+function wireDaCli(){
+  qs('[data-close="dacli"]').addEventListener('click',closeDaCli);
+  qs('[data-min="dacli"]').addEventListener('click',function(){ minimize('dacli'); if(ICQ.open) dockIcq(); });
+  qs('#daTabs').addEventListener('click',function(e){ var t=e.target.closest('.dtab'); if(!t) return; DACOM.sel=t.getAttribute('data-p'); renderDaCli(); });
+  loadDaCom(false);
+  clearInterval(DACOM.timer);
+  DACOM.timer=setInterval(function(){ if(!document.hidden) loadDaCom(false); },15000);
 }
 
 /* ---------- icono de red de la bandeja (las dos pantallas se encienden al pasar datos) ---------- */
@@ -7717,6 +7875,7 @@ function buildStart(){
     var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app',p[0]); it.innerHTML='<span data-ico="'+p[0]+'">'+ICONS[p[0]]+'</span><span></span>'; it.lastChild.textContent=p[1];
     it.addEventListener('click',function(){ closeStart(); openApp(p[0]); }); sub.appendChild(it);
   });
+  (function(){ var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app','dacli'); it.innerHTML='<span data-ico="startRun">'+(ICONS.startRun||'')+'</span><span>CLI DeepAgents</span>'; it.addEventListener('click',function(){ closeStart(); openDaCli(true); }); sub.appendChild(it); })();
   qs('#mi-programs').addEventListener('click',function(){ var m=qs('#smenu'), it=qs('#mi-programs'); sub.style.display='block'; sub.style.left=(m.offsetLeft+m.offsetWidth-3)+'px'; sub.style.top=(m.offsetTop+it.offsetTop-3)+'px'; it.classList.add('hl'); });
   var simple={
     'mi-docs':function(){ openApp('readme'); },
@@ -8005,7 +8164,7 @@ function init(){
   qs('#eqAuto').addEventListener('click',function(){ this.classList.toggle('on'); });
   qs('#eqPre').addEventListener('click',nextPreset);
   renderPlaylist(); drawEqGraph();
-  wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireNet(); icqgInit();
+  wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireDaCli(); wireNet(); icqgInit();
 
   // reloj: pulsar la hora lanza el protector (ya no arranca solo)
   function clock(){ var d=new Date(); qs('#clock').textContent=pad2(d.getHours())+':'+pad2(d.getMinutes()); }

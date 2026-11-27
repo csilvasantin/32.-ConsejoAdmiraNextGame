@@ -1239,7 +1239,9 @@ Winamp (AdmirAmp): playlist vacía al arrancar; se llena con las
 descargas de Napster etiquetadas #winamp y con la playlist #winamp
 del player virtual-win95, leída DIRECTA del servidor
 (GET /api/win95/emision?lista=winamp, el mismo camino que el Media
-Player; encargo #7751). Ya no se raspa el Stock desde el navegador.
+Player; encargo #7751). Las piezas #winamp NO entran en Admira Media
+Player. El Stock solo se raspa desde el navegador como respaldo si la
+emisión falla (sin sesión, sin servidor o admira.tv caído).
 Comprobar piezas:
   https://admira.tv/api/emision?screen=virtual-win95&tag=winamp&resumen=1
 Al abrir el icono NO arranca solo (openAmp(false)). Suena al pulsar
@@ -2071,7 +2073,8 @@ var CONFIG = {
   names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster', media:'Admira Media Player' },
   // Playlist de Winamp (AdmirAmp): descargas de Napster y la playlist #winamp del player virtual-win95,
   // leída DIRECTA por /api/win95/emision?lista=winamp (misma emisión que el Media Player; encargo #7751).
-  // Vacía al arrancar; se llena al descargar o al leer la emisión. Sin pistas inventadas ni raspado del Stock en el cliente.
+  // Vacía al arrancar; se llena al descargar o al leer la emisión. Sin pistas inventadas. El raspado del índice público
+  // del Stock (stock.admira.store / api.admira.store/stock/list) queda SOLO como respaldo si la emisión falla.
   tracks: [],
   // ICQGram en línea: en admira.live/windows95 habla de verdad con los consejeros (mismo hilo que GrokBot/Telegram).
   // El nombre lo pone el servidor a partir de la sesión de Google. Límite 300 caracteres y 1 mensaje cada 20 s (también en el servidor).
@@ -7942,14 +7945,57 @@ function trackFromEmision(p){
   return {stockId:String(p.id||p.stockId||''), artist:artist||'Admira Studio', title:title||String(p.id||''), duration:Number(p.duracion||p.duration)||0, bpm:120, src:p.url, tag:'winamp'};
 }
 /* Camino directo (encargo #7751): la playlist #winamp del player virtual-win95, por el mismo endpoint que el Media Player.
-   Sin servidor (file:) no hay emisión: AdmirAmp se queda con las descargas de Napster. */
+   Sin servidor (file:) o sin sesión no hay emisión: se lanza y entra el respaldo. */
 async function readWinampEmision() {
-  if (location.protocol==='file:' || typeof fetch!=='function') return [];
+  if (location.protocol==='file:' || typeof fetch!=='function') throw Error('sin-servidor');
   var response = await fetch('/api/win95/emision?lista=winamp', {cache:'no-store', credentials:'same-origin', signal:AbortSignal.timeout(20000)});
   if (!response.ok) throw Error('emision');
   var data = await response.json();
   if (!data || !data.ok || !Array.isArray(data.playlist)) throw Error('emision');
   return data.playlist;
+}
+/* RESPALDO, SOLO si la emisión falla (sin servidor, 401, admira.tv caído): el raspado antiguo del índice público del Stock
+   filtrando #winamp (encargo #7751, punto 2). Nunca se mezcla con el camino directo ni lo sustituye cuando este contesta. */
+function stockHasTag(item, name){
+  var n=String(name||'').replace(/^#/,'').toLowerCase();
+  var tags=Array.isArray(item&&item.tags)?item.tags:[];
+  var i, text;
+  for(i=0;i<tags.length;i++){ if(String(tags[i]||'').trim().replace(/^#/,'').toLowerCase()===n) return true; }
+  text=String((item&&(item.title||''))+' '+(item&&(item.comment||'')));
+  return new RegExp('(?:^|\\s)#'+n+'\\b','i').test(text);
+}
+function stockSrc(item){
+  var u=item&&item.url;
+  if(typeof u==='string'&&/^https:\/\//.test(u)&&/admira\.(store|tv|studio)/.test(u)) return u;
+  if(!item||!item.id) return '';
+  return 'https://api.admira.store/stock/asset/'+encodeURIComponent(item.id);
+}
+async function readWinampStock(url) {
+  var response = await fetch(url, {cache:'no-store', credentials:'omit', signal:AbortSignal.timeout(20000)});
+  if (!response.ok) throw Error('Stock');
+  var data = await response.json();
+  if (!Array.isArray(data.items)) throw Error('Stock');
+  return data.items;
+}
+async function readWinampStockRespaldo() {
+  var results = await Promise.allSettled([
+    readWinampStock('https://stock.admira.store/stock/index.json'),
+    readWinampStock('https://api.admira.store/stock/list?limit=200')
+  ]), out=[], seen={};
+  for (var r=0;r<results.length;r++) {
+    if (results[r].status !== 'fulfilled') continue;
+    var items=results[r].value;
+    for (var i=0;i<items.length;i++) {
+      var item=items[i]; if (!item || !item.id || seen[item.id]) continue;
+      var typ=String(item.type||'').toLowerCase();
+      if (typ && typ!=='audio' && typ!=='music') continue;
+      if (!stockHasTag(item, 'winamp')) continue;
+      var src=stockSrc(item); if(!src) continue;
+      seen[item.id]=1;
+      out.push({id:item.id, titulo:String(item.title||item.comment||item.id||''), artista:String(item.artist||''), tipo:'audio', duracion:Number(item.duration)||0, url:src});
+    }
+  }
+  return out;
 }
 async function refreshWinamp() {
   if (!PL.open || syncingWinamp) return;
@@ -7957,10 +8003,10 @@ async function refreshWinamp() {
   try {
     var tracks = new Map();
     descargasDe('winamp').forEach(function(d){ var t=trackFromDescarga(d); if(t) tracks.set(t.stockId||t.src, t); });
-    try {
-      var piezas = await readWinampEmision();
-      for (var i=0;i<piezas.length;i++) { var t=trackFromEmision(piezas[i]); if(t) tracks.set(t.stockId||t.src, t); }
-    } catch (e) {}
+    var piezas = [];
+    try { piezas = await readWinampEmision(); }
+    catch (e) { try { piezas = await readWinampStockRespaldo(); } catch (e2) { piezas = []; } }
+    for (var i=0;i<piezas.length;i++) { var t=trackFromEmision(piezas[i]); if(t) tracks.set(t.stockId||t.src, t); }
     var previous = CONFIG.tracks[PL.cur], selected = CONFIG.tracks[PL.sel];
     if (previous && previous.src && PL.state !== 'stop' && previous.stockId && !tracks.has(previous.stockId)) tracks.set(previous.stockId, previous);
     var next = Array.from(tracks.values());

@@ -24,6 +24,7 @@ test("la playlist de Winamp arranca vacía: solo descargas de Napster y la emisi
   assert.doesNotMatch(html, /Ambient Store Mix/);
   assert.match(html, /descargasDe\('winamp'\)/);
   assert.match(html, /fetch\('\/api\/win95\/emision\?lista=winamp'/);
+  assert.match(html, /stockHasTag\(item, 'winamp'\)/, "el raspado del Stock sigue existiendo, solo como respaldo");
   assert.match(html, /if\(!CONFIG\.tracks\.length\) return;/);
 });
 

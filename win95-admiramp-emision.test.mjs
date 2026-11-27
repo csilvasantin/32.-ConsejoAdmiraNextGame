@@ -90,19 +90,40 @@ test("#7751: una lista desconocida no abre un proxy: 400; sin lista sigue siendo
   assert.deepEqual(calls.sort(), [...TAGS].sort());
 });
 
-test("#7751: AdmirAmp carga su lista por /api/win95/emision?lista=winamp y ya no raspa el Stock en el cliente", () => {
+test("#7751: AdmirAmp carga su lista por /api/win95/emision?lista=winamp; el raspado del Stock queda SOLO como respaldo si la emisión falla", () => {
   assert.match(html, /async function readWinampEmision\(\)/);
   assert.match(html, /fetch\('\/api\/win95\/emision\?lista=winamp', \{cache:'no-store', credentials:'same-origin'/);
   assert.match(html, /function trackFromEmision\(p\)/);
-  assert.match(html, /var piezas = await readWinampEmision\(\);/);
   assert.match(html, /descargasDe\('winamp'\)/, "las descargas de Napster siguen entrando en la lista");
-  // Nada de raspado desde el navegador
-  assert.doesNotMatch(html, /readWinampStock/);
-  assert.doesNotMatch(html, /stockHasTag/);
-  assert.doesNotMatch(html, /api\.admira\.store\/stock\/list\?limit=200/);
-  assert.doesNotMatch(html, /fetch\('https:\/\/stock\.admira\.store\/stock\/index\.json'/);
-  // Sin servidor (file:) no hay emisión y no se inventa nada
-  assert.match(html, /if \(location\.protocol==='file:' \|\| typeof fetch!=='function'\) return \[\];/);
+  // Camino directo primero; el respaldo solo dentro del catch
+  assert.match(html, /try \{ piezas = await readWinampEmision\(\); \}\n\s*catch \(e\) \{ try \{ piezas = await readWinampStockRespaldo\(\); \} catch \(e2\) \{ piezas = \[\]; \} \}/);
+  assert.equal((html.match(/readWinampStockRespaldo\(\)/g) || []).length, 2, "definición + una sola llamada (en el catch)");
+  assert.equal((html.match(/readWinampStock\('https:/g) || []).length, 2, "el índice del Stock solo se lee dentro del respaldo");
+  assert.match(html, /RESPALDO, SOLO si la emisión falla/);
+  // Sin servidor (file:) la emisión lanza y entra el respaldo; nunca se inventan pistas
+  assert.match(html, /if \(location\.protocol==='file:' \|\| typeof fetch!=='function'\) throw Error\('sin-servidor'\);/);
+  assert.doesNotMatch(html, /Ambient Store Mix/);
+});
+
+test("#7751: las piezas #winamp salen en AdmirAmp y NO en Admira Media Player", () => {
+  // Servidor: la lista por defecto del Media Player no lleva #winamp
+  assert.ok(!TAGS.map((t) => t.toLowerCase()).includes("winamp"));
+  assert.ok(!tagsDeLista("media").map((t) => t.toLowerCase()).includes("winamp"));
+  // Cliente: la config del Media Player y su filtro de tags ignoran #winamp
+  assert.match(html, /mediaPlayer: \{ screen:'virtual-win95', tags:\['win95','genero95','WindowsMediaPlayer','AdmiraMediaPlayer'\]/);
+  const m = html.match(/function mpIsMediaTag\(tag\)\{[\s\S]*?\n\}\n/);
+  assert.ok(m, "mpIsMediaTag presente");
+  const mpIsMediaTag = new Function(m[0] + "return mpIsMediaTag;")();
+  assert.equal(mpIsMediaTag("winamp"), false);
+  assert.equal(mpIsMediaTag("#winamp"), false);
+  assert.equal(mpIsMediaTag("win95"), true);
+  assert.equal(mpIsMediaTag("AdmiraMediaPlayer"), true);
+  // Y la pista de AdmirAmp lleva tag winamp, que el Media Player filtra con mpIsMediaTag
+  const tm = html.match(/function trackFromEmision\(p\)\{[\s\S]*?\n\}\n/);
+  const trackFromEmision = new Function(tm[0] + "return trackFromEmision;")();
+  const t = trackFromEmision({ id: "w1", titulo: "Pista", tipo: "audio", url: "https://api.admira.store/stock/asset/w1" });
+  assert.equal(t.tag, "winamp");
+  assert.equal(mpIsMediaTag(t.tag), false);
 });
 
 test("#7751: trackFromEmision (misma lógica que la página) convierte piezas de audio y descarta vídeo o URL no https", () => {
@@ -122,6 +143,6 @@ test("#7751: la documentación precargada cuenta el camino directo", () => {
   const txt = readFileSync(new URL("./windows95/como-funciona-win95-xperience.txt", import.meta.url), "utf8");
   for (const doc of [html, txt]) {
     assert.match(doc, /GET \/api\/win95\/emision\?lista=winamp, el mismo camino que el Media\nPlayer; encargo #7751/);
-    assert.match(doc, /Ya no se raspa el Stock desde el navegador/);
+    assert.match(doc, /Las piezas #winamp NO entran en Admira Media\nPlayer\. El Stock solo se raspa desde el navegador como respaldo si la\nemisión falla/);
   }
 });

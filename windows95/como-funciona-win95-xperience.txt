@@ -169,7 +169,9 @@ Winamp (AdmirAmp): playlist vacía al arrancar; se llena con las
 descargas de Napster etiquetadas #winamp y con la playlist #winamp
 del player virtual-win95, leída DIRECTA del servidor
 (GET /api/win95/emision?lista=winamp, el mismo camino que el Media
-Player; encargo #7751). Ya no se raspa el Stock desde el navegador.
+Player; encargo #7751). Las piezas #winamp NO entran en Admira Media
+Player. El Stock solo se raspa desde el navegador como respaldo si la
+emisión falla (sin sesión, sin servidor o admira.tv caído).
 Comprobar piezas:
   https://admira.tv/api/emision?screen=virtual-win95&tag=winamp&resumen=1
 Al abrir el icono NO arranca solo (openAmp(false)). Suena al pulsar

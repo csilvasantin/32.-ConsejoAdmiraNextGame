@@ -33,6 +33,15 @@ import {
   corsAllowsOrigin,
   audioPlaybackSrc,
   isProxySrc,
+  trackKey,
+  shouldProxyAudio,
+  cleanLocalName,
+  removeSelected,
+  mergePlaylist,
+  eqLiveBars,
+  useFakeSpectrum,
+  importStatus,
+  isAudioResult,
 } from "./win95-admiramp-lib.mjs";
 import * as api from "./functions/api/win95/audio.js";
 import { emitir as emitirPuerta, COOKIE as COOKIE_PUERTA } from "./functions/_puerta.js";
@@ -257,4 +266,106 @@ test("el HTML cablea imán, escalado del interior y EQ Web Audio con CORS/proxy"
   assert.match(html, /getByteFrequencyData/);
   assert.match(html, /eqPresetMenu|EQ_PRESETS|#eqPre/);
   assert.match(html, /drawEqGraph\(/);
+  assert.match(html, /id="ampAdd"/);
+  assert.match(html, /id="ampRemove"/);
+  assert.match(html, /id="ampSel"/);
+  assert.match(html, /function ampRemoveSelected\(/);
+  assert.match(html, /function ampAddLocalFiles\(/);
+  assert.match(html, /function openAmpSel\(/);
+  assert.match(html, /\/api\/win95\/napster\?q=/);
+  assert.match(html, /createObjectURL/);
+  assert.match(html, /shouldProxyAudio/);
+  assert.match(html, /eqLiveBarsNow/);
+  assert.match(html, /Importar a #winamp/);
+  assert.doesNotMatch(html, /if\(!box\.children\.length\)/);
+});
+
+
+test("QUITAR elimina la pista seleccionada, avanza si sonaba y no la deja en el merge", () => {
+  const a = { stockId: "a", title: "Uno", src: "https://stock.admira.store/a.mp3" };
+  const b = { stockId: "b", title: "Dos", src: "https://stock.admira.store/b.mp3" };
+  const c = { localId: "l1", title: "Local", src: "blob:https://www.admira.live/x" };
+  const r = removeSelected([a, b, c], 1, 1, "play");
+  assert.equal(r.removed.stockId, "b");
+  assert.deepEqual(r.tracks.map((t) => t.stockId || t.localId), ["a", "l1"]);
+  assert.equal(r.playIndex, 1);
+  assert.equal(r.cur, 1);
+  const empty = removeSelected([a], 0, 0, "play");
+  assert.equal(empty.state, "stop");
+  assert.equal(empty.tracks.length, 0);
+  assert.equal(empty.playIndex, null);
+  const merged = mergePlaylist({
+    stock: [a, b],
+    extras: [c],
+    hiddenKeys: [trackKey(b)],
+  });
+  assert.deepEqual(merged.map(trackKey), ["stock:a", "local:l1"]);
+  assert.equal(merged.some((t) => t.stockId === "b"), false);
+});
+
+test("AÑADIR local limpia el nombre y no proxifica blob:", () => {
+  const n = cleanLocalName("Clasicos De Los 80 - Mix.mp3");
+  assert.equal(n.artist, "Clasicos De Los 80");
+  assert.equal(n.title, "Mix");
+  assert.equal(cleanLocalName("tema.wav").artist, "Local");
+  assert.equal(cleanLocalName("tema.wav").title, "tema");
+  assert.equal(shouldProxyAudio("blob:https://www.admira.live/abc"), false);
+  assert.equal(shouldProxyAudio("https://stock.admira.store/stock/x/asset.mp3"), true);
+  assert.equal(useFakeSpectrum({ src: "blob:https://x/y" }), false);
+  assert.equal(useFakeSpectrum({ bars: 16 }), true);
+});
+
+test("SEL importa a la lista de sesión y declara con honestidad que no hay API de escritura en Stock", () => {
+  const extra = { stockId: "z", title: "Nueva", src: "https://stock.admira.store/z.mp3", tag: "winamp" };
+  const list = mergePlaylist({ stock: [{ stockId: "a", src: "https://stock.admira.store/a.mp3" }], extras: [extra] });
+  assert.equal(list.length, 2);
+  assert.equal(list[1].stockId, "z");
+  assert.match(importStatus(false), /no hay un API para escribir la etiqueta #winamp/i);
+  assert.equal(isAudioResult({ tipo: "audio", url: "https://stock.admira.store/a.mp3" }), true);
+  assert.equal(isAudioResult({ tipo: "video", url: "https://stock.admira.store/a.mp4" }), false);
+});
+
+test("el espectro del EQ sale de datos reales del analizador, no de un pulso inventado", () => {
+  const freq = new Uint8Array(512);
+  freq[Math.round((60 / 22050) * 512)] = 200;
+  freq[Math.round((1000 / 22050) * 512)] = 40;
+  const bars = eqLiveBars(freq, 44100, 10);
+  assert.equal(bars.length, 10);
+  assert.ok(bars[0] > 0.5, "graves vivos");
+  assert.ok(bars[4] > 0.1, "1K reacciona");
+  assert.ok(eqLiveBars([], 44100).every((v) => v === 0));
+});
+
+
+test("GET /api/win95/audio sigue redirects a hosts Admira y rechaza un 302 a un dominio ajeno", async () => {
+  const e = env();
+  const puerta = await emitirPuerta(FIRMA, "agente", "lucas");
+  const cookie = COOKIE_PUERTA + "=" + puerta.valor;
+  const finalUrl = "https://stock.admira.store/stock/x/asset.mp3";
+  const mid = "https://api.admira.store/stock/asset/x";
+  const calls = [];
+  const fakeFetch = async (url, init) => {
+    const u = String(url);
+    calls.push(u);
+    if (u === mid) {
+      return new Response(null, { status: 302, headers: { Location: finalUrl } });
+    }
+    if (u === finalUrl) {
+      return new Response("OKAUDIO", { status: 200, headers: { "content-type": "audio/mpeg", "accept-ranges": "bytes" } });
+    }
+    throw new Error("unexpected " + u);
+  };
+  const req = new Request("https://www.admira.live/api/win95/audio?u=" + encodeURIComponent(mid), { headers: { Cookie: cookie } });
+  const r = await api.onRequestGet({ request: req, env: e, fetch: fakeFetch });
+  assert.equal(r.status, 200);
+  assert.equal(await r.text(), "OKAUDIO");
+  assert.deepEqual(calls, [mid, finalUrl]);
+
+  const evilFetch = async (url) => new Response(null, { status: 302, headers: { Location: "https://evil.com/steal.mp3" } });
+  const bad = await api.onRequestGet({
+    request: new Request("https://www.admira.live/api/win95/audio?u=" + encodeURIComponent(finalUrl), { headers: { Cookie: cookie } }),
+    env: e,
+    fetch: evilFetch,
+  });
+  assert.equal(bad.status, 502);
 });

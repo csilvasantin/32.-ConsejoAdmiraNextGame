@@ -1,15 +1,19 @@
 /**
  * GET /api/win95/emision — inventario saneado de piezas públicas de
- * admira.tv para el player virtual-win95 (hashtags #win95, #genero95,
- * #WindowsMediaPlayer y #AdmiraMediaPlayer). No es un proxy abierto:
- * pantalla y tags van fijos, y solo se devuelven campos públicos
- * (título, tipo, duración, URL https de hosts Admira). Sin secretos.
+ * admira.tv para el player virtual-win95.
+ *   · sin parámetro o ?lista=media → Admira Media Player (hashtags #win95,
+ *     #genero95, #WindowsMediaPlayer y #AdmiraMediaPlayer);
+ *   · ?lista=winamp → AdmirAmp (hashtag #winamp), encargo #7751: Winamp
+ *     va directo a la emisión del player virtual, sin raspar el Stock.
+ * No es un proxy abierto: pantalla y listas van fijas (otra lista → 400),
+ * y solo se devuelven campos públicos (título, tipo, duración, URL https
+ * de hosts Admira). Sin secretos.
  * /api/* no pasa por la verja HTML, así que aquí se exige cookie de
  * la puerta o sesión de Google del visitante. 401 si no hay sesión.
  */
 import { verificar, leerCookie } from "../../_puerta.js";
 import { emailGoogle } from "../../../chat-hilo-lib.mjs";
-import { SCREEN, TAGS, playlistUnica } from "../../../win95-emision-lib.mjs";
+import { SCREEN, tagsDeLista, playlistUnica } from "../../../win95-emision-lib.mjs";
 
 const UPSTREAM = "https://admira.tv/api/emision";
 const CABECERAS = {
@@ -89,6 +93,14 @@ async function leerTag(tag, fetchImpl) {
 
 export async function onRequestGet({ request, env, fetch: fetchImpl }) {
   if (!(await autorizado(request, env))) return json({ ok: false, error: "sesion" }, 401);
+  let lista = "media";
+  try {
+    lista = new URL(request.url).searchParams.get("lista") || "media";
+  } catch {
+    lista = "media";
+  }
+  const TAGS = tagsDeLista(lista);
+  if (!TAGS) return json({ ok: false, error: "lista" }, 400);
   const f = fetchImpl || fetch;
   try {
     const tags = await Promise.all(TAGS.map((t) => leerTag(t, f)));
@@ -96,6 +108,7 @@ export async function onRequestGet({ request, env, fetch: fetchImpl }) {
     return json({
       ok: true,
       screen: SCREEN,
+      lista: String(lista).toLowerCase(),
       tags,
       playlist,
       total: playlist.length,

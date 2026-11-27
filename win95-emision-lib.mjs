@@ -1,10 +1,27 @@
 /**
- * Inventario de la playlist del Admira Media Player (player virtual-win95).
- * Hashtags de fábrica (sin #, mayúsculas indiferentes en admira.tv):
+ * Inventario de las playlists del player virtual-win95 (admira.tv).
+ * Admira Media Player — hashtags de fábrica (sin #, mayúsculas indiferentes en admira.tv):
  * #win95, #genero95 (traducción ya existente), #WindowsMediaPlayer y #AdmiraMediaPlayer.
+ * AdmirAmp (Winamp) — #winamp, por el mismo camino directo.
  */
 export const SCREEN = "virtual-win95";
 export const TAGS = ["win95", "genero95", "WindowsMediaPlayer", "AdmiraMediaPlayer"];
+
+/**
+ * Playlist de AdmirAmp (Winamp): hashtag #winamp del Stock, servido por la
+ * misma emisión de virtual-win95 (encargo #7751). Nada de raspar el Stock
+ * en el cliente: el player virtual ya la expone como playlist alternativa.
+ */
+export const TAGS_WINAMP = ["winamp"];
+
+/** Listas que sirve /api/win95/emision: ?lista=media (por defecto) o ?lista=winamp. Lista cerrada: no es un proxy abierto. */
+export const LISTAS = { media: TAGS, winamp: TAGS_WINAMP };
+
+/** Hashtags de una lista, o null si la lista no existe (→ 400 en el endpoint). */
+export function tagsDeLista(lista) {
+  const k = String(lista == null || lista === "" ? "media" : lista).trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(LISTAS, k) ? LISTAS[k] : null;
+}
 
 export function piezaClave(p) {
   if (!p || typeof p !== "object") return "";

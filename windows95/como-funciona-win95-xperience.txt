@@ -166,10 +166,16 @@ de Carlos (ver encargos).
 6. WINAMP Y ADMIRA MEDIA PLAYER
 ------------------------------------------------------------------------
 Winamp (AdmirAmp): playlist vacía al arrancar; se llena con las
-descargas de Napster etiquetadas #winamp y, si hay, con piezas de
-Stock que ya traen esa etiqueta. Al abrir el icono NO arranca solo
-(openAmp(false)). Suena al pulsar Reproducir o al abrir una pista
-de Descargas.
+descargas de Napster etiquetadas #winamp y con la playlist #winamp
+del player virtual-win95, leída DIRECTA del servidor
+(GET /api/win95/emision?lista=winamp, el mismo camino que el Media
+Player; encargo #7751). Las piezas #winamp NO entran en Admira Media
+Player. El Stock solo se raspa desde el navegador como respaldo si la
+emisión falla (sin sesión, sin servidor o admira.tv caído).
+Comprobar piezas:
+  https://admira.tv/api/emision?screen=virtual-win95&tag=winamp&resumen=1
+Al abrir el icono NO arranca solo (openAmp(false)). Suena al pulsar
+Reproducir o al abrir una pista de Descargas.
 
 Admira Media Player: vídeos y piezas públicas de admira.studio
 vía /api/win95/emision y las descargas #AdmiraMediaPlayer.
@@ -190,6 +196,7 @@ PRs #508–#514.
   functions/api/win95/ajuste.js        ajuste desde Director
   functions/api/win95/visitas.js       contador de Netscape
   functions/api/win95/emision.js       inventario para el Media Player
+                                       (?lista=winamp → AdmirAmp)
   win95-presencia-lib.mjs, win95-napster-lib.mjs,
   win95-comunicaciones-lib.mjs, win95-ajuste-lib.mjs
   Tests: win95-*.test.mjs, historico-win95.test.mjs

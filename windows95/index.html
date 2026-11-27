@@ -1251,10 +1251,16 @@ de Carlos (ver encargos).
 6. WINAMP Y ADMIRA MEDIA PLAYER
 ------------------------------------------------------------------------
 Winamp (AdmirAmp): playlist vacía al arrancar; se llena con las
-descargas de Napster etiquetadas #winamp y, si hay, con piezas de
-Stock que ya traen esa etiqueta. Al abrir el icono NO arranca solo
-(openAmp(false)). Suena al pulsar Reproducir o al abrir una pista
-de Descargas.
+descargas de Napster etiquetadas #winamp y con la playlist #winamp
+del player virtual-win95, leída DIRECTA del servidor
+(GET /api/win95/emision?lista=winamp, el mismo camino que el Media
+Player; encargo #7751). Las piezas #winamp NO entran en Admira Media
+Player. El Stock solo se raspa desde el navegador como respaldo si la
+emisión falla (sin sesión, sin servidor o admira.tv caído).
+Comprobar piezas:
+  https://admira.tv/api/emision?screen=virtual-win95&tag=winamp&resumen=1
+Al abrir el icono NO arranca solo (openAmp(false)). Suena al pulsar
+Reproducir o al abrir una pista de Descargas.
 
 Admira Media Player: vídeos y piezas públicas de admira.studio
 vía /api/win95/emision y las descargas #AdmiraMediaPlayer.
@@ -1276,6 +1282,7 @@ PRs #508–#514.
   functions/api/win95/ajuste.js        ajuste desde Director
   functions/api/win95/visitas.js       contador de Netscape
   functions/api/win95/emision.js       inventario para el Media Player
+                                       (?lista=winamp → AdmirAmp)
   win95-presencia-lib.mjs, win95-deepagents-lib.mjs, win95-napster-lib.mjs,
   win95-comunicaciones-lib.mjs, win95-ajuste-lib.mjs
   Tests: win95-*.test.mjs, historico-win95.test.mjs
@@ -1406,7 +1413,8 @@ B) Napster → escribir la etiqueta real en Stock
    locales (rememberDescarga, stock:false). Falta el sí de
    Carlos para escribirlas de verdad en el catálogo de Stock.
    No implementar el POST hasta que lo autorice. Mientras,
-   Winamp ya lee las piezas de Stock que YA traen #winamp.
+   Winamp ya lee las piezas con #winamp por la emisión del
+   player virtual (/api/win95/emision?lista=winamp, #7751).
 
 C) Lecturas del cupo «Grok Bot semanal»
    El % de ICQGram se apaga a las 2 h o al pasar el reset.
@@ -2085,8 +2093,10 @@ var CONFIG = {
   mediaPlayer: { screen:'virtual-win95', tags:['win95','genero95','WindowsMediaPlayer','AdmiraMediaPlayer'], rotateSeconds:60, inDemo:true,
     channelUrl:'https://admira.tv/canal.html?screen=virtual-win95&circuit=itcrowd-win95&playerType=virtual&clean=1&mode=local&cam=0&shot=0&muted=1' },
   names: { player:'Winamp', browser:'Netscape Navigator', chat:'ICQGram', p2p:'Napster', media:'Admira Media Player' },
-  // Playlist de Winamp: solo descargas de Napster y piezas de Stock con #winamp.
-  // Vacía al arrancar; se llena al descargar o al leer el catálogo etiquetado. Sin pistas inventadas.
+  // Playlist de Winamp (AdmirAmp): descargas de Napster y la playlist #winamp del player virtual-win95,
+  // leída DIRECTA por /api/win95/emision?lista=winamp (misma emisión que el Media Player; encargo #7751).
+  // Vacía al arrancar; se llena al descargar o al leer la emisión. Sin pistas inventadas. El raspado del índice público
+  // del Stock (stock.admira.store / api.admira.store/stock/list) queda SOLO como respaldo si la emisión falla.
   tracks: [],
   // ICQGram en línea: en admira.live/windows95 habla de verdad con los consejeros (mismo hilo que GrokBot/Telegram).
   // El nombre lo pone el servidor a partir de la sesión de Google. Límite 300 caracteres y 1 mensaje cada 20 s (también en el servidor).
@@ -4621,7 +4631,7 @@ var ESTILO_SEED_NAME='Estilo comunicaciones ICQGram.txt';
 var ESTILO_SEED_REV='20261125-2130';
 var ESTILO_SEED_MS=new Date(2026,10,25,21,30).getTime();
 var MISC_TRASPASO=[
-  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261126-1048',ms:new Date(2026,10,26,10,48).getTime(),left:92,top:8},
+  {id:'doc-como-funciona-win95',name:'Cómo funciona Win95 Xperience.txt',seed:'como-funciona-win95-seed',rev:'20261127-1940',ms:new Date(2026,10,27,19,40).getTime(),left:92,top:8},
   {id:'doc-encargos-abiertos',name:'Encargos y misiones abiertas.txt',seed:'encargos-abiertos-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:8,top:100},
   {id:'doc-normas-consejo',name:'Normas del Consejo para nuevos consejeros.txt',seed:'normas-consejo-seed',rev:'20261125-2352',ms:new Date(2026,10,25,23,52).getTime(),left:92,top:100}
 ];
@@ -8131,10 +8141,37 @@ function ssFrame(t){
 
 /* ---------- AdmirAmp: abrir / cerrar ---------- */
 var syncingWinamp = false;
+function trackFromDescarga(d){
+  if(!d||!d.url) return null;
+  var n=tituloLimpio(d);
+  return {stockId:d.id||d.stockId||'', artist:n.artist, title:n.title, duration:Number(d.duracion||d.duration)||0, bpm:120, src:d.url, tag:'winamp'};
+}
+/* Pieza de la emisión virtual-win95 (#winamp) → pista de AdmirAmp. Solo audio; la URL ya viene saneada por /api/win95/emision. */
+function trackFromEmision(p){
+  if(!p||typeof p.url!=='string'||!/^https:\/\//.test(p.url)) return null;
+  var typ=String(p.tipo||p.medio||'').toLowerCase();
+  if(typ&&typ!=='audio'&&typ!=='music') return null;
+  var title=String(p.titulo||p.title||p.id||'').trim(), artist=String(p.artista||p.artist||'').trim();
+  if(!artist && title.indexOf(' - ')>=0){ var k=title.indexOf(' - '); artist=title.slice(0,k).trim(); title=title.slice(k+3).trim(); }
+  else if(artist && title.indexOf(artist+' - ')===0) title=title.slice(artist.length+3).trim();
+  return {stockId:String(p.id||p.stockId||''), artist:artist||'Admira Studio', title:title||String(p.id||''), duration:Number(p.duracion||p.duration)||0, bpm:120, src:p.url, tag:'winamp'};
+}
+/* Camino directo (encargo #7751): la playlist #winamp del player virtual-win95, por el mismo endpoint que el Media Player.
+   Sin servidor (file:) o sin sesión no hay emisión: se lanza y entra el respaldo. */
+async function readWinampEmision() {
+  if (location.protocol==='file:' || typeof fetch!=='function') throw Error('sin-servidor');
+  var response = await fetch('/api/win95/emision?lista=winamp', {cache:'no-store', credentials:'same-origin', signal:AbortSignal.timeout(20000)});
+  if (!response.ok) throw Error('emision');
+  var data = await response.json();
+  if (!data || !data.ok || !Array.isArray(data.playlist)) throw Error('emision');
+  return data.playlist;
+}
+/* RESPALDO, SOLO si la emisión falla (sin servidor, 401, admira.tv caído): el raspado antiguo del índice público del Stock
+   filtrando #winamp (encargo #7751, punto 2). Nunca se mezcla con el camino directo ni lo sustituye cuando este contesta. */
 function stockHasTag(item, name){
   var n=String(name||'').replace(/^#/,'').toLowerCase();
   var tags=Array.isArray(item&&item.tags)?item.tags:[];
-  var i, t, text;
+  var i, text;
   for(i=0;i<tags.length;i++){ if(String(tags[i]||'').trim().replace(/^#/,'').toLowerCase()===n) return true; }
   text=String((item&&(item.title||''))+' '+(item&&(item.comment||'')));
   return new RegExp('(?:^|\\s)#'+n+'\\b','i').test(text);
@@ -8145,11 +8182,6 @@ function stockSrc(item){
   if(!item||!item.id) return '';
   return 'https://api.admira.store/stock/asset/'+encodeURIComponent(item.id);
 }
-function trackFromDescarga(d){
-  if(!d||!d.url) return null;
-  var n=tituloLimpio(d);
-  return {stockId:d.id||d.stockId||'', artist:n.artist, title:n.title, duration:Number(d.duracion||d.duration)||0, bpm:120, src:d.url, tag:'winamp'};
-}
 async function readWinampStock(url) {
   var response = await fetch(url, {cache:'no-store', credentials:'omit', signal:AbortSignal.timeout(20000)});
   if (!response.ok) throw Error('Stock');
@@ -8157,35 +8189,36 @@ async function readWinampStock(url) {
   if (!Array.isArray(data.items)) throw Error('Stock');
   return data.items;
 }
+async function readWinampStockRespaldo() {
+  var results = await Promise.allSettled([
+    readWinampStock('https://stock.admira.store/stock/index.json'),
+    readWinampStock('https://api.admira.store/stock/list?limit=200')
+  ]), out=[], seen={};
+  for (var r=0;r<results.length;r++) {
+    if (results[r].status !== 'fulfilled') continue;
+    var items=results[r].value;
+    for (var i=0;i<items.length;i++) {
+      var item=items[i]; if (!item || !item.id || seen[item.id]) continue;
+      var typ=String(item.type||'').toLowerCase();
+      if (typ && typ!=='audio' && typ!=='music') continue;
+      if (!stockHasTag(item, 'winamp')) continue;
+      var src=stockSrc(item); if(!src) continue;
+      seen[item.id]=1;
+      out.push({id:item.id, titulo:String(item.title||item.comment||item.id||''), artista:String(item.artist||''), tipo:'audio', duracion:Number(item.duration)||0, url:src});
+    }
+  }
+  return out;
+}
 async function refreshWinamp() {
   if (!PL.open || syncingWinamp) return;
   syncingWinamp = true;
   try {
     var tracks = new Map();
     descargasDe('winamp').forEach(function(d){ var t=trackFromDescarga(d); if(t) tracks.set(t.stockId||t.src, t); });
-    try {
-      var results = await Promise.allSettled([
-        readWinampStock('https://stock.admira.store/stock/index.json'),
-        readWinampStock('https://api.admira.store/stock/list?limit=200')
-      ]);
-      for (var result of results) {
-        if (result.status !== 'fulfilled') continue;
-        for (var item of result.value) {
-          if (!item || !item.id) continue;
-          var typ=String(item.type||'').toLowerCase();
-          if (typ && typ!=='audio' && typ!=='music') continue;
-          if (!stockHasTag(item, 'winamp')) continue;
-          var src=stockSrc(item); if(!src) continue;
-          tracks.set(item.id, (function(){
-            var title=String(item.title||item.comment||item.id||'').trim();
-            var artist=String(item.artist||'').trim();
-            if(!artist && title.indexOf(' - ')>=0){ var k=title.indexOf(' - '); artist=title.slice(0,k).trim(); title=title.slice(k+3).trim(); }
-            else if(artist && title.indexOf(artist+' - ')===0) title=title.slice(artist.length+3).trim();
-            return {stockId:item.id, artist:artist||'Admira Studio', title:title||item.id, duration:Number(item.duration)||0, bpm:120, src:src, tag:'winamp'};
-          })());
-        }
-      }
-    } catch (e) {}
+    var piezas = [];
+    try { piezas = await readWinampEmision(); }
+    catch (e) { try { piezas = await readWinampStockRespaldo(); } catch (e2) { piezas = []; } }
+    for (var i=0;i<piezas.length;i++) { var t=trackFromEmision(piezas[i]); if(t) tracks.set(t.stockId||t.src, t); }
     var previous = CONFIG.tracks[PL.cur], selected = CONFIG.tracks[PL.sel];
     if (previous && previous.src && PL.state !== 'stop' && previous.stockId && !tracks.has(previous.stockId)) tracks.set(previous.stockId, previous);
     var next = Array.from(tracks.values());

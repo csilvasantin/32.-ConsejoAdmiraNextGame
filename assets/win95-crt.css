@@ -433,22 +433,41 @@ html.crt-frame-off #crt-ui { top: auto; bottom: 40px; right: 12px; }
 #crt-ui #win95-page-fs-salir{position:static;right:auto;top:auto;box-shadow:2px 2px #090603}
 #win95-page-fs-hint{z-index:2147483645}
 
-/* Extended: escritorio a todo el viewport, sin formato 4:3 ni marco CRT.
- * Por defecto OFF. Los cuatro botones quedan abajo-derecha, por encima del reloj. */
+/* Extended: escritorio a todo el viewport visible, sin formato 4:3 ni marco CRT.
+ * 100dvh (con fallback 100vh) para que la barra de tareas no quede bajo el
+ * chrome del navegador en móvil horizontal. */
+html.crt-extended, html.crt-extended body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
 html.crt-extended #crt-shell,
 html.crt-extended.crt-frame-off #crt-shell {
+  position: fixed;
+  left: 0;
+  top: 0;
   width: 100vw;
+  width: 100dvw;
   height: 100vh;
+  height: 100dvh;
+  max-width: 100vw;
+  max-width: 100dvw;
+  max-height: 100vh;
+  max-height: 100dvh;
   transform: none;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 html.crt-extended #crt-monitor,
 html.crt-extended.crt-frame-off #crt-monitor {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   border-radius: 0;
   background: none;
   box-shadow: none;
   overflow: hidden;
+  box-sizing: border-box;
 }
 html.crt-extended #crt-monitor .crt-grain,
 html.crt-extended #crt-monitor .crt-lip,
@@ -478,7 +497,13 @@ html.crt-extended #wall {
   width: 100%;
   height: calc(100% - 28px);
 }
-html.crt-extended #taskbar { width: 100%; }
+html.crt-extended #taskbar {
+  width: 100%;
+  left: 0;
+  bottom: 0;
+  height: 28px;
+  z-index: 5000;
+}
 html.crt-extended #ssaver,
 html.crt-extended #shade,
 html.crt-extended #boot,

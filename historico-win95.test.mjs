@@ -27,11 +27,11 @@ test("historico-win95.js abre /windows95 a pantalla completa y sale con Esc", ()
   assert.match(js, /Press Start 2P/);
 });
 
-test("win95 conserva ?fs=1 al redirigir a /windows95/", () => {
-  const html = src("win95/index.html");
-  assert.match(html, /auth-gate\.js/);
-  assert.match(html, /location\.search/);
-  assert.match(html, /\/windows95\//);
+test("/win95 sirve windows95 con rewrite 200 y conserva la query", () => {
+  const redirs = src("_redirects");
+  assert.match(redirs, /\/win95\s+\/windows95\/index\.html\s+200/);
+  assert.match(redirs, /\/win95\/\s+\/windows95\/index\.html\s+200/);
+  assert.doesNotMatch(redirs, /\/win95\s+\/windows95\/\s+302/);
 });
 
 test("windows95 carga el gancho ?fs=1 y el script pide pantalla completa", () => {
@@ -77,6 +77,34 @@ test("el marco del CRT se puede ocultar: Monitor ON/OFF, tecla M y ?crt=", () =>
   assert.match(hist, /Monitor: ON/);
   const html = src("windows95/index.html");
   assert.match(html, /admira-win95-crt/);
+});
+
+test("Computer ON/OFF está junto a Monitor y al apagar vuelve a la home", () => {
+  const js = src("assets/win95-crt.js");
+  assert.match(js, /crt-computer-toggle/);
+  assert.match(js, /Computer: ON/);
+  assert.match(js, /Computer: OFF/);
+  assert.match(js, /location\.href = "\/"/);
+  assert.match(js, /function apagarEquipo\(/);
+  const css = src("assets/win95-crt.css");
+  assert.match(css, /flex-direction:\s*column/);
+  assert.match(css, /#computer-off-cover/);
+  assert.match(css, /#crt-computer-toggle|#crt-ui button/);
+});
+
+test("el preloader de Windows cubre desde el primer frame, antes del JS", () => {
+  const html = src("windows95/index.html");
+  const head = html.slice(0, html.indexOf("</style>") + 8);
+  const firstScript = html.indexOf("<script src=\"/auth-gate.js\">");
+  const firstStyle = html.indexOf("<style>");
+  assert.ok(firstStyle >= 0 && firstStyle < firstScript, "el CSS crítico del preloader va antes de auth-gate");
+  assert.match(html, /<html lang="es" class="booting">/);
+  assert.match(head, /#boot-frame/);
+  assert.match(head, /html\.booting/);
+  assert.match(html, /id="boot-frame"/);
+  assert.match(html, /function hideBoot\(/);
+  assert.match(html, /function showBoot\(/);
+  assert.doesNotMatch(html, /async function bootSeq\(tk\)\{ var b=qs\('#boot'\); b\.style\.display='block'/);
 });
 
 test("el Bloc de notas es un textarea editable con menús de los 90", () => {

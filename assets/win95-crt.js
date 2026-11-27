@@ -137,6 +137,31 @@
     }
   }
 
+  function irAHome() {
+    try { location.href = "/"; } catch (e) { location.assign("/"); }
+  }
+
+  function apagarEquipo() {
+    var btn = $("crt-computer-toggle");
+    if (btn) {
+      if (btn.getAttribute("data-off") === "1") return;
+      btn.setAttribute("data-off", "1");
+      btn.textContent = "Computer: OFF";
+      btn.setAttribute("aria-pressed", "false");
+    }
+    document.documentElement.classList.add("computer-off");
+    var cover = $("computer-off-cover");
+    if (!cover) {
+      cover = document.createElement("div");
+      cover.id = "computer-off-cover";
+      cover.setAttribute("aria-hidden", "true");
+      cover.innerHTML = '<div class="msg">Espere mientras se apaga el equipo...</div>';
+      document.body.appendChild(cover);
+    }
+    cover.style.display = "block";
+    setTimeout(irAHome, 700);
+  }
+
   function botonera() {
     if (inIframe()) {
       document.documentElement.classList.add("crt-in-iframe");
@@ -149,6 +174,13 @@
     mon.type = "button";
     mon.id = "crt-monitor-toggle";
     ui.appendChild(mon);
+    var comp = document.createElement("button");
+    comp.type = "button";
+    comp.id = "crt-computer-toggle";
+    comp.textContent = "Computer: ON";
+    comp.setAttribute("aria-pressed", "true");
+    comp.setAttribute("aria-label", "Apagar el equipo y volver al menú de admira.live.");
+    ui.appendChild(comp);
     var salir = $("win95-page-fs-salir");
     if (salir) ui.appendChild(salir);
     document.body.appendChild(ui);
@@ -156,6 +188,11 @@
       e.preventDefault();
       e.stopPropagation();
       aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true });
+    });
+    comp.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      apagarEquipo();
     });
   }
 

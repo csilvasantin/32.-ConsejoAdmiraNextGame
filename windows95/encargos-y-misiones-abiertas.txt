@@ -89,7 +89,8 @@ B) Napster → escribir la etiqueta real en Stock
    locales (rememberDescarga, stock:false). Falta el sí de
    Carlos para escribirlas de verdad en el catálogo de Stock.
    No implementar el POST hasta que lo autorice. Mientras,
-   Winamp ya lee las piezas de Stock que YA traen #winamp.
+   Winamp ya lee las piezas con #winamp por la emisión del
+   player virtual (/api/win95/emision?lista=winamp, #7751).
 
 C) Lecturas del cupo «Grok Bot semanal»
    El % de ICQGram se apaga a las 2 h o al pasar el reset.

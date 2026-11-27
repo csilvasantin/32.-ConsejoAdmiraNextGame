@@ -19,11 +19,11 @@ test("abrir Winamp o Admira Media Player no reproduce solo; cerrar detiene el au
   assert.doesNotMatch(html, /if\(!MP\.playing\|\|MP\.paused\) mpPlay\(\);\s*else mpLoadTags/);
 });
 
-test("la playlist de Winamp arranca vacía: solo descargas de Napster y Stock con #winamp", () => {
+test("la playlist de Winamp arranca vacía: solo descargas de Napster y la emisión #winamp del player virtual", () => {
   assert.match(html, /tracks: \[\],/);
   assert.doesNotMatch(html, /Ambient Store Mix/);
   assert.match(html, /descargasDe\('winamp'\)/);
-  assert.match(html, /stockHasTag\(item, 'winamp'\)/);
+  assert.match(html, /fetch\('\/api\/win95\/emision\?lista=winamp'/);
   assert.match(html, /if\(!CONFIG\.tracks\.length\) return;/);
 });
 

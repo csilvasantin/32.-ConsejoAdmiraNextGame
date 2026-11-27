@@ -285,14 +285,29 @@
     if (!shell) return 1;
     var ext = document.documentElement.classList.contains("crt-extended");
     if (ext) {
-      var evw = window.innerWidth, evh = window.innerHeight;
+      var evw = window.innerWidth, evh = window.innerHeight, evl = 0, evt = 0;
+      try {
+        if (window.Win95DeskLayout && typeof window.Win95DeskLayout.viewportSize === "function") {
+          var vp = window.Win95DeskLayout.viewportSize(window);
+          evw = vp.w; evh = vp.h; evl = vp.left || 0; evt = vp.top || 0;
+        } else if (window.visualViewport && window.visualViewport.height) {
+          evw = Math.round(window.visualViewport.width);
+          evh = Math.round(window.visualViewport.height);
+          evl = Math.round(window.visualViewport.offsetLeft || 0);
+          evt = Math.round(window.visualViewport.offsetTop || 0);
+        }
+      } catch (e) {}
       shell.style.width = evw + "px";
       shell.style.height = evh + "px";
+      shell.style.left = evl + "px";
+      shell.style.top = evt + "px";
       shell.style.transform = "none";
       return 1;
     }
     shell.style.width = "";
     shell.style.height = "";
+    shell.style.left = "";
+    shell.style.top = "";
     var off = document.documentElement.classList.contains("crt-frame-off");
     var sw = off ? BARE_W : CRT_W, sh = off ? BARE_H : CRT_H;
     var vw = window.innerWidth, vh = window.innerHeight;

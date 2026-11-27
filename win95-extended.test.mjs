@@ -42,6 +42,7 @@ test("Extended ON ocupa todo el viewport, oculta el CRT y Monitor ON lo desactiv
   assert.match(css, /html\.crt-extended #crt-shell/);
   assert.match(css, /width:\s*100vw/);
   assert.match(css, /height:\s*100vh/);
+  assert.match(css, /height:\s*100dvh/);
   assert.match(css, /html\.crt-extended #crt-ui\s*\{[^}]*bottom:\s*40px/s);
   assert.match(css, /html\.crt-extended #desk/);
   assert.match(css, /html\.crt-extended \.win\.max/);

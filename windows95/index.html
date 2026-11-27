@@ -176,6 +176,21 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .plsb div{position:absolute;left:1px;top:1px;width:5px;height:18px;background:linear-gradient(90deg,#7a7a8e,#4a4a5a)}
 .alogo{width:18px;height:18px;border-radius:4px;background:#ff6a00;color:#fff;font:bold 13px/18px Arial,sans-serif;text-align:center;box-shadow:inset -1px -1px rgba(0,0,0,.35),inset 1px 1px rgba(255,255,255,.35)}
 
+/* AdmirAmp: imán visual, lista que rellena y cuerpo de WINAMP/EQ que escala */
+#amp,#eqw,#plw{box-sizing:border-box;overflow:hidden}
+#amp>.atb,#eqw>.atb,#plw>.atb{z-index:5;width:auto;right:0}
+#amp>.skin-body,#eqw>.skin-body{position:absolute;left:0;top:14px;width:275px;height:102px;transform-origin:0 0}
+#amp>.skin-body>*,#eqw>.skin-body>*{position:absolute}
+#plw>#plist{left:10px;top:18px;right:17px;bottom:23px;width:auto!important;height:auto!important}
+#plw>.plsb{top:18px;right:9px;left:auto;width:7px;bottom:23px;height:auto!important}
+#plw>.pl-tools{position:absolute;left:10px;right:10px;bottom:7px;top:auto;height:13px;display:flex;align-items:center;gap:2px}
+#plw>.pl-tools .sk{position:relative;left:auto;top:auto;flex:none}
+#plw>.pl-tools #plinfo{position:relative;left:auto;top:auto;flex:1;min-width:84px;height:13px;background:#000}
+.eq-presets{position:absolute;z-index:30;right:6px;top:32px;background:#2a2a34;box-shadow:inset 1px 1px #5c5c70,inset -1px -1px #0c0c10,2px 2px 0 #000;padding:2px 0;min-width:78px;display:none}
+.eq-presets.on{display:block}
+.eq-presets div{padding:2px 8px;font:bold 8px/14px Arial,sans-serif;color:#d8d8e0;letter-spacing:.4px;cursor:default;white-space:nowrap}
+.eq-presets div:hover,.eq-presets div.on{background:#0000c6;color:#fff}
+
 /* ---------- Admister (homenaje P2P) ---------- */
 #nap .hdr{height:38px;margin-top:2px;background:linear-gradient(#26263e,#111120);display:flex;align-items:center;padding:0 10px;color:#fff}
 #nap .hdr [data-ico] svg{width:28px;height:28px}
@@ -1854,42 +1869,49 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
     <!-- AdmirAmp: ventana principal -->
     <div id="amp" class="skin" data-group="amp" style="left:182px;top:16px;width:275px;height:116px">
       <div class="atb"><i class="ln"></i><b id="ampName">WINAMP</b><i class="ln"></i><span class="sbx" id="ampMin" title="Minimizar">_</span><span class="sbx" id="ampMax" data-max="amp" title="Maximizar">□</span><span class="sbx" id="ampClose" title="Cerrar">×</span></div>
-      <canvas id="lcd" width="93" height="42" style="left:9px;top:20px"></canvas>
-      <canvas id="marq" width="155" height="11" style="left:110px;top:21px"></canvas>
-      <canvas id="info" width="155" height="9" style="left:110px;top:36px"></canvas>
-      <div class="hs" id="vol" style="left:110px;top:51px;width:68px"><div class="fill"></div><div class="knob"></div></div>
-      <div class="hs" id="bal" style="left:184px;top:51px;width:38px"><div class="mid"></div><div class="knob"></div></div>
-      <div class="sk tog on" id="tEQ" style="left:228px;top:50px;width:18px;height:11px">EQ</div>
-      <div class="sk tog on" id="tPL" style="left:248px;top:50px;width:18px;height:11px">PL</div>
-      <div class="seek" id="seek" style="left:12px;top:69px;width:251px"><div class="knob"></div></div>
-      <div class="sk tp" id="bPrev" style="left:12px;top:87px"></div>
-      <div class="sk tp" id="bPlay" style="left:35px;top:87px"></div>
-      <div class="sk tp" id="bPause" style="left:58px;top:87px"></div>
-      <div class="sk tp" id="bStop" style="left:81px;top:87px"></div>
-      <div class="sk tp" id="bNext" style="left:104px;top:87px"></div>
-      <div class="sk tp" id="bEject" style="left:133px;top:88px;width:22px;height:16px"></div>
-      <div class="sk tog" id="tShuf" style="left:162px;top:90px;width:42px;height:12px">MEZCLA</div>
-      <div class="sk tog on" id="tRep" style="left:206px;top:90px;width:30px;height:12px">REP</div>
-      <div class="alogo" style="left:247px;top:86px">W</div>
+      <div class="skin-body">
+      <canvas id="lcd" width="93" height="42" style="left:9px;top:6px"></canvas>
+      <canvas id="marq" width="155" height="11" style="left:110px;top:7px"></canvas>
+      <canvas id="info" width="155" height="9" style="left:110px;top:22px"></canvas>
+      <div class="hs" id="vol" style="left:110px;top:37px;width:68px"><div class="fill"></div><div class="knob"></div></div>
+      <div class="hs" id="bal" style="left:184px;top:37px;width:38px"><div class="mid"></div><div class="knob"></div></div>
+      <div class="sk tog on" id="tEQ" style="left:228px;top:36px;width:18px;height:11px">EQ</div>
+      <div class="sk tog on" id="tPL" style="left:248px;top:36px;width:18px;height:11px">PL</div>
+      <div class="seek" id="seek" style="left:12px;top:55px;width:251px"><div class="knob"></div></div>
+      <div class="sk tp" id="bPrev" style="left:12px;top:73px"></div>
+      <div class="sk tp" id="bPlay" style="left:35px;top:73px"></div>
+      <div class="sk tp" id="bPause" style="left:58px;top:73px"></div>
+      <div class="sk tp" id="bStop" style="left:81px;top:73px"></div>
+      <div class="sk tp" id="bNext" style="left:104px;top:73px"></div>
+      <div class="sk tp" id="bEject" style="left:133px;top:74px;width:22px;height:16px"></div>
+      <div class="sk tog" id="tShuf" style="left:162px;top:76px;width:42px;height:12px">MEZCLA</div>
+      <div class="sk tog on" id="tRep" style="left:206px;top:76px;width:30px;height:12px">REP</div>
+      <div class="alogo" style="left:247px;top:72px">W</div>
+      </div>
     </div>
     <!-- AdmirAmp: ecualizador -->
     <div id="eqw" class="skin" data-group="amp" style="left:182px;top:132px;width:275px;height:116px">
       <div class="atb"><i class="ln"></i><b>ECUALIZADOR</b><i class="ln"></i><span class="sbx" data-min="eqw" title="Minimizar">_</span><span class="sbx" data-max="eqw" title="Maximizar">□</span><span class="sbx" data-close="eqw">×</span></div>
-      <div class="sk tog on" id="eqOn" style="left:12px;top:19px;width:28px;height:12px">ON</div>
-      <div class="sk tog" id="eqAuto" style="left:42px;top:19px;width:34px;height:12px">AUTO</div>
-      <canvas id="eqg" width="113" height="19" style="left:84px;top:16px"></canvas>
-      <div class="sk" id="eqPre" style="left:205px;top:19px;width:58px;height:12px">PRESETS</div>
+      <div class="skin-body">
+      <div class="sk tog on" id="eqOn" style="left:12px;top:5px;width:28px;height:12px">ON</div>
+      <div class="sk tog" id="eqAuto" style="left:42px;top:5px;width:34px;height:12px">AUTO</div>
+      <canvas id="eqg" width="113" height="19" style="left:84px;top:2px"></canvas>
+      <div class="sk" id="eqPre" style="left:205px;top:5px;width:58px;height:12px">PRESETS</div>
+      </div>
+      <div class="eq-presets" id="eqPresetMenu" hidden></div>
     </div>
     <!-- AdmirAmp: lista -->
     <div id="plw" class="skin" data-group="amp" style="left:182px;top:248px;width:275px;height:150px">
       <div class="atb"><i class="ln"></i><b>LISTA DE REPRODUCCIÓN</b><i class="ln"></i><span class="sbx" data-min="plw" title="Minimizar">_</span><span class="sbx" data-max="plw" title="Maximizar">□</span><span class="sbx" data-close="plw">×</span></div>
       <div id="plist" style="left:10px;top:18px;width:246px;height:102px"></div>
       <div class="plsb" style="left:259px;top:18px;width:7px;height:102px"><div></div></div>
-      <div class="sk" style="left:10px;top:127px;width:44px;height:13px">+ AÑADIR</div>
-      <div class="sk" style="left:56px;top:127px;width:44px;height:13px">- QUITAR</div>
-      <div class="sk" style="left:102px;top:127px;width:30px;height:13px">SEL</div>
-      <div class="sk" style="left:134px;top:127px;width:36px;height:13px">VARIOS</div>
-      <canvas id="plinfo" width="84" height="9" style="left:176px;top:129px"></canvas>
+      <div class="pl-tools">
+      <div class="sk" style="width:44px;height:13px">+ AÑADIR</div>
+      <div class="sk" style="width:44px;height:13px">- QUITAR</div>
+      <div class="sk" style="width:30px;height:13px">SEL</div>
+      <div class="sk" style="width:36px;height:13px">VARIOS</div>
+      <canvas id="plinfo" width="84" height="9"></canvas>
+      </div>
     </div>
     <div id="shutdlg" class="win dlg" style="left:170px;top:110px;width:300px;display:none">
       <div class="tb"><span class="t">Apagar Windows</span><span class="x" data-min="shutdlg">_</span><span class="x" data-max="shutdlg" title="Maximizar">□</span><span class="x gap" data-close="shutdlg">×</span></div>
@@ -2313,7 +2335,7 @@ function audioInit(){
   A.input=c.createGain(); A.input.gain.value=0.7;
   A.pre=c.createGain(); A.input.connect(A.pre);
   var last=A.pre; A.bands=[];
-  for(var i=0;i<10;i++){ var f=c.createBiquadFilter(); f.type=i===0?'lowshelf':(i===9?'highshelf':'peaking'); f.frequency.value=EQ_FREQS[i]; f.Q.value=1.4; f.gain.value=0; last.connect(f); last=f; A.bands.push(f); }
+  for(var i=0;i<10;i++){ var f=c.createBiquadFilter(); f.type='peaking'; f.frequency.value=EQ_FREQS[i]; f.Q.value=1.4; f.gain.value=0; last.connect(f); last=f; A.bands.push(f); }
   A.analyser=c.createAnalyser(); A.analyser.fftSize=1024; A.analyser.smoothingTimeConstant=0.55;
   last.connect(A.analyser);
   A.pan=c.createStereoPanner?c.createStereoPanner():null;
@@ -2437,15 +2459,49 @@ function sfxModem(){
 var PL={cur:0,sel:0,state:'stop',shuffle:false,repeat:true,open:false,eqOn:true};
 var EQV=[0,0,0,0,0,0,0,0,0,0], PRE=0;
 var VOL,BAL,SEEK,PRES,EQS=[];
-var PRESETS=[['PLANO',[0,0,0,0,0,0,0,0,0,0]],['CLUB',[0,0,4,6,6,6,4,0,0,0]],['TECHNO',[8,6,0,-6,-5,0,8,10,10,9]],['ROCK',[8,5,-5,-8,-3,4,9,11,11,11]],['POP',[-2,5,7,8,5,0,-2,-2,-2,-2]],['GRAVES',[10,10,10,5,1,-4,-8,-10,-11,-11]]];
+var PRESETS=[['PLANO',[0,0,0,0,0,0,0,0,0,0]],['ROCK',[8,5,-5,-8,-3,4,9,11,11,11]],['POP',[-2,5,7,8,5,0,-2,-2,-2,-2]],['CLUB',[0,0,4,6,6,6,4,0,0,0]],['GRAVES',[10,10,10,5,1,-4,-8,-10,-11,-11]],['AGUDOS',[-10,-10,-8,-4,0,5,9,11,12,12]],['TECHNO',[8,6,0,-6,-5,0,8,10,10,9]],['SUAVE',[-2,0,2,3,4,5,4,2,1,0]]];
 var PRESET_I=0;
 
-function applyVol(){ if(!A.ctx||!VOL) return; A.vol.gain.value=VOL.v*VOL.v; if(A.pan) A.pan.pan.value=(BAL.v-0.5)*2; }
-function applyEq(){ if(!A.ctx) return; for(var i=0;i<10;i++) A.bands[i].gain.value=PL.eqOn?EQV[i]:0; A.pre.gain.value=PL.eqOn?Math.pow(10,PRE/20):1; }
+function applyVol(){ if(!A.ctx||!VOL) return; tryResume(); A.vol.gain.value=VOL.v*VOL.v; if(A.pan) A.pan.pan.value=(BAL.v-0.5)*2; }
+function applyEq(){ if(!A.ctx) return; tryResume(); for(var i=0;i<10;i++) A.bands[i].gain.value=PL.eqOn?EQV[i]:0; A.pre.gain.value=PL.eqOn?Math.pow(10,PRE/20):1; }
+function audioUrlPermitida(u){
+  if(typeof u!=='string'||!u) return '';
+  try{
+    var x=new URL(u, location.href);
+    if(x.protocol!=='https:') return '';
+    var h=x.hostname.toLowerCase();
+    if(!(h==='stock.admira.store'||h==='api.admira.store'||h==='admira.store'||h==='admira.tv'||h==='www.admira.tv'||h==='admira.studio'||h==='www.admira.studio'||h==='admira.live'||h==='www.admira.live'||/\.admira\.(store|tv|studio|live)$/.test(h))) return '';
+    return x.toString();
+  }catch(e){ return ''; }
+}
+function proxyAudioUrl(u){ var p=audioUrlPermitida(u); return p?'/api/win95/audio?u='+encodeURIComponent(p):''; }
+function hookMediaSource(){
+  audioInit();
+  if(!A.ctx||!A.el||A.elNode) return;
+  try{ A.elNode=A.ctx.createMediaElementSource(A.el); A.elNode.connect(A.input); }catch(e){}
+}
+function onAmpAudioError(){
+  if(A._retrying||A.usingProxy||!A.directSrc) return;
+  var p=proxyAudioUrl(A.directSrc); if(!p) return;
+  A._retrying=true; setAmpSrc(A.directSrc,true);
+  if(PL.state==='play'&&A.el){ var pr=A.el.play(); if(pr&&pr.catch) pr.catch(function(){}); }
+  A._retrying=false;
+}
+function setAmpSrc(url, viaProxy){
+  ensureEl(); tryResume();
+  var direct=audioUrlPermitida(url)||url;
+  A.directSrc=direct; A.usingProxy=!!viaProxy;
+  if(viaProxy){ var p=proxyAudioUrl(direct); if(!p) return false; A.el.removeAttribute('crossorigin'); A.el.src=p; }
+  else { A.el.crossOrigin='anonymous'; A.el.src=direct; }
+  return true;
+}
 function ensureEl(){
-  if(A.el) return; A.el=new Audio(); A.el.crossOrigin='anonymous'; A.el.preload='auto';
-  A.el.addEventListener('ended',function(){ if(PL.state==='play') onTrackEnd(); });
-  try{ if(A.ctx){ A.elNode=A.ctx.createMediaElementSource(A.el); A.elNode.connect(A.input); } }catch(e){}
+  if(!A.el){
+    A.el=new Audio(); A.el.preload='auto';
+    A.el.addEventListener('ended',function(){ if(PL.state==='play') onTrackEnd(); });
+    A.el.addEventListener('error',onAmpAudioError);
+  }
+  hookMediaSource();
 }
 function trackDur(i){ var t=CONFIG.tracks[i]; if(!t) return 0; if(t.src&&A.el&&PL.cur===i&&isFinite(A.el.duration)) return A.el.duration; if(t.stockId||t.src) return t.duration||0; return t.bars?t.bars*16*(60/t.bpm/4):0; }
 function elapsed(){ var t=CONFIG.tracks[PL.cur]; if(!t) return 0; if(t.src&&A.el) return A.el.currentTime||0; return SEQ.step*SEQ.spb; }
@@ -2458,7 +2514,7 @@ function play(i){
   stopSound();
   PL.cur=i; PL.sel=i; PL.state='play';
   var t=CONFIG.tracks[i];
-  if(t.src){ ensureEl(); A.el.src=t.src; try{ A.el.currentTime=0; }catch(e){} var p=A.el.play(); if(p&&p.catch) p.catch(function(){}); }
+  if(t.src){ setAmpSrc(t.src,false); try{ A.el.currentTime=0; }catch(e){} var p=A.el.play(); if(p&&p.catch) p.catch(function(){}); }
   else { SEQ.track=i; SEQ.spb=60/t.bpm/4; SEQ.step=0; SEQ.next=A.ctx?A.ctx.currentTime+0.06:0; SEQ.vlast=null; SEQ.virtual=!audioRunning(); SEQ.playing=true; }
   MARQ.dirty=true; MARQ.off=0; renderPlaylist();
 }
@@ -2481,7 +2537,7 @@ function seekTo(frac){
 function hSlider(el,W,kw,init,onChange,onRelease){
   var knob=qs('.knob',el), fill=qs('.fill',el), S={el:el,knob:knob,v:init,drag:false};
   S.set=function(v,silent){ v=clamp(v,0,1); S.v=v; var x=Math.round(v*(W-kw)); knob.style.left=x+'px'; if(fill) fill.style.width=(x+kw/2)+'px'; if(!silent&&onChange) onChange(v); };
-  function fromE(e){ var r=el.getBoundingClientRect(), k=kw*SCALE; return (e.clientX-r.left-k/2)/(r.width-k); }
+  function fromE(e){ var r=el.getBoundingClientRect(), kr=knob.getBoundingClientRect(), k=kr.width||kw, span=r.width-k; return span<=0?0:(e.clientX-r.left-k/2)/span; }
   el.addEventListener('pointerdown',function(e){ S.drag=true; try{ el.setPointerCapture(e.pointerId); }catch(_){} S.set(fromE(e)); });
   el.addEventListener('pointermove',function(e){ if(S.drag) S.set(fromE(e)); });
   function end(){ if(S.drag){ S.drag=false; if(onRelease) onRelease(S.v); } }
@@ -2491,7 +2547,7 @@ function hSlider(el,W,kw,init,onChange,onRelease){
 function vSlider(el,H,kh,init,onChange){
   var knob=qs('.knob',el), lvl=qs('.lvl',el), S={el:el,knob:knob,v:init,drag:false};
   S.set=function(v,silent){ v=clamp(v,0,1); S.v=v; var y=Math.round(v*(H-kh)); knob.style.top=y+'px'; lvl.style.top=(y+Math.round(kh/2))+'px'; if(!silent&&onChange) onChange(v); };
-  function fromE(e){ var r=el.getBoundingClientRect(), k=kh*SCALE; return (e.clientY-r.top-k/2)/(r.height-k); }
+  function fromE(e){ var r=el.getBoundingClientRect(), kr=knob.getBoundingClientRect(), k=kr.height||kh, span=r.height-k; return span<=0?0:(e.clientY-r.top-k/2)/span; }
   el.addEventListener('pointerdown',function(e){ S.drag=true; try{ el.setPointerCapture(e.pointerId); }catch(_){} S.set(fromE(e)); });
   el.addEventListener('pointermove',function(e){ if(S.drag) S.set(fromE(e)); });
   function end(){ S.drag=false; }
@@ -2572,16 +2628,16 @@ function drawInfo(){
   drawText(c,'MONO',92,1,1,'#2a4a2a'); drawText(c,'STEREO',119,1,1,on?'#00e000':'#2a4a2a');
 }
 function drawPlInfo(){
-  var c=plCtx, n=CONFIG.tracks.length, tot=0; for(var i=0;i<n;i++) tot+=trackDur(i);
-  c.fillStyle='#000'; c.fillRect(0,0,84,9);
+  var c=plCtx, n=CONFIG.tracks.length, tot=0, W=(c&&c.canvas&&c.canvas.width)||84; for(var i=0;i<n;i++) tot+=trackDur(i);
+  c.fillStyle='#000'; c.fillRect(0,0,W,9);
   drawText(c,(PL.cur+1)+'/'+n+' '+fmt(PL.state==='stop'?0:elapsed())+'/'+fmt(tot),2,1,1,'#00e000');
 }
 function drawEqGraph(){
-  var c=eqgCtx,W=113,H=19; c.fillStyle='#000'; c.fillRect(0,0,W,H); c.fillStyle='#2e2e3a'; for(var gx=0;gx<W;gx+=2) c.fillRect(gx,9,1,1);
+  var c=eqgCtx,W=113,H=19,EV=PL.eqOn?EQV:[0,0,0,0,0,0,0,0,0,0]; c.fillStyle='#000'; c.fillRect(0,0,W,H); c.fillStyle='#2e2e3a'; for(var gx=0;gx<W;gx+=2) c.fillRect(gx,9,1,1);
   var sp=(W-8)/9, prev=null;
   for(var x=0;x<W;x++){
     var fx=(x-4)/sp, i=clamp(Math.floor(fx),0,8), fr=clamp(fx-i,0,1), e=(1-Math.cos(fr*Math.PI))/2;
-    var ya=9-EQV[i]/12*8, yb=9-EQV[i+1]/12*8, y=clamp(Math.round(ya+(yb-ya)*e),1,H-2);
+    var ya=9-EV[i]/12*8, yb=9-EV[i+1]/12*8, y=clamp(Math.round(ya+(yb-ya)*e),1,H-2);
     var top=prev===null?y:Math.min(y,prev), hh=prev===null?1:Math.abs(y-prev)+1;
     c.fillStyle=VCOL[clamp(Math.round((H-1-y)/(H-1)*15),0,15)]; c.fillRect(x,top,1,hh); prev=y;
   }
@@ -2662,6 +2718,158 @@ function focusWin(el){
   updateTasks(grp||el.id);
   list.forEach(clampWinHoriz);
 }
+
+/* ---------- AdmirAmp: imán, acoplamiento y escalado ---------- */
+var AMP_DOCKS={};
+var AMP_IDS=['amp','eqw','plw'];
+var AMP_MAGNET=16;
+function isAmpWin(el){ return !!(el&&(el.id==='amp'||el.id==='eqw'||el.id==='plw')); }
+function ampBox(el){ return {id:el.id,l:el.offsetLeft,t:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight,r:el.offsetLeft+el.offsetWidth,b:el.offsetTop+el.offsetHeight}; }
+function ampPositions(){ var o={}; AMP_IDS.forEach(function(id){ var el=qs('#'+id); if(el) o[id]=ampBox(el); }); return o; }
+function ampVisible(el){ return !!(el&&el.style.display!=='none'&&el.getAttribute('data-hidden')!=='1'); }
+function placeAmpEl(el,l,t){
+  l=Math.round(clampWinLeft(l,el.offsetWidth));
+  t=Math.round(clamp(t,0,DESK_TOP_MAX));
+  el.style.left=l+'px'; el.style.top=t+'px';
+}
+function ampCluster(id){
+  var graph={}, add=function(a,b){ if(!a||!b) return; (graph[a]||(graph[a]=[])).push(b); (graph[b]||(graph[b]=[])).push(a); };
+  Object.keys(AMP_DOCKS).forEach(function(c){ if(AMP_DOCKS[c]&&AMP_DOCKS[c].parentId) add(c,AMP_DOCKS[c].parentId); });
+  var out=[], seen={}, stack=[id];
+  while(stack.length){ var n=stack.pop(); if(!n||seen[n]) continue; seen[n]=1; out.push(n); (graph[n]||[]).forEach(function(m){ stack.push(m); }); }
+  return out;
+}
+function ampDescendants(id){
+  var out=[], seen={}; seen[id]=1;
+  function walk(p){ Object.keys(AMP_DOCKS).forEach(function(c){ if(AMP_DOCKS[c]&&AMP_DOCKS[c].parentId===p&&!seen[c]){ seen[c]=1; out.push(c); walk(c); } }); }
+  walk(id); return out;
+}
+function undockAmp(id){ var n={}; Object.keys(AMP_DOCKS).forEach(function(k){ if(k!==id) n[k]=AMP_DOCKS[k]; }); AMP_DOCKS=n; }
+function setAmpDock(id,dock){
+  if(!id) return;
+  if(!dock||!dock.parentId||dock.parentId===id){ undockAmp(id); return; }
+  AMP_DOCKS[id]={parentId:dock.parentId,side:dock.side,align:dock.align||0};
+  var seen={}, cur=id;
+  while(AMP_DOCKS[cur]&&AMP_DOCKS[cur].parentId){
+    if(seen[cur]){ undockAmp(id); return; }
+    seen[cur]=1; cur=AMP_DOCKS[cur].parentId;
+    if(cur===id){ undockAmp(id); return; }
+  }
+}
+function snapAmpWindow(moving,others,threshold){
+  threshold=threshold==null?AMP_MAGNET:threshold;
+  var orig=moving, best=null, bestDist=threshold+0.0001, sl=orig.l, st=orig.t;
+  (others||[]).forEach(function(o){
+    if(!o||o.id===orig.id) return;
+    var overlapX=Math.min(orig.r,o.r)-Math.max(orig.l,o.l);
+    var overlapY=Math.min(orig.b,o.b)-Math.max(orig.t,o.t);
+    var cands=[];
+    if(overlapX>-threshold){ cands.push({side:'bottom',dist:orig.t-o.b,l:orig.l,t:o.b,o:o}); cands.push({side:'top',dist:orig.b-o.t,l:orig.l,t:o.t-orig.h,o:o}); }
+    if(overlapY>-threshold){ cands.push({side:'right',dist:orig.l-o.r,l:o.r,t:orig.t,o:o}); cands.push({side:'left',dist:orig.r-o.l,l:o.l-orig.w,t:orig.t,o:o}); }
+    cands.forEach(function(c){ var d=Math.abs(c.dist); if(d<=threshold&&d<bestDist){ bestDist=d; best={parentId:c.o.id,side:c.side,align:0,o:c.o}; sl=c.l; st=c.t; } });
+  });
+  if(best){
+    var o=best.o;
+    if(best.side==='bottom'||best.side==='top'){
+      if(Math.abs(sl-o.l)<=threshold) sl=o.l;
+      else if(Math.abs(sl+orig.w-o.r)<=threshold) sl=o.r-orig.w;
+      best.align=sl-o.l;
+    } else {
+      if(Math.abs(st-o.t)<=threshold) st=o.t;
+      else if(Math.abs(st+orig.h-o.b)<=threshold) st=o.b-orig.h;
+      best.align=st-o.t;
+    }
+    delete best.o;
+  }
+  return {l:sl,t:st,dock:best};
+}
+function placeAgainstAmp(p,c,side,align){
+  align=align||0;
+  if(side==='bottom') return {l:p.l+align,t:p.b};
+  if(side==='top') return {l:p.l+align,t:p.t-c.h};
+  if(side==='right') return {l:p.r,t:p.t+align};
+  if(side==='left') return {l:p.l-c.w,t:p.t+align};
+  return {l:c.l,t:c.t};
+}
+function reflowAmpDocks(){
+  var pos=ampPositions(), placed={}, id, guard=0, progress, d, loc, el;
+  AMP_IDS.forEach(function(i){ if(!AMP_DOCKS[i]) placed[i]=1; });
+  while(guard++<20){
+    progress=false;
+    for(id in AMP_DOCKS){
+      d=AMP_DOCKS[id]; if(!d||placed[id]||!pos[id]||!pos[d.parentId]) continue;
+      if(!placed[d.parentId]&&AMP_DOCKS[d.parentId]) continue;
+      loc=placeAgainstAmp(pos[d.parentId],pos[id],d.side,d.align||0);
+      el=qs('#'+id); if(el){ placeAmpEl(el,loc.l,loc.t); pos[id]=ampBox(el); }
+      placed[id]=1; progress=true;
+    }
+    if(!progress) break;
+  }
+}
+function layoutPlaylistWin(el){
+  var w=el.clientWidth, h=el.clientHeight, list=qs('#plist',el), sb=qs('.plsb',el), tools=qs('.pl-tools',el), info=qs('#plinfo',el);
+  var pad=10, footer=23, sbw=7, gap=9, btnH=13, bottom=7;
+  w=Math.max(w,275); h=Math.max(h,140);
+  var listH=Math.max(24,h-footer-18), listW=Math.max(40,w-pad-gap-sbw);
+  if(list){ list.style.left=pad+'px'; list.style.top='18px'; list.style.right='auto'; list.style.bottom='auto'; list.style.width=listW+'px'; list.style.height=listH+'px'; list.style.fontSize=Math.min(14,Math.max(9,Math.round(9*(w/275))))+'px'; }
+  if(sb){ sb.style.left=(w-gap-sbw)+'px'; sb.style.top='18px'; sb.style.right='auto'; sb.style.bottom='auto'; sb.style.width=sbw+'px'; sb.style.height=listH+'px'; }
+  if(tools){ tools.style.left=pad+'px'; tools.style.right=pad+'px'; tools.style.bottom=bottom+'px'; tools.style.height=btnH+'px'; }
+  if(info){ var tw=Math.max(84, Math.round((tools&&tools.clientWidth?tools.clientWidth:listW)-170)); if(info.width!==tw){ info.width=tw; info.height=9; if(typeof drawPlInfo==='function') drawPlInfo(); } }
+}
+function layoutSkin(el){
+  if(!el||!isAmpWin(el)) return;
+  if(el.id==='plw'){ layoutPlaylistWin(el); if(!el.classList.contains('max')) reflowAmpDocks(); return; }
+  var body=qs('.skin-body',el); if(!body) return;
+  var desW=275, desH=116, title=14, w=Math.max(el.clientWidth,desW), h=Math.max(el.clientHeight,desH);
+  var sx=w/desW, sy=(h-title)/(desH-title);
+  body.style.transform='scale('+sx+','+sy+')';
+  if(!el.classList.contains('max')) reflowAmpDocks();
+}
+function layoutAllAmp(){ AMP_IDS.forEach(function(id){ var el=qs('#'+id); if(el) layoutSkin(el); }); }
+function dockAmpOnOpen(){
+  var amp=qs('#amp'), eq=qs('#eqw'), pl=qs('#plw'); if(!amp) return;
+  var y=amp.offsetTop+amp.offsetHeight, x=amp.offsetLeft;
+  if(ampVisible(eq)){ placeAmpEl(eq,x,y); setAmpDock('eqw',{parentId:'amp',side:'bottom',align:0}); y+=eq.offsetHeight; } else undockAmp('eqw');
+  if(ampVisible(pl)){ placeAmpEl(pl,x,y); setAmpDock('plw',{parentId:ampVisible(eq)?'eqw':'amp',side:'bottom',align:0}); } else undockAmp('plw');
+  layoutAllAmp();
+}
+function makeAmpDraggable(handle,win){
+  var sx,sy,ox,oy,pid=null,start=null,movingKids=null;
+  handle.addEventListener('pointerdown',function(e){
+    if(e.target.closest('.x,.sbx')) return;
+    if(win.classList.contains('max')){ focusWin(win); return; }
+    pid=e.pointerId; try{ handle.setPointerCapture(pid); }catch(_){}
+    sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win);
+    start=ampPositions();
+    if(win.id==='amp') movingKids=ampCluster('amp');
+    else { undockAmp(win.id); movingKids=[win.id].concat(ampDescendants(win.id)); }
+  });
+  handle.addEventListener('pointermove',function(e){
+    if(pid!==e.pointerId) return;
+    var nx=Math.round(ox+(e.clientX-sx)/SCALE), ny=Math.round(oy+(e.clientY-sy)/SCALE);
+    if(win.id!=='amp'){
+      var others=[];
+      AMP_IDS.forEach(function(k){ if(k!==win.id&&movingKids.indexOf(k)<0){ var el=qs('#'+k); if(ampVisible(el)) others.push(ampBox(el)); } });
+      var moving={id:win.id,l:nx,t:ny,w:win.offsetWidth,h:win.offsetHeight,r:nx+win.offsetWidth,b:ny+win.offsetHeight};
+      var sn=snapAmpWindow(moving,others);
+      nx=sn.l; ny=sn.t; win._pendingDock=sn.dock;
+    } else win._pendingDock=null;
+    var dx=nx-ox, dy=ny-oy;
+    (movingKids||[win.id]).forEach(function(k){
+      var p=start[k], el=qs('#'+k); if(!p||!el) return;
+      placeAmpEl(el, k===win.id?nx:p.l+dx, k===win.id?ny:p.t+dy);
+    });
+  });
+  function end(e){
+    if(pid!==e.pointerId) return; pid=null;
+    if(win.id!=='amp'&&win._pendingDock) setAmpDock(win.id, win._pendingDock);
+    win._pendingDock=null;
+    reflowAmpDocks();
+    if(MODE==='interactive'&&typeof saveDeskLayout==='function') saveDeskLayout();
+  }
+  handle.addEventListener('pointerup',end); handle.addEventListener('pointercancel',end);
+}
+
 function makeDraggable(handle,win){
   var sx,sy,ox,oy,id=null;
   handle.addEventListener('pointerdown',function(e){ if(e.target.closest('.x,.sbx')) return; if(win.classList.contains('max')){ focusWin(win); return; } id=e.pointerId; try{ handle.setPointerCapture(id); }catch(_){} sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; focusWin(win); });
@@ -2683,6 +2891,7 @@ function winRestore(el){
   if(r){ el.style.left=r.left; el.style.top=r.top; el.style.width=r.width; el.style.height=r.height; }
   clampWinHoriz(el);
   var b=winMaxBtn(el); if(b) b.textContent='□';
+  if(isAmpWin(el)) layoutSkin(el);
 }
 function winMaximize(el){
   if(!el) return;
@@ -2691,6 +2900,7 @@ function winMaximize(el){
   el.classList.add('max');
   el.style.left='0px'; el.style.top='0px'; el.style.width=DESK_W+'px'; el.style.height=DESK_H+'px';
   var b=winMaxBtn(el); if(b) b.textContent='❐';
+  if(isAmpWin(el)) layoutSkin(el);
   focusWin(el);
 }
 function winToggleMax(el){
@@ -2781,6 +2991,7 @@ function attachResize(win){
     t=Math.round(clamp(t,0,DESK_TOP_MAX));
     w=Math.round(Math.min(Math.max(w,min.w),DESK_W-l)); h=Math.round(Math.min(h,DESK_H-Math.max(t,0)));
     win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px';
+    if(isAmpWin(win)) layoutSkin(win);
   }
   function end(e){
     var z=win._rzing; if(!z||(e.pointerId!=null&&z.id!==e.pointerId)) return;
@@ -2856,6 +3067,7 @@ function applyWinLayout(){
     var left=Math.round(clampWinLeft(+p.left,w)), top=Math.round(clamp(+p.top,0,DESK_TOP_MAX));
     if(left+w>DESK_W) w=DESK_W-left;
     el.style.left=left+'px'; el.style.top=top+'px'; el.style.width=w+'px'; el.style.height=h+'px';
+    if(isAmpWin(el)) layoutSkin(el);
     any=true;
   });
   return any;
@@ -7992,7 +8204,7 @@ async function refreshWinamp() {
 function openAmp(autoplay){
   var wins=[qs('#amp'),qs('#eqw'),qs('#plw')];
   wins.forEach(function(w){ if(w.getAttribute('data-hidden')!=='1') w.style.display='block'; });
-  PL.open=true; void refreshWinamp(); addTask('amp',CONFIG.names.player,'amp',wins); focusWin(qs('#amp'));
+  PL.open=true; dockAmpOnOpen(); void refreshWinamp(); addTask('amp',CONFIG.names.player,'amp',wins); focusWin(qs('#amp'));
   audioInit(); if(autoplay&&PL.state!=='play'&&CONFIG.tracks.length) play();
 }
 function closeAmp(){
@@ -8265,7 +8477,7 @@ function init(){
   buildDesktop(); buildStart();
 
   // ventanas
-  qsa('#desk > .win, #desk > .skin').forEach(function(w){ w.addEventListener('pointerdown',function(){ focusWin(w); }); var h=qs('.tb,.atb',w); if(h) makeDraggable(h,w); });
+  qsa('#desk > .win, #desk > .skin').forEach(function(w){ w.addEventListener('pointerdown',function(){ focusWin(w); }); var h=qs('.tb,.atb',w); if(h){ if(isAmpWin(w)) makeAmpDraggable(h,w); else makeDraggable(h,w); } });
   wireWinChrome(); wireWinResize(); wireShutdownDlg();
   window.addEventListener('pagehide',function(){ if(MODE==='interactive') saveIconLayout(); });
   window.addEventListener('beforeunload',function(){ if(MODE==='interactive') saveIconLayout(); });
@@ -8287,7 +8499,8 @@ function init(){
   BAL=hSlider(qs('#bal'),38,12,0.5,function(v){ if(Math.abs(v-0.5)<0.07){ BAL.set(0.5,true); v=0.5; } applyVol(); var p=(v-0.5)*2; overrideMarq('BALANCE: '+(p===0?'CENTRO':Math.round(Math.abs(p)*100)+'% '+(p<0?'IZQUIERDA':'DERECHA'))); });
   SEEK=hSlider(qs('#seek'),251,28,0,function(v){ if(PL.state!=='stop') overrideMarq('IR A: '+fmt(v*trackDur(PL.cur))+'/'+fmt(trackDur(PL.cur))); },function(v){ seekTo(v); });
   var eqw=qs('#eqw'), LBL=['60','170','310','600','1K','3K','6K','12K','14K','16K'];
-  function mkV(x,label,cb){ var d=document.createElement('div'); d.className='vs'; d.style.left=x+'px'; d.style.top='38px'; d.innerHTML='<div class="trk"></div><div class="lvl"></div><div class="knob"></div>'; eqw.appendChild(d); var l=document.createElement('div'); l.className='eql'; l.style.left=(x-4)+'px'; l.style.top='100px'; l.textContent=label; eqw.appendChild(l); return vSlider(d,58,9,0.5,cb); }
+  var eqBody=qs('.skin-body',eqw)||eqw;
+  function mkV(x,label,cb){ var d=document.createElement('div'); d.className='vs'; d.style.left=x+'px'; d.style.top='24px'; d.innerHTML='<div class="trk"></div><div class="lvl"></div><div class="knob"></div>'; eqBody.appendChild(d); var l=document.createElement('div'); l.className='eql'; l.style.left=(x-4)+'px'; l.style.top='86px'; l.textContent=label; eqBody.appendChild(l); return vSlider(d,58,9,0.5,cb); }
   PRES=mkV(16,'PRE',function(v){ PRE=12-24*v; applyEq(); overrideMarq('PREAMP: '+fmtDb(PRE)); });
   LBL.forEach(function(lb,i){ EQS.push(mkV(66+i*19,lb,function(v){ EQV[i]=12-24*v; applyEq(); drawEqGraph(); overrideMarq('EQ '+lb+'HZ: '+fmtDb(EQV[i])); })); });
   qs('#bPrev').addEventListener('click',function(){ step(-1); });
@@ -8301,10 +8514,17 @@ function init(){
   qs('#tPL').addEventListener('click',function(){ toggleSub('#plw','#tPL'); });
   qs('#tShuf').addEventListener('click',function(){ PL.shuffle=!PL.shuffle; this.classList.toggle('on',PL.shuffle); overrideMarq('MEZCLA: '+(PL.shuffle?'SI':'NO')); });
   qs('#tRep').addEventListener('click',function(){ PL.repeat=!PL.repeat; this.classList.toggle('on',PL.repeat); overrideMarq('REPETIR: '+(PL.repeat?'SI':'NO')); });
-  qs('#eqOn').addEventListener('click',function(){ PL.eqOn=!PL.eqOn; this.classList.toggle('on',PL.eqOn); applyEq(); });
+  qs('#eqOn').addEventListener('click',function(){ PL.eqOn=!PL.eqOn; this.classList.toggle('on',PL.eqOn); applyEq(); drawEqGraph(); });
   qs('#eqAuto').addEventListener('click',function(){ this.classList.toggle('on'); });
-  qs('#eqPre').addEventListener('click',nextPreset);
-  renderPlaylist(); drawEqGraph();
+  function renderEqPresets(){
+    var menu=qs('#eqPresetMenu'); if(!menu) return;
+    menu.innerHTML='';
+    PRESETS.forEach(function(p,i){ var d=document.createElement('div'); d.textContent=p[0]; if(i===PRESET_I) d.className='on'; d.addEventListener('click',function(e){ e.stopPropagation(); PRESET_I=i; overrideMarq('PRESET: '+p[0]); animateEq(p[1]); renderEqPresets(); menu.classList.remove('on'); menu.hidden=true; }); menu.appendChild(d); });
+  }
+  renderEqPresets();
+  qs('#eqPre').addEventListener('click',function(e){ e.stopPropagation(); nextPreset(); renderEqPresets(); var menu=qs('#eqPresetMenu'); if(menu){ menu.hidden=false; menu.classList.add('on'); } });
+  document.addEventListener('pointerdown',function(e){ var menu=qs('#eqPresetMenu'); if(!menu||menu.hidden) return; if(e.target.closest&&(e.target.closest('#eqPresetMenu')||e.target.closest('#eqPre'))) return; menu.classList.remove('on'); menu.hidden=true; });
+  renderPlaylist(); drawEqGraph(); layoutAllAmp();
   wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireDaCli(); wireNet(); icqgInit();
 
   // reloj: pulsar la hora lanza el protector (ya no arranca solo)

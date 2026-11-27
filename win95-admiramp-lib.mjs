@@ -286,7 +286,7 @@ export function layoutPlaylist(w, h) {
   const listW = Math.max(40, width - pad - sbGap - sb);
   return {
     title: { l: 0, t: 0, w: width, h: title },
-    list: { l: pad, t: listTop, w: listW, h: listH },
+    list: { l: pad, t: listTop, w: listW, h: listH, r: sbGap + sb },
     scrollbar: { l: width - sbGap - sb, t: listTop, w: sb, h: listH },
     tools: { l: pad, t: height - bottom - btnH, w: width - pad * 2, h: btnH },
     fontPx: Math.min(14, Math.max(9, Math.round(9 * (width / AMP_DESIGN.plw.w)))),
@@ -461,4 +461,46 @@ export function isAudioResult(p) {
   const url = String((p && p.url) || "");
   if (/\.(mp4|webm|mov|mkv|avi)(\?|$)/i.test(url)) return false;
   return true;
+}
+
+/** El visor del player (LCD, espectro, reloj, título, seek) se rige por el audio real, no solo por PL.state. */
+export function ampIsPlaying({ state, elPaused, elEnded, elSrc, seqPlaying } = {}) {
+  if (seqPlaying) return true;
+  const src = elSrc == null ? "" : String(elSrc);
+  if (src && elPaused === false && elEnded !== true) return true;
+  return state === "play";
+}
+
+export function ampVisorState(opts = {}) {
+  return ampIsPlaying(opts) ? "play" : (opts.state || "stop");
+}
+
+/** El analizador del player WINAMP debe vivir con el mismo criterio que el bloque EQ. */
+export function playerSpectrumActive(opts = {}) {
+  return ampIsPlaying(opts);
+}
+
+/** drawImage(null) en el marquee mataba el requestAnimationFrame del visor. */
+export function marqueeCanDraw(img) {
+  return !!(img && (img.width || img.height));
+}
+
+function defaultFmt(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return String(m) + ":" + String(r).padStart(2, "0");
+}
+
+/** Texto del pie de la lista. Nunca "1/0": sin pistas es "0/0". */
+export function playlistCounterText(cur, n, elapsedSec = 0, totalSec = 0, fmt = defaultFmt) {
+  const total = Math.max(0, n | 0);
+  const idx = total === 0 ? 0 : Math.min(Math.max((cur | 0) + 1, 1), total);
+  return idx + "/" + total + " " + fmt(elapsedSec || 0) + "/" + fmt(totalSec || 0);
+}
+
+export function playlistCount(tracksLength, domRows = 0) {
+  const n = Math.max(0, tracksLength | 0);
+  if (n > 0) return n;
+  return Math.max(0, domRows | 0);
 }

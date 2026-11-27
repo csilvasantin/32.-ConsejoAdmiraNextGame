@@ -68,8 +68,8 @@ test("fallback 26-nov: 4 DeepAgents + SteveJobs, misiones reales, sin secretos",
   assert.ok(d.carpetas.filter((c) => c.padre === "misiones").length === 4);
   assert.equal(d.carpetas.find((c) => c.nombre === "SteveJobs").padre, "miscelanea");
   const jobs = d.carpetas.find((c) => c.id === STEVEJOBS.folderId);
-  assert.match(jobs.ficheros[0].texto, /Win95 Xperience y control de DeepAgents en admira\.live/);
-  assert.match(jobs.ficheros[0].texto, /Frescura de cupos en ICQGram/);
+  assert.match(jobs.ficheros[0].texto, /Lanzadera AdmiraXperience Planeta/);
+  assert.match(jobs.ficheros[0].texto, /mupis verticales 01V, 03V y 05V/);
   const blob = JSON.stringify(d);
   for (const fuga of ["192.168.", "100.117.", "100.89.", "ssh-ed25519", "AAAAC3", "csilva@", "ghp_", "token="]) {
     assert.ok(!blob.includes(fuga), fuga);
@@ -126,7 +126,7 @@ test("Win95: Misiones hidrata los 4 DeepAgents y Miscelánea guarda SteveJobs; D
   assert.match(html, /function ensureMisionesFolder\(/);
   assert.match(html, /padreDeCarpeta\(/);
   assert.match(html, /function loadMisiones\(/);
-  assert.match(html, /Win95 Xperience y control de DeepAgents en admira\.live/);
+  assert.match(html, /Lanzadera AdmiraXperience Planeta/);
   assert.match(html, /DESK_LAYOUT_VER=4/);
   assert.match(html, /FVIEW_KEY='admira-win95-vistas-v2'/);
   assert.match(html, /mode:VIEW_MODES\.indexOf\(v\.mode\)>=0\?v\.mode:\(isDesk\?'large':'details'\)/);
@@ -181,10 +181,10 @@ test("ICQGram: la misión se lee de la subcarpeta del consejero en Miscelánea; 
   assert.ok(coincideCarpetaConsejero("JohnLasseter", { name: "John Lasseter", persona: "lasseter" }));
   assert.ok(!coincideCarpetaConsejero("Neo - #7621 Screen sync", jobs));
   const nota = notaSteveJobs(AHORA);
-  assert.equal(misionDeclaradaEnTexto(nota), "Win95 Xperience y control de DeepAgents en admira.live");
+  assert.equal(misionDeclaradaEnTexto(nota), "Lanzadera AdmiraXperience Planeta");
   assert.equal(misionCompacta("Win95 Xperience y control de DeepAgents en admira.live"), "Win95 Xperience y control DeepAgents");
   const mis = misionDeConsejeroEnCarpetas(jobs, MISIONES_FALLBACK.carpetas);
-  assert.equal(mis.corto, "Win95 Xperience y control DeepAgents");
+  assert.equal(mis.corto, "Lanzadera AdmiraXperience Planeta");
   assert.equal(misionDeConsejeroEnCarpetas({ name: "Elon Musk", persona: "musk" }, MISIONES_FALLBACK.carpetas), null);
   assert.equal(misionDesdeCarpeta({ nombre: "SteveWozniak", ficheros: [] }), null);
   assert.equal(misionDesdeCarpeta({ nombre: "ElonMusk - Xperience en admira.tv", ficheros: [] }).corto, "Xperience en admira.tv");

@@ -12,7 +12,10 @@
  *      confirmación, y nunca apaga el Studio ni el Mini.
  *   2. Zona interactiva de Terminator (calle Planeta) — «Demo AdmiraNeXT»
  *      (player interactivo de admira.tv controlado desde AdmiraDesk) y
- *      «Modo demo PortAventuraNeXT».
+ *      «Modo demo PortAventuraNeXT». Solo los horizontales AdmiraNeXT01–05.
+ *   3. Mupis verticales (27-nov-2026, t1452u): 01V, 03V y 05V, que cuelgan
+ *      de AdmiraNeXT01, 03 y 05. Zona independiente: apagar o cambiar los
+ *      interactivos no toca los mupis, y al revés.
  * Puro (sin DOM): lo usan la página, la CLI y los tests.
  */
 import { formatHoraInicio, etiquetaMision } from './consejo-autonomo-leyendas.mjs';
@@ -26,6 +29,15 @@ export const URL_CANAL = 'https://admira.tv/canal.html?screen=';
 export const URL_ADMIRADESK = 'https://www.admira.store/control/admiradesk/';
 export const URL_DEMO_PAN = 'https://www.admiranext.com/demo/PortAventuraNeXT/';
 export const URL_DEMO_PAN_PLAYER = 'https://www.admiranext.com/demo/player';
+
+/**
+ * Player de PortAventuraNeXT por pantalla. Convención real del player
+ * (admiranext.com/demo/player.js, encargo #7467): ?screen=admiranext0N-a|b.
+ * Sin ?screen todas las pantallas caían en la 01.
+ */
+export function urlPlayerPan(pantalla) {
+  return URL_DEMO_PAN_PLAYER + '?screen=' + encodeURIComponent(String(pantalla || ''));
+}
 
 /** Destinos de flota. Los machineId salen de ListMachines (26-nov-2026). */
 export const URL_SALA_NEGRO = 'https://www.admira.live/lanzadera/negro.html';
@@ -81,15 +93,20 @@ export function esMaquinaProtegida(machineId) {
  * porque esas ids aparecen hoy con otra etiqueta.
  */
 export const MAQUINAS_ZONA_INTERACTIVA = Object.freeze([
-  Object.freeze({ e: '01', etiqueta: 'AdmiraNeXT01', machineId: '7d817289-d0a8-45ea-965a-0a8271b0c0d5', pantalla: 'admiranext01-a', grupo: 'PC' }),
-  Object.freeze({ e: '02', etiqueta: 'AdmiraNeXT02', machineId: '42f77bdb-332d-4505-bedd-212335668648', pantalla: 'admiranext02-a', grupo: 'PC' }),
-  Object.freeze({ e: '03', etiqueta: 'AdmiraNeXT03', machineId: null, pantalla: 'admiranext03-a', grupo: 'PC', pendiente: 'ListMachines no muestra ahora una máquina con la etiqueta AdmiraNeXT03.' }),
-  Object.freeze({ e: '04', etiqueta: 'AdmiraNeXT04', machineId: null, pantalla: 'admiranext04-a', grupo: 'PC', pendiente: 'ListMachines no muestra ahora una máquina con la etiqueta AdmiraNeXT04.' }),
-  Object.freeze({ e: '05', etiqueta: 'AdmiraNeXT05', machineId: '511f89a1-49a0-4e7e-a78a-41480b790b8b', pantalla: 'admiranext05-a', grupo: 'PC' }),
-  Object.freeze({ e: '01V', etiqueta: 'AdmiraNeXT01 · vertical', machineId: '7d817289-d0a8-45ea-965a-0a8271b0c0d5', pantalla: 'admiranext01-b', grupo: 'vertical' }),
-  Object.freeze({ e: '03V', etiqueta: 'AdmiraNeXT03 · vertical', machineId: null, pantalla: 'admiranext03-b', grupo: 'vertical', pendiente: 'La vertical 03V vive en el PC 03, cuya machineId no está confirmada hoy.' }),
-  Object.freeze({ e: '05V', etiqueta: 'AdmiraNeXT05 · vertical', machineId: '511f89a1-49a0-4e7e-a78a-41480b790b8b', pantalla: 'admiranext05-b', grupo: 'vertical' }),
+  Object.freeze({ e: '01', etiqueta: 'AdmiraNeXT01', maquina: 'AdmiraNeXT01', machineId: '7d817289-d0a8-45ea-965a-0a8271b0c0d5', pantalla: 'admiranext01-a', grupo: 'PC' }),
+  Object.freeze({ e: '02', etiqueta: 'AdmiraNeXT02', maquina: 'AdmiraNeXT02', machineId: '42f77bdb-332d-4505-bedd-212335668648', pantalla: 'admiranext02-a', grupo: 'PC' }),
+  Object.freeze({ e: '03', etiqueta: 'AdmiraNeXT03', maquina: 'AdmiraNeXT03', machineId: null, pantalla: 'admiranext03-a', grupo: 'PC', pendiente: 'ListMachines no muestra ahora una máquina con la etiqueta AdmiraNeXT03.' }),
+  Object.freeze({ e: '04', etiqueta: 'AdmiraNeXT04', maquina: 'AdmiraNeXT04', machineId: null, pantalla: 'admiranext04-a', grupo: 'PC', pendiente: 'ListMachines no muestra ahora una máquina con la etiqueta AdmiraNeXT04.' }),
+  Object.freeze({ e: '05', etiqueta: 'AdmiraNeXT05', maquina: 'AdmiraNeXT05', machineId: '511f89a1-49a0-4e7e-a78a-41480b790b8b', pantalla: 'admiranext05-a', grupo: 'PC' }),
+  Object.freeze({ e: '01V', etiqueta: 'AdmiraNeXT01 · vertical', maquina: 'AdmiraNeXT01', machineId: '7d817289-d0a8-45ea-965a-0a8271b0c0d5', pantalla: 'admiranext01-b', grupo: 'vertical' }),
+  Object.freeze({ e: '03V', etiqueta: 'AdmiraNeXT03 · vertical', maquina: 'AdmiraNeXT03', machineId: null, pantalla: 'admiranext03-b', grupo: 'vertical', pendiente: 'La vertical 03V vive en el PC 03, cuya machineId no está confirmada hoy.' }),
+  Object.freeze({ e: '05V', etiqueta: 'AdmiraNeXT05 · vertical', maquina: 'AdmiraNeXT05', machineId: '511f89a1-49a0-4e7e-a78a-41480b790b8b', pantalla: 'admiranext05-b', grupo: 'vertical' }),
 ]);
+
+/** Zona interactiva: solo los horizontales 01–05. */
+export const MAQUINAS_HORIZONTALES = Object.freeze(MAQUINAS_ZONA_INTERACTIVA.filter((m) => m.grupo === 'PC'));
+/** Zona de mupis verticales: 01V, 03V y 05V (cuelgan de AdmiraNeXT01, 03 y 05). */
+export const MAQUINAS_MUPIS = Object.freeze(MAQUINAS_ZONA_INTERACTIVA.filter((m) => m.grupo === 'vertical'));
 
 export const DEMOS = Object.freeze({
   admiranext: Object.freeze({
@@ -138,11 +155,42 @@ export const DEMOS = Object.freeze({
     tituloEn: 'PortAventuraNeXT demo mode',
     urlControl: URL_DEMO_PAN,
     controlEtiqueta: 'Modo demo PortAventuraNeXT',
-    urlPlayer: URL_DEMO_PAN_PLAYER,
+    panPlayer: true,
     fuentes: Object.freeze([
       URL_DEMO_PAN,
       URL_DEMO_PAN_PLAYER,
     ]),
+  }),
+  mupis: Object.freeze({
+    id: 'mupis',
+    zona: 'mupis',
+    titulo: 'Mupis · Demo AdmiraNeXT',
+    tituloEn: 'Mupis · AdmiraNeXT Demo',
+    urlControl: URL_ADMIRADESK,
+    controlEtiqueta: 'AdmiraDesk',
+    urlPlayerPlantilla: URL_CANAL,
+    fuentes: Object.freeze([URL_ADMIRADESK, 'https://admira.tv/canal.html?screen=admiranext01-b']),
+  }),
+  'pan-mupis': Object.freeze({
+    id: 'pan-mupis',
+    zona: 'mupis',
+    titulo: 'Mupis · Modo PortAventuraNeXT',
+    tituloEn: 'Mupis · PortAventuraNeXT mode',
+    urlControl: URL_DEMO_PAN,
+    controlEtiqueta: 'Modo demo PortAventuraNeXT',
+    panPlayer: true,
+    fuentes: Object.freeze([URL_DEMO_PAN, URL_DEMO_PAN_PLAYER]),
+  }),
+  'negro-mupis': Object.freeze({
+    id: 'negro-mupis',
+    zona: 'mupis',
+    titulo: 'Mupis en negro',
+    tituloEn: 'Mupis in black',
+    reset: true,
+    urlControl: URL_SALA_NEGRO,
+    controlEtiqueta: 'Sala en negro',
+    urlPlayerFija: URL_SALA_NEGRO,
+    fuentes: Object.freeze([URL_SALA_NEGRO]),
   }),
   negro: Object.freeze({
     id: 'negro',
@@ -168,6 +216,13 @@ function idDeResto(resto) {
   const s = String(resto || '').trim();
   if (!s) return null;
   const compact = s.replace(/\s+/g, '');
+
+  if (/mupis?|vertical(?:es)?/.test(s)) {
+    if (/portaventura|\bpan\b/.test(s)) return 'pan-mupis';
+    if (/negro/.test(s)) return 'negro-mupis';
+    return 'mupis';
+  }
+  if (/^(pan-mupis|negro-mupis)$/.test(compact)) return compact;
 
   if (/^(negro|salaennegro|salanegro)$/.test(compact)
       || /sala\s+(en\s+)?negro/.test(s)
@@ -262,10 +317,18 @@ export function urlLanzaderaDesdeComando(texto) {
   return null;
 }
 
+export function urlPantallaDemo(demo, pantalla) {
+  if (demo.urlPlayerFija) return demo.urlPlayerFija;
+  if (demo.panPlayer) return urlPlayerPan(pantalla);
+  return URL_CANAL + pantalla;
+}
+
 function destinosInteractivos(demo) {
-  return MAQUINAS_ZONA_INTERACTIVA.map((m) => Object.freeze({
+  const lista = demo.zona === 'mupis' ? MAQUINAS_MUPIS : MAQUINAS_HORIZONTALES;
+  return lista.map((m) => Object.freeze({
     ...m,
-    url: demo.urlPlayer || (URL_CANAL + m.pantalla),
+    id: 'player-' + m.e,
+    url: urlPantallaDemo(demo, m.pantalla),
   }));
 }
 
@@ -283,7 +346,7 @@ export function planDeLanzamiento(demo, inicio) {
     noEncimarPlayer: true,
     noRobarFoco: 'Sin quitar el foco del ordenador que está usando Carlos y sin abrir nada encima del player.',
   };
-  if (d.zona === 'interactiva') {
+  if (d.zona === 'interactiva' || d.zona === 'mupis') {
     return {
       ...base,
       control: {
@@ -349,6 +412,15 @@ export function validarPlanContraInventario(plan, inventario) {
     if (r.error) errores.push(r.error);
     else localizados[k] = r;
   }
+  // Zonas interactiva y de mupis: cada player necesita machineId confirmada y su equipo en el inventario.
+  const maquinas = Array.isArray(inventario) ? inventario : [];
+  for (const p of (plan.players || [])) {
+    if (!p.machineId) { errores.push('Pendiente ID: ' + p.etiqueta + ' (' + p.e + ') no tiene machineId confirmada.'); continue; }
+    if (esMaquinaProtegida(p.machineId)) { errores.push(p.etiqueta + ' es un equipo protegido.'); continue; }
+    const m = maquinas.find((x) => x.machineId === p.machineId);
+    if (!m) errores.push('Sin conexión: no está conectado el ' + (p.maquina || p.etiqueta) + '.');
+    else localizados[p.id || ('player-' + p.e)] = { machineId: m.machineId };
+  }
   return { ok: errores.length === 0, errores, localizados };
 }
 
@@ -358,6 +430,12 @@ export function puedeMarcarEnMarcha(plan, verificacion) {
   const needed = [];
   if (plan.rosa) needed.push('rosa');
   if (plan.crema) needed.push('crema');
+  for (const p of (plan.players || [])) {
+    // Sin machineId (03, 04, 03V) no hay equipo que confirme: nunca «en marcha».
+    if (!p.machineId) return false;
+    needed.push(p.id || ('player-' + p.e));
+  }
+  if (!needed.length) return false;
   const pantallas = (verificacion && verificacion.pantallas) || [];
   return needed.every((k) => pantallas.some((p) => p.destino === k && p.ok === true));
 }
@@ -378,9 +456,16 @@ export const APAGADOS = Object.freeze({
     tituloEn: 'Turn off the Terminator interactive room',
     restaurar: 'interactivo',
   }),
+  mupis: Object.freeze({
+    id: 'mupis',
+    zona: 'mupis',
+    titulo: 'Apagar mupis verticales',
+    tituloEn: 'Turn off the vertical mupis',
+    restaurar: 'mupis',
+  }),
   todo: Object.freeze({
     id: 'todo',
-    zona: 'ambas',
+    zona: 'todas',
     titulo: 'Apagar todo',
     tituloEn: 'Turn everything off',
     restaurar: 'todo',
@@ -390,7 +475,8 @@ export const APAGADOS = Object.freeze({
 export const ENCENDIDOS = Object.freeze({
   reuniones: Object.freeze({ id: 'reuniones', zona: 'sala', titulo: 'Encender sala de reuniones Terminator', tituloEn: 'Restore the Terminator meeting room', demo: 'admiranext' }),
   interactivos: Object.freeze({ id: 'interactivos', zona: 'interactiva', titulo: 'Encender sala de interactivos Terminator', tituloEn: 'Restore the Terminator interactive room', demo: 'interactivo' }),
-  todo: Object.freeze({ id: 'todo', zona: 'ambas', titulo: 'Encender todo', tituloEn: 'Restore everything', demo: 'todo' }),
+  mupis: Object.freeze({ id: 'mupis', zona: 'mupis', titulo: 'Encender mupis verticales', tituloEn: 'Restore the vertical mupis', demo: 'mupis' }),
+  todo: Object.freeze({ id: 'todo', zona: 'todas', titulo: 'Encender todo', tituloEn: 'Restore everything', demo: 'todo' }),
 });
 
 const PROTECCIONES_ES = Object.freeze([
@@ -437,8 +523,22 @@ export function destinosApagadoReuniones() {
   ]);
 }
 
+function playersEnNegro(lista) {
+  return lista.map((m) => destinoApagado(m, {
+    id: 'player-' + m.e,
+    url: URL_SALA_NEGRO,
+    rol: 'Player de ' + m.etiqueta + ' en Sala en negro.',
+    tipo: 'player',
+  }));
+}
+
+/** Mupis verticales 01V, 03V y 05V en negro; no toca los horizontales. */
+export function destinosApagadoMupis() {
+  return Object.freeze(playersEnNegro(MAQUINAS_MUPIS));
+}
+
 export function destinosApagadoInteractivos() {
-  const players = MAQUINAS_ZONA_INTERACTIVA.map((m) => Object.freeze({
+  const players = MAQUINAS_HORIZONTALES.map((m) => Object.freeze({
     ...m,
     id: 'player-' + m.e,
     url: URL_SALA_NEGRO,
@@ -460,6 +560,7 @@ export function apagadoPorId(id) {
   if (APAGADOS[s]) return APAGADOS[s];
   if (/^(reunion|reuniones|sala-reuniones|sala de reuniones)$/.test(s)) return APAGADOS.reuniones;
   if (/^(interactivo|interactivos|sala-interactivos|sala de interactivos)$/.test(s)) return APAGADOS.interactivos;
+  if (/^(mupi|mupis|verticales|vertical|mupis verticales)$/.test(s)) return APAGADOS.mupis;
   if (/^(todo|all|ambas)$/.test(s)) return APAGADOS.todo;
   return null;
 }
@@ -484,10 +585,11 @@ export function parseComandoApagar(texto) {
   const s = norm(raw).replace(/^\//, '');
   if (/^(no\s+)?(quiero\s+)?(que\s+)?no\s+apagues/.test(s)) return null;
 
-  const enc = s.match(/^(encender|restaurar|prender|reanudar sala)(?:\s+(?:la\s+)?(?:sala\s+(?:de\s+)?)?)?(reuniones?|interactivos?|interactiva|todo|all)?$/);
+  const enc = s.match(/^(encender|restaurar|prender|reanudar sala)(?:\s+(?:la\s+)?(?:los\s+)?(?:sala\s+(?:de\s+)?)?)?(reuniones?|interactivos?|interactiva|mupis?(?:\s+verticales)?|verticales|todo|all)?$/);
   if (enc) {
     const zona = enc[2] || '';
     if (!zona || /todo|all/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.todo };
+    if (/mupi|vertical/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.mupis };
     if (/interact/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.interactivos };
     if (/reunion/.test(zona)) return { tipo: 'encender', encendido: ENCENDIDOS.reuniones };
     return { tipo: 'lanzadera', demo: null };
@@ -505,6 +607,9 @@ export function parseComandoApagar(texto) {
   if (/\btodo\b|\ball\b|ambas salas|todas las salas/.test(s)) {
     return { tipo: 'apagar', apagado: APAGADOS.todo };
   }
+  if (/mupi|vertical/.test(s)) {
+    return { tipo: 'apagar', apagado: APAGADOS.mupis };
+  }
   if (/interactivo/.test(s)) {
     return { tipo: 'apagar', apagado: APAGADOS.interactivos };
   }
@@ -521,6 +626,7 @@ export function planDeApagado(id, inicio) {
   let destinos = [];
   if (a.id === 'reuniones' || a.id === 'todo') destinos = destinos.concat(destinosApagadoReuniones());
   if (a.id === 'interactivos' || a.id === 'todo') destinos = destinos.concat(destinosApagadoInteractivos());
+  if (a.id === 'mupis' || a.id === 'todo') destinos = destinos.concat(destinosApagadoMupis());
   if (destinos.some((d) => esMaquinaProtegida(d.machineId))) {
     throw new Error('Un destino de apagado no puede ser el Mac Studio ni el Mini.');
   }

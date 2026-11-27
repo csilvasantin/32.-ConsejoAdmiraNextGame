@@ -504,3 +504,25 @@ export function playlistCount(tracksLength, domRows = 0) {
   if (n > 0) return n;
   return Math.max(0, domRows | 0);
 }
+
+/** Modo inicial del visor del player WINAMP: 0 = barras de espectro. */
+export function playerVisorDefaultMode() {
+  return 0;
+}
+
+/**
+ * Muestras -1..1 del osciloscopio del EQ a partir de getByteTimeDomainData.
+ * Silencio (128) o sin datos → ceros (línea plana centrada).
+ */
+export function eqWaveSamples(wave, width = 113) {
+  const n = Math.max(1, width | 0);
+  const out = new Array(n).fill(0);
+  const bins = wave && wave.length ? wave : [];
+  if (!bins.length) return out;
+  const last = bins.length - 1;
+  for (let i = 0; i < n; i++) {
+    const idx = n === 1 ? 0 : Math.round((i * last) / (n - 1));
+    out[i] = ((bins[idx] || 0) - 128) / 128;
+  }
+  return out;
+}

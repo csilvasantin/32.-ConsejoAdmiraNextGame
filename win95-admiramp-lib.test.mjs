@@ -48,6 +48,8 @@ import {
   marqueeCanDraw,
   playlistCounterText,
   playlistCount,
+  playerVisorDefaultMode,
+  eqWaveSamples,
 } from "./win95-admiramp-lib.mjs";
 import * as api from "./functions/api/win95/audio.js";
 import { emitir as emitirPuerta, COOKIE as COOKIE_PUERTA } from "./functions/_puerta.js";
@@ -281,7 +283,10 @@ test("el HTML cablea imán, escalado del interior y EQ Web Audio con CORS/proxy"
   assert.match(html, /\/api\/win95\/napster\?q=/);
   assert.match(html, /createObjectURL/);
   assert.match(html, /shouldProxyAudio/);
-  assert.match(html, /eqLiveBarsNow/);
+  assert.match(html, /function eqLiveWaveNow\(/);
+  assert.match(html, /getByteTimeDomainData\(A\.wave\)/);
+  assert.match(html, /var VZ_MODE_BARS=0/);
+  assert.match(html, /var VZ=\{mode:VZ_MODE_BARS/);
   assert.match(html, /function ampIsPlaying\(/);
   assert.match(html, /function ampVisorState\(/);
   assert.match(html, /function playlistCounterText\(/);
@@ -413,5 +418,26 @@ test("el contador de la lista nunca pinta 1/0 y usa el total real de pistas", ()
   assert.equal(L.list.l + L.list.w, L.scrollbar.l);
   assert.equal(L.list.r, 16);
   assert.ok(L.list.l + L.list.w + L.list.r === 275);
+});
+
+test("el visor WINAMP arranca en barras de espectro y el EQ pinta la onda en tiempo real", () => {
+  assert.equal(playerVisorDefaultMode(), 0);
+  assert.match(html, /var VZ_MODE_BARS=0,VZ_MODE_WAVE=1/);
+  assert.match(html, /var VZ=\{mode:VZ_MODE_BARS/);
+  assert.match(html, /VZ\.mode=VZ\.mode===VZ_MODE_BARS\?VZ_MODE_WAVE:VZ_MODE_BARS/);
+  assert.match(html, /function eqLiveWaveNow\(/);
+  assert.match(html, /function drawEqGraph\(\)\{[\s\S]*?eqLiveWaveNow\(W\)/);
+  assert.match(html, /function eqLiveWaveNow\([\s\S]*?getByteTimeDomainData\(A\.wave\)/);
+  assert.doesNotMatch(html, /function drawEqGraph\(\)\{[\s\S]*?eqLiveBarsNow/);
+  assert.doesNotMatch(html, /function drawEqGraph\(\)\{[\s\S]*?VCOL\[/);
+  const silent = new Uint8Array(64).fill(128);
+  assert.ok(eqWaveSamples(silent, 10).every((v) => v === 0));
+  assert.deepEqual(eqWaveSamples(null, 4), [0, 0, 0, 0]);
+  const wave = new Uint8Array(64);
+  for (let i = 0; i < 64; i++) wave[i] = i < 32 ? 255 : 1;
+  const samples = eqWaveSamples(wave, 10);
+  assert.equal(samples.length, 10);
+  assert.ok(samples[0] > 0.5, "ataque positivo de la onda");
+  assert.ok(samples[9] < -0.5, "valle negativo de la onda");
 });
 

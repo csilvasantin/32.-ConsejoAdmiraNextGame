@@ -2651,7 +2651,7 @@ function nextPreset(){ PRESET_I=(PRESET_I+1)%PRESETS.length; overrideMarq('PRESE
 /* ---------- pantallas LCD ---------- */
 var lcdCtx,marqCtx,infoCtx,eqgCtx,plCtx,lcdBg;
 var MARQ={dirty:true,off:0,img:null,w:0,ovr:null,ovrUntil:0};
-var VZ={mode:0,bars:[],peaks:[]}; for(var vi=0;vi<19;vi++){ VZ.bars.push(0); VZ.peaks.push(0); }
+var VZ_MODE_BARS=0,VZ_MODE_WAVE=1; var VZ={mode:VZ_MODE_BARS,bars:[],peaks:[]}; for(var vi=0;vi<19;vi++){ VZ.bars.push(0); VZ.peaks.push(0); }
 function ampIsPlaying(){
   if(SEQ&&SEQ.playing) return true;
   var el=A.el;
@@ -2703,7 +2703,7 @@ function getBands(t){
 }
 function drawViz(c,t){
   var x0=8,y0=22,H=16,i,y;
-  if(VZ.mode===0){
+  if(VZ.mode===VZ_MODE_BARS){
     var v=getBands(t);
     for(i=0;i<19;i++){
       VZ.bars[i]=Math.max(v[i],VZ.bars[i]*0.82);
@@ -2746,29 +2746,30 @@ function drawPlInfo(){
   c.fillStyle='#000'; c.fillRect(0,0,W,9);
   drawText(c,playlistCounterText(PL.cur,n,elap,tot),2,1,1,'#00e000');
 }
-function eqLiveBarsNow(){
-  var out=[], i; for(i=0;i<10;i++) out.push(0);
-  if(!(ampIsPlaying()&&audioRunning()&&A.analyser&&A.freq)) return out;
-  A.analyser.getByteFrequencyData(A.freq);
-  var count=A.freq.length, nyquist=(A.ctx.sampleRate||44100)/2;
-  for(i=0;i<10;i++){
-    var f=EQ_FREQS[i], idx=Math.min(count-1,Math.round((f/nyquist)*count)), lo=Math.max(0,idx-2), hi=Math.min(count-1,idx+2), m=0, b;
-    for(b=lo;b<=hi;b++) if(A.freq[b]>m) m=A.freq[b];
-    out[i]=m/255;
+function eqLiveWaveNow(width){
+  var W=width||113, out=[], i;
+  for(i=0;i<W;i++) out.push(0);
+  if(!(ampIsPlaying()&&audioRunning()&&A.analyser&&A.wave)) return out;
+  A.analyser.getByteTimeDomainData(A.wave);
+  var len=A.wave.length; if(!len) return out;
+  for(i=0;i<W;i++){
+    var idx=W===1?0:Math.round(i*(len-1)/(W-1));
+    out[i]=(A.wave[idx]-128)/128;
   }
   return out;
 }
 function drawEqGraph(){
   var c=eqgCtx; if(!c) return;
-  var W=113,H=19,EV=PL.eqOn?EQV:[0,0,0,0,0,0,0,0,0,0], live=eqLiveBarsNow(), i, x;
+  var W=113,H=19,EV=PL.eqOn?EQV:[0,0,0,0,0,0,0,0,0,0], wave=eqLiveWaveNow(W), i, x, prev=null;
   c.fillStyle='#000'; c.fillRect(0,0,W,H);
-  var bw=Math.floor((W-4)/10);
-  for(i=0;i<10;i++){
-    var h=Math.round(live[i]*(H-2));
-    if(h>0){ c.fillStyle=VCOL[clamp(Math.round(live[i]*15),0,15)]; c.fillRect(2+i*bw, H-1-h, Math.max(2,bw-1), h); }
-  }
   c.fillStyle='#2e2e3a'; for(var gx=0;gx<W;gx+=2) c.fillRect(gx,9,1,1);
-  var sp=(W-8)/9, prev=null;
+  c.fillStyle='#00e000';
+  for(x=0;x<W;x++){
+    var y=clamp(Math.round(9-clamp(wave[x]||0,-1,1)*8),1,H-2);
+    var top=prev===null?y:Math.min(y,prev), hh=prev===null?1:Math.abs(y-prev)+1;
+    c.fillRect(x,top,1,hh); prev=y;
+  }
+  var sp=(W-8)/9; prev=null;
   for(x=0;x<W;x++){
     var fx=(x-4)/sp, ii=clamp(Math.floor(fx),0,8), fr=clamp(fx-ii,0,1), e=(1-Math.cos(fr*Math.PI))/2;
     var ya=9-EV[ii]/12*8, yb=9-EV[ii+1]/12*8, y=clamp(Math.round(ya+(yb-ya)*e),1,H-2);
@@ -8736,7 +8737,7 @@ function resetDesktop(){
   EQV=[0,0,0,0,0,0,0,0,0,0]; PRE=0; PRESET_I=0; EQS.forEach(function(s){ s.set(0.5,true); }); PRES.set(0.5,true);
   PL.eqOn=true; qs('#eqOn').classList.add('on'); applyEq(); drawEqGraph();
   VOL.set(0.8,true); BAL.set(0.5,true); applyVol();
-  PL.cur=0; PL.sel=0; PL.shuffle=false; PL.repeat=true; VZ.mode=0; MARQ.dirty=true;
+  PL.cur=0; PL.sel=0; PL.shuffle=false; PL.repeat=true; VZ.mode=VZ_MODE_BARS; MARQ.dirty=true;
   qs('#tShuf').classList.remove('on'); qs('#tRep').classList.add('on');
   ['#eqw','#plw'].forEach(function(s){ qs(s).removeAttribute('data-hidden'); }); qs('#tEQ').classList.add('on'); qs('#tPL').classList.add('on');
   qs('#amp').style.left='182px'; qs('#amp').style.top='16px'; qs('#eqw').style.left='182px'; qs('#eqw').style.top='132px'; qs('#plw').style.left='182px'; qs('#plw').style.top='248px'; qs('#note').style.left='150px'; qs('#note').style.top='50px';
@@ -8848,7 +8849,7 @@ function init(){
   qs('#bStop').addEventListener('click',stop);
   qs('#bNext').addEventListener('click',function(){ step(1); });
   qs('#bEject').addEventListener('click',function(){ msgBox('Abrir archivo','Inserta el disquete de admira.tv en la unidad A:\n(Las pistas del catálogo llegan pronto.)','info'); });
-  qs('#lcd').addEventListener('click',function(){ VZ.mode=1-VZ.mode; });
+  qs('#lcd').addEventListener('click',function(){ VZ.mode=VZ.mode===VZ_MODE_BARS?VZ_MODE_WAVE:VZ_MODE_BARS; });
   qs('#tEQ').addEventListener('click',function(){ toggleSub('#eqw','#tEQ'); });
   qs('#tPL').addEventListener('click',function(){ toggleSub('#plw','#tPL'); });
   qs('#tShuf').addEventListener('click',function(){ PL.shuffle=!PL.shuffle; this.classList.toggle('on',PL.shuffle); overrideMarq('MEZCLA: '+(PL.shuffle?'SI':'NO')); });

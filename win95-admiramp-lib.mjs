@@ -359,3 +359,106 @@ export function audioPlaybackSrc(url, opts = {}) {
 export function isProxySrc(src) {
   return typeof src === "string" && src.startsWith("/api/win95/audio?");
 }
+
+/* ---------- Lista: quitar, añadir local, importar, refresco ---------- */
+
+export function trackKey(t) {
+  if (!t) return "";
+  if (t.localId) return "local:" + String(t.localId);
+  if (t.stockId) return "stock:" + String(t.stockId);
+  if (t.src) return "src:" + String(t.src);
+  return "";
+}
+
+export function shouldProxyAudio(url) {
+  if (typeof url !== "string" || !url) return false;
+  if (/^(blob:|file:|data:)/i.test(url)) return false;
+  if (isProxySrc(url)) return false;
+  if (url.startsWith("/")) return false;
+  return !!urlPublicaAudio(url);
+}
+
+export function cleanLocalName(filename) {
+  let name = String(filename || "Audio").replace(/\\/g, "/");
+  name = name.slice(name.lastIndexOf("/") + 1);
+  name = name.replace(/\.[A-Za-z0-9]{1,5}$/, "").trim() || "Audio";
+  const k = name.indexOf(" - ");
+  if (k > 0) return { artist: name.slice(0, k).trim(), title: name.slice(k + 3).trim() };
+  return { artist: "Local", title: name };
+}
+
+export function removeSelected(tracks, sel, cur, state) {
+  const list = Array.isArray(tracks) ? tracks.slice() : [];
+  if (!list.length) {
+    return { tracks: [], sel: 0, cur: 0, state: "stop", removed: null, playIndex: null };
+  }
+  const i = clamp(sel | 0, 0, list.length - 1);
+  const removed = list.splice(i, 1)[0];
+  if (!list.length) {
+    return { tracks: [], sel: 0, cur: 0, state: "stop", removed, playIndex: null };
+  }
+  let newSel = Math.min(i, list.length - 1);
+  let newCur = cur | 0;
+  let playIndex = null;
+  let newState = state || "stop";
+  if (newCur === i) {
+    newCur = newSel;
+    if (state === "play") playIndex = newCur;
+    else newState = "stop";
+  } else if (newCur > i) {
+    newCur -= 1;
+  }
+  if (sel > i) newSel = Math.min(sel - 1, list.length - 1);
+  return { tracks: list, sel: newSel, cur: newCur, state: newState, removed, playIndex };
+}
+
+export function mergePlaylist({ stock = [], extras = [], hiddenKeys = [] } = {}) {
+  const hidden = new Set((hiddenKeys || []).filter(Boolean));
+  const out = [];
+  const seen = new Set();
+  for (const t of [...(stock || []), ...(extras || [])]) {
+    if (!t) continue;
+    const k = trackKey(t);
+    if (k && hidden.has(k)) continue;
+    if (k && seen.has(k)) continue;
+    if (k) seen.add(k);
+    out.push(t);
+  }
+  return out;
+}
+
+/** Barras 0..1 de las 10 bandas del EQ a partir de getByteFrequencyData. */
+export function eqLiveBars(freq, sampleRate = 44100, n = 10) {
+  const bins = freq && freq.length ? freq : [];
+  const count = bins.length || 512;
+  const nyquist = (Number(sampleRate) || 44100) / 2;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const f = EQ_FREQS[i] || 0;
+    const idx = Math.min(count - 1, Math.round((f / nyquist) * count));
+    const lo = Math.max(0, idx - 2);
+    const hi = Math.min(count - 1, idx + 2);
+    let m = 0;
+    for (let b = lo; b <= hi; b++) if ((bins[b] || 0) > m) m = bins[b] || 0;
+    out.push(m / 255);
+  }
+  return out;
+}
+
+/** Solo se inventa un pulso en pistas sintéticas (sin src). Con audio real, o hay analizador o barras a 0. */
+export function useFakeSpectrum(track) {
+  return !(track && track.src);
+}
+
+export function importStatus(wroteTag) {
+  if (wroteTag) return "Importada a #winamp en Stock y en la lista de esta sesión.";
+  return "Importada a la lista de Winamp de esta sesión. En este sitio no hay un API para escribir la etiqueta #winamp en el catálogo de Stock.";
+}
+
+export function isAudioResult(p) {
+  const typ = String((p && (p.tipo || p.type)) || "").toLowerCase();
+  if (typ && /video|imagen|image|html/.test(typ)) return false;
+  const url = String((p && p.url) || "");
+  if (/\.(mp4|webm|mov|mkv|avi)(\?|$)/i.test(url)) return false;
+  return true;
+}

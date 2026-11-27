@@ -190,6 +190,15 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 .eq-presets.on{display:block}
 .eq-presets div{padding:2px 8px;font:bold 8px/14px Arial,sans-serif;color:#d8d8e0;letter-spacing:.4px;cursor:default;white-space:nowrap}
 .eq-presets div:hover,.eq-presets div.on{background:#0000c6;color:#fff}
+#ampsel{z-index:40}
+#ampsel .body{display:block;padding:10px 10px 4px}
+#ampsel .amp-search{display:flex;gap:6px;align-items:center;margin:0 0 8px}
+#ampsel .amp-search input{flex:1;height:21px;padding:1px 4px;border:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:12px "MS Sans Serif",sans-serif;outline:none;background:#fff}
+#ampsel .list{height:148px;overflow:auto;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf;font:11px "MS Sans Serif",sans-serif}
+#ampsel .list div{padding:3px 6px;cursor:default;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ampsel .list div.sel{background:#000080;color:#fff}
+#ampsel .st{margin:6px 0 0;font:11px "MS Sans Serif",sans-serif;color:#000;min-height:28px;white-space:pre-line}
+#ampsel .acts{text-align:right;padding:8px 10px 10px}
 
 /* ---------- Admister (homenaje P2P) ---------- */
 #nap .hdr{height:38px;margin-top:2px;background:linear-gradient(#26263e,#111120);display:flex;align-items:center;padding:0 10px;color:#fff}
@@ -1906,10 +1915,11 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
       <div id="plist" style="left:10px;top:18px;width:246px;height:102px"></div>
       <div class="plsb" style="left:259px;top:18px;width:7px;height:102px"><div></div></div>
       <div class="pl-tools">
-      <div class="sk" style="width:44px;height:13px">+ AÑADIR</div>
-      <div class="sk" style="width:44px;height:13px">- QUITAR</div>
-      <div class="sk" style="width:30px;height:13px">SEL</div>
-      <div class="sk" style="width:36px;height:13px">VARIOS</div>
+      <div class="sk" id="ampAdd" title="Añadir ficheros locales">+ AÑADIR</div>
+      <div class="sk" id="ampRemove" title="Quitar la pista seleccionada">- QUITAR</div>
+      <div class="sk" id="ampSel" title="Buscar música en admira.studio">SEL</div>
+      <div class="sk" id="ampMisc" title="Varios">VARIOS</div>
+      <input id="ampFile" type="file" accept="audio/*,video/*,.mp3,.wav,.ogg,.m4a,.flac,.aac" multiple hidden>
       <canvas id="plinfo" width="84" height="9"></canvas>
       </div>
     </div>
@@ -2475,23 +2485,39 @@ function audioUrlPermitida(u){
   }catch(e){ return ''; }
 }
 function proxyAudioUrl(u){ var p=audioUrlPermitida(u); return p?'/api/win95/audio?u='+encodeURIComponent(p):''; }
+function shouldProxyAudio(url){ if(typeof url!=='string'||!url) return false; if(/^(blob:|file:|data:)/i.test(url)) return false; if(url.indexOf('/api/win95/audio?')===0) return false; if(url.charAt(0)==='/') return false; return !!audioUrlPermitida(url); }
 function hookMediaSource(){
   audioInit();
   if(!A.ctx||!A.el||A.elNode) return;
   try{ A.elNode=A.ctx.createMediaElementSource(A.el); A.elNode.connect(A.input); }catch(e){}
 }
 function onAmpAudioError(){
-  if(A._retrying||A.usingProxy||!A.directSrc) return;
-  var p=proxyAudioUrl(A.directSrc); if(!p) return;
-  A._retrying=true; setAmpSrc(A.directSrc,true);
-  if(PL.state==='play'&&A.el){ var pr=A.el.play(); if(pr&&pr.catch) pr.catch(function(){}); }
-  A._retrying=false;
+  if(A._retrying||!A.directSrc) return;
+  if(A.usingProxy){
+    var direct=audioUrlPermitida(A.directSrc);
+    if(!direct) return;
+    A._retrying=true; setAmpSrc(direct,false);
+    if(PL.state==='play'&&A.el){ var pr=A.el.play(); if(pr&&pr.catch) pr.catch(function(){}); }
+    A._retrying=false;
+    return;
+  }
+  if(shouldProxyAudio(A.directSrc)){
+    A._retrying=true; setAmpSrc(A.directSrc,true);
+    if(PL.state==='play'&&A.el){ var p2=A.el.play(); if(p2&&p2.catch) p2.catch(function(){}); }
+    A._retrying=false;
+  }
 }
 function setAmpSrc(url, viaProxy){
   ensureEl(); tryResume();
-  var direct=audioUrlPermitida(url)||url;
-  A.directSrc=direct; A.usingProxy=!!viaProxy;
-  if(viaProxy){ var p=proxyAudioUrl(direct); if(!p) return false; A.el.removeAttribute('crossorigin'); A.el.src=p; }
+  var isBlob=/^(blob:|file:|data:)/i.test(url||'');
+  var direct=isBlob?url:(audioUrlPermitida(url)||url);
+  var useProxy=!isBlob&&(viaProxy||viaProxy===undefined?shouldProxyAudio(direct):viaProxy);
+  if(viaProxy===false) useProxy=false;
+  if(viaProxy===true) useProxy=!!proxyAudioUrl(direct);
+  A.directSrc=direct; A.usingProxy=!!useProxy;
+  hookMediaSource();
+  if(useProxy){ var p=proxyAudioUrl(direct); if(!p) return false; A.el.removeAttribute('crossorigin'); A.el.src=p; }
+  else if(isBlob||(direct&&direct.charAt(0)==='/')){ A.el.removeAttribute('crossorigin'); A.el.src=direct; }
   else { A.el.crossOrigin='anonymous'; A.el.src=direct; }
   return true;
 }
@@ -2514,7 +2540,7 @@ function play(i){
   stopSound();
   PL.cur=i; PL.sel=i; PL.state='play';
   var t=CONFIG.tracks[i];
-  if(t.src){ setAmpSrc(t.src,false); try{ A.el.currentTime=0; }catch(e){} var p=A.el.play(); if(p&&p.catch) p.catch(function(){}); }
+  if(t.src){ setAmpSrc(t.src); try{ A.el.currentTime=0; }catch(e){} var p=A.el.play(); if(p&&p.catch) p.catch(function(){}); }
   else { SEQ.track=i; SEQ.spb=60/t.bpm/4; SEQ.step=0; SEQ.next=A.ctx?A.ctx.currentTime+0.06:0; SEQ.vlast=null; SEQ.virtual=!audioRunning(); SEQ.playing=true; }
   MARQ.dirty=true; MARQ.off=0; renderPlaylist();
 }
@@ -2576,16 +2602,16 @@ function drawMarq(dt){
   c.drawImage(MARQ.img,x,2); c.drawImage(MARQ.img,x+MARQ.w,2);
 }
 function getBands(t){
-  var out=[], i, real=false;
+  var out=[], i, real=false, tr=CONFIG.tracks[PL.cur], fakeOk=!(tr&&tr.src);
   if(PL.state==='play'&&audioRunning()&&A.analyser){
     A.analyser.getByteFrequencyData(A.freq); var sum=0;
-    for(i=0;i<19;i++){ var m=0; for(var b=A.edges[i];b<A.edges[i+1];b++) if(A.freq[b]>m) m=A.freq[b]; sum+=m; out.push(Math.pow(m/255,1.5)); }
+    for(i=0;i<19;i++){ var m=0; for(var b=A.edges[i];b<A.edges[i+1];b++) if(A.freq[b]>m) m=A.freq[b]; sum+=m; out.push(Math.pow(m/255,0.85)); }
     real=sum>0;
   }
   if(!real){
     out=[];
-    if(PL.state==='play'&&CONFIG.tracks[PL.cur]){
-      var tr=CONFIG.tracks[PL.cur], beat=(elapsed()*(tr.bpm||120)/60)%1, pulse=Math.exp(-beat*6);
+    if(fakeOk&&PL.state==='play'&&tr){
+      var beat=(elapsed()*(tr.bpm||120)/60)%1, pulse=Math.exp(-beat*6);
       for(i=0;i<19;i++) out.push(clamp(0.28+0.22*Math.sin(t/180+i*0.9)*Math.sin(t/410+i*0.3)+(i<7?pulse*0.6*(1-i/7):0)+Math.random()*0.15,0,1)*(1-i/38));
     } else for(i=0;i<19;i++) out.push(0);
   }
@@ -2632,27 +2658,46 @@ function drawPlInfo(){
   c.fillStyle='#000'; c.fillRect(0,0,W,9);
   drawText(c,(PL.cur+1)+'/'+n+' '+fmt(PL.state==='stop'?0:elapsed())+'/'+fmt(tot),2,1,1,'#00e000');
 }
+function eqLiveBarsNow(){
+  var out=[], i; for(i=0;i<10;i++) out.push(0);
+  if(!(PL.state==='play'&&audioRunning()&&A.analyser&&A.freq)) return out;
+  A.analyser.getByteFrequencyData(A.freq);
+  var count=A.freq.length, nyquist=(A.ctx.sampleRate||44100)/2;
+  for(i=0;i<10;i++){
+    var f=EQ_FREQS[i], idx=Math.min(count-1,Math.round((f/nyquist)*count)), lo=Math.max(0,idx-2), hi=Math.min(count-1,idx+2), m=0, b;
+    for(b=lo;b<=hi;b++) if(A.freq[b]>m) m=A.freq[b];
+    out[i]=m/255;
+  }
+  return out;
+}
 function drawEqGraph(){
-  var c=eqgCtx,W=113,H=19,EV=PL.eqOn?EQV:[0,0,0,0,0,0,0,0,0,0]; c.fillStyle='#000'; c.fillRect(0,0,W,H); c.fillStyle='#2e2e3a'; for(var gx=0;gx<W;gx+=2) c.fillRect(gx,9,1,1);
+  var c=eqgCtx; if(!c) return;
+  var W=113,H=19,EV=PL.eqOn?EQV:[0,0,0,0,0,0,0,0,0,0], live=eqLiveBarsNow(), i, x;
+  c.fillStyle='#000'; c.fillRect(0,0,W,H);
+  var bw=Math.floor((W-4)/10);
+  for(i=0;i<10;i++){
+    var h=Math.round(live[i]*(H-2));
+    if(h>0){ c.fillStyle=VCOL[clamp(Math.round(live[i]*15),0,15)]; c.fillRect(2+i*bw, H-1-h, Math.max(2,bw-1), h); }
+  }
+  c.fillStyle='#2e2e3a'; for(var gx=0;gx<W;gx+=2) c.fillRect(gx,9,1,1);
   var sp=(W-8)/9, prev=null;
-  for(var x=0;x<W;x++){
-    var fx=(x-4)/sp, i=clamp(Math.floor(fx),0,8), fr=clamp(fx-i,0,1), e=(1-Math.cos(fr*Math.PI))/2;
-    var ya=9-EV[i]/12*8, yb=9-EV[i+1]/12*8, y=clamp(Math.round(ya+(yb-ya)*e),1,H-2);
+  for(x=0;x<W;x++){
+    var fx=(x-4)/sp, ii=clamp(Math.floor(fx),0,8), fr=clamp(fx-ii,0,1), e=(1-Math.cos(fr*Math.PI))/2;
+    var ya=9-EV[ii]/12*8, yb=9-EV[ii+1]/12*8, y=clamp(Math.round(ya+(yb-ya)*e),1,H-2);
     var top=prev===null?y:Math.min(y,prev), hh=prev===null?1:Math.abs(y-prev)+1;
-    c.fillStyle=VCOL[clamp(Math.round((H-1-y)/(H-1)*15),0,15)]; c.fillRect(x,top,1,hh); prev=y;
+    c.fillStyle='#ffe44a'; c.fillRect(x,top,1,hh); prev=y;
   }
 }
 function renderPlaylist(){
-  var box=qs('#plist');
-  if(!box.children.length){
-    CONFIG.tracks.forEach(function(t,i){
-      var r=document.createElement('div'); r.className='prow'; r.innerHTML='<span class="n"></span><span class="d"></span>';
-      r.firstChild.textContent=(i+1)+'. '+t.artist+' - '+t.title; r.lastChild.textContent=fmt(trackDur(i));
-      r.addEventListener('click',function(e){ PL.sel=i; renderPlaylist(); if(e.isTrusted&&lastPointerType==='touch') play(i); });
-      r.addEventListener('dblclick',function(){ play(i); });
-      box.appendChild(r);
-    });
-  }
+  var box=qs('#plist'); if(!box) return;
+  box.replaceChildren();
+  CONFIG.tracks.forEach(function(t,i){
+    var r=document.createElement('div'); r.className='prow'; r.innerHTML='<span class="n"></span><span class="d"></span>';
+    r.firstChild.textContent=(i+1)+'. '+(t.artist||'Admira Studio')+' - '+(t.title||''); r.lastChild.textContent=fmt(trackDur(i));
+    r.addEventListener('click',function(e){ PL.sel=i; renderPlaylist(); if(e.isTrusted&&lastPointerType==='touch') play(i); });
+    r.addEventListener('dblclick',function(){ play(i); });
+    box.appendChild(r);
+  });
   qsa('.prow',box).forEach(function(r,i){ r.classList.toggle('cur',i===PL.cur); r.classList.toggle('sel',i===PL.sel); });
 }
 
@@ -8157,6 +8202,162 @@ async function readWinampStock(url) {
   if (!Array.isArray(data.items)) throw Error('Stock');
   return data.items;
 }
+
+var AMP_HIDDEN=new Set();
+var AMP_EXTRAS=[];
+var AMP_LOCAL_SEQ=1;
+function ampTrackKey(t){ if(!t) return ''; if(t.localId) return 'local:'+t.localId; if(t.stockId) return 'stock:'+t.stockId; if(t.src) return 'src:'+t.src; return ''; }
+function loadAmpListState(){
+  try{
+    var raw=JSON.parse(sessionStorage.getItem('admiramp.list.v1')||'null');
+    if(raw&&Array.isArray(raw.hidden)) raw.hidden.forEach(function(k){ if(k) AMP_HIDDEN.add(k); });
+    if(raw&&Array.isArray(raw.imported)) AMP_EXTRAS=raw.imported.filter(function(t){ return t&&t.src&&!/^blob:/i.test(t.src); });
+  }catch(e){}
+}
+function saveAmpListState(){
+  try{
+    var imported=AMP_EXTRAS.filter(function(t){ return t&&t.src&&!/^blob:/i.test(t.src); });
+    sessionStorage.setItem('admiramp.list.v1', JSON.stringify({hidden:Array.from(AMP_HIDDEN),imported:imported}));
+  }catch(e){}
+}
+function ampMergeList(stock){
+  var seen={}, out=[], list=(stock||[]).concat(AMP_EXTRAS);
+  list.forEach(function(t){
+    if(!t) return;
+    var k=ampTrackKey(t);
+    if(k&&AMP_HIDDEN.has(k)) return;
+    if(k&&seen[k]) return;
+    if(k) seen[k]=1;
+    out.push(t);
+  });
+  return out;
+}
+function cleanLocalName(filename){
+  var name=String(filename||'Audio').replace(/\\/g,'/');
+  name=name.slice(name.lastIndexOf('/')+1).replace(/\.[A-Za-z0-9]{1,5}$/,'').trim()||'Audio';
+  var k=name.indexOf(' - ');
+  if(k>0) return {artist:name.slice(0,k).trim(),title:name.slice(k+3).trim()};
+  return {artist:'Local',title:name};
+}
+function probeLocalDuration(track){
+  if(!track||!track.src) return;
+  var a=new Audio(); a.preload='metadata';
+  a.addEventListener('loadedmetadata',function(){ if(isFinite(a.duration)&&a.duration>0){ track.duration=a.duration; renderPlaylist(); } try{ a.src=''; }catch(e){} });
+  a.src=track.src;
+}
+function ampRemoveSelected(){
+  if(!CONFIG.tracks.length) return;
+  var i=clamp(PL.sel,0,CONFIG.tracks.length-1);
+  var removed=CONFIG.tracks[i];
+  var wasPlay=PL.state==='play'&&PL.cur===i;
+  var k=ampTrackKey(removed);
+  if(k) AMP_HIDDEN.add(k);
+  AMP_EXTRAS=AMP_EXTRAS.filter(function(t){ return ampTrackKey(t)!==k; });
+  if(removed&&removed.objectUrl){ try{ URL.revokeObjectURL(removed.objectUrl); }catch(e){} }
+  CONFIG.tracks=CONFIG.tracks.filter(function(_,idx){ return idx!==i; });
+  saveAmpListState();
+  if(!CONFIG.tracks.length){ stop(); PL.sel=0; PL.cur=0; renderPlaylist(); MARQ.dirty=true; return; }
+  var next=Math.min(i,CONFIG.tracks.length-1);
+  if(PL.cur===i){ PL.cur=next; PL.sel=next; if(wasPlay) play(next); else { stop(); renderPlaylist(); } }
+  else { if(PL.cur>i) PL.cur--; PL.sel=next; renderPlaylist(); }
+  MARQ.dirty=true;
+}
+function ampAddLocalFiles(files){
+  if(!files||!files.length) return;
+  var i, f, url, meta, track, start=CONFIG.tracks.length;
+  for(i=0;i<files.length;i++){
+    f=files[i]; if(!f) continue;
+    url=URL.createObjectURL(f);
+    meta=cleanLocalName(f.name||'Audio');
+    track={localId:'f'+AMP_LOCAL_SEQ++, artist:meta.artist, title:meta.title, duration:0, bpm:120, src:url, objectUrl:url, tag:'winamp', local:true, fileName:f.name};
+    AMP_EXTRAS.push(track);
+    CONFIG.tracks.push(track);
+    probeLocalDuration(track);
+  }
+  saveAmpListState();
+  if(CONFIG.tracks.length){ PL.sel=start; renderPlaylist(); }
+  overrideMarq('ANADIDAS: '+files.length);
+}
+function ampImportTrack(item){
+  if(!item||!item.url) return {ok:false,msg:'Sin URL pública'};
+  var typ=String(item.tipo||item.type||'').toLowerCase();
+  var url=item.url;
+  if(typ&&/video|imagen|image|html/.test(typ)) return {ok:false,msg:'Esa pieza es vídeo o imagen: ábrela en Admira Media Player'};
+  if(/\.(mp4|webm|mov|mkv|avi)(\?|$)/i.test(url)) return {ok:false,msg:'Esa pieza es vídeo: ábrela en Admira Media Player'};
+  var title=String(item.titulo||item.title||item.id||'').trim();
+  var artist=String(item.artista||item.artist||'').trim();
+  if(!artist&&title.indexOf(' - ')>=0){ var k=title.indexOf(' - '); artist=title.slice(0,k).trim(); title=title.slice(k+3).trim(); }
+  var track={stockId:item.id||'', artist:artist||'Admira Studio', title:title||item.id||'Pista', duration:Number(item.duracion||item.duration)||0, bpm:120, src:url, tag:'winamp', imported:true};
+  var key=ampTrackKey(track);
+  if(key) AMP_HIDDEN.delete(key);
+  if(!CONFIG.tracks.some(function(t){ return ampTrackKey(t)===key; })){ AMP_EXTRAS.push(track); CONFIG.tracks.push(track); }
+  saveAmpListState();
+  PL.sel=CONFIG.tracks.length-1; renderPlaylist(); MARQ.dirty=true;
+  return {ok:true,msg:'Importada a la lista de Winamp de esta sesión. En este sitio no hay un API para escribir la etiqueta #winamp en el catálogo de Stock.'};
+}
+function closeAmpSel(){ var w=qs('#ampsel'); if(!w) return; w.style.display='none'; removeTask('ampsel'); }
+function openAmpSel(){
+  var w=qs('#ampsel');
+  if(!w){
+    w=document.createElement('div'); w.id='ampsel'; w.className='win dlg'; w.style.width='360px'; w.style.left='140px'; w.style.top='80px';
+    w.innerHTML='<div class="tb"><span class="t">Seleccionar · admira.studio</span><span class="x gap" data-close="ampsel">×</span></div>'
+      +'<div class="body"><div class="amp-search"><input id="ampSelQ" type="text" spellcheck="false" placeholder="título, artista o #etiqueta"><button class="btn" id="ampSelGo">Buscar</button></div>'
+      +'<div class="list" id="ampSelList"></div><div class="st" id="ampSelSt">Busca música en el catálogo de admira.studio (Stock) e impórtala a la lista #winamp de esta sesión.</div></div>'
+      +'<div class="acts"><button class="btn" id="ampSelImp">Importar a #winamp</button> <button class="btn" id="ampSelClose">Cerrar</button></div>';
+    desk.appendChild(w);
+    makeDraggable(qs('.tb',w),w); attachResize(w);
+    w.addEventListener('pointerdown',function(){ focusWin(w); });
+    qs('[data-close="ampsel"]',w).addEventListener('click',closeAmpSel);
+    qs('#ampSelClose',w).addEventListener('click',closeAmpSel);
+    qs('#ampSelGo',w).addEventListener('click',ampSelSearch);
+    qs('#ampSelQ',w).addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ampSelSearch(); } });
+    qs('#ampSelImp',w).addEventListener('click',ampSelImport);
+  }
+  w.style.display='block'; addTask('ampsel','Seleccionar · admira.studio','media',[w]); focusWin(w);
+  setTimeout(function(){ try{ qs('#ampSelQ',w).focus(); }catch(e){} },30);
+}
+var AMP_SEL={hits:[],sel:0};
+function ampSelPaint(){
+  var box=qs('#ampSelList'); if(!box) return;
+  box.replaceChildren();
+  AMP_SEL.hits.forEach(function(p,i){
+    var d=document.createElement('div'); if(i===AMP_SEL.sel) d.className='sel';
+    d.textContent=(p.artista?p.artista+' - ':'')+(p.titulo||p.id||'');
+    d.title=(p.hashtags&&p.hashtags.length)?'#'+p.hashtags.join(' #'):'';
+    d.addEventListener('click',function(){ AMP_SEL.sel=i; ampSelPaint(); });
+    d.addEventListener('dblclick',ampSelImport);
+    box.appendChild(d);
+  });
+}
+async function ampSelSearch(){
+  var q=String((qs('#ampSelQ')&&qs('#ampSelQ').value)||'').trim(), st=qs('#ampSelSt');
+  if(!q){ if(st) st.textContent='Escribe un título, artista o #etiqueta.'; return; }
+  if(st) st.textContent='Buscando en admira.studio…';
+  AMP_SEL.hits=[]; AMP_SEL.sel=0; ampSelPaint();
+  try{
+    var r=await fetch('/api/win95/napster?q='+encodeURIComponent(q),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)});
+    if(r.status===401){ if(st) st.textContent='Hay que entrar en admira.live para buscar en el catálogo.'; return; }
+    if(!r.ok){ if(st) st.textContent='No se pudo buscar ahora (admira.studio no contesta).'; return; }
+    var d=await r.json();
+    var raw=Array.isArray(d&&d.results)?d.results:[];
+    AMP_SEL.hits=raw.filter(function(p){
+      var typ=String(p.tipo||p.type||'').toLowerCase();
+      if(typ&&/video|imagen|image|html/.test(typ)) return false;
+      if(/\.(mp4|webm|mov|mkv|avi)(\?|$)/i.test(p.url||'')) return false;
+      return !!p.url;
+    }).slice(0,40);
+    AMP_SEL.sel=0; ampSelPaint();
+    if(st) st.textContent=AMP_SEL.hits.length?('Catálogo de '+((d&&d.fuente)||'admira.studio')+' · '+AMP_SEL.hits.length+' pistas de audio.'):'No hay pistas de audio para esa búsqueda.';
+  }catch(e){ if(st) st.textContent='No se pudo buscar ahora.'; }
+}
+function ampSelImport(){
+  var st=qs('#ampSelSt'), p=AMP_SEL.hits[AMP_SEL.sel];
+  if(!p){ if(st) st.textContent='Selecciona una pista de la lista.'; return; }
+  var r=ampImportTrack(p);
+  if(st) st.textContent=r.msg;
+  if(r.ok) overrideMarq('IMPORTADA');
+}
+
 async function refreshWinamp() {
   if (!PL.open || syncingWinamp) return;
   syncingWinamp = true;
@@ -8187,8 +8388,8 @@ async function refreshWinamp() {
       }
     } catch (e) {}
     var previous = CONFIG.tracks[PL.cur], selected = CONFIG.tracks[PL.sel];
-    if (previous && previous.src && PL.state !== 'stop' && previous.stockId && !tracks.has(previous.stockId)) tracks.set(previous.stockId, previous);
-    var next = Array.from(tracks.values());
+    if (previous && previous.src && PL.state !== 'stop' && previous.stockId && !tracks.has(previous.stockId) && !AMP_HIDDEN.has(ampTrackKey(previous))) tracks.set(previous.stockId, previous);
+    var next = ampMergeList(Array.from(tracks.values()));
     if (JSON.stringify(CONFIG.tracks) === JSON.stringify(next)) return;
     CONFIG.tracks = next;
     function index(track) {
@@ -8525,6 +8726,12 @@ function init(){
   qs('#eqPre').addEventListener('click',function(e){ e.stopPropagation(); nextPreset(); renderEqPresets(); var menu=qs('#eqPresetMenu'); if(menu){ menu.hidden=false; menu.classList.add('on'); } });
   document.addEventListener('pointerdown',function(e){ var menu=qs('#eqPresetMenu'); if(!menu||menu.hidden) return; if(e.target.closest&&(e.target.closest('#eqPresetMenu')||e.target.closest('#eqPre'))) return; menu.classList.remove('on'); menu.hidden=true; });
   renderPlaylist(); drawEqGraph(); layoutAllAmp();
+  loadAmpListState();
+  qs('#ampAdd').addEventListener('click',function(){ qs('#ampFile').click(); });
+  qs('#ampFile').addEventListener('change',function(){ var files=this.files; if(files&&files.length) ampAddLocalFiles(files); this.value=''; });
+  qs('#ampRemove').addEventListener('click',ampRemoveSelected);
+  qs('#ampSel').addEventListener('click',openAmpSel);
+  qs('#ampMisc').addEventListener('click',function(){ overrideMarq('VARIOS'); });
   wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireDaCli(); wireNet(); icqgInit();
 
   // reloj: pulsar la hora lanza el protector (ya no arranca solo)
@@ -8540,7 +8747,7 @@ function init(){
 
   // bucles
   var lastT=0;
-  function frame(t){ var dt=lastT?t-lastT:16; lastT=t; if(PL.open){ drawLCD(t); drawMarq(dt); drawInfo(); drawPlInfo(); if(!SEEK.drag){ var on=PL.state!=='stop'&&CONFIG.tracks.length&&trackDur(PL.cur)>0; qs('#seek').classList.toggle('on',on); if(on) SEEK.set(elapsed()/trackDur(PL.cur),true); } } requestAnimationFrame(frame); }
+  function frame(t){ var dt=lastT?t-lastT:16; lastT=t; if(PL.open){ drawLCD(t); drawMarq(dt); drawInfo(); drawPlInfo(); drawEqGraph(); if(!SEEK.drag){ var on=PL.state!=='stop'&&CONFIG.tracks.length&&trackDur(PL.cur)>0; qs('#seek').classList.toggle('on',on); if(on) SEEK.set(elapsed()/trackDur(PL.cur),true); } } requestAnimationFrame(frame); }
   requestAnimationFrame(frame);
   setInterval(seqTick,25);
   setInterval(function(){

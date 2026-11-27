@@ -34,6 +34,12 @@ export const HELP_TEXT = [
   '  ayuda · help · ?               — esta lista',
   '  ayuda pagina                   — abre /help/',
   '',
+  'PANTALLA (alternan ON/OFF)',
+  '  monitor                        — marco CRT del monitor',
+  '  computer                       — apaga o enciende el equipo',
+  '  extended                       — escritorio a todo el viewport',
+  '  entrelazado                    — líneas de scan CRT',
+  '',
   'PROGRAMAS DE WIN95',
   '  winamp · napster · netscape · cli · cmd',
   '  icqgram · notepad · media · bandeja',
@@ -158,6 +164,56 @@ export function syncMatrixUrl(on, loc) {
   if (next !== cur) loc.history.replaceState({}, '', next);
 }
 
+export const CRT_FEATURES = ['monitor', 'computer', 'extended', 'entrelazado'];
+export const CRT_LABELS = {
+  monitor: 'Monitor',
+  computer: 'Computer',
+  extended: 'Extended',
+  entrelazado: 'Entrelazado',
+};
+
+export function parseCrtCommand(cmd, original) {
+  const parts = String(cmd || '').split(' ').filter(Boolean);
+  if (!parts.length) return null;
+  if (CRT_FEATURES.indexOf(parts[0]) < 0) return null;
+  if (parts.length > 2) return null;
+  let mode = 'toggle';
+  if (parts.length === 2) {
+    const arg = parts[1];
+    if (arg === 'on' || arg === '1' || arg === 'si' || arg === 'yes') mode = 'on';
+    else if (arg === 'off' || arg === '0' || arg === 'no') mode = 'off';
+    else return null;
+  }
+  return {
+    ok: true,
+    action: 'crt',
+    feature: parts[0],
+    mode: mode,
+    raw: original,
+    canonical: parts[0] + (mode === 'toggle' ? '' : ' ' + mode),
+  };
+}
+
+export function applyCrtCommand(parsed, api) {
+  if (!parsed || parsed.action !== 'crt' || !api || typeof api.isOn !== 'function' || typeof api.set !== 'function') {
+    return { ok: false, message: 'Comando no disponible.' };
+  }
+  const feature = parsed.feature;
+  const current = !!api.isOn(feature);
+  let next = current;
+  if (parsed.mode === 'on') next = true;
+  else if (parsed.mode === 'off') next = false;
+  else next = !current;
+  api.set(feature, next);
+  const label = CRT_LABELS[feature] || feature;
+  return {
+    ok: true,
+    feature: feature,
+    on: next,
+    message: label + ': ' + (next ? 'ON' : 'OFF'),
+  };
+}
+
 export function parseRunCommand(raw) {
   const original = String(raw || '');
   const cmd = normalizeCommand(raw);
@@ -182,6 +238,8 @@ export function parseRunCommand(raw) {
   if (cmd === 'help pagina' || cmd === 'ayuda pagina' || cmd === 'help page' || cmd === 'ayuda page') {
     return { ok: true, action: 'open', url: '/help/', title: 'Ayuda', raw: original };
   }
+  const crt = parseCrtCommand(cmd, original);
+  if (crt) return crt;
   if (cmd === 'demo' || cmd === 'demostracion') {
     return { ok: true, action: 'demo', raw: original, canonical: 'demo' };
   }
@@ -488,7 +546,8 @@ export function getMatrixRain() { return rainCtl; }
 const api = {
   MATRIX_GLYPHS, MATRIX_FONT_SIZE, MATRIX_FONT, MATRIX_HEAD, MATRIX_TRAIL,
   MATRIX_TRAIL_DIM, MATRIX_BG, MATRIX_FADE, MATRIX_SHADOW, DEFAULT_MATRIX_TITLES,
-  HELP_TEXT, stripAccents, normalizeCommand, parseRunCommand, wantsMatrixFromUrl,
+  HELP_TEXT, CRT_FEATURES, CRT_LABELS, stripAccents, normalizeCommand, parseRunCommand,
+  parseCrtCommand, applyCrtCommand, wantsMatrixFromUrl,
   syncMatrixUrl, createMatrixRain, setMatrixTheme, resizeMatrixRain, isMatrixTheme,
   ensureMatrixCanvas, getMatrixRain,
 };

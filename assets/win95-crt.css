@@ -363,7 +363,14 @@ html.crt-frame-off #crt-fx,
 html.crt-frame-off #crt-screen #admira-gate,
 html.crt-frame-off #crt-screen #admira-gate .frame { border-radius: 0 !important; }
 
-/* Botonera retro fija: Monitor, Computer, Extended y Entrelazado apilados a la derecha, sin solaparse. */
+/* #crt-ui solo aloja Salir (pantalla completa). Las 4 cajas Monitor/Computer/
+ * Extended/Entrelazado se quitaron de la interfaz (se alternan en Ejecutar). */
+#crt-monitor-toggle,
+#crt-computer-toggle,
+#crt-extended-toggle,
+#crt-entrelazado-toggle { display: none !important; }
+
+/* Botonera residual (Salir): apilada a la derecha, sin solaparse. */
 #crt-ui {
   position: fixed;
   top: 10px;

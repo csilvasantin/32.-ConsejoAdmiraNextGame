@@ -1,7 +1,9 @@
 /* CRT realista + interruptor del marco (ON/OFF, tecla M, ?crt=0/1, localStorage),
  * modo Extended (OFF por defecto): escritorio a 100vw×100vh, sin formato 4:3,
  * y Entrelazado (ON por defecto): scanlines CRT; OFF las quita para trabajar nítido.
- * Viñeta y reflejo se mantienen; las scanlines solo se ocultan con Entrelazado OFF. */
+ * Viñeta y reflejo se mantienen; las scanlines solo se ocultan con Entrelazado OFF.
+ * Los interruptores ya no son cajas en pantalla: se alternan desde Ejecutar
+ * (monitor, computer, extended, entrelazado) o, el marco, con la tecla M. */
 (function () {
   "use strict";
   var KEY = "admira-win95-crt";
@@ -215,14 +217,33 @@
     try { location.href = "/"; } catch (e) { location.assign("/"); }
   }
 
+  var computerOffTimer = null;
+
+  function syncComputerBtn(on) {
+    var btn = $("crt-computer-toggle");
+    if (!btn) return;
+    btn.textContent = on ? "Computer: ON" : "Computer: OFF";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    if (on) btn.removeAttribute("data-off");
+    else btn.setAttribute("data-off", "1");
+  }
+
+  function encenderEquipo() {
+    if (computerOffTimer) {
+      clearTimeout(computerOffTimer);
+      computerOffTimer = null;
+    }
+    document.documentElement.classList.remove("computer-off");
+    var cover = $("computer-off-cover");
+    if (cover) cover.style.display = "none";
+    syncComputerBtn(true);
+  }
+
   function apagarEquipo() {
     var btn = $("crt-computer-toggle");
-    if (btn) {
-      if (btn.getAttribute("data-off") === "1") return;
-      btn.setAttribute("data-off", "1");
-      btn.textContent = "Computer: OFF";
-      btn.setAttribute("aria-pressed", "false");
-    }
+    if (btn && btn.getAttribute("data-off") === "1" &&
+        document.documentElement.classList.contains("computer-off")) return;
+    syncComputerBtn(false);
     document.documentElement.classList.add("computer-off");
     var cover = $("computer-off-cover");
     if (!cover) {
@@ -233,65 +254,30 @@
       document.body.appendChild(cover);
     }
     cover.style.display = "block";
-    setTimeout(irAHome, 700);
+    if (computerOffTimer) clearTimeout(computerOffTimer);
+    computerOffTimer = setTimeout(irAHome, 700);
   }
 
+  function aplicarComputer(on) {
+    if (on) encenderEquipo();
+    else apagarEquipo();
+  }
+
+  /* Las 4 cajas beige (Monitor / Computer / Extended / Entrelazado) salieron
+     de la interfaz: se alternan desde Inicio → Ejecutar. Se mantiene #crt-ui
+     solo si hace falta el botón Salir de pantalla completa. */
   function botonera() {
     if (inIframe()) {
       document.documentElement.classList.add("crt-in-iframe");
       return;
     }
     if ($("crt-ui")) return;
+    var salir = $("win95-page-fs-salir");
+    if (!salir) return;
     var ui = document.createElement("div");
     ui.id = "crt-ui";
-    var mon = document.createElement("button");
-    mon.type = "button";
-    mon.id = "crt-monitor-toggle";
-    ui.appendChild(mon);
-    var comp = document.createElement("button");
-    comp.type = "button";
-    comp.id = "crt-computer-toggle";
-    comp.textContent = "Computer: ON";
-    comp.setAttribute("aria-pressed", "true");
-    comp.setAttribute("aria-label", "Apagar el equipo y volver al menú de admira.live.");
-    ui.appendChild(comp);
-    var ext = document.createElement("button");
-    ext.type = "button";
-    ext.id = "crt-extended-toggle";
-    ext.textContent = "Extended: OFF";
-    ext.setAttribute("aria-pressed", "false");
-    ext.setAttribute("aria-label", "Extender el escritorio a todo el ancho y alto disponibles.");
-    ui.appendChild(ext);
-    var ent = document.createElement("button");
-    ent.type = "button";
-    ent.id = "crt-entrelazado-toggle";
-    ent.textContent = "Entrelazado: ON";
-    ent.setAttribute("aria-pressed", "true");
-    ent.setAttribute("aria-label", "Quitar las líneas de entrelazado CRT para ver el escritorio nítido.");
-    ui.appendChild(ent);
-    var salir = $("win95-page-fs-salir");
-    if (salir) ui.appendChild(salir);
+    ui.appendChild(salir);
     document.body.appendChild(ui);
-    mon.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      aplicar(document.documentElement.classList.contains("crt-frame-off"), { url: true, fromUser: true });
-    });
-    comp.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      apagarEquipo();
-    });
-    ext.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      aplicarExtended(!document.documentElement.classList.contains("crt-extended"));
-    });
-    ent.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      aplicarEntrelazado(document.documentElement.classList.contains("crt-interlace-off"));
-    });
   }
 
   window.win95CrtFit = function () {
@@ -323,6 +309,8 @@
   window.win95ExtendedOn = function () { return document.documentElement.classList.contains("crt-extended"); };
   window.win95EntrelazadoSet = function (on) { aplicarEntrelazado(!!on); };
   window.win95EntrelazadoOn = function () { return !document.documentElement.classList.contains("crt-interlace-off"); };
+  window.win95ComputerSet = function (on) { aplicarComputer(!!on); };
+  window.win95ComputerOn = function () { return !document.documentElement.classList.contains("computer-off"); };
 
   function ready(fn) {
     if (document.body) fn();

@@ -1793,26 +1793,29 @@
                     "Commands: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89, /lanzadera, /demo admiranext, /demo portaventura, /demo interactivo, /demo modo portaventura, /demo negro, /apagar reuniones, /apagar interactivos, /apagar todo. Spanish switches the site to Spanish; English, to English.") + (cambio ? " · 🌐 " + cambio : ""));
         return;
       }
-      if (/^\/(lanzadera|launcher|sala(?:\s+en)?\s+negro|apagar(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|todo))?|encender(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|todo))?|restaurar(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|todo))?)$/i.test(t) || /^\/demo(?:\s+(lanzadera|negro|sala(?:\s+en)?\s+negro|admiradesk|interactivo|player(?:\s+interactivo)?|admiranext(?:-interactivo|\s+interactivo)?(?:\.com)?|modo(?:\s+demo)?\s+portaventura(?:next)?(?:\.com)?|portaventura(?:next)?(?:-interactivo|\s+interactivo)?(?:\.com)?|pan(?:-interactivo)?))?$/i.test(t)) {
+      if (/^\/(lanzadera|launcher|sala(?:\s+en)?\s+negro|apagar(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|mupis?|todo))?|encender(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|mupis?|todo))?|restaurar(?:\s+(?:sala(?:\s+de\s+)?)?(?:reuniones?|interactivos?|mupis?|todo))?)$/i.test(t) || /^\/demo(?:\s+(lanzadera|negro|sala(?:\s+en)?\s+negro|admiradesk|interactivo|player(?:\s+interactivo)?|admiranext(?:-interactivo|\s+interactivo)?(?:\.com)?|modo(?:\s+demo)?\s+portaventura(?:next)?(?:\.com)?|portaventura(?:next)?(?:-interactivo|\s+interactivo)?(?:\.com)?|pan(?:-interactivo)?|mupis?(?:\s+(?:portaventura(?:next)?|pan|negro))?))?$/i.test(t)) {
         var dest = "/lanzadera/";
         if (/^\/(apagar|encender|restaurar)/i.test(t)) {
           if (/^\/apagar\s*$/i.test(t)) dest += "#zona-apagado";
           else if (/encender|restaurar/i.test(t)) {
             if (/todo|all/i.test(t)) dest += "?encender=todo";
+            else if (/mupi|vertical/i.test(t)) dest += "?encender=mupis";
             else if (/interact/i.test(t)) dest += "?encender=interactivos";
             else dest += "?encender=reuniones";
           } else if (/todo|all/i.test(t)) dest += "?apagar=todo";
+          else if (/mupi|vertical/i.test(t)) dest += "?apagar=mupis";
           else if (/interact/i.test(t)) dest += "?apagar=interactivos";
           else dest += "?apagar=reuniones";
         }
+        else if (/mupi|vertical/i.test(t)) dest += /portaventura|\bpan\b/i.test(t) ? "?demo=pan-mupis" : /negro/i.test(t) ? "?demo=negro-mupis" : "?demo=mupis";
         else if (/modo\s*(demo\s*)?portaventura|portaventura[^\n]*interactivo|pan-interactivo/i.test(t)) dest += "?demo=pan-interactivo";
         else if (/negro|sala(?:\s+en)?\s+negro/i.test(t)) dest += "?demo=negro";
         else if (/admiradesk|interactivo|player/i.test(t)) dest += "?demo=interactivo";
         else if (/admiranext/i.test(t)) dest += "?demo=admiranext";
         else if (/portaventura|\bpan\b/i.test(t) && !/^\/demo\s*$/i.test(t)) dest += "?demo=pan";
         if (/^\/demo\s*$/i.test(t)) {
-          say(expertT("Catálogo: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /demo negro · /apagar reuniones · /apagar interactivos · /apagar todo · /lanzadera · /demo help en la home.",
-                      "Catalogue: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /demo negro · /apagar reuniones · /apagar interactivos · /apagar todo · /lanzadera · /demo help on the home page.") + (cambio ? " · 🌐 " + cambio : ""));
+          say(expertT("Catálogo: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /demo negro · /demo mupis · /demo mupis portaventura · /demo mupis negro · /apagar reuniones · /apagar interactivos · /apagar mupis · /apagar todo · /encender mupis · /lanzadera · /demo help en la home.",
+                      "Catalogue: /demo admiranext · /demo portaventura · /demo interactivo · /demo modo portaventura · /demo negro · /demo mupis · /demo mupis portaventura · /demo mupis negro · /apagar reuniones · /apagar interactivos · /apagar mupis · /apagar todo · /encender mupis · /lanzadera · /demo help on the home page.") + (cambio ? " · 🌐 " + cambio : ""));
           return;
         }
         say(expertT("🚀 Abriendo " + dest, "🚀 Opening " + dest) + (cambio ? " · 🌐 " + cambio : ""));

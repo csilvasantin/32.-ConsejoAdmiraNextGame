@@ -9,8 +9,8 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
-  <link rel="stylesheet" href="/yk-frame.css?v=20261126-apagado">
-  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261126-apagado">
+  <link rel="stylesheet" href="/yk-frame.css?v=20261127-zonas3">
+  <link rel="stylesheet" href="/lanzadera/lanzadera.css?v=20261127-zonas3">
 </head>
 <body data-yk-title="LANZADERA" data-yk-zone="app">
   <a class="skip-link" href="#contenido">Ir a la lanzadera</a>
@@ -18,7 +18,7 @@
   <aside data-yk-slot="left">
     <p class="slot-kicker" data-en="Voice and selection">Voz y selección</p>
     <button type="button" id="btn-voz" class="voz-btn" aria-pressed="false">🎙️ Escuchar</button>
-    <p class="slot-copy" id="voz-estado" data-en="Sala: say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». «Sala en negro» blacks out the screens. Shutdown, with confirmation: «apagar reuniones», «apagar interactivos», «apagar todo». Restore: «encender reuniones», «encender interactivos». Interactive zone: «player interactivo», «AdmiraDesk» or «modo demo PortAventuraNeXT». Expert: /demo admiranext, /demo negro, /apagar reuniones, /apagar interactivos, /apagar todo.">Sala: di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». «Sala en negro» deja las pantallas negras. Apagado, con confirmación: «apagar reuniones», «apagar interactivos», «apagar todo». Encender: «encender reuniones», «encender interactivos». Zona interactiva: «player interactivo», «AdmiraDesk» o «modo demo PortAventuraNeXT». Experto: /demo admiranext, /demo negro, /apagar reuniones, /apagar interactivos, /apagar todo.</p>
+    <p class="slot-copy" id="voz-estado" data-en="Sala: say «Demo AdmiraNeXT.com» or «Demo PortAventuraNeXT.com». «Sala en negro» blacks out the screens. Shutdown, with confirmation: «apagar reuniones», «apagar interactivos», «apagar todo». Restore: «encender reuniones», «encender interactivos». Interactive zone: «player interactivo», «AdmiraDesk» or «modo demo PortAventuraNeXT». Mupis: «demo mupis», «apagar mupis», «encender mupis». Expert: /demo admiranext, /demo negro, /demo mupis, /demo mupis portaventura, /demo mupis negro, /apagar reuniones, /apagar interactivos, /apagar mupis, /apagar todo, /encender mupis.">Sala: di «Demo AdmiraNeXT.com» o «Demo PortAventuraNeXT.com». «Sala en negro» deja las pantallas negras. Apagado, con confirmación: «apagar reuniones», «apagar interactivos», «apagar todo». Encender: «encender reuniones», «encender interactivos». Zona interactiva: «player interactivo», «AdmiraDesk» o «modo demo PortAventuraNeXT». Mupis: «demo mupis», «apagar mupis», «encender mupis». Experto: /demo admiranext, /demo negro, /demo mupis, /demo mupis portaventura, /demo mupis negro, /apagar reuniones, /apagar interactivos, /apagar mupis, /apagar todo, /encender mupis.</p>
     <p class="slot-copy" data-en="The cursor is never hidden: when the mouse moves, it has to come back, including in digital signage.">El cursor no se oculta nunca: si mueves el ratón, tiene que reaparecer, también en cartelería.</p>
   </aside>
 
@@ -32,8 +32,12 @@
     </ul>
     <p class="slot-copy"><strong data-en="Interactive zone">Zona interactiva</strong></p>
     <ul class="destinos">
-      <li><strong>Demo AdmiraNeXT</strong> — player <a href="https://admira.tv/canal.html?screen=admiranext01-a">admira.tv/canal</a> en AdmiraNeXT01–05 y verticales 01V, 03V y 05V, controlado desde <a href="https://www.admira.store/control/admiradesk/">AdmiraDesk</a>.</li>
-      <li><strong>Modo demo PortAventuraNeXT</strong> — <a href="https://www.admiranext.com/demo/PortAventuraNeXT/">admiranext.com/demo/PortAventuraNeXT</a> y el player en 01–05.</li>
+      <li><strong>Demo AdmiraNeXT</strong> — player <a href="https://admira.tv/canal.html?screen=admiranext01-a">admira.tv/canal</a> en las horizontales AdmiraNeXT01–05, controlado desde <a href="https://www.admira.store/control/admiradesk/">AdmiraDesk</a>.</li>
+      <li><strong>Modo demo PortAventuraNeXT</strong> — <a href="https://www.admiranext.com/demo/PortAventuraNeXT/">admiranext.com/demo/PortAventuraNeXT</a> y el player de cada pantalla (demo/player?screen=admiranext0N-a).</li>
+    </ul>
+    <p class="slot-copy"><strong data-en="Vertical mupis">Mupis verticales</strong></p>
+    <ul class="destinos">
+      <li><strong>01V, 03V y 05V</strong> — cuelgan de AdmiraNeXT01, 03 y 05 (screen=admiranext0N-b). Zona propia: /demo mupis, /apagar mupis, /encender mupis.</li>
     </ul>
     <p class="slot-copy" data-en="The launch is recorded here with the mission start time. Opening Chrome on the other machines uses the fleet, without stealing focus from the computer Carlos is using, without putting anything on top of the player, and without disabling any device.">El arranque queda anotado aquí con la hora de inicio de la misión. Abrir Chrome en los otros equipos lo hace la flota, sin quitar el foco del ordenador que está usando Carlos, sin poner nada encima del player y sin desactivar ningún dispositivo.</p>
   </aside>
@@ -42,10 +46,30 @@
     <header class="lanza-cabeza">
       <p class="eyebrow" data-en="Presentations">Presentaciones</p>
       <h1 data-en="Launcher">Lanzadera</h1>
-      <p class="lead" data-en="Two zones: the Terminator meeting room and, below, the Terminator interactive zone. Say it or tap it. The mission start time is recorded here.">Dos zonas: la sala de reuniones de Terminator y, debajo, la zona interactiva de Terminator. Dilo o selecciónalo. La hora de inicio de la misión queda anotada aquí.</p>
+      <p class="lead" data-en="Three zones: the Terminator meeting room, the interactive zone and the vertical mupis. Say it or tap it: each order goes to the real screens and the live status only says «running» when the screen confirms it.">Tres zonas: la sala de reuniones de Terminator, la zona interactiva y los mupis verticales. Dilo o selecciónalo: cada orden va a las pantallas reales y el estado vivo solo dice «en marcha» cuando la pantalla lo confirma.</p>
     </header>
 
     <p class="mision" id="mision" role="status" aria-live="polite">Misión: aún no se ha lanzado ninguna demo en esta página.</p>
+
+    <section class="estado-vivo" id="estado-vivo" aria-labelledby="estado-vivo-titulo">
+      <div class="ev-cabeza">
+        <h2 id="estado-vivo-titulo" data-en="Live status">Estado vivo</h2>
+        <p class="ev-hora" id="ev-hora" data-en="Not checked yet">Sin verificar todavía</p>
+        <button type="button" class="ev-btn" id="ev-actualizar" data-en="Refresh status">Actualizar estado</button>
+      </div>
+      <p class="ev-leyenda" data-en="Running only when the screen itself confirms it. Black · Offline (no heartbeat in the fleet census) · Pending ID (03, 04 and 03V) · Dispatched, waiting for the screen to confirm.">«En marcha» solo cuando la propia pantalla lo confirma. En negro · Sin conexión (sin latido en el censo de flota) · Pendiente ID (03, 04 y 03V) · Despachado, esperando que la pantalla confirme.</p>
+      <div class="ev-zonas" id="ev-zonas">
+        <article class="ev-zona" data-zona="reuniones"><header><h3>Sala de reuniones</h3><span class="chip" data-estado="sin_verificar">Sin verificar</span></header><ul class="ev-pantallas"></ul></article>
+        <article class="ev-zona" data-zona="interactivos"><header><h3>Zona interactiva</h3><span class="chip" data-estado="sin_verificar">Sin verificar</span></header><ul class="ev-pantallas"></ul></article>
+        <article class="ev-zona" data-zona="mupis"><header><h3>Mupis verticales</h3><span class="chip" data-estado="sin_verificar">Sin verificar</span></header><ul class="ev-pantallas"></ul></article>
+      </div>
+      <p class="ev-aviso" id="ev-aviso" hidden></p>
+    </section>
+
+    <section class="resultado" id="resultado" hidden aria-live="polite">
+      <h2 id="resultado-titulo">Resultado de la orden</h2>
+      <ul id="resultado-pantallas"></ul>
+    </section>
 
     <section class="zona" id="zona-sala" aria-labelledby="zona-sala-titulo">
       <h2 id="zona-sala-titulo">Zona 1 · Sala de reuniones de Terminator</h2>
@@ -71,17 +95,49 @@
 
     <section class="zona" id="zona-interactiva" aria-labelledby="zona-interactiva-titulo">
       <h2 id="zona-interactiva-titulo">Zona 2 · Zona interactiva de Terminator</h2>
-      <p class="zona-lead" data-en="The interactive admira.tv player on AdmiraNeXT01–05, controlled from AdmiraDesk, or the PortAventuraNeXT demo mode.">El player interactivo de admira.tv en AdmiraNeXT01–05, controlado desde AdmiraDesk, o el modo demo PortAventuraNeXT.</p>
+      <p class="zona-lead" data-en="The interactive admira.tv player on the horizontal AdmiraNeXT01–05 screens, controlled from AdmiraDesk, or the PortAventuraNeXT demo mode. The vertical mupis have their own zone below.">El player interactivo de admira.tv en las horizontales AdmiraNeXT01–05, controlado desde AdmiraDesk, o el modo demo PortAventuraNeXT. Los mupis verticales tienen su propia zona, debajo.</p>
       <div class="lanza-grid" role="group" aria-label="Demos de la zona interactiva de Terminator">
         <button type="button" class="demo-card" id="demo-interactivo" data-demo="interactivo">
           <span class="demo-kicker">03</span>
           <span class="demo-title">Demo AdmiraNeXT</span>
-          <span class="demo-copy" data-en="Interactive admira.tv player (canal.html?screen=admiranext0N-a and the 01V, 03V and 05V verticals), controlled from AdmiraDesk.">Player interactivo de admira.tv (canal.html?screen=admiranext0N-a y las verticales 01V, 03V y 05V), controlado desde AdmiraDesk.</span>
+          <span class="demo-copy" data-en="Interactive admira.tv player (canal.html?screen=admiranext0N-a) on the horizontal 01–05, controlled from AdmiraDesk. The mupis are not touched.">Player interactivo de admira.tv (canal.html?screen=admiranext0N-a) en las horizontales 01–05, controlado desde AdmiraDesk. No toca los mupis.</span>
         </button>
         <button type="button" class="demo-card" id="demo-pan-interactivo" data-demo="pan-interactivo">
           <span class="demo-kicker">04</span>
           <span class="demo-title">Modo demo PortAventuraNeXT</span>
-          <span class="demo-copy" data-en="The official interactive presentation at admiranext.com/demo/PortAventuraNeXT, with synced screens on AdmiraNeXT01–05.">La presentación interactiva oficial en admiranext.com/demo/PortAventuraNeXT, con las pantallas de AdmiraNeXT01–05 en sincro.</span>
+          <span class="demo-copy" data-en="The official interactive presentation at admiranext.com/demo/PortAventuraNeXT, with each AdmiraNeXT01–05 screen on its own player (demo/player?screen=admiranext0N-a), in sync.">La presentación interactiva oficial en admiranext.com/demo/PortAventuraNeXT, con cada pantalla de AdmiraNeXT01–05 en su propio player (demo/player?screen=admiranext0N-a), en sincro.</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="zona" id="zona-mupis" aria-labelledby="zona-mupis-titulo">
+      <h2 id="zona-mupis-titulo">Zona 3 · Mupis verticales</h2>
+      <p class="zona-lead" data-en="The three vertical mupis, 01V, 03V and 05V, hanging from AdmiraNeXT01, 03 and 05. An independent zone: changing or turning off the interactive screens does not touch them, and vice versa. 03V stays as Pending ID until its machineId is confirmed.">Los tres mupis verticales, 01V, 03V y 05V, que cuelgan de AdmiraNeXT01, 03 y 05. Zona independiente: cambiar o apagar los interactivos no los toca, y al revés. El 03V queda como Pendiente ID hasta confirmar su machineId.</p>
+      <div class="lanza-grid lanza-grid-3" role="group" aria-label="Demos de los mupis verticales">
+        <button type="button" class="demo-card" id="demo-mupis" data-demo="mupis">
+          <span class="demo-kicker">05</span>
+          <span class="demo-title">Mupis · Demo AdmiraNeXT</span>
+          <span class="demo-copy" data-en="admira.tv player (canal.html?screen=admiranext0N-b) on 01V, 03V and 05V.">Player de admira.tv (canal.html?screen=admiranext0N-b) en 01V, 03V y 05V.</span>
+        </button>
+        <button type="button" class="demo-card" id="demo-pan-mupis" data-demo="pan-mupis">
+          <span class="demo-kicker">06</span>
+          <span class="demo-title">Mupis · Modo PortAventuraNeXT</span>
+          <span class="demo-copy" data-en="The PortAventuraNeXT player on each mupi (demo/player?screen=admiranext0N-b).">El player de PortAventuraNeXT en cada mupi (demo/player?screen=admiranext0N-b).</span>
+        </button>
+        <button type="button" class="demo-card demo-reset" id="demo-negro-mupis" data-demo="negro-mupis">
+          <span class="demo-kicker">●</span>
+          <span class="demo-title">Mupis en negro</span>
+          <span class="demo-copy" data-en="Only the mupis go black. Nothing is turned off.">Solo los mupis pasan a negro. No se apaga nada.</span>
+        </button>
+        <button type="button" class="demo-card demo-apagar" id="apagar-mupis" data-apagar="mupis">
+          <span class="demo-kicker">⏻</span>
+          <span class="demo-title">Apagar mupis</span>
+          <span class="demo-copy" data-en="With confirmation. Blacks out 01V, 03V and 05V and leaves the horizontals as they are.">Con confirmación. Pone en negro 01V, 03V y 05V y deja las horizontales como están.</span>
+        </button>
+        <button type="button" class="demo-card demo-encender" id="encender-mupis" data-encender="mupis">
+          <span class="demo-kicker">▶</span>
+          <span class="demo-title">Encender mupis</span>
+          <span class="demo-copy" data-en="Restores the AdmiraNeXT demo on the mupis.">Restaura la demo AdmiraNeXT en los mupis.</span>
         </button>
       </div>
     </section>
@@ -99,12 +155,12 @@
         <button type="button" class="demo-card demo-apagar" id="apagar-interactivos" data-apagar="interactivos">
           <span class="demo-kicker">⏻</span>
           <span class="demo-title">Apagar sala de interactivos Terminator</span>
-          <span class="demo-copy" data-en="Blacks out the players on AdmiraNeXT01–05 and the verticals, and closes or blacks out AdmiraDesk. No computer is shut down.">Pone en negro los players de AdmiraNeXT01–05 y las verticales, y cierra o pone en negro AdmiraDesk. No se apaga ningún equipo.</span>
+          <span class="demo-copy" data-en="Blacks out the players on the horizontal AdmiraNeXT01–05 and closes or blacks out AdmiraDesk. The mupis are not touched. No computer is shut down.">Pone en negro los players de las horizontales AdmiraNeXT01–05 y cierra o pone en negro AdmiraDesk. No toca los mupis. No se apaga ningún equipo.</span>
         </button>
         <button type="button" class="demo-card demo-apagar" id="apagar-todo" data-apagar="todo">
           <span class="demo-kicker">⏻</span>
           <span class="demo-title">Apagar todo</span>
-          <span class="demo-copy" data-en="Does both shutdowns, still with confirmation.">Hace los dos apagados, también con confirmación.</span>
+          <span class="demo-copy" data-en="Meeting room, interactive zone and mupis, still with confirmation.">Sala de reuniones, zona interactiva y mupis, también con confirmación.</span>
         </button>
         <button type="button" class="demo-card demo-encender" id="encender-reuniones" data-encender="reuniones">
           <span class="demo-kicker">▶</span>
@@ -115,6 +171,11 @@
           <span class="demo-kicker">▶</span>
           <span class="demo-title">Encender sala de interactivos</span>
           <span class="demo-copy" data-en="Restores the default interactive AdmiraNeXT demo, with AdmiraDesk.">Restaura la demo por defecto de la zona interactiva, AdmiraNeXT, con AdmiraDesk.</span>
+        </button>
+        <button type="button" class="demo-card demo-encender" id="encender-todo" data-encender="todo">
+          <span class="demo-kicker">▶</span>
+          <span class="demo-title">Encender todo</span>
+          <span class="demo-copy" data-en="Restores the AdmiraNeXT demo in the three zones.">Restaura la demo AdmiraNeXT en las tres zonas.</span>
         </button>
       </div>
     </section>
@@ -142,7 +203,7 @@
     </section>
   </main>
 
-  <script type="module" src="/lanzadera/lanzadera.js?v=20261126-apagado"></script>
-  <script src="/yk-frame.js?v=20261126-apagado"></script>
+  <script type="module" src="/lanzadera/lanzadera.js?v=20261127-zonas3"></script>
+  <script src="/yk-frame.js?v=20261127-zonas3"></script>
 </body>
 </html>

@@ -93,13 +93,16 @@ test('cli-ayuda: /demo help cuenta, ordena por fecha (interruptores arriba, lueg
   const A = globalThis.AdmiraCliAyuda;
   const h = A.demoHelp('', false).split('\n');
   assert.match(h[0], new RegExp('^Hay ' + A.CATALOGO.length + ' demos'));
-  assert.match(h[1], /^26-11-2026 {2}\/demo admiranext/);
-  assert.match(h[2], /^26-11-2026 {2}\/demo portaventura/);
-  assert.match(h[3], /^26-11-2026 {2}\/demo interactivo/);
-  assert.match(h[4], /^26-11-2026 {2}\/demo modo portaventura/);
-  assert.match(h[6], /^26-11-2026 {2}\/demo negro/);
-  assert.match(h[7], /^26-11-2026 {2}\/apagar reuniones/);
-  assert.match(h[10], /^14-10-2026 {2}\/demo interruptores/);
+  // 27-11-2026: los mupis verticales (zona 3 de la lanzadera) van arriba.
+  assert.match(h[1], /^27-11-2026 {2}\/demo mupis/);
+  assert.match(h[2], /^27-11-2026 {2}\/apagar mupis/);
+  assert.match(h[3], /^26-11-2026 {2}\/demo admiranext/);
+  assert.match(h[4], /^26-11-2026 {2}\/demo portaventura/);
+  assert.match(h[5], /^26-11-2026 {2}\/demo interactivo/);
+  assert.match(h[6], /^26-11-2026 {2}\/demo modo portaventura/);
+  assert.match(h[8], /^26-11-2026 {2}\/demo negro/);
+  assert.match(h[9], /^26-11-2026 {2}\/apagar reuniones/);
+  assert.match(h[12], /^14-10-2026 {2}\/demo interruptores/);
   const old = A.demoHelp('antiguas', false).split('\n');
   assert.match(old[1], /07-10-2026/);
   const az = A.demoHelp('--orden alfabetico', true).split('\n');

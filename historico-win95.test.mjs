@@ -331,6 +331,38 @@ test("Miscelánea incluye la subcarpeta SteveWozniak con la misión del 26-nov-2
   assert.doesNotMatch(html, /id:'fld-stevejobs'/);
 });
 
+test("Miscelánea incluye 2026-11-27.txt en SteveWozniak junto a la nota del 26-nov", () => {
+  const html = src("windows95/index.html");
+  const txt26 = src("windows95/misiones/SteveWozniak/2026-11-26.txt");
+  const txt = src("windows95/misiones/SteveWozniak/2026-11-27.txt");
+  assert.match(txt26, /26-nov-2026/);
+  assert.match(txt26, /Win95 Xperience en admira\.live/);
+  assert.match(txt, /MISIÓN PRINCIPAL/);
+  assert.match(txt, /Steve Wozniak \(Woz\)/);
+  assert.match(txt, /27-nov-2026/);
+  assert.match(txt, /DeepAgents/);
+  assert.match(txt, /sin gastar/);
+  assert.match(txt, /tokens de consejero/);
+  assert.match(txt, /legendarios y actuales/);
+  assert.match(txt, /nube verde/);
+  assert.match(txt, /\/win95/);
+  assert.doesNotMatch(txt, NO_IP);
+  assert.doesNotMatch(txt, NO_MAC);
+  assert.match(html, /id="mision-woz-20261126-seed"/);
+  assert.match(html, /id="mision-woz-20261127-seed"/);
+  assert.match(html, /id:'doc-woz-mision-20261126'/);
+  assert.match(html, /id:'doc-woz-mision-20261127'/);
+  assert.match(html, /name:'2026-11-27\.txt'/);
+  assert.match(html, /folder:'fld-stevewozniak'/);
+  assert.ok(html.includes(txt.replace(/\s+$/, "")));
+  // La nota del 26-nov se conserva en disco y en el seed; el cuerpo del .txt
+  // y el seed ya diferían en main (ICQGram) y no se tocan.
+  assert.match(txt26, /26-nov-2026/);
+  assert.match(html, /id="mision-woz-20261126-seed"/);
+  assert.match(html, /id:'doc-woz-mision-20261126'/);
+  assert.match(html, /name:'2026-11-26\.txt'/);
+});
+
 test("el menú Inicio imita Windows 95 y la A de Admira es la nube, con estrellas en Navigator", () => {
   const html = src("windows95/index.html");
   assert.match(html, /Windows <b>95<\/b>/);

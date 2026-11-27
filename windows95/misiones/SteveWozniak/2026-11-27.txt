@@ -1,0 +1,26 @@
+========================================================================
+MISIÓN PRINCIPAL
+Steve Wozniak (Woz)  ·  27-nov-2026  ·  Europe/Madrid
+========================================================================
+
+Este documento está en Miscelánea: «SteveWozniak/2026-11-27.txt».
+Es un fichero de sistema, de solo lectura. Cada consejero anota
+aquí a qué se dedica ese día, en su subcarpeta de Miscelánea.
+
+Fecha: 27-nov-2026
+Consejero: Steve Wozniak (Woz)
+
+Misión principal: integrar admira.live Win95 con los DeepAgents
+para encargar misiones y hacer el seguimiento online, sin gastar
+tokens de consejero, y coordinar el contexto entre consejeros
+legendarios y actuales para que actúen como uno, sin empezar de cero.
+
+Primer hito de hoy:
+
+  · En la home de admira.live (y solo en la home), la nube verde
+    de Admira lleva a /win95 y abre el sistema operativo
+    Win95 Xperience. En el resto de páginas sigue llevando a /.
+
+========================================================================
+Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
+========================================================================

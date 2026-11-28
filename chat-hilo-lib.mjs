@@ -298,7 +298,7 @@ export function textoEncargo(persona, turnos, turno, sitio = "https://www.admira
   const contexto = previos.map((t) => `${t.rol === "carlos" ? (t.autor_nombre || nombreCorto) : nombre} (${t.origen}): ${corto(limpiarTextoVisita(t.texto), 220)}`);
   const via = win95 ? " · ICQGram (Vuelta al 95)" : "";
   const cabecera = `${MARCA_CHAT} ${nombreAutor} → ${nombre} · hilo compartido admira.live${via}`;
-  const instruccion = `Lee el hilo ${sitio}/api/chat/hilo?persona=${persona} antes de contestar (hilo-jobs.sh leer 20) y responde EN EL HILO con rol ${persona}, origen rutina, msg_id enc-<número de este encargo>-resp (POST /api/chat/hilo). Cierra también este encargo con telegram_responder (done + la misma respuesta). Mensaje: msg_id ${turno.id}.`;
+  const instruccion = `Lee con autenticación el hilo ${sitio}/api/chat/hilo?persona=${persona}&limite=20 antes de contestar y responde EN EL HILO con rol ${persona}, origen rutina, msg_id enc-<número de este encargo>-resp (POST /api/chat/hilo autenticado). Cierra también este encargo con telegram_responder (done + la misma respuesta). Mensaje: msg_id ${turno.id}.`;
   const img = turno && turno.imagen ? `\nImagen adjunta (ábrela y mírala antes de contestar): ${turno.imagen}` : "";
   const pie = (win95
     ? `Mensaje de ${nombreAutor} desde ICQGram (admira.live/windows95):\n${turno.texto}`

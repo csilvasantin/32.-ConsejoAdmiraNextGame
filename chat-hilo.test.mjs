@@ -220,6 +220,17 @@ test("enviar win95: recorta el prefijo, firma como Carlos, tope 300 y 20 s por u
   assert.equal(desp.canal, "win95");
 });
 
+test("encargos de todas las sillas leen y responden en su propio hilo autenticado", () => {
+  for (const persona of ["jobs", "wozniak", "disney", "lucas", "musk", "huang"]) {
+    const encargo = textoEncargo(persona, [], { id: "live-persona", texto: "Hola" });
+    assert.ok(encargo.includes(`/api/chat/hilo?persona=${persona}&limite=20`));
+    assert.ok(encargo.includes(`EN EL HILO con rol ${persona}, origen rutina`));
+    assert.match(encargo, /Lee con autenticación/);
+    assert.match(encargo, /POST \/api\/chat\/hilo autenticado/);
+    assert.ok(!encargo.includes("hilo-jobs.sh"));
+  }
+});
+
 test("texto del encargo cabe en 4000 y sincronizar ignora lo ya respondido", () => {
   const largos = Array.from({ length: 10 }, (_, i) => ({ id: "t" + i, rol: i % 2 ? "jobs" : "carlos", origen: "app", texto: "x".repeat(3000), ts: new Date(1_790_000_000_000 + i).toISOString() }));
   const turno = { id: "live-1", texto: "y".repeat(3000) };

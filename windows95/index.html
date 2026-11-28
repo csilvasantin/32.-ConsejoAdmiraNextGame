@@ -8639,7 +8639,7 @@ function renderCodex(){
     var html='', abajo=hist.scrollHeight-hist.scrollTop-hist.clientHeight<30;
     (h.turnos||[]).forEach(function(t){
       if(t.rol==='latido'&&!lat) return;
-      var quien=t.rol==='carlos'?'CARLOS · CODEX':t.rol==='win95'?'CARLOS · WIN95 → CODEX':t.rol==='latido'?'LATIDO':'TRINITY · CODEX'+(t.fase==='commentary'?' (pensando)':'');
+      var mW=t.rol==='win95'?/→ CODEX · ([^·\]]+?) · /.exec(t.texto||''):null; var quien=t.rol==='carlos'?'CARLOS · CODEX':t.rol==='win95'?((mW?mW[1].trim():'CARLOS')+' · WIN95 → CODEX'):t.rol==='latido'?'LATIDO':'TRINITY · CODEX'+(t.fase==='commentary'?' (pensando)':'');
       if(t.rol==='latido') html+='<div class="cm latido"><b>['+esc(cdxDia(t.ts))+']</b> '+esc(t.texto)+'</div>';
       else html+='<div class="cm '+esc(t.rol)+'"><b>▓ '+esc(quien)+' · '+esc(cdxDia(t.ts))+'</b><div>'+esc(t.texto)+'</div></div>';
     });

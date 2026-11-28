@@ -75,7 +75,7 @@ test('las 4 cajas cuadradas Monitor/Computer/Extended/Entrelazado ya no se muest
 });
 
 test('Ejecutar muestra la línea de toggles y la etiqueta Ejecutar: en lugar de Abrir:', () => {
-  assert.match(html, /Pruebe <b>demo<\/b>, <b>matrix<\/b>, <b>win95<\/b> o <b>ayuda<\/b>\./);
+  assert.match(html, /Pruebe <b>demo<\/b>, <b>matrix<\/b>, <b>deus<\/b>, <b>win95<\/b> o <b>ayuda<\/b>\./);
   assert.match(html, /Ejecuta <b>Monitor<\/b>, <b>Computer<\/b>, <b>Extended<\/b> o <b>Entrelazado<\/b>\./);
   assert.match(html, /<span class="run-open-lbl"><u>E<\/u>jecutar:<\/span>/);
   assert.doesNotMatch(html, /<u>A<\/u>brir:/);

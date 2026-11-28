@@ -807,6 +807,44 @@ body.theme-matrix #matrix-rain,#stage.theme-matrix #matrix-rain,#desktop.theme-m
 #stage.theme-matrix .rundlg .run-help{background:rgba(0,20,8,.86);color:#9f6;box-shadow:inset 0 0 0 1px #00ff41}
 #stage.theme-matrix .rundlg .run-fb{color:#ff8080}
 #stage.theme-matrix input[type="text"],#desktop.theme-matrix input[type="text"]{background:#03140c;color:#d8ffe6}
+/* Píldoras Matrix + Deus Ex Machina (AI flow) */
+.mx-pills{position:absolute;inset:0;z-index:8000;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#04150c 0%,#020604 62%,#000 100%);color:#d8ffe6;font-family:"Segoe UI",Tahoma,sans-serif;pointer-events:auto}
+.deus-root{position:absolute;inset:0;z-index:8000;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;touch-action:none;background:radial-gradient(ellipse at 50% 30%,#2a1406 0%,#0a0603 42%,#030201 100%);color:#ffd078;font-family:"Segoe UI",Tahoma,sans-serif;pointer-events:auto}
+.deus-root canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.deus-ui{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:8px 12px 10px;background:linear-gradient(transparent,rgba(10,6,2,.92) 28%);pointer-events:none;opacity:0;transition:opacity .4s ease}
+.deus-ui.deus-ui-on{opacity:1}
+.deus-ui .deus-form,.deus-ui .deus-btn,.deus-ui input{pointer-events:auto}
+.deus-subs{min-height:3.2em;font:15px/1.4 "JetBrains Mono","Lucida Console",monospace;color:#ffd078;text-shadow:0 0 10px rgba(224,144,32,.55);white-space:pre-wrap}
+.deus-hint{margin:6px 0 8px;font-size:12px;color:#e09020}
+.deus-src{margin:6px 0 0;font-size:10px;color:#8a4a14}
+.deus-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.deus-form-lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.deus-form input{flex:1;min-width:140px;height:28px;border:0;padding:4px 8px;background:#120904;color:#fff3d0;font:13px "Segoe UI",sans-serif;box-shadow:inset 0 0 0 1px #a86018}
+.deus-btn{height:28px;padding:0 10px;background:#1a0c04;color:#ffd078;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #e09020}
+.deus-btn-azul{box-shadow:inset 0 0 0 1px #3a7ad4;color:#c8dcff}
+.mx-pills-inner{text-align:center;padding:16px 18px;max-width:440px}
+.mx-pills-kicker{margin:0 0 6px;letter-spacing:.28em;font-size:10px;color:#5a8a64;text-transform:uppercase}
+.mx-pills-title{margin:0 0 8px;font:700 28px/1.1 "Segoe UI",sans-serif;color:#e8ffe8;text-shadow:0 0 18px rgba(0,255,65,.55)}
+.mx-pills-sub{margin:0 0 22px;font-size:13px;line-height:1.45;color:#9f6}
+.mx-pills-row{display:flex;gap:28px;justify-content:center;align-items:flex-end;flex-wrap:wrap}
+.mx-pill{appearance:none;background:transparent;border:0;padding:0;cursor:pointer;color:inherit;display:flex;flex-direction:column;align-items:center;gap:10px}
+.mx-pill-cap{width:42px;height:88px;border-radius:22px;display:block;box-shadow:0 8px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -10px 16px rgba(0,0,0,.25);position:relative}
+.mx-pill-cap::before{content:"";position:absolute;left:8px;top:8px;width:10px;height:28px;border-radius:8px;background:rgba(255,255,255,.28)}
+.mx-pill-azul .mx-pill-cap{background:linear-gradient(160deg,#9ecbff 0%,#2a6adf 42%,#0b2f7a 100%)}
+.mx-pill-roja .mx-pill-cap{background:linear-gradient(160deg,#ff8a8a 0%,#e02020 42%,#6a0000 100%)}
+.mx-pill:focus-visible .mx-pill-cap,.mx-pill:hover .mx-pill-cap{transform:translateY(-3px) scale(1.04);outline:none}
+.mx-pill-azul:hover .mx-pill-cap,.mx-pill-azul:focus-visible .mx-pill-cap{box-shadow:0 0 28px rgba(80,140,255,.7),0 8px 28px rgba(0,0,0,.55)}
+.mx-pill-roja:hover .mx-pill-cap,.mx-pill-roja:focus-visible .mx-pill-cap{box-shadow:0 0 28px rgba(255,40,40,.7),0 8px 28px rgba(0,0,0,.55)}
+.mx-pill-lbl{font-size:12px;letter-spacing:.04em}
+.mx-pills-hint{margin:18px 0 0;font-size:11px;color:#5a8a64}
+@media (prefers-reduced-motion:reduce){
+  .mx-pill:focus-visible .mx-pill-cap,.mx-pill:hover .mx-pill-cap{transform:none}
+}
+@media (max-height:420px){
+  .mx-pill-cap{width:34px;height:68px;border-radius:17px}
+  .mx-pills-title{font-size:22px}
+  .deus-subs{font-size:13px;min-height:2.6em}
+}
 </style>
 <link rel="stylesheet" href="/assets/win95-crt.css?v=20261127-r331">
 <script>(function(){try{var q=new URL(location.href).searchParams.get("crt");var ext=false;var intl=true;try{ext=localStorage.getItem("admira-win95-extended")==="1";intl=localStorage.getItem("admira-win95-entrelazado")!=="0";}catch(e2){}var on=q==="0"?false:q==="1"?true:localStorage.getItem("admira-win95-crt")!=="0";if(ext){document.documentElement.classList.add("crt-extended");on=false;}document.documentElement.classList.toggle("crt-frame-off",!on);if(!intl)document.documentElement.classList.add("crt-interlace-off");}catch(e){}})();</script>
@@ -4863,8 +4901,9 @@ function openExpertoView(url){
 }
 function dispatchRun(r){
   if(!r||!r.ok) return;
-  if(r.action==='matrix'){ if(window.Win95Experto) window.Win95Experto.setMatrixTheme(true); return; }
-  if(r.action==='classic'){ if(window.Win95Experto) window.Win95Experto.setMatrixTheme(false); return; }
+  if(r.action==='matrix'){ if(window.Win95DeusBoot&&window.Win95DeusBoot.openPills) window.Win95DeusBoot.openPills(); else if(window.Win95Experto) window.Win95Experto.setMatrixTheme(true); return; }
+  if(r.action==='deus'){ if(window.Win95DeusBoot&&window.Win95DeusBoot.openDeus) window.Win95DeusBoot.openDeus(); return; }
+  if(r.action==='classic'){ if(window.Win95DeusBoot&&window.Win95DeusBoot.leaveAll) window.Win95DeusBoot.leaveAll(); else if(window.Win95Experto) window.Win95Experto.setMatrixTheme(false); return; }
   if(r.action==='demo'){ launchDemo(); return; }
   if(r.action==='cli'){ openDaCli(true); return; }
   if(r.action==='codex'){ openCodex(true); return; }
@@ -4901,7 +4940,7 @@ function openRunDlg(){
   if(RUNDLG){ focusWin(RUNDLG); try{ qs('input',RUNDLG).select(); }catch(e){} return; }
   var w=document.createElement('div'), key='rundlg'; w.className='win dlg rundlg'; w.id=key; w.style.width='360px';
   w.innerHTML='<div class="tb"><span class="t">Ejecutar</span><span class="x gap">×</span></div>'
-    +'<div class="body" style="display:block;padding:10px 10px 4px"><div class="msg" style="margin:0 0 8px">Escriba un comando del Modo Experto (con o sin /) y Admira 95 lo ejecutará.<br>Pruebe <b>demo</b>, <b>matrix</b>, <b>win95</b> o <b>ayuda</b>.<br>Ejecuta <b>Monitor</b>, <b>Computer</b>, <b>Extended</b> o <b>Entrelazado</b>.</div>'
+    +'<div class="body" style="display:block;padding:10px 10px 4px"><div class="msg" style="margin:0 0 8px">Escriba un comando del Modo Experto (con o sin /) y Admira 95 lo ejecutará.<br>Pruebe <b>demo</b>, <b>matrix</b>, <b>deus</b>, <b>win95</b> o <b>ayuda</b>.<br>Ejecuta <b>Monitor</b>, <b>Computer</b>, <b>Extended</b> o <b>Entrelazado</b>.</div>'
     +'<label class="run-open" style="display:flex;align-items:center;gap:6px"><span class="run-open-lbl"><u>E</u>jecutar:</span> <input type="text" value="demo" spellcheck="false" autocapitalize="off" style="flex:1;height:20px;border:0;padding:2px 4px;font:inherit;background:#fff;-webkit-user-select:text;user-select:text;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf"></label>'
     +'<div class="run-fb" data-run-fb hidden></div>'
     +'<pre class="run-help" data-run-help hidden></pre></div>'
@@ -9361,14 +9400,64 @@ function boot(){
 <script src="/assets/win95-crt.js?v=20261127-r331"></script>
 <script src="/assets/win95-fs.js?v=20261125-fs"></script>
 <script type="module">
-  import * as Win95Experto from '/win95-experto-lib.mjs?v=20261128-codex';
+  import * as Win95Experto from '/win95-experto-lib.mjs?v=20261128-r332';
   import * as Win95DeskLayout from '/win95-desk-layout-lib.mjs?v=20261127-r331';
+  // Entrada directa: ?tema=matrix&pildora=roja (o deus / deusexmachina / aiflow).
+  import * as Win95Deus from '/win95-deus-lib.mjs?v=20261128-r332';
+  import * as Win95DeusScene from '/win95-deus-scene.mjs?v=20261128-r332';
   window.Win95Experto = Win95Experto;
   window.Win95DeskLayout = Win95DeskLayout;
-  window.dispatchEvent(new Event('win95-experto-ready'));
-  if (Win95Experto.wantsMatrixFromUrl(location.search)) {
-    Win95Experto.setMatrixTheme(true, { cinematic: false });
+  window.Win95Deus = Win95Deus;
+  window.Win95DeusScene = Win95DeusScene;
+  function deusHost(){ return document.getElementById('stage') || document.getElementById('desktop') || document.body; }
+  async function loadDeusFuentes(){
+    var cred = { cache:'no-store', credentials:'same-origin', headers:{ accept:'application/json' } };
+    function grab(url){ return fetch(url, cred).then(function(r){ if (r.status===401 || !r.ok) return null; return r.json(); }).catch(function(){ return null; }); }
+    var pair = await Promise.all([grab(Win95Deus.DEUS_URLS.deepagents), grab(Win95Deus.DEUS_URLS.comunicaciones)]);
+    return { censo: pair[0], comunicaciones: (pair[1] && pair[1].ok) ? pair[1] : null };
   }
+  function leaveAll(){
+    Win95DeusScene.exitDeus();
+    Win95DeusScene.hidePills();
+    try { Win95Deus.syncPildoraUrl(null, window); } catch (e) {}
+    Win95Experto.setMatrixTheme(false);
+  }
+  function openPills(){
+    Win95DeusScene.exitDeus();
+    Win95Experto.setMatrixTheme(true, { rain:false, cinematic:true });
+    try { Win95Deus.syncPildoraUrl(null, window); } catch (e) {}
+    Win95DeusScene.showPills({
+      host: deusHost(),
+      onRed: function(){ openDeus(); },
+      onBlue: function(){ leaveAll(); }
+    });
+  }
+  function openDeus(){
+    Win95DeusScene.hidePills();
+    var reduced = Win95Deus.prefersReducedMotion();
+    Win95Experto.setMatrixTheme(true, { rain: !reduced, cinematic:false });
+    var rain = Win95Experto.getMatrixRain && Win95Experto.getMatrixRain();
+    var scene = Win95DeusScene.enterDeus({
+      host: deusHost(),
+      flow: Win95Deus.buildAiFlow({}),
+      rain: rain,
+      reducedMotion: reduced,
+      onExit: function(){ leaveAll(); }
+    });
+    loadDeusFuentes().then(function(fuentes){
+      if (scene && scene.updateFlow) scene.updateFlow(Win95Deus.buildAiFlow(fuentes));
+    });
+    setTimeout(function(){
+      var r = Win95Experto.getMatrixRain && Win95Experto.getMatrixRain();
+      if (r && r.stop) r.stop();
+    }, 1800);
+  }
+  window.Win95DeusBoot = { openPills: openPills, openDeus: openDeus, leaveAll: leaveAll };
+  window.dispatchEvent(new Event('win95-experto-ready'));
+  var pill = Win95Deus.wantsPildoraFromUrl(location.search);
+  if (pill === 'roja') openDeus();
+  else if (pill === 'azul') leaveAll();
+  else if (Win95Experto.wantsMatrixFromUrl(location.search)) openPills();
   if (typeof fit === 'function') fit();
 </script>
 </body>

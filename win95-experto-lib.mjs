@@ -25,7 +25,11 @@ export const HELP_TEXT = [
   'Modo Experto de Admira 95 · comandos (con o sin /)',
   '',
   'ENTORNO',
-  '  matrix                         — escritorio hipermoderno con lluvia Matrix',
+  '  matrix                         — píldoras roja y azul (antes de la lluvia)',
+  '  deus · deusexmachina · aiflow  — Ciudad de las Máquinas (AI flow)',
+  '  pildora roja                   — entra al mundo de las máquinas',
+  '  pildora azul                   — vuelve a Win95 clásico',
+  '  ?tema=matrix&pildora=roja      — entra directo a la Ciudad de las Máquinas',
   '  win95 · clasico · normal       — vuelve al Win95 clásico',
   '  matrix off                     — apaga el entorno Matrix',
   '',
@@ -229,6 +233,12 @@ export function parseRunCommand(raw) {
   if (cmd === 'matrix' || cmd === 'matriz' || cmd === 'matrix on' || cmd === 'tema matrix') {
     return { ok: true, action: 'matrix', raw: original, canonical: 'matrix' };
   }
+  if (cmd === 'deus' || cmd === 'deusexmachina' || cmd === 'deus ex machina' || cmd === 'aiflow' || cmd === 'ai flow' || cmd === 'pildora roja' || cmd === 'pill roja' || cmd === 'red pill') {
+    return { ok: true, action: 'deus', raw: original, canonical: 'deus' };
+  }
+  if (cmd === 'pildora azul' || cmd === 'pill azul' || cmd === 'blue pill') {
+    return { ok: true, action: 'classic', raw: original, canonical: 'win95' };
+  }
   if (CLASSIC.has(cmd)) {
     return { ok: true, action: 'classic', raw: original, canonical: 'win95' };
   }
@@ -300,7 +310,7 @@ export function createMatrixRain(canvas, options) {
   let ctx = getCtx();
   let width = 0, height = 0, sideWidth = 120, columns = 0;
   let drops = [], speeds = [], writers = [];
-  let raf = 0, running = false, destroyed = false;
+  let raf = 0, running = false, destroyed = false, pace = 1;
   let resizeHandler = null;
   const rafFn = opts.requestAnimationFrame || (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null);
   const cafFn = opts.cancelAnimationFrame || (typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : null);
@@ -410,7 +420,7 @@ export function createMatrixRain(canvas, options) {
       ctx.globalAlpha = 1;
       if (animate) {
         if (y > height && Math.random() > 0.975) drops[i] = 0;
-        drops[i] += speeds[i] + side * 0.22;
+        drops[i] += (speeds[i] + side * 0.22) * pace;
       }
     }
   }
@@ -461,10 +471,15 @@ export function createMatrixRain(canvas, options) {
     resizeHandler = function () { if (running && !destroyed) resize(); };
     window.addEventListener('resize', resizeHandler);
   }
+  function setPace(p) {
+    const n = Number(p);
+    pace = Number.isFinite(n) && n > 0 ? n : 1;
+  }
   return {
-    start, stop, resize, destroy,
+    start, stop, resize, destroy, setPace,
     get running() { return running; },
     get destroyed() { return destroyed; },
+    get pace() { return pace; },
     canvas,
   };
 }
@@ -513,7 +528,7 @@ export function setMatrixTheme(on, opts) {
   } else if (stage) {
     stage.classList.remove('theme-matrix-enter');
   }
-  if (on) {
+  if (on && options.rain !== false) {
     const canvas = ensureMatrixCanvas(doc, stage);
     if (canvas && !rainCtl) {
       rainCtl = createMatrixRain(canvas, {
@@ -530,6 +545,8 @@ export function setMatrixTheme(on, opts) {
       });
     }
     if (rainCtl && !rainCtl.running) rainCtl.start();
+    if (options.syncUrl !== false && typeof window !== 'undefined') syncMatrixUrl(true, window.location && window.history ? window : options.location);
+  } else if (on) {
     if (options.syncUrl !== false && typeof window !== 'undefined') syncMatrixUrl(true, window.location && window.history ? window : options.location);
   } else {
     if (rainCtl) { rainCtl.destroy(); rainCtl = null; }

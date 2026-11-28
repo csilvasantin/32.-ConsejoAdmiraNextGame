@@ -65,6 +65,9 @@ test('parseRunCommand: ayuda / help / ? muestran la lista', () => {
     assert.match(r.text, /extended/);
     assert.match(r.text, /entrelazado/);
     assert.match(r.text, /alternan ON\/OFF/);
+    assert.match(r.text, /deus/);
+    assert.match(r.text, /pildora roja/);
+    assert.match(r.text, /aiflow/);
     assert.match(HELP_TEXT, /consumos/);
   }
 });
@@ -316,10 +319,16 @@ test('windows95/index.html: typo Abrir: corregido, Ejecutar es Modo Experto y ca
   assert.match(html, /Modo Experto/);
   assert.match(html, /<b>demo<\/b>/);
   assert.match(html, /<b>matrix<\/b>/);
+  assert.match(html, /<b>deus<\/b>/);
   assert.match(html, /<b>win95<\/b>/);
   assert.match(html, /<b>ayuda<\/b>/);
   assert.match(html, /Ejecuta <b>Monitor<\/b>, <b>Computer<\/b>, <b>Extended<\/b> o <b>Entrelazado<\/b>/);
   assert.match(html, /win95-experto-lib\.mjs/);
+  assert.match(html, /win95-deus-lib\.mjs/);
+  assert.match(html, /win95-deus-scene\.mjs/);
+  assert.match(html, /Win95DeusBoot/);
+  assert.match(html, /pildora=roja/);
+  assert.match(html, /action==='deus'/);
   assert.match(html, /body\.theme-matrix|#stage\.theme-matrix/);
   assert.match(html, /#matrix-rain/);
   assert.match(html, /parseRunCommand/);

@@ -22,7 +22,7 @@ try:
 except Exception:  # pragma: no cover
     MADRID = None
 
-VERSION = "codex-espejo/1.0 (t1419u)"
+VERSION = "codex-espejo/1.1 (t1419u)"
 HOME = os.path.expanduser("~")
 CODEX_HOME = os.environ.get("CODEX_HOME", os.path.join(HOME, ".codex"))
 STATE_DB = os.path.join(CODEX_HOME, "state_5.sqlite")
@@ -147,6 +147,9 @@ def turno_de(d):
     if rol == "assistant":
         fase = p.get("phase") or ""
         if txt.lstrip().startswith("<heartbeat>"):
+            # NOTIFY = Codex quiere que Carlos lo lea (p. ej. la respuesta a un mensaje de Win95): va como mensaje.
+            if tag(txt, "decision").upper() == "NOTIFY" and tag(txt, "message"):
+                return dict(base, rol="codex", fase=fase, texto=tag(txt, "message")[:6000])
             return dict(base, rol="latido", fase=fase, texto=latido(txt))
         return dict(base, rol="codex", fase=fase, texto=txt[:6000])
     return None

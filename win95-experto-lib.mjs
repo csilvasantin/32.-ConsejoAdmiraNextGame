@@ -41,7 +41,7 @@ export const HELP_TEXT = [
   '  entrelazado                    — líneas de scan CRT',
   '',
   'PROGRAMAS DE WIN95',
-  '  winamp · napster · netscape · cli · cmd',
+  '  winamp · napster · netscape · cli · cmd · codex',
   '  icqgram · notepad · media · bandeja',
   '  mi pc · misiones · miscelanea · papelera',
   '',
@@ -245,6 +245,9 @@ export function parseRunCommand(raw) {
   }
   if (cmd === 'cli' || cmd === 'deepagents' || cmd === 'command' || cmd === 'cmd' || cmd === 'terminal') {
     return { ok: true, action: 'cli', raw: original, canonical: 'cli' };
+  }
+  if (cmd === 'codex' || cmd === 'trinity' || cmd === 'codex trinity') {
+    return { ok: true, action: 'codex', raw: original, canonical: 'codex' };
   }
   if (cmd === 'misiones' || cmd === 'mision') {
     return { ok: true, action: 'folder', folder: 'misiones', id: 'fld-misiones', raw: original };

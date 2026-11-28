@@ -278,6 +278,25 @@ canvas{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 @keyframes dacur{50%{opacity:0}}
 #dacli .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff;font-size:10px}
 @media (prefers-reduced-motion: reduce){ #dacli .cur{animation:none} }
+/* ---------- Codex · Trinity (MacStudio) — Carlos t1419u, 28-11-2026: ver, leer y escribir la app Codex desde Win95 ---------- */
+#cdx .ctabs{position:absolute;left:3px;right:3px;top:22px;height:18px;display:flex;gap:2px;overflow:hidden;white-space:nowrap}
+#cdx .ctab{display:flex;align-items:center;gap:3px;padding:0 6px;height:17px;max-width:150px;background:#c0c0c0;cursor:pointer;font-size:10px;overflow:hidden;text-overflow:ellipsis;box-shadow:inset -1px -1px #000,inset 1px 1px #fff}
+#cdx .ctab.on{background:#dfdfdf;font-weight:bold;box-shadow:inset 1px 1px #000,inset -1px -1px #fff}
+#cdx .ctab i{flex:none;display:inline-block;width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 1px #404040}
+#cdx i.rojo{background:#e02020} #cdx i.verde{background:#2fc42f} #cdx i.gris{background:#a0a0a0}
+#cdx .chist{position:absolute;left:3px;right:3px;top:42px;bottom:86px;overflow-y:auto;padding:4px 6px;background:#fff;font-size:11px;line-height:14px;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#cdx .cm{margin:0 0 6px}
+#cdx .cm b{display:block;font-size:10px;color:#000080}
+#cdx .cm.codex b{color:#1f8a2e} #cdx .cm.win95 b,#cdx .cm.out b{color:#b00000}
+#cdx .cm.latido{color:#707070;font-size:10px;margin-bottom:3px}
+#cdx .cm.latido b{display:inline;color:#707070;font-weight:normal}
+#cdx .cm div{white-space:pre-wrap;word-break:break-word}
+#cdx .cm.out{opacity:.85;border-left:2px solid #b00000;padding-left:4px}
+#cdx textarea{position:absolute;left:3px;right:70px;bottom:26px;height:54px;resize:none;font:11px/14px Tahoma,Arial,sans-serif;padding:2px 4px;border:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #000,inset -2px -2px #dfdfdf}
+#cdx textarea:disabled{background:#d4d0c8;color:#606060}
+#cdx #cdxSend{position:absolute;right:3px;bottom:56px;width:62px;height:24px}
+#cdx label.lat{position:absolute;right:3px;bottom:29px;width:64px;font-size:10px;white-space:nowrap;overflow:hidden}
+#cdx .sbar1{position:absolute;left:3px;right:3px;bottom:3px;height:20px;padding:3px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff;font-size:10px}
 /* ---------- ICQGram (homenaje mensajería) ---------- */
 #icq .qhdr{height:30px;margin-top:2px;display:flex;align-items:center;padding:0 6px;background:#fff;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
 #icq .qhdr [data-ico] svg{width:22px;height:22px}
@@ -1254,6 +1273,7 @@ Otras piezas del escritorio:
 Código: windows95/index.html (openIcq, presenciaCargar, cupoCab, deepCab).
 API: GET /api/win95/presencia  (regla: win95-presencia-lib.mjs).
 API: GET /api/win95/deepagents (regla: win95-deepagents-lib.mjs).
+API: GET/POST /api/win95/codex (espejo de la app Codex del MacStudio; regla: win95-codex-lib.mjs).
 El grupo DeepAgents no usa el % de cupo de Grok Bot. Su cabecera es
 «DeepAgents (N abiertos · M distintos)»: instancias de app de escritorio
 abiertas ahora y deepagents distintos (el mismo puede estar en varios
@@ -1933,6 +1953,16 @@ Fin del documento. Está en Miscelánea\SteveWozniak, solo lectura.
       <div class="dtabs" id="daTabs"></div>
       <div class="dterm" id="daTerm"><div class="dhead" id="daHead"></div><pre id="daLog"></pre><span class="cur"></span></div>
       <div class="sbar1" id="daSt">Conectando con la flota…</div>
+    </div>
+    <!-- Codex · Trinity (MacStudio): espejo de la app Codex (Carlos t1419u). Lee los ficheros de sesión vía puente launchd; escribe con `codex queue`. -->
+    <div id="cdx" class="win" style="left:150px;top:60px;width:380px;height:330px;display:none" aria-label="Codex · Trinity (MacStudio)">
+      <div class="tb"><span data-ico="startRun"></span><span class="t" id="cdxT">Codex · Trinity (MacStudio)</span><span class="x" data-min="cdx">_</span><span class="x" data-max="cdx" title="Maximizar">□</span><span class="x gap" data-close="cdx">×</span></div>
+      <div class="ctabs" id="cdxTabs"></div>
+      <div class="chist" id="cdxHist" aria-live="polite"></div>
+      <textarea id="cdxIn" maxlength="2000" placeholder="Escribe a Codex (Trinity) y pulsa Enviar · Ctrl/Cmd+Enter"></textarea>
+      <button class="btn" id="cdxSend" type="button">Enviar</button>
+      <label class="lat" title="Mostrar las revisiones programadas (heartbeats) del hilo"><input type="checkbox" id="cdxLat" checked> Latidos</label>
+      <div class="sbar1" id="cdxSt">Conectando con el MacStudio…</div>
     </div>
     <!-- ICQGram: conversación -->
     <div id="icqc" class="win" style="left:140px;top:96px;width:330px;height:284px;display:none">
@@ -4837,6 +4867,7 @@ function dispatchRun(r){
   if(r.action==='classic'){ if(window.Win95Experto) window.Win95Experto.setMatrixTheme(false); return; }
   if(r.action==='demo'){ launchDemo(); return; }
   if(r.action==='cli'){ openDaCli(true); return; }
+  if(r.action==='codex'){ openCodex(true); return; }
   if(r.action==='app'){ openApp(r.app); return; }
   if(r.action==='folder'){
     if(r.id==='fld-misiones'||r.folder==='misiones'){ if(typeof ensureMisionesFolder==='function') ensureMisionesFolder(); openFolder('fld-misiones'); }
@@ -8544,6 +8575,86 @@ function wireDaCli(){
   DACOM.timer=setInterval(function(){ if(!document.hidden) loadDaCom(false); },15000);
 }
 
+/* ---------- Codex · Trinity (MacStudio) — Carlos t1419u, 28-11-2026 ----------
+   «Que podamos ver, escribir y leer lo mismo desde win95» con la app Codex del MacStudio, como ICQGram con
+   los consejeros. GET /api/win95/codex cada 5 s mientras la ventana está abierta (puente launchd del MacStudio
+   que lee las sesiones de Codex, sin foco ni AX). Enviar → POST {accion:'enviar'}; el puente lo entrega con
+   `codex queue` y vuelve el acuse. El kiosco es solo lectura. Regla: win95-codex-lib.mjs. */
+var CDX_URL='/api/win95/codex';
+var CDX={datos:null,sel:null,timer:0,loading:false,enviando:false,pintado:'',err:''};
+function cdxHora(ms){ if(!ms) return ''; try{ return new Date(ms).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}); }catch(e){ return ''; } }
+function cdxDia(ms){ if(!ms) return ''; try{ var d=new Date(ms), h=new Date(); var mismo=d.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'})===h.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'}); return mismo?cdxHora(ms):d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',timeZone:'Europe/Madrid'})+' '+cdxHora(ms); }catch(e){ return ''; } }
+function cdxHilo(){ var d=CDX.datos; if(!d||!d.hilos) return null; for(var i=0;i<d.hilos.length;i++){ if(d.hilos[i].id===CDX.sel) return d.hilos[i]; } return null; }
+function renderCodex(){
+  var w=qs('#cdx'); if(!w||w.style.display!=='block') return;
+  var d=CDX.datos, tabs=qs('#cdxTabs'), hist=qs('#cdxHist'), st=qs('#cdxSt'), inp=qs('#cdxIn'), btn=qs('#cdxSend');
+  if(!d){ tabs.innerHTML=''; hist.textContent=CDX.err||'Conectando con el MacStudio…'; st.textContent=CDX.err?'Sin conexión con el espejo':'Conectando…'; inp.disabled=true; btn.disabled=true; return; }
+  var hilos=d.hilos||[];
+  if(!CDX.sel||!hilos.some(function(h){ return h.id===CDX.sel; })) CDX.sel=hilos.length?hilos[0].id:null;
+  var th='';
+  hilos.forEach(function(h){ var bol=!d.fresco?'gris':(h.estado==='trabajando'?'rojo':'verde'); th+='<span class="ctab'+(h.id===CDX.sel?' on':'')+'" data-h="'+esc(h.id)+'" title="'+esc(h.titulo+(h.proyecto?' · '+h.proyecto:'')+' · '+h.estado)+'"><i class="'+bol+'"></i>'+esc(h.titulo)+'</span>'; });
+  tabs.innerHTML=th;
+  var h=cdxHilo(), lat=qs('#cdxLat').checked;
+  if(!h){ hist.textContent=d.aviso||'No hay hilos de Codex abiertos en el MacStudio.'; }
+  else {
+    var html='', abajo=hist.scrollHeight-hist.scrollTop-hist.clientHeight<30;
+    (h.turnos||[]).forEach(function(t){
+      if(t.rol==='latido'&&!lat) return;
+      var quien=t.rol==='carlos'?'CARLOS · CODEX':t.rol==='win95'?'CARLOS · WIN95 → CODEX':t.rol==='latido'?'LATIDO':'TRINITY · CODEX'+(t.fase==='commentary'?' (pensando)':'');
+      if(t.rol==='latido') html+='<div class="cm latido"><b>['+esc(cdxDia(t.ts))+']</b> '+esc(t.texto)+'</div>';
+      else html+='<div class="cm '+esc(t.rol)+'"><b>▓ '+esc(quien)+' · '+esc(cdxDia(t.ts))+'</b><div>'+esc(t.texto)+'</div></div>';
+    });
+    (d.salida||[]).filter(function(x){ return x.hilo===h.id&&x.estado!=='entregado'; }).forEach(function(x){
+      html+='<div class="cm out"><b>▓ '+esc(String(x.autorNombre||'Carlos').toUpperCase())+' · WIN95 · '+esc(cdxHora(x.ts))+' · '+(x.estado==='pendiente'?'⧗ esperando al MacStudio':'✗ '+esc(x.nota||'error'))+'</b><div>'+esc(x.texto)+'</div></div>';
+    });
+    if(!html) html='<div class="cm latido">Sin mensajes visibles en este hilo todavía.</div>';
+    var clave=h.id+'|'+(h.turnos||[]).length+'|'+((h.turnos||[]).slice(-1)[0]||{}).id+'|'+lat+'|'+JSON.stringify((d.salida||[]).map(function(x){ return x.id+x.estado; }));
+    if(clave!==CDX.pintado){ hist.innerHTML=html; if(abajo||CDX.pintado.split('|')[0]!==h.id) hist.scrollTop=hist.scrollHeight; CDX.pintado=clave; }
+  }
+  var puede=!!(d.puedeEscribir&&h&&d.fresco);
+  inp.disabled=!puede||CDX.enviando; btn.disabled=!puede||CDX.enviando;
+  inp.placeholder=!d.puedeEscribir?'Solo lectura en este acceso (kiosco). Entra con tu cuenta de Google para escribir a Codex.':(!d.fresco?'El puente del MacStudio no responde; no se puede escribir ahora.':'Escribe a Codex (Trinity) y pulsa Enviar · Ctrl/Cmd+Enter');
+  var ultimaEnt=(d.salida||[]).filter(function(x){ return h&&x.hilo===h.id&&x.estado==='entregado'; }).slice(-1)[0];
+  st.textContent=(d.maquina||'MacStudio')+' · '+(d.app||'Codex')+' · '+(d.fresco?'puente al día (hace '+d.haceS+' s)':(d.aviso||'sin puente'))+(h?' · '+h.estado+(h.enCola?' · '+h.enCola+' en cola':''):'')+(ultimaEnt?' · último envío '+cdxHora(ultimaEnt.entregado||ultimaEnt.ts)+' ✓':'')+(d.puedeEscribir?'':' · solo lectura');
+}
+function loadCodex(){
+  if(typeof fetch!=='function'||CDX.loading) return;
+  CDX.loading=true;
+  fetch(CDX_URL,{credentials:'same-origin',cache:'no-store',signal:(window.AbortSignal&&AbortSignal.timeout)?AbortSignal.timeout(12000):undefined})
+    .then(function(r){ if(r.status===401){ CDX.err='Inicie sesión en admira.live para ver la sesión de Codex del MacStudio.'; return null; } return r.ok?r.json():null; })
+    .then(function(d){ CDX.loading=false; if(d&&d.ok){ CDX.datos=d; CDX.err=''; } renderCodex(); })
+    .catch(function(){ CDX.loading=false; if(!CDX.datos) CDX.err='No se pudo leer el espejo de Codex.'; renderCodex(); });
+}
+function enviarCodex(){
+  var d=CDX.datos, h=cdxHilo(), inp=qs('#cdxIn'), txt=String(inp.value||'').trim();
+  if(!d||!h||!txt||CDX.enviando||!d.puedeEscribir) return;
+  CDX.enviando=true; renderCodex();
+  var mid='w95cdx-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+  fetch(CDX_URL,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({accion:'enviar',hilo:h.id,texto:txt,msg_id:mid})})
+    .then(function(r){ return r.json().catch(function(){ return {ok:false,error:'HTTP '+r.status}; }); })
+    .then(function(r){ CDX.enviando=false; if(r&&r.ok){ inp.value=''; qs('#cdxSt').textContent='Enviado a la bandeja · esperando al MacStudio…'; loadCodex(); } else { renderCodex(); qs('#cdxSt').textContent='No enviado: '+((r&&r.error)||'error'); } })
+    .catch(function(){ CDX.enviando=false; renderCodex(); qs('#cdxSt').textContent='No enviado: sin conexión'; });
+}
+function openCodex(manual){
+  var w=qs('#cdx'); if(!w) return;
+  w.style.display='block';
+  if(TASKS.cdx&&TASKS.cdx.min) toggleTask('cdx');
+  addTask('cdx','Codex · Trinity','startRun',[w]);
+  focusWin(w); renderCodex(); loadCodex();
+  clearInterval(CDX.timer);
+  CDX.timer=setInterval(function(){ if(!document.hidden&&qs('#cdx').style.display==='block') loadCodex(); },5000);
+}
+function closeCodex(){ var w=qs('#cdx'); if(!w) return; w.style.display='none'; removeTask('cdx'); clearInterval(CDX.timer); }
+function wireCodex(){
+  if(!qs('#cdx')) return;
+  qs('[data-close="cdx"]').addEventListener('click',closeCodex);
+  qs('[data-min="cdx"]').addEventListener('click',function(){ minimize('cdx'); });
+  qs('#cdxTabs').addEventListener('click',function(e){ var t=e.target.closest('.ctab'); if(!t) return; CDX.sel=t.getAttribute('data-h'); CDX.pintado=''; renderCodex(); });
+  qs('#cdxSend').addEventListener('click',enviarCodex);
+  qs('#cdxLat').addEventListener('change',function(){ CDX.pintado=''; renderCodex(); });
+  qs('#cdxIn').addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); enviarCodex(); } });
+}
+
 /* ---------- icono de red de la bandeja (las dos pantallas se encienden al pasar datos) ---------- */
 var NET={tx:0,rx:0};
 function net(dir){ NET[dir]=now(); }
@@ -8887,6 +8998,7 @@ function buildStart(){
     it.addEventListener('click',function(){ closeStart(); openApp(p[0]); }); sub.appendChild(it);
   });
   (function(){ var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app','dacli'); it.innerHTML='<span data-ico="startRun">'+(ICONS.startRun||'')+'</span><span>CLI DeepAgents</span>'; it.addEventListener('click',function(){ closeStart(); openDaCli(true); }); sub.appendChild(it); })();
+  (function(){ var it=document.createElement('div'); it.className='mi'; it.setAttribute('data-app','cdx'); it.innerHTML='<span data-ico="startRun">'+(ICONS.startRun||'')+'</span><span>Codex · Trinity (MacStudio)</span>'; it.addEventListener('click',function(){ closeStart(); openCodex(true); }); sub.appendChild(it); })();
   qs('#mi-programs').addEventListener('click',function(){ var m=qs('#smenu'), it=qs('#mi-programs'); sub.style.display='block'; sub.style.left=(m.offsetLeft+m.offsetWidth-3)+'px'; sub.style.top=(m.offsetTop+it.offsetTop-3)+'px'; it.classList.add('hl'); });
   var simple={
     'mi-docs':function(){ openApp('readme'); },
@@ -9190,7 +9302,7 @@ function init(){
   qs('#ampRemove').addEventListener('click',ampRemoveSelected);
   qs('#ampSel').addEventListener('click',openAmpSel);
   qs('#ampMisc').addEventListener('click',function(){ overrideMarq('VARIOS'); });
-  wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireDaCli(); wireNet(); icqgInit();
+  wireNap(); wireIcq(); wireBrowser(); wireMedia(); buildVolPop(); wireDeskMenu(); wireTrash(); wireMail(); wireDaCli(); wireCodex(); wireNet(); icqgInit();
 
   // reloj: pulsar la hora lanza el protector (ya no arranca solo)
   function clock(){ var d=new Date(); qs('#clock').textContent=pad2(d.getHours())+':'+pad2(d.getMinutes()); }
@@ -9249,7 +9361,7 @@ function boot(){
 <script src="/assets/win95-crt.js?v=20261127-r331"></script>
 <script src="/assets/win95-fs.js?v=20261125-fs"></script>
 <script type="module">
-  import * as Win95Experto from '/win95-experto-lib.mjs?v=20261127-r329';
+  import * as Win95Experto from '/win95-experto-lib.mjs?v=20261128-codex';
   import * as Win95DeskLayout from '/win95-desk-layout-lib.mjs?v=20261127-r331';
   window.Win95Experto = Win95Experto;
   window.Win95DeskLayout = Win95DeskLayout;
